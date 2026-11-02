@@ -3,7 +3,6 @@ export interface VersionEntry {
   id: string;
   createdAt: string;
   agents: number;
-  findings: { error: number; warning: number; info: number };
   inferred: { procedures: number; rules: number; failed: number } | null;
 }
 

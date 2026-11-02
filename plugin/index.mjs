@@ -1,5 +1,5 @@
-// OpenClaw plugin: export this instance as SysML v2 for Assembly, with doctor
-// findings and, on request, procedures and rules inferred from agent prose.
+// OpenClaw plugin: export this instance as SysML v2 for Assembly and, on
+// request, procedures and rules inferred from agent prose.
 import { isAbsolute, join, relative } from "node:path";
 import process from "node:process";
 import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
@@ -74,12 +74,9 @@ async function openViewer(api, path) {
 }
 
 function summarize(s) {
-  const findings = Object.entries(s.findings).map(([k, v]) => `${v} ${k}`)
-    .join(", ") || "none";
   const lines = [
     `SysML v2 export: ${s.agents} agents → ${s.outDir}`,
     `Viewer: ${s.viewer}`,
-    `Doctor: ${findings}`,
   ];
   if (s.inferred) {
     lines.push(
@@ -96,7 +93,7 @@ export default definePluginEntry({
   id: "sysmlv2-export",
   name: "OpenClaw SysML v2 Export",
   description:
-    "Export this OpenClaw instance as SysML v2 for Assembly, with doctor findings and inferred procedures.",
+    "Export an OpenClaw instance as SysML v2 for Assembly, with optional inferred procedures and a version viewer.",
   register(api) {
     // The export discloses the whole instance: owner only on chat surfaces,
     // operator.admin for gateway clients (plugin-command-execution enforces it).
@@ -135,7 +132,7 @@ export default definePluginEntry({
           name: "sysmlv2_export",
           label: "SysML v2 export",
           description:
-            "Export this OpenClaw instance (agents, tool grants, plugins, sandboxes, channels, cron, skills) to SysML v2 for Assembly and run its configuration doctor. Returns where the files and the version viewer are and the findings count. Does not call a model.",
+            "Export this OpenClaw instance (agents, tool grants, plugins, sandboxes, channels, cron, skills) to SysML v2 for Assembly. Returns where the files and the version viewer are. Does not call a model.",
           parameters: {
             type: "object",
             properties: {},

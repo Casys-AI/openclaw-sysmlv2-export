@@ -89,7 +89,7 @@ th { color: var(--muted); font-weight: 600; background: var(--soft); }
 #rows tr { cursor: pointer; }
 #rows tr:hover { background: var(--soft); }
 #rows tr.on { background: #ddf4ff; }
-.error { color: #cf222e; } .warning { color: #9a6700; } .info, .muted { color: var(--muted); }
+.muted { color: var(--muted); }
 nav { display: flex; flex-wrap: wrap; gap: 4px; margin: 8px 0; }
 button { font: inherit; padding: 2px 10px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--fg); cursor: pointer; }
 button.on { background: var(--fg); border-color: var(--fg); color: #fff; }
@@ -98,14 +98,13 @@ pre { padding: 8px 10px; }
 .diff div { padding: 0 10px; white-space: pre; }
 .add { background: #e6ffec; } .del { background: #ffebe9; } .hunk { background: #eaeef2; color: var(--muted); }
 .k { color: #8250df; } .s { color: #0a3069; } .c { color: #6e7781; }
-table.findings td { white-space: normal; vertical-align: top; }
 </style>
 </head>
 <body>
 <header><h1>OpenClaw SysML v2 export versions</h1><span class="muted" id="count"></span></header>
 <main>
 <section id="list"><table>
-<thead><tr><th>Date (UTC)</th><th class="num">Agents</th><th title="errors / warnings / info">Findings</th><th class="num" title="procedures / rules">Inferred</th><th class="num" title="files changed since the previous version">Changed</th></tr></thead>
+<thead><tr><th>Date (UTC)</th><th class="num">Agents</th><th class="num" title="procedures / rules">Inferred</th><th class="num" title="files changed since the previous version">Changed</th></tr></thead>
 <tbody id="rows"></tbody>
 </table></section>
 <section id="detail">
@@ -148,20 +147,7 @@ function sysml(text) {
   return pre;
 }
 
-function findings(text) {
-  const table = el("table", "findings");
-  const head = table.createTHead().insertRow();
-  for (const h of ["Severity", "Code", "Subject", "Context"]) head.append(el("th", "", h));
-  const body = table.createTBody();
-  for (const f of JSON.parse(text)) {
-    body.insertRow().append(el("td", f.severity, f.severity), el("td", "", f.code),
-      el("td", "", f.subject), el("td", "", f.context));
-  }
-  return table;
-}
-
 function content(name, text) {
-  if (name === "findings.json") return findings(text);
   if (name.endsWith(".json")) return el("pre", "", JSON.stringify(JSON.parse(text), null, 2));
   return name.endsWith(".sysml") ? sysml(text) : el("pre", "", text);
 }
@@ -189,10 +175,7 @@ function render() {
   document.getElementById("count").textContent = versions.length + " versions, newest first";
   document.getElementById("rows").replaceChildren(...versions.map((v, i) => {
     const tr = el("tr", i === selected ? "on" : "");
-    const sev = el("td");
-    sev.append(el("span", "error", String(v.findings.error)), " / ",
-      el("span", "warning", String(v.findings.warning)), " / ", el("span", "info", String(v.findings.info)));
-    tr.append(el("td", "", when(v)), el("td", "num", String(v.agents)), sev,
+    tr.append(el("td", "", when(v)), el("td", "num", String(v.agents)),
       el("td", "num", v.inferred ? v.inferred.procedures + " / " + v.inferred.rules : "—"),
       el("td", "num", v.changes ? String(v.changes.length) : "—"));
     tr.onclick = () => { selected = i; history.replaceState(null, "", "#" + v.id); render(); };

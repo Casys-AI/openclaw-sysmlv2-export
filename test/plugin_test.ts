@@ -52,20 +52,19 @@ Deno.test("plugin runs are kept as versions", async (t) => {
     await t.step("versions.json lists the runs newest first", async () => {
       assert.equal(first.outDir, join(out, "2026-11-02T10-15-00Z"));
       assert.equal(second.version, "2026-11-02T10-20-00Z");
-      const findings = { error: 1, warning: 21, info: 29 };
+      // Doctor findings are not part of the plugin's export in 0.1.0.
+      assert.ok(!("findings" in first) && !("findings" in second));
       assert.deepEqual(
         JSON.parse(await readFile(join(out, "versions.json"), "utf8")),
         [{
           id: "2026-11-02T10-20-00Z",
           createdAt: "2026-11-02T10:20:00.000Z",
           agents: 6,
-          findings,
           inferred: { procedures: 0, rules: 1, failed: 0 },
         }, {
           id: "2026-11-02T10-15-00Z",
           createdAt: "2026-11-02T10:15:00.250Z",
           agents: 6,
-          findings,
           inferred: null,
         }],
       );
@@ -80,7 +79,6 @@ Deno.test("plugin runs are kept as versions", async (t) => {
           "OpenClawInstance.sysml",
           "cases.sysml",
           "core.sysml",
-          "findings.json",
           "inference.json",
           "skills.sysml",
           "snapshot.json",
@@ -97,6 +95,10 @@ Deno.test("plugin runs are kept as versions", async (t) => {
       async () => {
         assert.equal(second.viewer, join(out, "index.html"));
         const page = await readFile(second.viewer, "utf8");
+        assert.doesNotMatch(
+          page.replace(/<script id="data".*?<\/script>/s, ""),
+          /findings/i,
+        );
         const data = JSON.parse(
           page.match(
             /<script id="data" type="application\/json">(.*?)<\/script>/s,

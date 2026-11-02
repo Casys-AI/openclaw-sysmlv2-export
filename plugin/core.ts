@@ -9,7 +9,6 @@ import {
 } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
 import { collect } from "../src/collect.ts";
-import { doctor } from "../src/doctor.ts";
 import { emit } from "../src/emit.ts";
 import { ExportError } from "../src/error.ts";
 import {
@@ -38,7 +37,6 @@ export interface ExportSummary {
   /** `<outDir>/index.html`, the version viewer. */
   viewer: string;
   agents: number;
-  findings: Record<string, number>;
   inferred: { procedures: number; rules: number; failed: string[] } | null;
 }
 
@@ -149,10 +147,8 @@ export async function runExport(
   now: Date,
 ): Promise<ExportSummary> {
   const snapshot = await collect(stateDir, pluginList);
-  const findings = doctor(snapshot);
   const files = new Map([
     ["snapshot.json", canonical(snapshot)],
-    ["findings.json", canonical(findings)],
     ...emit(snapshot),
     ...ASSEMBLY_LIBRARY,
   ]);
@@ -218,19 +214,10 @@ export async function runExport(
       : e;
   });
   for (const [name, text] of files) await writeFile(join(dir, name), text);
-  const bySeverity: Record<string, number> = {};
-  for (const f of findings) {
-    bySeverity[f.severity] = (bySeverity[f.severity] ?? 0) + 1;
-  }
   const versions = withVersion(await readVersions(outDir), {
     id: version,
     createdAt: now.toISOString(),
     agents: snapshot.agents.length,
-    findings: {
-      error: bySeverity.error ?? 0,
-      warning: bySeverity.warning ?? 0,
-      info: bySeverity.info ?? 0,
-    },
     inferred: inferred && {
       procedures: inferred.procedures,
       rules: inferred.rules,
@@ -253,7 +240,6 @@ export async function runExport(
     version,
     viewer,
     agents: snapshot.agents.length,
-    findings: bySeverity,
     inferred,
   };
 }

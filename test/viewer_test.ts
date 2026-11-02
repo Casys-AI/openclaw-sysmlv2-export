@@ -8,7 +8,6 @@ Deno.test("viewer data can neither close its script nor open a comment", () => {
       id: "2026-11-02T10-15-00Z",
       createdAt: "2026-11-02T10:15:00.000Z",
       agents: 1,
-      findings: { error: 0, warning: 0, info: 0 },
       inferred: null,
     },
     files: { "OpenClawInstance.sysml": text },
