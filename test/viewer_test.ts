@@ -48,8 +48,18 @@ Deno.test("the same versions give the same page", async () => {
   assert.equal(await viewerPage(versions), await viewerPage(versions));
 });
 
+/** A version's entry for a view, in the page data. */
+// deno-lint-ignore no-explicit-any
+const viewOf = (data: any, version: any, id: string) =>
+  version.views.find((e: { view: number }) => data.views[e.view].id === id);
+
 Deno.test("an element added since the previous version is highlighted", async () => {
   const next = structuredClone(snapshot);
+  next.agents.find((a) => a.id === "coach")!.grants.push({
+    id: "sandbox:cron",
+    tool: "cron",
+    layer: "sandbox",
+  });
   next.accounts.push({
     id: "telegram:coach",
     channel: "telegram",
@@ -71,16 +81,14 @@ Deno.test("an element added since the previous version is highlighted", async ()
     ]),
   );
   const [latest, first] = data.versions;
-  const delta =
-    latest.views.find((e: { view: number }) =>
-      data.views[e.view].id === "system"
-    ).delta;
+  const delta = viewOf(data, latest, "system").delta;
   assert.deepEqual(delta.added, [
     "account:telegram:coach",
     "binding:binding-new",
   ]);
+  // Coach's block lists its tools, cron now among them.
   assert.deepEqual([delta.changed, delta.removed, delta.isNew], [
-    [],
+    ["agent:coach"],
     [],
     false,
   ]);
@@ -91,6 +99,18 @@ Deno.test("an element added since the previous version is highlighted", async ()
   assert.match(
     data.texts[latest.files[file]].split("\n")[from - 1],
     /part 'account_telegram:coach' : ChannelAccount \{/,
+  );
+  // In the Tools matrix, the new grant is a new cell of a changed row.
+  const tools = viewOf(data, latest, "tools");
+  assert.deepEqual(
+    [tools.delta.added, tools.delta.changed],
+    [["grant:coach:cron"], ["agent:coach", "tool:cron"]],
+  );
+  const { table } = data.views[tools.view];
+  const cell = table.cells.find((c: unknown[]) => c[3] === "grant:coach:cron");
+  assert.deepEqual(
+    [table.rows[cell[0]].id, table.columns[cell[1]].id, cell[2]],
+    ["tool:cron", "agent:coach", "s"],
   );
 });
 

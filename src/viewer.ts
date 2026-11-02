@@ -2,6 +2,7 @@ import { structuredPatch } from "diff";
 import type { Inference } from "./infer.ts";
 import { layoutView, METRICS, type Scene } from "./layout.ts";
 import { parseSnapshot } from "./snapshot.ts";
+import { drawing, type TableData, tableData } from "./tables.ts";
 import type { VersionEntry } from "./versions.ts";
 import { PAGE } from "./viewer_page.ts";
 import { declarations, diagramViews, type SysmlRef } from "./views.ts";
@@ -47,7 +48,9 @@ interface ViewData {
   id: string;
   title: string;
   group: string;
-  scene: Scene;
+  /** Its drawn elements; null when it is only a table. */
+  scene: Scene | null;
+  table: TableData | null;
   /** Per node or edge: its attributes and the [file, from, to] of its SysML. */
   elements: Record<
     string,
@@ -90,20 +93,23 @@ async function versionViews(
     });
   const out: ViewData[] = [];
   for (const view of diagramViews(snapshot, inferenceOf(files))) {
-    const key = JSON.stringify(view);
-    if (!scenes.has(key)) scenes.set(key, await layoutView(view));
+    const drawn = drawing(view), key = JSON.stringify(drawn);
+    if (drawn.nodes.length && !scenes.has(key)) {
+      scenes.set(key, await layoutView(drawn));
+    }
     out.push({
       id: view.id,
       title: view.title,
       group: view.group,
-      scene: scenes.get(key)!,
+      scene: scenes.get(key) ?? null,
+      table: tableData(view),
       elements: Object.fromEntries([
         ...view.nodes.map((
           n,
         ) => [n.id, { a: n.attributes, s: locate(n.sysml) }]),
         ...view.edges.filter((e) => e.sysml.length).map((e) => [
           e.id,
-          { a: [], s: locate(e.sysml) },
+          { a: e.attributes, s: locate(e.sysml) },
         ]),
       ]),
     });
@@ -114,7 +120,8 @@ async function versionViews(
 /** What changed in a view since the previous version: the elements added, the
  * elements whose attributes or SysML text changed (containers by attributes
  * only, so a change inside a frame marks that element and not the frame), and
- * the elements removed. A view the previous version did not have is new. */
+ * the elements removed, drawn or in its table. A view the previous version did
+ * not have is new. */
 function viewChanges(
   view: ViewData,
   files: Record<string, string>,
@@ -123,8 +130,9 @@ function viewChanges(
 ) {
   if (!previous) return { isNew: true, added: [], changed: [], removed: [] };
   const containers = new Set(
-    view.scene.nodes.filter((n) => n.shape === "frame" || n.shape === "group")
-      .map((n) => n.id),
+    (view.scene?.nodes ?? []).filter((n) =>
+      n.shape === "frame" || n.shape === "group"
+    ).map((n) => n.id),
   );
   const slice = (
     f: Record<string, string>,
@@ -136,9 +144,14 @@ function viewChanges(
       containers.has(id) ? e.a : [e.a, e.s.map((s) => slice(f, s))],
     );
   };
+  // Every node is drawn or in the table, and so is every edge with SysML;
+  // only nodes and table elements can be listed as removed.
+  const shown = (v: ViewData) => {
+    const lines = new Set(v.scene?.edges.map((e) => e.id));
+    return Object.keys(v.elements).filter((id) => !lines.has(id));
+  };
   const ids = (v: ViewData) => [
-    ...v.scene.nodes.map((n) => n.id),
-    ...v.scene.edges.map((e) => e.id),
+    ...new Set([...shown(v), ...v.scene?.edges.map((e) => e.id) ?? []]),
   ];
   const before = new Set(ids(previous)), now = new Set(ids(view));
   return {
@@ -148,9 +161,7 @@ function viewChanges(
       before.has(id) && view.elements[id] && previous.elements[id] &&
       signature(view, files, id) !== signature(previous, previousFiles, id)
     ),
-    removed: previous.scene.nodes.filter((n) => !now.has(n.id)).map((n) =>
-      n.id
-    ),
+    removed: shown(previous).filter((id) => !now.has(id)),
   };
 }
 

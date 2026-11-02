@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import type { Inference } from "../src/infer.ts";
 import { layoutView, type Scene } from "../src/layout.ts";
 import { parseSnapshot } from "../src/snapshot.ts";
+import { drawing } from "../src/tables.ts";
 import { diagramViews } from "../src/views.ts";
 
 const read = (path: string) =>
@@ -14,7 +15,8 @@ const overlaps = (a: Scene["nodes"][number], b: Scene["nodes"][number]) =>
   a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
 
 Deno.test("layout is deterministic, nests containers and never overlaps siblings", async () => {
-  for (const v of diagramViews(snapshot, inference)) {
+  for (const v of diagramViews(snapshot, inference).map(drawing)) {
+    if (!v.nodes.length) continue;
     const scene = await layoutView(v);
     assert.deepEqual(scene, await layoutView(v), v.id);
     assert.equal(scene.nodes.length, v.nodes.length);
@@ -53,21 +55,4 @@ Deno.test("a Behaviour view with many rules stays wider than tall", async () => 
   }).find((v) => v.id === "behaviour:field")!;
   const scene = await layoutView(view);
   assert.ok(scene.w > scene.h, `${scene.w} × ${scene.h}`);
-});
-
-Deno.test("a plugin with many tools stands no taller than wide", async () => {
-  const tools = Array.from({ length: 44 }, (_, i) => `tool_${i}`);
-  const many = {
-    ...snapshot,
-    plugins: [...snapshot.plugins!, {
-      ...snapshot.plugins![0],
-      id: "many",
-      tools,
-    }],
-  };
-  const view = diagramViews(many, inference).find((v) => v.id === "tools")!;
-  const frame = (await layoutView(view)).nodes.find((n) =>
-    n.id === "plugin:many"
-  )!;
-  assert.ok(frame.h <= frame.w, `${frame.w} × ${frame.h}`);
 });

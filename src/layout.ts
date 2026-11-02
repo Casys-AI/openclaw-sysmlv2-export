@@ -35,7 +35,6 @@ export interface SceneNode {
   lines?: string[];
   /** A decision's text, beside its diamond. */
   label?: SceneLabel;
-  slots?: string;
   /** The type is drawn on its own line, under the name. */
   split?: true;
   muted?: true;
@@ -325,8 +324,6 @@ export const METRICS = {
   tabH: 24,
   headH: 16,
   lineH: 15,
-  slot: 9,
-  slotGap: 3,
 } as const;
 const M = METRICS;
 const r1 = (v: number) => Math.round(v * 10) / 10;
@@ -338,13 +335,11 @@ interface Sized {
   label?: string[];
 }
 
-const keyword = (n: DiagramNode) => n.keyword ? `«${n.keyword}»` : undefined;
-const stripWidth = (slots: string) =>
-  slots.length * (M.slot + M.slotGap) - M.slotGap;
+export const keyword = (n: DiagramNode) =>
+  n.keyword ? `«${n.keyword}»` : undefined;
 
 /** A block's header and compartments, rows cut to the widest allowed. A type
- * that does not fit beside the name goes on its own line. A legend block
- * (Tools) ends with the agent's grant slot. */
+ * that does not fit beside the name goes on its own line. */
 function block(n: DiagramNode, max: number): Sized {
   const kw = keyword(n);
   const type = n.type ? ` : ${n.type}` : "";
@@ -363,7 +358,6 @@ function block(n: DiagramNode, max: number): Sized {
       150,
       (kw ? measure(kw, "kw") : 0) + 2 * M.padX,
       head + 2 * M.padX,
-      n.slots ? stripWidth(n.slots) + 2 * M.padX : 0,
       ...comps.flatMap(([t, rows]) => [
         measure(t, "sect") + 2 * M.padX,
         ...rows.map((r) => measure(r, "row") + 2 * M.padX),
@@ -374,7 +368,7 @@ function block(n: DiagramNode, max: number): Sized {
     comps.reduce(
       (sum, [, rows]) => sum + M.sectGap + M.sectH + rows.length * M.rowH,
       0,
-    ) + M.padBottom + (n.slots ? M.slot + 8 : 0);
+    ) + M.padBottom;
   return {
     w,
     h,
@@ -385,7 +379,6 @@ function block(n: DiagramNode, max: number): Sized {
       ...(type ? { type: fit(split ? type.trim() : type, "type", inner) } : {}),
       ...(split ? { split: true as const } : {}),
       comps,
-      ...(n.slots ? { slots: n.slots } : {}),
     },
   };
 }
@@ -480,7 +473,7 @@ function header(
     ),
   };
 }
-const flags = (n: DiagramNode) => ({
+export const flags = (n: DiagramNode) => ({
   ...(n.parent ? { parent: n.parent } : {}),
   ...(n.muted ? { muted: true as const } : {}),
   ...(n.dashed ? { dashed: true as const } : {}),
@@ -853,138 +846,14 @@ function flow(boxes: Box[], width: number, gap: number): Box {
   };
 }
 
-/** The Tools view, packed on shelves: a row of agents whose slots key the
- * grant strips, then the Tools package with built-in tools on the left and
- * plugins, MCP servers and CLI commands stacked on the right. No edge links
- * them, so a layered layout has nothing to order; ELK's box packing does not
- * keep the origins in order. */
-function toolsScene(view: DiagramView): Scene {
-  const kids = new Map<string | null, DiagramNode[]>();
-  for (const n of view.nodes) {
-    kids.set(n.parent, [...kids.get(n.parent) ?? [], n]);
-  }
-  const tools = view.nodes.filter((n) => n.shape === "tool");
-  const chipW = Math.ceil(Math.max(
-    100,
-    ...tools.map((n) =>
-      Math.max(measure(n.name, "tool"), stripWidth(n.slots ?? "")) +
-      2 * M.padX
-    ),
-  ));
-  const chipH = 42, gap = 8;
-  const chip = (n: DiagramNode): Box => ({
-    w: chipW,
-    h: chipH,
-    place: (x, y) => [{
-      id: n.id,
-      shape: "tool",
-      x,
-      y,
-      w: chipW,
-      h: chipH,
-      name: fit(n.name, "tool", chipW - 2 * M.padX),
-      ...(n.slots ? { slots: n.slots } : {}),
-      ...flags(n),
-    }],
-  });
-  const container = (n: DiagramNode, content: Box, minW = 0, minH = 0): Box => {
-    const head = header(n), pad = 16;
-    const w = Math.round(Math.max(head.w, content.w + 2 * pad, minW));
-    const h = Math.round(Math.max(head.top + content.h + pad, minH));
-    return {
-      w,
-      h,
-      place: (x, y) => [
-        { id: n.id, ...head.scene, ...flags(n), x, y, w, h },
-        ...content.place(x + pad, y + head.top),
-      ],
-    };
-  };
-  const grid = (chips: DiagramNode[], cols: number) =>
-    flow(chips.map(chip), cols * chipW + (cols - 1) * gap, gap);
-  // A plugin's or server's tools: two columns, more once they would stand
-  // taller than wide.
-  const square = (n: number) =>
-    Math.min(
-      n,
-      Math.max(2, Math.ceil(Math.sqrt(n * (chipH + gap) / (chipW + gap)))),
-    );
-  const group = (n: DiagramNode, cols: number, minW = 0, minH = 0): Box => {
-    const inside = kids.get(n.id) ?? [];
-    const leaves = inside.filter((k) => k.shape === "tool");
-    const frames = inside.filter((k) => k.shape !== "tool").map((f) => {
-      const chips = kids.get(f.id) ?? [];
-      return container(f, grid(chips, square(chips.length)));
-    });
-    const content = frames.length
-      ? flow(frames, Math.max(...frames.map((f) => f.w)) * 3 + 24, 12)
-      : grid(leaves, Math.max(1, Math.min(cols, leaves.length)));
-    return container(n, content, minW, minH);
-  };
-  const pkg = view.nodes.find((n) => n.id === "package:Tools")!;
-  const groups = kids.get(pkg.id) ?? [];
-  const left = groups.find((g) => g.id === "origin:builtin");
-  const right = groups.filter((g) => g !== left);
-  const column = (boxes: Box[]): Box => ({
-    w: Math.max(0, ...boxes.map((b) => b.w)),
-    h: boxes.reduce((s, b) => s + b.h + 16, -16),
-    place: (x, y) =>
-      boxes.flatMap((b) => {
-        const nodes = b.place(x, y);
-        y += b.h + 16;
-        return nodes;
-      }),
-  });
-  const rightW = Math.max(0, ...right.map((g) => group(g, 4).w));
-  const rightBox = column(right.map((g) => group(g, 4, rightW)));
-  // Built-in tools take as few columns as keep them no taller than the rest.
-  let cols = 4;
-  while (left && cols < 8 && group(left, cols).h > rightBox.h) cols++;
-  const leftBox = left
-    ? group(left, cols, 0, rightBox.h)
-    : { w: 0, h: 0, place: () => [] };
-  const body = flow(
-    [leftBox, rightBox].filter((b) => b.w > 0),
-    Infinity,
-    16,
-  );
-  const catalog = container(pkg, body);
-  const agents = view.nodes.filter((n) => n.parent === null && n !== pkg)
-    .map((n) => {
-      const size = leaf(n, 260);
-      return {
-        w: Math.round(size.w),
-        h: Math.round(size.h),
-        place: (x: number, y: number) => [{
-          id: n.id,
-          ...size.scene,
-          ...flags(n),
-          x,
-          y,
-          w: Math.round(size.w),
-          h: Math.round(size.h),
-        }],
-      };
-    });
-  const legend = flow(agents, Math.max(catalog.w, 900), 14);
-  const nodes = [...legend.place(0, 0), ...catalog.place(0, legend.h + 28)];
-  return {
-    w: Math.max(legend.w, catalog.w),
-    h: legend.h + 28 + catalog.h,
-    nodes,
-    edges: [],
-  };
-}
-
-/** Places a view. System and Scheduled tasks are layered graphs; Tools is
- * packed on shelves; a Behaviour view lays its procedures out as flows above
+/** Places a view's drawn elements (see tables.ts). System and Scheduled tasks
+ * are layered graphs; a Behaviour view lays its procedures out as flows above
  * the parties they hand work to, with its rules beside or under them. */
 export async function layoutView(view: DiagramView): Promise<Scene> {
   const margin = (s: Scene) => {
     const m = moved(s, 24, 24);
     return { ...m, w: r1(s.w + 48), h: r1(s.h + 48) };
   };
-  if (view.id === "tools") return margin(toolsScene(view));
   const s = settings(view);
   if (!view.id.startsWith("behaviour:")) return margin(await laidOut(view, s));
   const rules = view.nodes.filter((n) => n.shape === "requirement");

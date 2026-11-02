@@ -50,21 +50,35 @@ Deno.test("the fixture's views hold its agents, tools, schedules and procedures"
     /^plugin \(1\): browser$/m,
   );
 
-  // One strip slot per agent, in id order: client coach devbox field lead secretary.
+  // A matrix: agents as columns, in id order; one grant cell per tool held.
   const tools = view(views, "tools");
-  const slots = (id: string) => tools.nodes.find((n) => n.id === id)!.slots;
-  assert.equal(slots("tool:cli:git"), "----h-");
-  assert.equal(slots("tool:browser"), "sssshs");
-  assert.equal(slots("agent:lead"), "----x-");
+  assert.equal(tools.table?.kind, "matrix");
+  assert.deepEqual(
+    tools.table.columns.map((id) => id.slice(6)),
+    ["client", "coach", "devbox", "field", "lead", "secretary"],
+  );
+  const holders = (tool: string) =>
+    tools.edges.filter((e) => e.target === tool).map((e) =>
+      `${e.source.slice(6)} ${e.label}`
+    );
+  assert.deepEqual(holders("tool:cli:git"), ["lead host"]);
+  assert.deepEqual(holders("tool:browser"), [
+    "client sandbox",
+    "coach sandbox",
+    "devbox sandbox",
+    "field sandbox",
+    "lead host",
+    "secretary sandbox",
+  ]);
   assert.equal(
     tools.nodes.find((n) => n.id === "tool:docs__*")!.parent,
     "mcp:docs",
   );
-  // Declared but granted to no agent: drawn on its provider, not in the catalog.
+  // Declared but granted to no agent: a row of its provider, without cells.
   const ghost = tools.nodes.find((n) =>
     n.id === "plugin:workboard:board_list"
   )!;
-  assert.ok(ghost.muted && ghost.dashed && ghost.slots === null);
+  assert.ok(ghost.muted && ghost.dashed && !holders(ghost.id).length);
 
   const schedules = view(views, "schedules");
   assert.equal(ids(schedules, "cron:").length, 10);

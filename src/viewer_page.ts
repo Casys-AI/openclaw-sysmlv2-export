@@ -1,7 +1,7 @@
 /** The viewer page. `__DATA__` is replaced by the versions' data and
  * `__METRICS__` by layout.ts's drawing metrics. It draws the precomputed
- * scenes as SVG in SysML v2 notation, on Assembly's light palette, and needs
- * no network. */
+ * scenes as SVG in SysML v2 notation and renders the tables shaped by
+ * tables.ts, on Assembly's light palette, and needs no network. */
 export const PAGE = String.raw`<!doctype html>
 <html lang="en">
 <head>
@@ -47,6 +47,9 @@ main > section[hidden] { display: none; }
 
 /* Diagrams: Assembly's SysML page, as one sheet. */
 .md { position: relative; height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr); }
+.md-main { min-height: 0; display: flex; flex-direction: column; }
+.md-stage { position: relative; flex: 1 1 0; min-height: 0; }
+.md-stage[hidden], .md-sheet[hidden] { display: none; }
 .md-toolbar { position: relative; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 10px 16px 0; pointer-events: none; }
 .md-toolbar > * { pointer-events: auto; }
 .md-title { display: flex; align-items: baseline; gap: 8px; min-width: 0; max-width: 420px; }
@@ -56,12 +59,13 @@ main > section[hidden] { display: none; }
 .md-chips, .md-tools { display: flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
 .md-chips:empty { display: none; }
 .md-tools { margin-left: auto; }
+.md-tools[hidden] { display: none; }
 .md-chips button, .md-tools button, .md-chips span { all: unset; cursor: pointer; padding: 3px 9px; border-radius: 7px; font-size: 12px; font-weight: 500; color: var(--muted); }
 .md-chips span { cursor: default; }
 .md-chips button:hover, .md-tools button:hover { color: var(--ink); background: var(--hover); }
 .md-chips .add { color: var(--add); } .md-chips .chg { color: var(--warn); } .md-chips .del { color: var(--del); }
 .md-chips button[aria-pressed="false"] { text-decoration: line-through; }
-.md-canvas { position: relative; min-height: 0; overflow: hidden; cursor: grab; touch-action: none; outline: none;
+.md-canvas { position: absolute; inset: 0; overflow: hidden; cursor: grab; touch-action: none; outline: none;
   background-image: radial-gradient(var(--md-dot) 0.9px, transparent 1px); background-size: 22px 22px; }
 .md-canvas:active { cursor: grabbing; }
 .md-canvas > svg { position: absolute; inset: 0; width: 100%; height: 100%; font-family: var(--diagram); }
@@ -92,15 +96,7 @@ main > section[hidden] { display: none; }
 .md-row { font-size: 11.5px; }
 .md-text { font-size: 12px; }
 .md-group-label { font-size: 10px; font-style: italic; fill: var(--muted) !important; }
-.md-tool { font-size: 11.5px; font-weight: 500; }
 .md-actor { fill: none; stroke: var(--md-stroke); stroke-width: 1.3; stroke-linecap: round; }
-.slot { stroke: var(--md-stroke); stroke-width: 1; fill: var(--md-node); }
-.slot.n { stroke: var(--line-strong); fill: none; }
-.slot.h, .slot.b { fill: var(--md-stroke); }
-.slot.x { fill: var(--md-node); stroke: var(--ink); stroke-width: 1.8; }
-.slot-dot { fill: var(--ink); pointer-events: none; }
-.slot-half { fill: var(--md-stroke); pointer-events: none; }
-.slot-mark { stroke: #fff; stroke-width: 1.2; pointer-events: none; }
 .md-node.selected > .md-body { stroke: var(--ink); stroke-width: 2.2; }
 .md-ring-select { fill: none; stroke: var(--md-ring); stroke-width: 8; }
 .md-badge circle { stroke: var(--paper); stroke-width: 2; }
@@ -153,10 +149,57 @@ svg.md-focus .md-edge.lit .md-line { stroke-width: 1.8; }
 .md-src button:hover { text-decoration-color: var(--ink); }
 .md-inspector pre { max-height: 260px; margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 11px; }
 .md.inspecting .md-legend { display: none; }
+.md.inspecting .md-sheet { padding-right: 396px; }
 .md-pop { position: absolute; z-index: 3; top: 52px; right: 16px; width: 300px; max-height: 50%; overflow: auto; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: 0 10px 30px rgb(0 0 0 / 6%); }
 .md-pop[hidden] { display: none; }
 .md-pop button { all: unset; display: block; width: 100%; padding: 4px 0; border-top: 1px solid var(--line); cursor: pointer; font: 11.5px var(--mono); color: var(--del); }
 .md-canvas:focus-visible, button:focus-visible, select:focus-visible, [role="button"]:focus-visible { outline: 2px solid #797369; outline-offset: 2px; }
+
+/* Tables: a view's elements in rows, under its diagram or alone. */
+.md-sheet { flex: 0 0 auto; max-height: 44%; overflow: auto; margin: 0 12px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+.md-sheet.alone { flex: 1 1 0; max-height: none; margin-top: 8px; }
+.tb-bar { position: sticky; left: 0; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--card); font-size: 12px; color: var(--muted); }
+.tb-bar input { width: 220px; padding: 4px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); font: inherit; color: var(--ink); }
+.tb-bar button { all: unset; cursor: pointer; padding: 2px 8px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); }
+.tb-bar button:hover { background: var(--hover); }
+.tb-bar button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--line-strong); }
+.tb-key { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.tb-note { margin-left: auto; font-style: italic; }
+.hl tr.added > th, .hl tr.added > td { background: var(--add-bg); }
+.hl tr.changed > th, .hl tr.changed > td { background: var(--warn-bg); }
+.hl th.added { box-shadow: inset 0 -3px var(--add); } .hl th.changed { box-shadow: inset 0 -3px var(--warn); }
+.hl td.added { box-shadow: inset 0 0 0 2px var(--add); } .hl td.changed { box-shadow: inset 0 0 0 2px var(--warn); }
+.mx { border-collapse: separate; border-spacing: 0; font-size: 12px; }
+.mx th, .mx td { border-bottom: 1px solid var(--line); background: var(--card); }
+.mx thead th { position: sticky; top: 0; z-index: 2; padding: 6px 4px; vertical-align: bottom; font-weight: 500; border-bottom: 1px solid var(--line-strong); }
+.mx thead th.mx-corner { left: 0; z-index: 3; min-width: 250px; padding: 6px 14px; text-align: left; font-size: 11px; font-weight: 400; font-style: italic; color: var(--muted); }
+.mx-col { min-width: 88px; max-width: 120px; cursor: pointer; text-align: center; line-height: 1.25; }
+.mx-col span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mx-col small { display: block; color: var(--muted); font: 10.5px var(--mono); overflow: hidden; text-overflow: ellipsis; }
+.mx.narrow .mx-col { min-width: 30px; max-width: 30px; padding: 8px 0; }
+.mx.narrow .mx-col span { display: none; }
+.mx.narrow .mx-col small { writing-mode: vertical-rl; transform: rotate(180deg); margin: 0 auto; max-height: 120px; }
+.mx tbody th { position: sticky; left: 0; z-index: 1; padding: 3px 14px; text-align: left; font-weight: 400; white-space: nowrap; cursor: pointer; border-right: 1px solid var(--line); }
+.mx tbody td { padding: 2px 4px; text-align: center; }
+.mx td[data-id] { cursor: pointer; }
+.mx tr.d0 > th { padding-left: 28px; } .mx tr.d1 > th { padding-left: 44px; } .mx tr.d2 > th { padding-left: 60px; }
+.mx-group > th { font-size: 11.5px; } .mx-group > th, .mx-group > td { background: var(--paper); }
+.mx tr.d0 > th { font-style: italic; color: var(--muted); }
+.mx-group .mx-kw { color: var(--muted); font-size: 10px; margin-right: 5px; }
+.mx-group .mx-name { font-weight: 600; } .mx tr.d0 .mx-name { font-weight: 500; }
+.mx-type { color: var(--muted); }
+.mx-fold { all: unset; cursor: pointer; display: inline-block; width: 14px; margin-left: -16px; color: var(--muted); text-align: center; }
+.mx-count { font-size: 10.5px; color: var(--muted); }
+.mx tr.muted > th { color: var(--muted); }
+.mx tr.dashed .mx-name { color: var(--muted); border-bottom: 1px dashed var(--line-strong); }
+.mx tbody tr:hover > th, .mx tbody tr:hover > td, .mx .hc { background-image: linear-gradient(var(--hover), var(--hover)); }
+.mx .selected, .mx .on { box-shadow: inset 0 0 0 2px var(--ink); }
+.mx thead th.selected { box-shadow: inset 0 -3px var(--ink); }
+.g { display: inline-block; position: relative; width: 11px; height: 11px; border: 1.2px solid var(--md-stroke); border-radius: 2px; vertical-align: middle; }
+.g.h, .g.b { background: var(--md-stroke); }
+.g.s { background: linear-gradient(to bottom right, transparent 50%, var(--md-stroke) 50%); }
+.g.b::after { content: ""; position: absolute; left: 1.5px; right: 1.5px; top: 3.6px; height: 1.3px; background: #fff; }
+.g.n { border-color: var(--line-strong); border-style: dashed; }
 
 /* Files and changes */
 nav.files { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 10px; }
@@ -185,18 +228,23 @@ pre { padding: 8px 10px; }
 <nav class="tabs" aria-label="Pages"><button data-tab="diagrams">Diagrams</button><button data-tab="files">Files</button><button data-tab="changes">Changes</button></nav>
 </header>
 <main>
-<section id="diagrams"><div class="md">
+<section id="diagrams"><div class="md" id="md">
 <div class="md-toolbar">
 <div class="md-title"><strong id="view-title"></strong><span id="view-sub"></span></div>
 <select id="view" aria-label="SysML view"></select>
 <div class="md-chips" id="delta" role="group" aria-label="Changes since the previous version"></div>
 <div class="md-tools"><button type="button" id="fit" title="Fit (0)">Fit</button><button type="button" id="zoom-in" title="Zoom in (+)" aria-label="Zoom in">+</button><button type="button" id="zoom-out" title="Zoom out (−)" aria-label="Zoom out">−</button></div>
 </div>
+<div class="md-main">
+<div class="md-stage" id="stage">
 <div class="md-canvas" id="canvas" tabindex="0" role="group" aria-label="Diagram canvas. Arrow keys pan, plus and minus zoom, zero fits, Escape clears the selection."></div>
-<div class="md-pop" id="removed" hidden></div>
-<aside class="md-inspector" id="inspector" aria-label="Element" hidden></aside>
 <div class="md-legend" id="legend"></div>
 <span class="md-hint">Drag or scroll to pan · ⌘/Ctrl + scroll to zoom · click an element</span>
+</div>
+<div class="md-sheet" id="sheet" hidden></div>
+</div>
+<div class="md-pop" id="removed" hidden></div>
+<aside class="md-inspector" id="inspector" aria-label="Element" hidden></aside>
 </div></section>
 <section id="files" class="sheet" hidden></section>
 <section id="changes" class="sheet" hidden></section>
@@ -215,15 +263,16 @@ const KEYWORDS = new Set(("about abstract accept action alias attribute bind cal
   " send specializes state subject subsets succession then to transition true use verify via").split(" "));
 const TOKEN = /(\/\*[\s\S]*?\*\/|\/\/[^\n]*)|("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*')|([A-Za-z_]\w*)/g;
 const LEGENDS = {
-  Structure: [["usage", "part usage"], ["connection", "connection : AgentBinding"], ["dashed", "disabled"],
-    ["host", "grant on host"], ["sandbox", "grant in sandbox"], ["none", "no grant"]],
+  Structure: [["usage", "part usage"], ["connection", "connection : AgentBinding"], ["dashed", "disabled"]],
   Cases: [["usage", "scheduled case"], ["owner", "owner"], ["target", "unresolved targetAgent"], ["dashed", "disabled"]],
   Behaviour: [["initial", "start"], ["decision", "decision"], ["send", "hand-off or escalation"], ["final", "done"],
     ["succession", "succession"], ["def", "requirement def"]],
 };
 
 const state = { version: 0, tab: "diagrams", view: "system", file: "OpenClawInstance.sysml", range: null,
-  selected: null, hover: null, viewport: null, highlight: true, drawn: null };
+  selected: null, hover: null, viewport: null, highlight: true, drawn: null,
+  // Tables: the text filter, folded groups.
+  filter: "", folded: new Set() };
 
 function el(tag, cls, text) {
   const e = document.createElement(tag);
@@ -311,16 +360,6 @@ function rounded(p) {
   const last = pts[pts.length - 1];
   return d + " L" + last[0] + "," + last[1];
 }
-function slotShape(g, x, y, c, title) {
-  const cls = c === "-" ? "n" : c;
-  const r = sv("rect", { class: "slot " + cls, x, y, width: M.slot, height: M.slot, rx: 1.5 });
-  if (title) r.append(sv("title", {}, title));
-  g.append(r);
-  if (c === "s") g.append(sv("path", { class: "slot-half", d: "M" + (x + M.slot) + "," + y + " V" + (y + M.slot) + " H" + x + " Z" }));
-  if (c === "b") g.append(sv("path", { class: "slot-mark", d: "M" + (x + 2) + "," + (y + M.slot / 2) + " H" + (x + M.slot - 2) }));
-  if (c === "x") g.append(sv("rect", { class: "slot-dot", x: x + 3, y: y + 3, width: M.slot - 6, height: M.slot - 6 }));
-}
-const SLOT_WORDS = { h: "host", s: "sandbox", b: "host and sandbox", "-": "no grant" };
 
 function drawBlock(g, n) {
   const def = n.kw && /def»$/.test(n.kw);
@@ -341,13 +380,6 @@ function drawBlock(g, n) {
     cy += M.sectGap + M.sectH;
     for (const row of rows) { g.append(txt(n.x + M.padX, cy + 11, row, "md-row", null, inner)); cy += M.rowH; }
   }
-  if (n.slots) {
-    const i = n.slots.indexOf("x");
-    for (let j = 0; j < n.slots.length; j++) {
-      slotShape(g, n.x + M.padX + j * (M.slot + M.slotGap), n.y + n.h - 8 - M.slot, j === i ? "x" : "-",
-        j === i ? "this agent's slot in the grant strips" : null);
-    }
-  }
 }
 function drawFrame(g, n) {
   const def = n.kw && /(def|package)»$/.test(n.kw);
@@ -364,7 +396,6 @@ function drawFrame(g, n) {
   if (n.title) { g.append(txt(n.x + 16, y + 12, n.title, "md-name", null, n.w - 32)); y += M.headH + 2; }
   for (const line of n.head || []) { g.append(txt(n.x + 16, y + 11, line, "md-sect", null, n.w - 32)); y += M.headH; }
 }
-let holders = [];
 function drawNode(n, delta) {
   const classes = ["md-node", n.shape, n.shape === "frame" || n.shape === "group" ? "container" : "leaf",
     n.kw && /def»$/.test(n.kw) ? "def" : "", n.muted ? "muted" : "", n.dashed ? "dashed" : "",
@@ -379,17 +410,6 @@ function drawNode(n, delta) {
       g.append(sv("rect", { class: "md-body", x, y, width: w, height: h, rx: 8 }));
       g.append(txt(x + 12, y + 19, n.name, "md-group-label"));
       break;
-    case "tool": {
-      g.append(sv("rect", { class: "md-body", x, y, width: w, height: h, rx: 7 }));
-      g.append(txt(x + M.padX, y + 18, n.name, "md-tool", null, w - 2 * M.padX));
-      if (n.slots) {
-        for (let j = 0; j < n.slots.length; j++) {
-          slotShape(g, x + M.padX + j * (M.slot + M.slotGap), y + h - 9 - M.slot, n.slots[j],
-            (holders[j] || "agent " + (j + 1)) + " · " + SLOT_WORDS[n.slots[j]]);
-        }
-      }
-      break;
-    }
     case "initial": g.append(sv("circle", { class: "md-body md-solid", cx, cy, r: w / 2 })); break;
     case "final":
       g.append(sv("circle", { class: "md-ring", cx, cy, r: w / 2 }));
@@ -474,58 +494,74 @@ function renderPicker(entries) {
   }));
   select.value = state.view;
 }
+// An element's header: a drawn node, or a row, column or cell of the table.
+function headOf(view, id) {
+  const n = view.scene && view.scene.nodes.find((x) => x.id === id);
+  const t = view.table;
+  if (n || !t) return n || null;
+  if (t.kind === "matrix") {
+    const cell = t.cells.find((c) => c[3] === id);
+    if (cell) return { id, kw: "allocation", name: t.rows[cell[0]].name + " → " + t.columns[cell[1]].name };
+    return t.columns.find((c) => c.id === id) || t.rows.find((r) => r.id === id) || null;
+  }
+  return t.rows.find((r) => r.id === id) || null;
+}
+const nameOf = (n) => n.name || (n.lines || []).join(" ") || (n.label ? n.label.lines.join(" ") : n.shape);
+function button(text, onclick, cls) {
+  const b = el("button", cls || "", text);
+  b.type = "button";
+  b.onclick = onclick;
+  return b;
+}
+function marker(delta) {
+  const added = new Set(delta ? delta.added : []), changed = new Set(delta ? delta.changed : []);
+  return (id) => added.has(id) ? " added" : changed.has(id) ? " changed" : "";
+}
+
 function renderDelta(cur) {
   const box = document.getElementById("delta"), d = cur.delta;
   box.replaceChildren();
   document.getElementById("removed").hidden = true;
   if (!d) return;
   if (d.isNew) { box.append(el("span", "add", "New in this version")); return; }
-  const count = (ids) => ids.filter((id) => cur.view.elements[id] || cur.view.scene.nodes.some((n) => n.id === id)).length;
+  const count = (ids) => ids.filter((id) => cur.view.elements[id] || headOf(cur.view, id)).length;
   const added = count(d.added), changed = count(d.changed);
   if (!added && !changed && !d.removed.length) { box.append(el("span", "", "No change since " + when(versions[state.version + 1]))); return; }
-  const toggle = el("button", "", "Changes");
-  toggle.type = "button";
+  const toggle = button("Changes", () => {
+    state.highlight = !state.highlight;
+    toggle.setAttribute("aria-pressed", String(state.highlight));
+    document.getElementById("md").classList.toggle("hl", state.highlight);
+  });
   toggle.title = "Highlight what changed since " + when(versions[state.version + 1]);
   toggle.setAttribute("aria-pressed", String(state.highlight));
-  toggle.onclick = () => { state.highlight = !state.highlight; renderDiagram(true); };
   box.append(toggle);
   const cycle = (ids, cls, label) => {
     if (!ids.length) return;
-    const b = el("button", cls, label);
-    b.type = "button";
     let at = -1;
-    b.onclick = () => {
-      const nodes = ids.filter((id) => cur.view.scene.nodes.some((n) => n.id === id));
-      if (!nodes.length) return;
-      at = (at + 1) % nodes.length;
-      select(nodes[at], true);
-    };
-    box.append(b);
+    box.append(button(label, () => {
+      const shown = ids.filter((id) => headOf(cur.view, id));
+      if (!shown.length) return;
+      at = (at + 1) % shown.length;
+      select(shown[at], true);
+    }, cls));
   };
   cycle(d.added, "add", "+" + added + " added");
   cycle(d.changed, "chg", "~" + changed + " changed");
   if (d.removed.length) {
-    const b = el("button", "del", "−" + d.removed.length + " removed");
-    b.type = "button";
-    b.onclick = () => {
+    box.append(button("−" + d.removed.length + " removed", () => {
       const pop = document.getElementById("removed");
       pop.hidden = !pop.hidden;
-      const before = entryOf(state.version + 1, state.view);
+      const before = payload(entryOf(state.version + 1, state.view));
       pop.replaceChildren(el("p", "md-kicker", "Removed since " + when(versions[state.version + 1])), ...d.removed.map((id) => {
-        const n = payload(before).scene.nodes.find((x) => x.id === id);
-        const item = el("button", "", n && n.name || id);
-        item.type = "button";
-        item.onclick = () => inspect(state.version + 1, payload(before), id, "removed");
-        return item;
+        const n = headOf(before, id);
+        return button(n ? nameOf(n) : id, () => inspect(state.version + 1, before, id, "removed"));
       }));
-    };
-    box.append(b);
+    }, "del"));
   }
 }
 function renderLegend(view) {
   const box = document.getElementById("legend");
-  const items = (LEGENDS[view.group] || []).filter(([k]) =>
-    view.id === "tools" ? !["connection", "usage"].includes(k) : view.id === "system" ? !["host", "sandbox", "none"].includes(k) : true);
+  const items = view.scene ? LEGENDS[view.group] || [] : [];
   box.replaceChildren(...items.map(([kind, text]) => {
     const s = el("span");
     const g = sv("svg", { viewBox: "0 0 26 14", "aria-hidden": "true" });
@@ -534,7 +570,6 @@ function renderLegend(view) {
     if (kind === "connection") add("path", { d: "M1,7 H25", stroke: "#4b4b4f", "stroke-width": 1.3 });
     if (kind === "owner" || kind === "succession") add("path", { d: "M1,7 H24 M19,3 L24,7 L19,11", stroke: "#4b4b4f", fill: "none", "stroke-width": 1.3 });
     if (kind === "target") add("path", { d: "M1,7 H24 M19,3 L24,7 L19,11", stroke: "#8e8b85", fill: "none", "stroke-dasharray": "2 2" });
-    if (kind === "host" || kind === "sandbox" || kind === "none") slotShape(g, 8, 2, kind === "host" ? "h" : kind === "sandbox" ? "s" : "-", null);
     if (kind === "initial") add("circle", { cx: 13, cy: 7, r: 5, fill: "#2b2b2d" });
     if (kind === "final") { add("circle", { cx: 13, cy: 7, r: 6, fill: "#fff", stroke: "#2b2b2d" }); add("circle", { cx: 13, cy: 7, r: 3, fill: "#2b2b2d" }); }
     if (kind === "decision") add("path", { d: "M13,0 L20,7 L13,14 L6,7 Z", fill: "#fff", stroke: "#2b2b2d" });
@@ -544,9 +579,16 @@ function renderLegend(view) {
   }));
   box.hidden = !items.length;
 }
+function subtitle(view) {
+  const t = view.table;
+  if (t && t.kind === "matrix") {
+    return t.rows.filter((r) => r.shape === "tool" && !r.dashed).length + " tools × " + t.columns.length + " agents · SysML allocation matrix";
+  }
+  return view.scene.nodes.filter((n) => !["frame", "group", "initial", "final"].includes(n.shape)).length + " elements";
+}
 
 function renderDiagram(keepViewport) {
-  const canvas = document.getElementById("canvas");
+  const canvas = document.getElementById("canvas"), stage = document.getElementById("stage"), sheet = document.getElementById("sheet");
   const cur = currentView();
   const entries = viewsOf(state.version);
   closeInspector();
@@ -556,6 +598,8 @@ function renderDiagram(keepViewport) {
     document.getElementById("view").replaceChildren();
     document.getElementById("delta").replaceChildren();
     document.getElementById("legend").hidden = true;
+    stage.hidden = false;
+    sheet.hidden = true;
     canvas.replaceChildren(el("p", "md-empty", "No diagrams for this version: its snapshot uses a schema this viewer does not read. Its files are under Files."));
     state.drawn = null;
     return;
@@ -563,13 +607,30 @@ function renderDiagram(keepViewport) {
   renderPicker(entries);
   const { view, delta } = cur;
   document.getElementById("view-title").textContent = view.title;
-  const leaves = view.scene.nodes.filter((n) => !["frame", "group", "initial", "final"].includes(n.shape)).length;
-  document.getElementById("view-sub").textContent = leaves + " elements";
+  document.getElementById("view-sub").textContent = subtitle(view);
   renderDelta(cur);
   renderLegend(view);
-  holders = [];
-  for (const n of view.scene.nodes) if (n.slots && n.slots.includes("x")) holders[n.slots.indexOf("x")] = n.name.replace(/^agent_/, "");
-  const svg = sv("svg", { role: "group", "aria-label": view.title + " diagram", class: state.highlight ? "hl" : "" });
+  const keep = keepViewport && state.drawn && state.drawn.view === view.id;
+  if (!keep) { state.selected = null; state.filter = ""; }
+  document.getElementById("md").classList.toggle("hl", state.highlight);
+  document.querySelector(".md-tools").hidden = !view.scene;
+  stage.hidden = !view.scene;
+  sheet.hidden = !view.table;
+  sheet.classList.toggle("alone", !view.scene);
+  state.drawn = { view: view.id, svg: null, world: null, scene: view.scene, payload: view };
+  if (view.scene) drawScene(view, delta, keep);
+  else canvas.replaceChildren();
+  if (view.table) {
+    const at = [sheet.scrollTop, sheet.scrollLeft];
+    renderTable(sheet, view, delta);
+    if (keep) [sheet.scrollTop, sheet.scrollLeft] = at;
+  }
+  if (state.selected && !headOf(view, state.selected)) state.selected = null;
+  if (state.selected) select(state.selected, false); else applyFocus();
+}
+function drawScene(view, delta, keep) {
+  const canvas = document.getElementById("canvas");
+  const svg = sv("svg", { role: "group", "aria-label": view.title + " diagram" });
   const world = sv("g", {});
   svg.append(defs(), world);
   for (const n of view.scene.nodes.filter((n) => n.shape === "frame" || n.shape === "group")) world.append(drawNode(n, delta));
@@ -581,16 +642,14 @@ function renderDiagram(keepViewport) {
     const max = +t.dataset.max;
     if (t.getComputedTextLength() > max) { t.setAttribute("textLength", max); t.setAttribute("lengthAdjust", "spacingAndGlyphs"); }
   }
-  const same = state.drawn && state.drawn.view === view.id;
-  state.drawn = { view: view.id, svg, world, scene: view.scene, payload: view };
-  if (!(keepViewport && same && state.viewport)) { state.selected = null; fit(); } else applyViewport();
-  if (state.selected && !view.scene.nodes.some((n) => n.id === state.selected)) state.selected = null;
-  if (state.selected) select(state.selected, false); else applyFocus();
+  state.drawn.svg = svg;
+  state.drawn.world = world;
+  if (keep && state.viewport) applyViewport(); else fit();
 }
 
 function fit() {
   const d = state.drawn, box = document.getElementById("canvas").getBoundingClientRect();
-  if (!d) return;
+  if (!d || !d.scene) return;
   const top = 56, margin = 24;
   const k = Math.min((box.width - 2 * margin) / Math.max(d.scene.w, 1), (box.height - top - 2 * margin) / Math.max(d.scene.h, 1), 1.25);
   state.viewport = { k, x: (box.width - d.scene.w * k) / 2, y: top + (box.height - top - d.scene.h * k) / 2 };
@@ -598,7 +657,7 @@ function fit() {
 }
 function applyViewport() {
   const d = state.drawn, v = state.viewport;
-  if (d && v) d.world.setAttribute("transform", "translate(" + v.x + "," + v.y + ") scale(" + v.k + ")");
+  if (d && d.world && v) d.world.setAttribute("transform", "translate(" + v.x + "," + v.y + ") scale(" + v.k + ")");
 }
 function zoom(f, cx, cy) {
   const v = state.viewport, box = document.getElementById("canvas").getBoundingClientRect();
@@ -618,45 +677,55 @@ function related(id) {
     if (within(e.s) || within(e.t)) { edges.add(e.id); nodes.add(e.s); nodes.add(e.t); }
   }
   for (const n of scene.nodes) if (within(n.id)) nodes.add(n.id);
-  // Tools: an agent's slot keys the strips of the tools it holds.
-  const node = scene.nodes.find((n) => n.id === id);
-  const legend = scene.nodes.filter((n) => n.slots && n.slots.includes("x"));
-  if (node && node.slots) {
-    if (node.slots.includes("x")) {
-      const i = node.slots.indexOf("x");
-      for (const n of scene.nodes) if (n.shape === "tool" && n.slots && n.slots[i] !== "-") nodes.add(n.id);
-    } else {
-      for (const a of legend) if (node.slots[a.slots.indexOf("x")] !== "-") nodes.add(a.id);
-    }
-  }
   return { nodes, edges };
 }
 function applyFocus() {
   const d = state.drawn;
   if (!d) return;
-  const focus = state.selected || state.hover;
-  const r = focus ? related(focus) : null;
-  d.svg.classList.toggle("md-focus", Boolean(r));
-  for (const g of d.world.querySelectorAll(".md-node")) {
-    g.classList.toggle("lit", Boolean(r && r.nodes.has(g.dataset.id)));
-    g.classList.toggle("selected", g.dataset.id === state.selected);
+  if (d.svg) {
+    const focus = state.selected || state.hover;
+    const r = focus ? related(focus) : null;
+    d.svg.classList.toggle("md-focus", Boolean(r));
+    for (const g of d.world.querySelectorAll(".md-node")) {
+      g.classList.toggle("lit", Boolean(r && r.nodes.has(g.dataset.id)));
+      g.classList.toggle("selected", g.dataset.id === state.selected);
+    }
+    for (const g of d.world.querySelectorAll(".md-edge")) g.classList.toggle("lit", Boolean(r && r.edges.has(g.dataset.id)));
   }
-  for (const g of d.world.querySelectorAll(".md-edge")) g.classList.toggle("lit", Boolean(r && r.edges.has(g.dataset.id)));
+  const sheet = document.getElementById("sheet");
+  for (const e of sheet.querySelectorAll("[data-id]")) e.classList.toggle("selected", e.dataset.id === state.selected);
+  // A selected matrix column marks its cells.
+  const column = sheet.querySelector("th.mx-col.selected"), c = column ? column.dataset.col : null;
+  for (const e of sheet.querySelectorAll("td[data-col]")) e.classList.toggle("on", e.dataset.col === c);
 }
 function select(id, center) {
   state.selected = id;
   applyFocus();
   if (!id) { closeInspector(); return; }
-  const n = state.drawn.scene.nodes.find((x) => x.id === id);
+  const n = state.drawn.scene && state.drawn.scene.nodes.find((x) => x.id === id);
   if (center && n) {
     const box = document.getElementById("canvas").getBoundingClientRect();
     const k = Math.max(state.viewport.k, 0.9);
     state.viewport = { k, x: box.width / 2 - (n.x + n.w / 2) * k, y: box.height / 2 - (n.y + n.h / 2) * k };
     applyViewport();
-  }
+  } else if (center) reveal(id);
   const d = currentView().delta;
   const status = d && d.added.includes(id) ? "added" : d && d.changed.includes(id) ? "changed" : null;
   inspect(state.version, state.drawn.payload, id, status);
+}
+// Scrolls a table element into view, clearing the filter and unfolding the
+// groups that hide it.
+function reveal(id) {
+  const sheet = document.getElementById("sheet");
+  const find = () => [...sheet.querySelectorAll("[data-id]")].find((e) => e.dataset.id === id);
+  if (!find() && (state.filter || state.folded.size)) {
+    state.filter = "";
+    state.folded.clear();
+    renderTable(sheet, state.drawn.payload, currentView().delta);
+    applyFocus();
+  }
+  const e = find();
+  if (e) e.scrollIntoView({ block: "center", inline: "nearest" });
 }
 
 function closeInspector() {
@@ -666,16 +735,14 @@ function closeInspector() {
 }
 function inspect(vi, view, id, status) {
   const box = document.getElementById("inspector");
-  const n = view.scene.nodes.find((x) => x.id === id);
+  const n = headOf(view, id);
   const info = view.elements[id] || { a: [], s: [] };
   let refs = info.s.slice();
   if (!n) return;
-  const close = el("button", "md-close", "×");
-  close.type = "button";
+  const close = button("×", () => select(null), "md-close");
   close.title = "Close";
   close.setAttribute("aria-label", "Close inspector");
-  close.onclick = () => select(null);
-  const h = el("h3", "", n.name || (n.lines || []).join(" ") || (n.label ? n.label.lines.join(" ") : n.shape));
+  const h = el("h3", "", nameOf(n));
   if (n.type) h.append(el("span", "", n.type));
   const parts = [close, el("p", "md-kicker", n.kw || n.shape), h];
   if (status) parts.push(el("span", "md-status " + status, status === "removed" ? "removed since " + when(versions[vi]) : status + " since " + when(versions[vi + 1])));
@@ -684,19 +751,17 @@ function inspect(vi, view, id, status) {
     for (const [k, v] of info.a) dl.append(el("dt", "", k), el("dd", "", v));
     parts.push(dl);
   }
-  if (vi === state.version && state.drawn) {
+  if (vi === state.version && state.drawn && state.drawn.scene) {
     const rel = state.drawn.scene.edges.filter((e) => e.s === id || e.t === id);
     if (rel.length) {
       const ul = el("ul");
       for (const e of rel) {
         const out = e.s === id, other = out ? e.t : e.s;
         const o = view.scene.nodes.find((x) => x.id === other);
-        const b = el("button");
-        b.type = "button";
         const label = e.label ? e.label.lines.join(" ") : "";
+        const b = button("", () => select(other, true));
         b.append(el("span", "md-kind", (out ? "→ " : "← ") + (e.kind === "connection" && label ? "connection · " + label : label || e.kind)),
-          el("span", "md-other", o ? o.name || (o.lines || []).join(" ") || o.shape : other));
-        b.onclick = () => select(other, true);
+          el("span", "md-other", o ? nameOf(o) : other));
         const li = el("li");
         li.append(b);
         ul.append(li);
@@ -709,10 +774,8 @@ function inspect(vi, view, id, status) {
     parts.push(el("p", "md-kicker", "SysML"));
     for (const [file, from, to] of refs) {
       const src = el("div", "md-src");
-      const b = el("button", "", file + ":" + from + (to > from ? "–" + to : ""));
-      b.type = "button";
+      const b = button(file + ":" + from + (to > from ? "–" + to : ""), () => showLines(vi, file, from, to));
       b.title = "Show in Files";
-      b.onclick = () => { state.version = vi; state.tab = "files"; state.file = file; state.range = [from, to]; render(); };
       const lines = fileText(vi, file).split("\n").slice(from - 1, to);
       const indent = Math.min(...lines.filter((l) => l.trim()).map((l) => l.length - l.trimStart().length));
       src.append(b, sysml(lines.map((l) => l.slice(indent)).join("\n")));
@@ -724,7 +787,111 @@ function inspect(vi, view, id, status) {
   box.parentElement.classList.add("inspecting");
   const canvas = document.getElementById("canvas").getBoundingClientRect();
   const v = state.viewport;
-  box.classList.toggle("is-left", Boolean(vi === state.version && v && v.x + (n.x + n.w / 2) * v.k > canvas.width / 2 + 120));
+  box.classList.toggle("is-left", Boolean(vi === state.version && n.w && v && v.x + (n.x + n.w / 2) * v.k > canvas.width / 2 + 120));
+}
+function showLines(vi, file, from, to) {
+  state.version = vi;
+  state.tab = "files";
+  state.file = file;
+  state.range = [from, to];
+  render();
+}
+
+// ---- Tables
+function renderTable(box, view, delta) {
+  renderMatrix(box, view.table, marker(delta));
+}
+const GLYPH_WORDS = { h: "on the host", s: "in the sandbox", b: "on the host and in the sandbox" };
+function glyph(g) { return el("i", "g " + g); }
+// Tools × agents. Group and provider rows count the tools each agent holds
+// under them; a filter shows the matching tools with their groups.
+function renderMatrix(box, t, mark) {
+  const index = new Map(t.rows.map((r, i) => [r.id, i]));
+  const up = (r) => { const out = []; for (let p = r.parent; p; p = t.rows[index.get(p)].parent) out.push(index.get(p)); return out; };
+  const cells = t.rows.map(() => new Map()), counts = t.rows.map(() => t.columns.map(() => 0));
+  for (const [r, c, g, id] of t.cells) {
+    cells[r].set(c, [g, id]);
+    for (const a of up(t.rows[r])) counts[a][c]++;
+  }
+  const input = el("input");
+  input.type = "search";
+  input.placeholder = "Filter tools";
+  input.setAttribute("aria-label", "Filter tools");
+  input.value = state.filter;
+  const groups = t.rows.filter((r) => r.shape !== "tool").map((r) => r.id);
+  const bar = el("div", "tb-bar");
+  bar.append(input, button("Expand all", () => { state.folded.clear(); rows(); }), button("Collapse all", () => { groups.forEach((g) => state.folded.add(g)); rows(); }));
+  for (const [g, text] of [["h", "host"], ["s", "sandbox"], ["b", "both"]]) {
+    const k = el("span", "tb-key");
+    k.append(glyph(g), text);
+    bar.append(k);
+  }
+  bar.append(el("span", "tb-note", "SysML allocation matrix: each cell is an agent's ToolGrant"));
+  const table = el("table", "mx" + (t.columns.length > 8 ? " narrow" : ""));
+  const head = el("tr");
+  head.append(el("th", "mx-corner", "tool ↓ · allocated to agent →"));
+  t.columns.forEach((c, i) => {
+    const th = el("th", "mx-col" + mark(c.id));
+    th.dataset.id = c.id;
+    th.dataset.col = String(i);
+    th.tabIndex = 0;
+    th.title = c.title + " · " + c.name + c.type;
+    th.append(el("span", "", c.title), el("small", "", c.name.replace(/^agent_/, "")));
+    head.append(th);
+  });
+  const thead = el("thead"), tbody = el("tbody");
+  thead.append(head);
+  table.append(thead, tbody);
+  const rows = () => {
+    const q = state.filter.trim().toLowerCase();
+    const hit = t.rows.map((r) => !q || [r, ...up(r).map((a) => t.rows[a])].some((x) => x.name.toLowerCase().includes(q)));
+    const show = hit.slice();
+    t.rows.forEach((r, i) => { if (hit[i]) for (const a of up(r)) show[a] = true; });
+    tbody.replaceChildren(...t.rows.flatMap((r, i) => {
+      if (!show[i] || !q && up(r).some((a) => state.folded.has(t.rows[a].id))) return [];
+      const tr = el("tr", (r.shape === "tool" ? "mx-tool" : "mx-group") + " d" + r.depth + (r.muted ? " muted" : "") + (r.dashed ? " dashed" : "") + mark(r.id));
+      const th = el("th");
+      th.dataset.id = r.id;
+      th.tabIndex = 0;
+      if (r.shape !== "tool") {
+        const open = !state.folded.has(r.id);
+        const fold = button(open ? "▾" : "▸", (e) => { e.stopPropagation(); if (open) state.folded.add(r.id); else state.folded.delete(r.id); rows(); }, "mx-fold");
+        fold.setAttribute("aria-expanded", String(open));
+        fold.setAttribute("aria-label", (open ? "Collapse " : "Expand ") + r.name);
+        th.append(fold);
+        if (r.kw) th.append(el("span", "mx-kw", r.kw));
+      }
+      th.append(el("span", "mx-name", r.name));
+      if (r.type && r.shape !== "tool") th.append(el("span", "mx-type", r.type));
+      tr.append(th);
+      t.columns.forEach((c, j) => {
+        const td = el("td");
+        td.dataset.col = String(j);
+        const cell = cells[i].get(j);
+        if (cell) {
+          td.dataset.id = cell[1];
+          td.className = mark(cell[1]).trim();
+          td.title = r.name + " · " + c.title + " · " + GLYPH_WORDS[cell[0]];
+          td.append(glyph(cell[0]));
+        } else if (counts[i][j]) td.append(el("span", "mx-count", String(counts[i][j])));
+        tr.append(td);
+      });
+      return [tr];
+    }));
+    applyFocus();
+  };
+  input.oninput = () => { state.filter = input.value; rows(); };
+  // Hovering a cell lights its column.
+  let lit = null;
+  table.onpointerover = (e) => {
+    const c = e.target.closest("[data-col]"), col = c ? c.dataset.col : null;
+    if (col === lit) return;
+    lit = col;
+    for (const x of table.querySelectorAll("[data-col]")) x.classList.toggle("hc", x.dataset.col === col);
+  };
+  table.onpointerleave = () => { lit = null; for (const x of table.querySelectorAll(".hc")) x.classList.remove("hc"); };
+  rows();
+  box.replaceChildren(bar, table);
 }
 
 // ---- Files and changes
@@ -837,6 +1004,16 @@ canvas.addEventListener("keydown", (e) => {
     applyViewport();
   } else return;
   e.preventDefault();
+});
+const sheet = document.getElementById("sheet");
+sheet.addEventListener("click", (e) => {
+  const x = e.target.closest("[data-id]");
+  if (x) select(x.dataset.id, false);
+});
+sheet.addEventListener("keydown", (e) => {
+  const x = e.target.closest("[data-id]");
+  if (x && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); select(x.dataset.id, false); }
+  else if (e.key === "Escape") select(null);
 });
 window.addEventListener("resize", () => { if (state.tab === "diagrams") fit(); });
 window.addEventListener("hashchange", () => { readHash(); render(); });

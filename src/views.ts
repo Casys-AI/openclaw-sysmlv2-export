@@ -5,8 +5,10 @@ import type { Agent, Snapshot } from "./snapshot.ts";
 /** Diagram model of one version: the viewer's views (System, Tools, Scheduled
  * tasks and, with inference, one Behaviour view per agent) as nodes and edges,
  * built from the snapshot and inference the emitter reads. Each element names
- * the SysML declarations that state it, so a diagram and its text say the same
- * thing. Pure, no geometry: layout.ts places it. */
+ * the SysML declarations that state it, so a view and its text say the same
+ * thing. A view may show some elements as a table instead of drawing them.
+ * Pure, no geometry: layout.ts places the drawn elements and tables.ts shapes
+ * the table. */
 
 export type Shape =
   /** A part usage, with compartments. */
@@ -15,7 +17,7 @@ export type Shape =
   | "frame"
   /** A visual group of elements sharing an attribute value. */
   | "group"
-  /** A catalog tool with one grant slot per agent. */
+  /** A catalog tool: a row of the Tools allocation matrix. */
   | "tool"
   | "initial"
   | "final"
@@ -44,7 +46,7 @@ export interface DiagramNode {
   /** Declared name (without quotes), or a group's label. */
   name: string;
   type: string | null;
-  /** A step's, decision's or requirement's text. */
+  /** A step's, decision's or requirement's text; an agent's display name. */
   text: string | null;
   compartments: Compartment[];
   /** Shown by the inspector, in order. */
@@ -54,9 +56,6 @@ export interface DiagramNode {
   muted: boolean;
   /** A reference, not a declaration of this view. */
   dashed: boolean;
-  /** One slot per agent of the view: h(ost), s(andbox), b(oth), - (none),
-   * or x (this agent, in the legend). */
-  slots: string | null;
 }
 export type EdgeKind =
   | "connection"
@@ -64,21 +63,31 @@ export type EdgeKind =
   | "handoff"
   | "escalation"
   | "owner"
-  | "target";
+  | "target"
+  /** A tool allocated to an agent: its grants, on one layer or both. */
+  | "grant";
 export interface DiagramEdge {
   id: string;
   kind: EdgeKind;
   source: string;
   target: string;
   label: string | null;
+  /** Shown by the inspector, in order. */
+  attributes: [string, string][];
   sysml: SysmlRef[];
 }
+/** The elements a view shows as a table instead of drawing them, by id. */
+export type ViewTable =
+  /** A SysML allocation matrix: rows (origin groups, providers, tools) by
+   * columns (agents); each cell is a `grant` edge from a column to a row. */
+  { kind: "matrix"; columns: string[]; rows: string[]; cells: string[] };
 export interface DiagramView {
   id: string;
   title: string;
   group: "Structure" | "Cases" | "Behaviour";
   nodes: DiagramNode[];
   edges: DiagramEdge[];
+  table: ViewTable | null;
 }
 
 export const INSTANCE_FILE = "OpenClawInstance.sysml";
@@ -131,7 +140,6 @@ function node(
     sysml: [],
     muted: false,
     dashed: false,
-    slots: null,
     ...n,
   };
 }
@@ -180,6 +188,9 @@ export function scheduleText(
   }`;
 }
 
+const layersOf = (granted: Grant[]) =>
+  [...new Set(granted.map((g) => g.layer))].sort();
+
 function agentBlock(a: Agent, granted: Grant[]): DiagramNode {
   const { search, daily, otherCount } = a.memory;
   const curated = a.workspace.instructions.some((f) => f.path === "MEMORY.md");
@@ -189,7 +200,7 @@ function agentBlock(a: Agent, granted: Grant[]): DiagramNode {
     `${daily.count} daily note${daily.count === 1 ? "" : "s"}`,
     ...(otherCount ? [`${otherCount} other`] : []),
   ].join(" · ");
-  const layers = [...new Set(granted.map((g) => g.layer))].sort();
+  const layers = layersOf(granted);
   const tools = ORIGINS.flatMap((origin) => {
     const ids = [
       ...new Set(
@@ -305,32 +316,34 @@ function systemView(s: Snapshot, granted: Map<string, Grant[]>): DiagramView {
       source: `agent:${b.agentId}`,
       target: `account:${b.account}`,
       label: b.peerKind,
+      attributes: [],
       sysml: [inst("Entries", name("binding", b.id))],
     }));
-  return { id: "system", title: "System", group: "Structure", nodes, edges };
+  return {
+    id: "system",
+    title: "System",
+    group: "Structure",
+    nodes,
+    edges,
+    table: null,
+  };
 }
 
+/** The Tools package as a SysML allocation matrix: the catalog's tools,
+ * grouped by origin and provider, allocated to agents by their grants. */
 function toolsView(s: Snapshot, granted: Map<string, Grant[]>): DiagramView {
   const agents = byId(s.agents);
-  const holders = new Map<string, Map<string, Set<string>>>();
+  const holders = new Map<string, Map<string, Grant[]>>();
   const catalog = new Map<string, Grant["tool"]>();
   for (const a of agents) {
     for (const g of granted.get(a.id)!) {
       catalog.set(g.tool.key, g.tool);
       const byAgent = holders.get(g.tool.key) ?? new Map();
-      byAgent.set(a.id, (byAgent.get(a.id) ?? new Set()).add(g.layer));
+      byAgent.set(a.id, [...byAgent.get(a.id) ?? [], g]);
       holders.set(g.tool.key, byAgent);
     }
   }
-  const slot = (layers?: Set<string>) =>
-    !layers
-      ? "-"
-      : layers.has("host") && layers.has("sandbox")
-      ? "b"
-      : layers.has("host")
-      ? "h"
-      : "s";
-  const nodes: DiagramNode[] = agents.map((a, i) => {
+  const columns = agents.map((a) => {
     const mine = granted.get(a.id)!;
     const count = (layer: string) =>
       new Set(mine.filter((g) => g.layer === layer).map((g) => g.tool.key))
@@ -341,32 +354,19 @@ function toolsView(s: Snapshot, granted: Map<string, Grant[]>): DiagramView {
       keyword: "part",
       name: `agent_${a.id}`,
       type: `Agent_${a.id}`,
-      compartments: [{
-        title: "grants",
-        rows: ["host", "sandbox"].filter((l) => count(l)).map((l) =>
-          `${count(l)} tools · ${l}`
-        ),
-      }],
+      text: a.name,
       attributes: [
         ["displayName", a.name],
         ["host grants", String(count("host"))],
         ["sandbox grants", String(count("sandbox"))],
       ],
       sysml: [inst("Operators", name("Agent", a.id))],
-      slots: agents.map((_, j) => j === i ? "x" : "-").join(""),
     });
   });
-  nodes.push(node({
-    id: "package:Tools",
-    shape: "frame",
-    keyword: "package",
-    name: "Tools",
-    sysml: [inst("Tools")],
-  }));
+  const rows: DiagramNode[] = [], cells: DiagramEdge[] = [];
   const group = (origin: typeof ORIGINS[number]) => {
-    nodes.push(node({
+    rows.push(node({
       id: `origin:${origin}`,
-      parent: "package:Tools",
       shape: "group",
       name: `origin = ${origin}`,
     }));
@@ -374,7 +374,7 @@ function toolsView(s: Snapshot, granted: Map<string, Grant[]>): DiagramView {
   };
   const tool = (t: Grant["tool"], parent: string) => {
     const byAgent = holders.get(t.key)!;
-    nodes.push(node({
+    rows.push(node({
       id: `tool:${t.key}`,
       parent,
       shape: "tool",
@@ -386,25 +386,31 @@ function toolsView(s: Snapshot, granted: Map<string, Grant[]>): DiagramView {
         ["provider", t.provider ?? "—"],
         ["optional", String(t.optional)],
         ...agents.filter((a) => byAgent.has(a.id)).map((a) =>
-          [
-            `grant ${a.id}`,
-            [...byAgent.get(a.id)!].sort().join(", "),
-          ] as [string, string]
+          [`grant ${a.id}`, layersOf(byAgent.get(a.id)!).join(", ")] as [
+            string,
+            string,
+          ]
         ),
       ],
-      sysml: [
-        inst("Tools", "toolCatalog", name("tool", t.key)),
-        ...agents.flatMap((a) =>
-          granted.get(a.id)!.filter((g) => g.tool.key === t.key).map((g) =>
-            inst("Authority", name("grant", `${a.id}:${g.id}`))
-          )
-        ),
-      ],
-      slots: agents.map((a) => slot(byAgent.get(a.id))).join(""),
+      sysml: [inst("Tools", "toolCatalog", name("tool", t.key))],
     }));
+    for (const a of agents.filter((a) => byAgent.has(a.id))) {
+      const mine = byAgent.get(a.id)!, layers = layersOf(mine).join(", ");
+      cells.push({
+        id: `grant:${a.id}:${t.key}`,
+        kind: "grant",
+        source: `agent:${a.id}`,
+        target: `tool:${t.key}`,
+        label: layers,
+        attributes: [["layer", layers]],
+        sysml: mine.map((g) =>
+          inst("Authority", name("grant", `${a.id}:${g.id}`))
+        ),
+      });
+    }
   };
   const ghost = (toolId: string, parent: string) =>
-    nodes.push(node({
+    rows.push(node({
       id: `${parent}:${toolId}`,
       parent,
       shape: "tool",
@@ -428,7 +434,7 @@ function toolsView(s: Snapshot, granted: Map<string, Grant[]>): DiagramView {
     const g = group("plugin");
     for (const p of s.plugins) {
       const id = `plugin:${p.id}`;
-      nodes.push(node({
+      rows.push(node({
         id,
         parent: g,
         shape: "frame",
@@ -452,7 +458,7 @@ function toolsView(s: Snapshot, granted: Map<string, Grant[]>): DiagramView {
     const g = group("mcp");
     for (const m of s.mcpServers) {
       const id = `mcp:${m.id}`;
-      nodes.push(node({
+      rows.push(node({
         id,
         parent: g,
         shape: "frame",
@@ -476,7 +482,20 @@ function toolsView(s: Snapshot, granted: Map<string, Grant[]>): DiagramView {
     const g = group("cli");
     for (const t of of("cli")) tool(t, g);
   }
-  return { id: "tools", title: "Tools", group: "Structure", nodes, edges: [] };
+  const ids = (xs: { id: string }[]) => xs.map((x) => x.id);
+  return {
+    id: "tools",
+    title: "Tools",
+    group: "Structure",
+    nodes: [...columns, ...rows],
+    edges: cells,
+    table: {
+      kind: "matrix",
+      columns: ids(columns),
+      rows: ids(rows),
+      cells: ids(cells),
+    },
+  };
 }
 
 function schedulesView(s: Snapshot): DiagramView | null {
@@ -493,6 +512,7 @@ function schedulesView(s: Snapshot): DiagramView | null {
       source: id,
       target: `agent:${agentId}`,
       label: null,
+      attributes: [],
       sysml: [],
     });
   };
@@ -601,6 +621,7 @@ function schedulesView(s: Snapshot): DiagramView | null {
     group: "Cases",
     nodes,
     edges,
+    table: null,
   };
 }
 
@@ -674,6 +695,7 @@ function behaviourView(
           source: id,
           target: `party:${step.target}`,
           label: step.kind === "escalation" ? "escalate" : "hand off",
+          attributes: [],
           sysml: [],
         });
       }
@@ -730,6 +752,7 @@ function behaviourView(
     group: "Behaviour",
     nodes,
     edges,
+    table: null,
   };
 }
 
@@ -740,6 +763,7 @@ function succession(source: string, target: string): DiagramEdge {
     source,
     target,
     label: null,
+    attributes: [],
     sysml: [],
   };
 }
