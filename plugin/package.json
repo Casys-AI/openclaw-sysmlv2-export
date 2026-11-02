@@ -2,8 +2,42 @@
   "name": "@casys/openclaw-sysmlv2-export",
   "version": "0.1.0",
   "private": true,
-  "description": "OpenClaw plugin: export an instance as SysML v2 for Assembly",
+  "description": "Export an OpenClaw instance as SysML v2 for Assembly, with optional inferred procedures and a version viewer.",
+  "keywords": [
+    "openclaw",
+    "openclaw-plugin",
+    "sysml",
+    "sysml-v2",
+    "mbse",
+    "model-based-systems-engineering",
+    "assembly",
+    "agents"
+  ],
+  "homepage": "https://github.com/Casys-AI/openclaw-sysmlv2-export#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Casys-AI/openclaw-sysmlv2-export.git",
+    "directory": "plugin"
+  },
+  "license": "MIT",
   "type": "module",
+  "files": [
+    "index.mjs",
+    "core.mjs",
+    "openclaw.plugin.json",
+    "README.md",
+    "LICENSE"
+  ],
   "peerDependencies": { "openclaw": ">=2026.10.9" },
-  "openclaw": { "extensions": ["./index.mjs"] }
+  "openclaw": {
+    "extensions": ["./index.mjs"],
+    "compat": {
+      "pluginApi": ">=2026.10.9",
+      "minGatewayVersion": "2026.10.9"
+    },
+    "build": {
+      "openclawVersion": "2026.10.9",
+      "pluginSdkVersion": "2026.10.9"
+    }
+  }
 }
