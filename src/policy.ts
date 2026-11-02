@@ -36,7 +36,8 @@ export const BUILTINS = unique([
   "skill_workshop",
 ]);
 GROUPS["group:openclaw"] = BUILTINS;
-const profiles: Record<string, string[] | null> = {
+type Profiles = Record<string, string[] | null>;
+const profiles202606: Profiles = {
   full: null,
   minimal: ["session_status"],
   coding: [
@@ -63,6 +64,127 @@ const profiles: Record<string, string[] | null> = {
     "session_status",
   ],
 };
+
+// OpenClaw 2026.10.9 docs/gateway/config-tools/tool-policy.md, Tool groups.
+// Only the named members are carried over; image and update_plan are not listed.
+const groups202610: Record<string, string[]> = {
+  "group:runtime": ["exec", "process", "code_execution"],
+  "group:fs": ["read", "write", "edit", "apply_patch"],
+  "group:sessions": [
+    "sessions",
+    "sessions_list",
+    "sessions_history",
+    "sessions_search",
+    "conversations_list",
+    "conversations_send",
+    "conversations_turn",
+    "sessions_send",
+    "sessions_spawn",
+    "sessions_yield",
+    "subagents",
+    "session_status",
+    "suggest_task",
+    "dismiss_task",
+  ],
+  "group:memory": ["memory_search", "memory_get"],
+  "group:web": ["web_search", "x_search", "web_fetch"],
+  "group:ui": [
+    "browser",
+    "screen",
+    "theme",
+    "dashboard",
+    "terminal",
+    "portal",
+    "canvas",
+    "show_widget",
+  ],
+  "group:automation": [
+    "heartbeat_respond",
+    "automations",
+    "gateway",
+    "plugins",
+    "openclaw",
+  ],
+  "group:messaging": ["message"],
+  "group:nodes": ["nodes", "computer"],
+  "group:agents": [
+    "agents_list",
+    "get_goal",
+    "create_goal",
+    "update_goal",
+    "progress_card",
+    "ask_user",
+    "skill_workshop",
+  ],
+  "group:media": [
+    "view_image",
+    "image_generate",
+    "music_generate",
+    "video_generate",
+    "tts",
+    "pdf",
+  ],
+};
+const grouped202610 = unique(Object.values(groups202610).flat());
+groups202610["group:openclaw"] = grouped202610.filter((t) =>
+  !["read", "write", "edit", "apply_patch", "exec", "process", "canvas"]
+    .includes(t)
+);
+// The same page names these run-dependent catalog entries outside the groups.
+const builtins202610 = unique([
+  ...grouped202610,
+  "github_identity_status",
+  "github_publish",
+  "transcripts",
+]);
+// docs/gateway/config-tools/tool-policy.md, Tool profiles: gateway is update-only
+// in restricted profiles. Tool-level grants cannot express that action subset;
+// withhold that automatic grant and report the partial profile below.
+const profiles202610: Profiles = {
+  full: null,
+  minimal: ["session_status"],
+  coding: [
+    "bundle-mcp",
+    "group:fs",
+    "group:runtime",
+    "group:web",
+    "group:sessions",
+    "group:memory",
+    "automations",
+    "get_goal",
+    "create_goal",
+    "update_goal",
+    "progress_card",
+    "ask_user",
+    "skill_workshop",
+    "view_image",
+    "image_generate",
+    "music_generate",
+    "video_generate",
+    "theme",
+  ],
+  messaging: [
+    "bundle-mcp",
+    "group:messaging",
+    "sessions",
+    "sessions_list",
+    "sessions_history",
+    "sessions_search",
+    "conversations_list",
+    "conversations_send",
+    "conversations_turn",
+    "sessions_send",
+    "sessions_spawn",
+    "sessions_yield",
+    "subagents",
+    "session_status",
+    "ask_user",
+    "theme",
+  ],
+};
+export function is202610(version: string | null): boolean {
+  return /^2026\.10\.\d+(?:[-+].*)?$/.test(version ?? "");
+}
 export function policy(raw: unknown): Policy {
   const p = obj(raw);
   return {
@@ -107,9 +229,8 @@ function filter(
   tools: string[],
   p: Policy,
   groups: Groups,
-  applyProfile = false,
+  base: string[] | null = p.allow,
 ): string[] {
-  const base = applyProfile ? profiles[p.profile ?? "full"] : p.allow;
   const allow = base === null ? null : unique([...base, ...p.alsoAllow]);
   return tools.filter((t) =>
     !matches(t, p.deny, groups) &&
@@ -136,23 +257,66 @@ export function resolvePolicy(
   plugins: Plugin[] | null,
   findings: Finding[],
   mcpPrefixes: string[] = [],
+  version: string | null = null,
 ): Pick<Agent, "grants" | "policy"> {
   // docs/gateway/config-tools/tool-policy.md (2026.10): plugin tools join the
   // catalog; group:plugins and each plugin id expand to them. A name that a
   // plugin declares is that plugin's tool, available only while it is enabled.
   const declared = new Set(plugins?.flatMap((x) => x.tools));
   const enabled = plugins?.filter((x) => x.enabled) ?? [];
-  const groups = new Map(Object.entries(GROUPS));
+  const modern = is202610(version);
+  const builtins = modern ? builtins202610 : BUILTINS;
+  const groups = new Map(Object.entries(modern ? groups202610 : GROUPS));
+  if (modern) {
+    // docs/gateway/config-tools/tool-policy.md: cron aliases automations;
+    // group:openclaw explicitly excludes plugin-owned tools.
+    groups.set("cron", ["automations"]);
+    groups.set(
+      "group:openclaw",
+      groups.get("group:openclaw")!.filter((t) => !declared.has(t)),
+    );
+  }
   groups.set("group:plugins", enabled.flatMap((x) => x.tools));
   for (const x of plugins ?? []) groups.set(x.id.toLowerCase(), x.tools);
   const catalog = unique([
-    ...BUILTINS.filter((t) => !declared.has(t)),
+    ...builtins.filter((t) => !declared.has(t)),
     ...enabled.flatMap((x) => x.tools),
   ]);
   const g = policy(global),
     a = policy(agent),
     p = providerPolicy(global, model),
     ap = providerPolicy(agent, model);
+  // docs/plugins/manifest/capabilities.md, Tool metadata: contributions merge
+  // into profiles, without bypassing subsequent operator allow/deny gates.
+  const contributed = (profile: string | null) =>
+    enabled.flatMap((x) =>
+      x.toolProfiles.filter((t) =>
+        profile !== null && t.profiles.includes(profile)
+      ).map((t) => t.id)
+    );
+  const profiles: Profiles = Object.fromEntries(
+    Object.entries(modern ? profiles202610 : profiles202606).map((
+      [name, base],
+    ) => [
+      name,
+      base === null ? null : unique([...base, ...contributed(name)]),
+    ]),
+  );
+  const selectedProfiles = [a.profile ?? g.profile, ap.profile ?? p.profile];
+  if (modern) {
+    for (
+      const name of unique(
+        selectedProfiles.filter((p): p is string => p !== null && p !== "full"),
+      )
+    ) {
+      findings.push(info(
+        "TOOL_PROFILE_PARTIAL",
+        id,
+        `Profile ${name} includes gateway update.run only; its automatic gateway grant is withheld because grants do not encode action subsets.`,
+        "Review gateway actions separately; docs/gateway/config-tools/tool-policy.md.",
+      ));
+    }
+  }
   // docs/tools/multi-agent-sandbox-tools.md: profile override, successive
   // intersections; sandbox override replaces global policy. No denied tool is restored.
   const sb = obj(obj(agent.sandbox).tools ?? obj(global.sandbox).tools);
@@ -170,7 +334,7 @@ export function resolvePolicy(
       deny: [],
     },
     groups,
-    true,
+    profiles[selectedProfiles[0] ?? "full"],
   );
   allowed = filter(
     allowed,
@@ -181,7 +345,7 @@ export function resolvePolicy(
       deny: [],
     },
     groups,
-    true,
+    profiles[selectedProfiles[1] ?? "full"],
   );
   for (const stage of [g, p, a, ap]) allowed = filter(allowed, stage, groups);
   // docs/tools/exec.md, apply_patch: available only for OpenAI/OpenAI Codex
@@ -211,6 +375,9 @@ export function resolvePolicy(
       tool,
       stages.flatMap((x) => [
         ...x.profile === "full" ? ["*"] : [],
+        // docs/plugins/manifest/capabilities.md: named profile attachments
+        // expose the tool by default, including optional plugin tools.
+        ...contributed(x.profile),
         ...x.allow ?? [],
         ...x.alsoAllow,
       ]),
@@ -293,7 +460,8 @@ export function resolvePolicy(
   }
   if (
     entries.some((x) =>
-      x !== "*" && x !== "bash" && !groups.has(x) && !BUILTINS.includes(x) &&
+      x !== "*" && x !== "bash" && !groups.has(x.toLowerCase()) &&
+      !builtins.includes(x.toLowerCase()) &&
       !declared.has(x) && x.toLowerCase() !== "bundle-mcp" &&
       !mcpTools.includes(x.toLowerCase()) && !mcpSubset(x)
     )

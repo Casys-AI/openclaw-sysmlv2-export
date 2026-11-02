@@ -3,6 +3,13 @@ import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { ExportError, invalid, ioError } from "./error.ts";
 import {
+  type ApprovalPolicy,
+  approvalPolicy,
+  configuredExec,
+  effectiveExec,
+  selectApprovals,
+} from "./execution.ts";
+import {
   arr,
   boolean,
   enumeration,
@@ -21,7 +28,7 @@ import {
   prose,
   redact,
 } from "./redaction.ts";
-import { info, model, resolvePolicy } from "./policy.ts";
+import { info, is202610, model, resolvePolicy } from "./policy.ts";
 import {
   type Agent,
   byId,
@@ -135,6 +142,8 @@ function allowlist(raw: unknown): CommandGrant[] {
 function execApprovals(db: DatabaseSync): {
   execApprovals: Snapshot["execApprovals"];
   commandsByAgent: Map<string, CommandGrant[]>;
+  approvalsByAgent: Map<string, ApprovalPolicy>;
+  approvalDefaults: ApprovalPolicy;
 } {
   // dist/openclaw-state-schema-Cr2v_hbj.mjs defines the table; the authoritative
   // row key is "current" in dist/exec-approvals-sqlite-CbRxT0B7.mjs (2026.10.9).
@@ -147,17 +156,26 @@ function execApprovals(db: DatabaseSync): {
     ).get()
     : undefined;
   const commandsByAgent = new Map<string, CommandGrant[]>();
-  if (!row) return { execApprovals: null, commandsByAgent };
+  const approvalsByAgent = new Map<string, ApprovalPolicy>();
+  if (!row) {
+    return {
+      execApprovals: null,
+      commandsByAgent,
+      approvalsByAgent,
+      approvalDefaults: approvalPolicy(undefined),
+    };
+  }
   const config = obj(json(required(row.raw_json))),
     defaults = obj(config.defaults);
+  const approvalDefaults = approvalPolicy(defaults);
   for (const [id, value] of Object.entries(obj(config.agents))) {
     commandsByAgent.set(id, allowlist(obj(value).allowlist));
+    approvalsByAgent.set(id, approvalPolicy(value));
   }
   return {
     execApprovals: {
       defaults: {
-        security: text(defaults.security),
-        ask: text(defaults.ask),
+        ...approvalDefaults,
         askFallback: text(defaults.askFallback),
         autoAllowSkills: defaults.autoAllowSkills === undefined
           ? null
@@ -168,16 +186,10 @@ function execApprovals(db: DatabaseSync): {
       wildcardCommands: commandsByAgent.get("*") ?? [],
     },
     commandsByAgent,
+    approvalsByAgent,
+    approvalDefaults,
   };
 }
-/** 2026.10 exec modes as the 2026.6 security/ask pair the snapshot keeps. */
-const EXEC_MODES: Record<string, [string, string]> = {
-  deny: ["deny", "off"],
-  allowlist: ["allowlist", "off"],
-  ask: ["allowlist", "on-miss"],
-  auto: ["allowlist", "on-miss"],
-  full: ["full", "off"],
-};
 async function regular(path: string): Promise<void> {
   const stat = await lstat(path);
   if (stat.isSymbolicLink() || !stat.isFile()) {
@@ -518,11 +530,10 @@ function sandbox(
     ),
   };
 }
-function state(home: string, findings: Finding[]): {
-  cron: Cron[];
-  execApprovals: Snapshot["execApprovals"];
-  commandsByAgent: Map<string, CommandGrant[]>;
-} {
+function state(
+  home: string,
+  findings: Finding[],
+): { cron: Cron[] } & ReturnType<typeof execApprovals> {
   const path = join(home, "state", "openclaw.sqlite");
   // docs/automation/cron-jobs.md: state/openclaw.sqlite is authoritative.
   // Deno 2.9.7 node:sqlite resolves a file: URI as a literal local path with
@@ -621,7 +632,7 @@ function state(home: string, findings: Finding[]): {
 }
 /** OpenClaw's plugin inventory, the output of `openclaw plugins list --json`
  * (docs/cli/plugins/list.md). Tool ownership comes from each entry's
- * `contracts.tools`; optionality from `toolMetadata.<tool>.optional` in the
+ * `contracts.tools`; optionality and profiles from `toolMetadata.<tool>` in the
  * manifest at its `rootDir`, which the inventory omits
  * (docs/plugins/building-plugins.md, Registering tools). Only plugins that
  * declare tools are kept, with their id, enablement and tool names. */
@@ -649,11 +660,22 @@ async function plugins(list: unknown): Promise<Plugin[]> {
       );
     }
     const meta = obj(manifest.toolMetadata);
+    // docs/plugins/manifest/capabilities.md, toolMetadata: only these built-in
+    // profiles are valid. Project only tools declared by this inventory entry.
+    const toolProfiles = tools.map((id) => ({
+      id,
+      profiles: unique(
+        strings(obj(meta[id]).profiles).map((p) =>
+          enumeration(p, ["minimal", "coding", "messaging", "full"], "full")
+        ),
+      ),
+    })).filter((t) => t.profiles.length > 0);
     result.push({
       id: required(entry.id),
       enabled: entry.enabled,
       tools,
       optionalTools: tools.filter((t) => boolean(obj(meta[t]).optional, false)),
+      toolProfiles,
     });
   }
   return byId(result);
@@ -700,16 +722,15 @@ export async function collect(
         enabled: true,
         tools: pseudoTools,
         optionalTools: [],
+        toolProfiles: [],
       }]
       : inventory;
-    if (version !== "2026.6.10") {
+    if (version !== "2026.6.10" && !is202610(version)) {
       findings.push(
         info(
           "OPENCLAW_VERSION_UNVERIFIED",
           "instance",
-          version === "2026.10.9"
-            ? "Agent and cron shapes of 2026.10 are read; tool policy follows the 2026.6.10 documentation."
-            : "The config records another or no version; the snapshot uses the 2026.6.10 interpretation.",
+          "The config records another or no version; the snapshot uses the 2026.6.10 interpretation.",
           "Confirm the source version before relying on this import.",
         ),
       );
@@ -750,6 +771,7 @@ export async function collect(
         policyInventory,
         findings,
         servers.map((s) => s.toolPrefix),
+        version,
       );
       // docs/tools/browser.md: both plugin and browser configuration can disable
       // the tool; an active sandbox browser has its separate configuration.
@@ -805,34 +827,22 @@ export async function collect(
           ),
         );
       }
-      // docs/tools/exec-approvals.md (2026.10): tools.exec.mode replaces the
-      // security/ask pair; docs/tools/exec.md: without one, gateway and node
-      // hosts run with mode=full.
-      const mode = text(ex.mode) ??
-        (ex.security === undefined && ex.ask === undefined &&
-            version?.startsWith("2026.10")
-          ? "full"
-          : null);
-      const [security, ask] = mode !== null && mode in EXEC_MODES
-        ? EXEC_MODES[mode]
-        : [ex.security, ex.ask];
+      // docs/tools/exec-approvals.md: host approval fields tighten the
+      // configured policy. Keep both sources and their result for the diff.
+      const configured = configuredExec(
+        obj(global.exec),
+        obj(tools.exec),
+        version,
+      );
+      const approvals = selectApprovals(
+        stored.approvalDefaults,
+        stored.approvalsByAgent.get("*") ?? approvalPolicy(undefined),
+        stored.approvalsByAgent.get(id) ?? approvalPolicy(undefined),
+      );
       const execution: Agent["execution"] = {
-        host: enumeration(
-          ex.host,
-          ["auto", "sandbox", "gateway", "node"],
-          "auto",
-        ),
-        security: enumeration(security, [
-          "deny",
-          "allowlist",
-          "full",
-          "unknown",
-        ], "unknown"),
-        ask: enumeration(
-          ask,
-          ["off", "on-miss", "always", "unknown"],
-          "unknown",
-        ),
+        ...configured,
+        approvals,
+        effective: effectiveExec(configured, approvals),
         elevated,
         elevatedChannelsCount: channels.length,
         safeBins,
@@ -856,12 +866,22 @@ export async function collect(
           "Set tools.exec.safeBins explicitly; compare docs/tools/exec.md and docs/tools/exec-approvals-advanced.md.",
         ));
       }
-      if (execution.security === "unknown" || execution.ask === "unknown") {
+      if (execution.host === "node") {
+        findings.push(info(
+          "NODE_EXEC_APPROVALS_UNRESOLVED",
+          id,
+          "Node exec uses the remote execution host's approvals; the local SQLite policy cannot establish that posture.",
+          "Inspect approvals on the execution node; docs/tools/exec-approvals.md.",
+        ));
+      } else if (
+        execution.effective.security === "unknown" ||
+        execution.effective.ask === "unknown"
+      ) {
         findings.push(
           info(
             "EXEC_APPROVALS_UNRESOLVED",
             id,
-            "Exec mode or host approval defaults are not fully represented by security/ask in this config.",
+            "Configured exec defaults are not fully documented for this version; host approvals do not resolve every effective field.",
             "Inspect host approvals and normalized exec mode; docs/tools/exec.md.",
           ),
         );
@@ -1037,8 +1057,8 @@ export async function collect(
     );
     const messaging = obj(global.agentToAgent);
     const result: Snapshot = {
-      schema: "openclaw-snapshot/4",
-      openclawVersion: text(obj(config.meta).lastTouchedVersion, "2026.6.10")!,
+      schema: "openclaw-snapshot/5",
+      openclawVersion: version ?? "unknown",
       plaintextSecretCount: plaintextSecretCount(raw),
       backupCount: (await readdir(home, { withFileTypes: true })).filter((e) =>
         e.isFile() && e.name.startsWith("openclaw.json.")

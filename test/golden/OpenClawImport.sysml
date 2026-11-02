@@ -45,7 +45,7 @@ package OpenClawImport {
     part def DelegationRule { attribute fromAgent : String; attribute toAgent : String; }
     part def MessagingPolicy { attribute enabled : Boolean; attribute allowedTargets : String; }
     part def ModelProvider { attribute name : String; attribute apiKind : String; attribute modelIds : String; }
-    part def OpenClawPlugin { attribute pluginId : String; attribute enabled : Boolean; attribute tools : String; attribute optionalTools : String; }
+    part def OpenClawPlugin { attribute pluginId : String; attribute enabled : Boolean; attribute tools : String; attribute optionalTools : String; attribute toolProfiles : String; }
     part def McpServer {
         attribute serverId : String; attribute toolPrefix : String;
         attribute enabled : Boolean; attribute transport : String;
@@ -56,6 +56,8 @@ package OpenClawImport {
     }
     part def ExecutionPosture {
         attribute host : String; attribute security : String; attribute ask : String;
+        attribute mode : String; attribute approvalSecurity : String; attribute approvalAsk : String;
+        attribute effectiveSecurity : String; attribute effectiveAsk : String;
         attribute elevated : Boolean; attribute elevatedChannelsCount : Integer;
         attribute safeBins : String; attribute safeBinProfiles : String;
         attribute trustedDirCount : Integer; attribute pathPrependCount : Integer;

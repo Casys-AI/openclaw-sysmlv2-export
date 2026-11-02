@@ -109,12 +109,17 @@ export function doctor(snapshot: Snapshot): Finding[] {
     }
     wildcard(a.id, a.execution.commands);
     const exec = a.grants.some((g) => g.tool === "exec");
-    if (exec && a.execution.security === "full" && a.execution.ask === "off") {
+    // docs/tools/exec-approvals.md: the host approval policy can tighten the
+    // configured security/ask pair; inspect the resolved posture.
+    if (
+      exec && a.execution.effective.security === "full" &&
+      a.execution.effective.ask === "off"
+    ) {
       add(
         "EXEC_WITHOUT_APPROVAL",
         "error",
         a.id,
-        "Exec is policy-reachable with security full and ask off.",
+        "Exec is policy-reachable with effective host security full and ask off.",
         "Restrict exec security or require approvals.",
       );
     }

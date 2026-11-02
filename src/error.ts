@@ -17,7 +17,7 @@ export function invalid(context = "Invalid input shape"): never {
   throw new ExportError(
     "INVALID_INPUT",
     context,
-    "Use a valid OpenClaw 2026.6.10 or 2026.10.9 input or openclaw-snapshot/4 snapshot.",
+    "Use a valid OpenClaw 2026.6.10 or 2026.10.x input or openclaw-snapshot/5 snapshot.",
   );
 }
 export function ioError(code: string, context: string): ExportError {

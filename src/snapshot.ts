@@ -54,8 +54,12 @@ export interface Agent {
   };
   execution: {
     host: string;
+    mode: string | null;
+    /** Configured host policy, before host approvals tighten it. */
     security: string;
     ask: string;
+    approvals: { security: string | null; ask: string | null };
+    effective: { security: string; ask: string };
     elevated: boolean;
     elevatedChannelsCount: number;
     safeBins: string[] | null;
@@ -126,6 +130,8 @@ export interface Plugin {
   tools: string[];
   /** `toolMetadata.<tool>.optional`: exposed only on explicit opt-in. */
   optionalTools: string[];
+  /** docs/plugins/manifest/capabilities.md: profile allowlist contributions. */
+  toolProfiles: { id: string; profiles: string[] }[];
 }
 export interface CommandGrant {
   id: string;
@@ -153,7 +159,7 @@ export interface Finding {
   recovery: string;
 }
 export interface Snapshot {
-  schema: "openclaw-snapshot/4";
+  schema: "openclaw-snapshot/5";
   openclawVersion: string;
   plaintextSecretCount: number;
   backupCount: number;
@@ -265,8 +271,10 @@ const command: Shape = {
   kind: { enum: ["safe-bin", "name", "path"] },
   argsRestricted: bool,
 };
+const security: Shape = { enum: ["deny", "allowlist", "full", "unknown"] };
+const ask: Shape = { enum: ["off", "on-miss", "always", "unknown"] };
 const shape: Shape = {
-  schema: { enum: ["openclaw-snapshot/4"] },
+  schema: { enum: ["openclaw-snapshot/5"] },
   openclawVersion: str,
   plaintextSecretCount: num,
   backupCount: num,
@@ -308,8 +316,14 @@ const shape: Shape = {
     },
     execution: {
       host: str,
-      security: str,
-      ask: str,
+      mode: { enum: [null, "deny", "allowlist", "ask", "auto", "full"] },
+      security,
+      ask,
+      approvals: {
+        security: { enum: [null, "deny", "allowlist", "full"] },
+        ask: { enum: [null, "off", "on-miss", "always"] },
+      },
+      effective: { security, ask },
       elevated: bool,
       elevatedChannelsCount: num,
       safeBins: nullable(strings),
@@ -390,6 +404,10 @@ const shape: Shape = {
     enabled: bool,
     tools: strings,
     optionalTools: strings,
+    toolProfiles: [{
+      id: str,
+      profiles: [{ enum: ["minimal", "coding", "messaging", "full"] }],
+    }],
   }]),
   mcpServers: [{
     id: str,

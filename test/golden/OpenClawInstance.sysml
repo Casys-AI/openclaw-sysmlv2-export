@@ -90,6 +90,8 @@ package OpenClawInstance {
         ref item 'grant_sandbox:sessions_spawn' : ToolGrant = 'tool_client:sandbox:sessions_spawn';
         ref item 'grant_sandbox:subagents' : ToolGrant = 'tool_client:sandbox:subagents';
         ref item 'grant_sandbox:write' : ToolGrant = 'tool_client:sandbox:write';
+        ref item 'command_safe-bin:python3' : CommandGrant = 'cmd_client:safe-bin:python3';
+        ref item 'command_safe-bin:wc' : CommandGrant = 'cmd_client:safe-bin:wc';
     }
     part agent_client : Agent_client {
         part sandbox : Sandbox {
@@ -116,6 +118,10 @@ package OpenClawInstance {
             attribute :>> trustedDirCount = 1;
             attribute :>> pathPrependCount = 1;
             attribute :>> strictInlineEval = false;
+            attribute :>> approvalSecurity = "allowlist";
+            attribute :>> approvalAsk = "on-miss";
+            attribute :>> effectiveSecurity = "allowlist";
+            attribute :>> effectiveAsk = "on-miss";
         }
         part memory : AgentMemory {
             attribute :>> searchEnabled = true;
@@ -227,6 +233,16 @@ package OpenClawInstance {
         attribute :>> tool = "write";
         attribute :>> layer = "sandbox";
     }
+    item 'cmd_client:safe-bin:python3' : CommandGrant {
+        attribute :>> command = "python3";
+        attribute :>> kind = "safe-bin";
+        attribute :>> argsRestricted = true;
+    }
+    item 'cmd_client:safe-bin:wc' : CommandGrant {
+        attribute :>> command = "wc";
+        attribute :>> kind = "safe-bin";
+        attribute :>> argsRestricted = true;
+    }
     part 'delegation_client:coach' : DelegationRule {
         attribute :>> fromAgent = "client";
         attribute :>> toAgent = "coach";
@@ -325,6 +341,8 @@ package OpenClawInstance {
         ref item 'grant_sandbox:web_fetch' : ToolGrant = 'tool_coach:sandbox:web_fetch';
         ref item 'grant_sandbox:web_search' : ToolGrant = 'tool_coach:sandbox:web_search';
         ref item 'grant_sandbox:write' : ToolGrant = 'tool_coach:sandbox:write';
+        ref item 'command_safe-bin:python3' : CommandGrant = 'cmd_coach:safe-bin:python3';
+        ref item 'command_safe-bin:wc' : CommandGrant = 'cmd_coach:safe-bin:wc';
     }
     part agent_coach : Agent_coach {
         part sandbox : Sandbox {
@@ -351,6 +369,10 @@ package OpenClawInstance {
             attribute :>> trustedDirCount = 1;
             attribute :>> pathPrependCount = 1;
             attribute :>> strictInlineEval = false;
+            attribute :>> approvalSecurity = "allowlist";
+            attribute :>> approvalAsk = "on-miss";
+            attribute :>> effectiveSecurity = "allowlist";
+            attribute :>> effectiveAsk = "on-miss";
         }
         part memory : AgentMemory {
             attribute :>> searchEnabled = true;
@@ -469,6 +491,16 @@ package OpenClawInstance {
         attribute :>> tool = "write";
         attribute :>> layer = "sandbox";
     }
+    item 'cmd_coach:safe-bin:python3' : CommandGrant {
+        attribute :>> command = "python3";
+        attribute :>> kind = "safe-bin";
+        attribute :>> argsRestricted = true;
+    }
+    item 'cmd_coach:safe-bin:wc' : CommandGrant {
+        attribute :>> command = "wc";
+        attribute :>> kind = "safe-bin";
+        attribute :>> argsRestricted = true;
+    }
     part 'delegation_coach:client' : DelegationRule {
         attribute :>> fromAgent = "coach";
         attribute :>> toAgent = "client";
@@ -566,6 +598,8 @@ package OpenClawInstance {
         ref item 'grant_sandbox:web_fetch' : ToolGrant = 'tool_devbox:sandbox:web_fetch';
         ref item 'grant_sandbox:web_search' : ToolGrant = 'tool_devbox:sandbox:web_search';
         ref item 'grant_sandbox:write' : ToolGrant = 'tool_devbox:sandbox:write';
+        ref item 'command_safe-bin:python3' : CommandGrant = 'cmd_devbox:safe-bin:python3';
+        ref item 'command_safe-bin:wc' : CommandGrant = 'cmd_devbox:safe-bin:wc';
     }
     part agent_devbox : Agent_devbox {
         part sandbox : Sandbox {
@@ -592,6 +626,10 @@ package OpenClawInstance {
             attribute :>> trustedDirCount = 1;
             attribute :>> pathPrependCount = 1;
             attribute :>> strictInlineEval = false;
+            attribute :>> approvalSecurity = "allowlist";
+            attribute :>> approvalAsk = "on-miss";
+            attribute :>> effectiveSecurity = "allowlist";
+            attribute :>> effectiveAsk = "on-miss";
         }
         part memory : AgentMemory {
             attribute :>> searchEnabled = true;
@@ -706,6 +744,16 @@ package OpenClawInstance {
         attribute :>> tool = "write";
         attribute :>> layer = "sandbox";
     }
+    item 'cmd_devbox:safe-bin:python3' : CommandGrant {
+        attribute :>> command = "python3";
+        attribute :>> kind = "safe-bin";
+        attribute :>> argsRestricted = true;
+    }
+    item 'cmd_devbox:safe-bin:wc' : CommandGrant {
+        attribute :>> command = "wc";
+        attribute :>> kind = "safe-bin";
+        attribute :>> argsRestricted = true;
+    }
     part 'delegation_devbox:lead' : DelegationRule {
         attribute :>> fromAgent = "devbox";
         attribute :>> toAgent = "lead";
@@ -802,6 +850,8 @@ package OpenClawInstance {
         ref item 'grant_sandbox:subagents' : ToolGrant = 'tool_field:sandbox:subagents';
         ref item 'grant_sandbox:tts' : ToolGrant = 'tool_field:sandbox:tts';
         ref item 'grant_sandbox:write' : ToolGrant = 'tool_field:sandbox:write';
+        ref item 'command_safe-bin:python3' : CommandGrant = 'cmd_field:safe-bin:python3';
+        ref item 'command_safe-bin:wc' : CommandGrant = 'cmd_field:safe-bin:wc';
     }
     part agent_field : Agent_field {
         part sandbox : Sandbox {
@@ -828,6 +878,10 @@ package OpenClawInstance {
             attribute :>> trustedDirCount = 1;
             attribute :>> pathPrependCount = 1;
             attribute :>> strictInlineEval = false;
+            attribute :>> approvalSecurity = "allowlist";
+            attribute :>> approvalAsk = "on-miss";
+            attribute :>> effectiveSecurity = "allowlist";
+            attribute :>> effectiveAsk = "on-miss";
         }
         part memory : AgentMemory {
             attribute :>> searchEnabled = true;
@@ -982,6 +1036,16 @@ package OpenClawInstance {
         attribute :>> tool = "write";
         attribute :>> layer = "sandbox";
     }
+    item 'cmd_field:safe-bin:python3' : CommandGrant {
+        attribute :>> command = "python3";
+        attribute :>> kind = "safe-bin";
+        attribute :>> argsRestricted = true;
+    }
+    item 'cmd_field:safe-bin:wc' : CommandGrant {
+        attribute :>> command = "wc";
+        attribute :>> kind = "safe-bin";
+        attribute :>> argsRestricted = true;
+    }
     part 'delegation_field:lead' : DelegationRule {
         attribute :>> fromAgent = "field";
         attribute :>> toAgent = "lead";
@@ -1089,6 +1153,10 @@ package OpenClawInstance {
             attribute :>> trustedDirCount = 1;
             attribute :>> pathPrependCount = 1;
             attribute :>> strictInlineEval = false;
+            attribute :>> approvalSecurity = "allowlist";
+            attribute :>> approvalAsk = "on-miss";
+            attribute :>> effectiveSecurity = "allowlist";
+            attribute :>> effectiveAsk = "on-miss";
         }
         part memory : AgentMemory {
             attribute :>> searchEnabled = true;
@@ -1610,6 +1678,8 @@ package OpenClawInstance {
         ref item 'grant_sandbox:sessions_spawn' : ToolGrant = 'tool_secretary:sandbox:sessions_spawn';
         ref item 'grant_sandbox:subagents' : ToolGrant = 'tool_secretary:sandbox:subagents';
         ref item 'grant_sandbox:write' : ToolGrant = 'tool_secretary:sandbox:write';
+        ref item 'command_safe-bin:python3' : CommandGrant = 'cmd_secretary:safe-bin:python3';
+        ref item 'command_safe-bin:wc' : CommandGrant = 'cmd_secretary:safe-bin:wc';
     }
     part agent_secretary : Agent_secretary {
         part sandbox : Sandbox {
@@ -1636,6 +1706,10 @@ package OpenClawInstance {
             attribute :>> trustedDirCount = 1;
             attribute :>> pathPrependCount = 1;
             attribute :>> strictInlineEval = false;
+            attribute :>> approvalSecurity = "allowlist";
+            attribute :>> approvalAsk = "on-miss";
+            attribute :>> effectiveSecurity = "allowlist";
+            attribute :>> effectiveAsk = "on-miss";
         }
         part memory : AgentMemory {
             attribute :>> searchEnabled = true;
@@ -1768,6 +1842,16 @@ package OpenClawInstance {
     item 'tool_secretary:sandbox:write' : ToolGrant {
         attribute :>> tool = "write";
         attribute :>> layer = "sandbox";
+    }
+    item 'cmd_secretary:safe-bin:python3' : CommandGrant {
+        attribute :>> command = "python3";
+        attribute :>> kind = "safe-bin";
+        attribute :>> argsRestricted = true;
+    }
+    item 'cmd_secretary:safe-bin:wc' : CommandGrant {
+        attribute :>> command = "wc";
+        attribute :>> kind = "safe-bin";
+        attribute :>> argsRestricted = true;
     }
     part 'delegation_secretary:lead' : DelegationRule {
         attribute :>> fromAgent = "secretary";
@@ -2191,30 +2275,35 @@ package OpenClawInstance {
         attribute :>> enabled = true;
         attribute :>> tools = "[\"browser\"]";
         attribute :>> optionalTools = "[]";
+        attribute :>> toolProfiles = "[]";
     }
     part 'plugin_memory-core' : OpenClawPlugin {
         attribute :>> pluginId = "memory-core";
         attribute :>> enabled = true;
         attribute :>> tools = "[\"memory_get\",\"memory_search\"]";
         attribute :>> optionalTools = "[]";
+        attribute :>> toolProfiles = "[]";
     }
     part 'plugin_stock-quotes' : OpenClawPlugin {
         attribute :>> pluginId = "stock-quotes";
         attribute :>> enabled = true;
         attribute :>> tools = "[\"stock_quote\"]";
         attribute :>> optionalTools = "[]";
+        attribute :>> toolProfiles = "[{\"id\":\"stock_quote\",\"profiles\":[\"coding\"]}]";
     }
     part plugin_whatsapp : OpenClawPlugin {
         attribute :>> pluginId = "whatsapp";
         attribute :>> enabled = true;
         attribute :>> tools = "[\"whatsapp_login\"]";
         attribute :>> optionalTools = "[\"whatsapp_login\"]";
+        attribute :>> toolProfiles = "[]";
     }
     part plugin_workboard : OpenClawPlugin {
         attribute :>> pluginId = "workboard";
         attribute :>> enabled = false;
         attribute :>> tools = "[\"board_claim\",\"board_list\"]";
         attribute :>> optionalTools = "[\"board_claim\",\"board_list\"]";
+        attribute :>> toolProfiles = "[]";
     }
     part mcp_9tools : McpServer {
         attribute :>> serverId = "9tools";

@@ -77,41 +77,6 @@
     "subject": "instance"
   },
   {
-    "code": "EXEC_WITHOUT_APPROVAL",
-    "context": "Exec is policy-reachable with security full and ask off.",
-    "recovery": "Restrict exec security or require approvals.",
-    "severity": "error",
-    "subject": "client"
-  },
-  {
-    "code": "EXEC_WITHOUT_APPROVAL",
-    "context": "Exec is policy-reachable with security full and ask off.",
-    "recovery": "Restrict exec security or require approvals.",
-    "severity": "error",
-    "subject": "coach"
-  },
-  {
-    "code": "EXEC_WITHOUT_APPROVAL",
-    "context": "Exec is policy-reachable with security full and ask off.",
-    "recovery": "Restrict exec security or require approvals.",
-    "severity": "error",
-    "subject": "devbox"
-  },
-  {
-    "code": "EXEC_WITHOUT_APPROVAL",
-    "context": "Exec is policy-reachable with security full and ask off.",
-    "recovery": "Restrict exec security or require approvals.",
-    "severity": "error",
-    "subject": "field"
-  },
-  {
-    "code": "EXEC_WITHOUT_APPROVAL",
-    "context": "Exec is policy-reachable with security full and ask off.",
-    "recovery": "Restrict exec security or require approvals.",
-    "severity": "error",
-    "subject": "secretary"
-  },
-  {
     "code": "EXTERNAL_BIND_SOURCES",
     "context": "External bind sources are explicitly allowed.",
     "recovery": "Disable dangerouslyAllowExternalBindSources and use permitted source roots.",

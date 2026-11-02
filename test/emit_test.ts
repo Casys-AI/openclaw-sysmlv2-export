@@ -124,7 +124,7 @@ Deno.test("MCP ownership and command grants preserve their policy scope", async 
 
     for (const layer of ["host", "sandbox"] as const) {
       agent.grants = [{ id: `${layer}:exec`, tool: "exec", layer }];
-      agent.execution.security = "allowlist";
+      agent.execution.effective.security = "allowlist";
       const allowed = emit(snapshot).get("OpenClawInstance.sysml")!;
       for (const command of agent.execution.commands) {
         assert.ok(allowed.includes(
@@ -138,13 +138,13 @@ Deno.test("MCP ownership and command grants preserve their policy scope", async 
       }
     }
     for (const security of ["full", "deny"]) {
-      agent.execution.security = security;
+      agent.execution.effective.security = security;
       assert.doesNotMatch(
         emit(snapshot).get("OpenClawInstance.sysml")!,
         /: CommandGrant/,
       );
     }
-    agent.execution.security = "allowlist";
+    agent.execution.effective.security = "allowlist";
     agent.grants = [];
     snapshot.execApprovals = null;
     const absent = emit(snapshot).get("OpenClawInstance.sysml")!;

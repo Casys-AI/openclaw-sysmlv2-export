@@ -239,6 +239,9 @@ Deno.test("plugin inventory keeps tool-declaring plugins and manifest optional f
       enabled,
       tools,
       optionalTools: optional ? tools : [],
+      toolProfiles: id === "stock-quotes"
+        ? [{ id: "stock_quote", profiles: ["coding"] }]
+        : [],
     });
     assert.deepEqual(snapshot.plugins, [
       plugin("browser", true, ["browser"]),
@@ -698,8 +701,11 @@ Deno.test("exec projects safe bins and SQLite allowlists without private metadat
     const execution = snapshot.agents.find((a) => a.id === "lead")!.execution;
     assert.deepEqual(execution, {
       host: "auto",
+      mode: null,
       security: "allowlist",
       ask: "on-miss",
+      approvals: { security: "allowlist", ask: "on-miss" },
+      effective: { security: "allowlist", ask: "on-miss" },
       elevated: true,
       elevatedChannelsCount: 1,
       safeBins: ["jq", "python3", "wc"],
@@ -764,6 +770,12 @@ Deno.test("exec projects safe bins and SQLite allowlists without private metadat
     }
     const absent = await collect(fixture.home);
     assert.equal(absent.execApprovals, null);
+    assert.ok(
+      absent.agents.every((a) =>
+        a.execution.effective.security === a.execution.security &&
+        a.execution.effective.ask === a.execution.ask
+      ),
+    );
     assert.ok(
       absent.agents.find((a) => a.id === "lead")!.execution.commands.every((
         c,

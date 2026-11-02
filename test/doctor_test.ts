@@ -48,11 +48,11 @@ const rules: [string, (s: Snapshot, positive: boolean) => void][] = [
     }];
   }],
   ["EXEC_WITHOUT_APPROVAL", (s, yes) => {
-    for (const a of s.agents) a.execution.ask = "always";
+    for (const a of s.agents) a.execution.effective.ask = "always";
     const a = s.agents[0];
     a.grants.push({ id: "test-exec", tool: "exec", layer: "host" });
-    a.execution.security = "full";
-    a.execution.ask = yes ? "off" : "always";
+    a.execution.effective.security = "full";
+    a.execution.effective.ask = yes ? "off" : "always";
   }],
   ["AGENT_WITHOUT_SANDBOX", (s, yes) => {
     for (const a of s.agents) a.sandbox.mode = "all";

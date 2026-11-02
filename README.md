@@ -28,16 +28,28 @@ evolving agentic systems from SysML v2.
 | Skills and instruction files            | References with path, SHA-256 and size                             |
 | Delegation and agent-to-agent messaging | Delegation rules and a messaging policy                            |
 
+Tool groups and profiles follow the recorded OpenClaw version: `2026.10.x` uses
+the 2026.10 catalog, and other versions use the 2026.6.10 catalog with an
+informational finding when unverified. Restricted 2026.10 profiles include
+update-only `gateway` access; the export reports that partial profile instead of
+granting the entire tool automatically.
+
 Plugin tools come from OpenClaw's own inventory: the plugin runs
-`openclaw plugins list --json` and reads each listed manifest only to learn
-which tools are optional. A disabled plugin's tools get no grant, and an
-optional tool needs an explicit allow entry (its name, its plugin id,
-`group:plugins`) or the `full` profile.
+`openclaw plugins list --json` and reads each listed manifest for optional flags
+and `toolMetadata.profiles`. A disabled plugin's tools get no grant. A tool
+attached to a selected restricted profile joins that profile's allowlist; other
+policy restrictions still apply. Optional tools need an explicit allow entry, a
+matching profile attachment, or the `full` profile.
 
 MCP grants describe whole configured servers; individual tool names require
 runtime discovery and produce an informational finding. Exec commands keep
 binary names and argument-restriction flags. They become command grants only
-when the agent has the `exec` tool and uses `allowlist` security.
+when the agent has the `exec` tool and effective `allowlist` security.
+
+Exec posture keeps the configured policy, selected host approvals and their
+stricter result separately. Doctor checks that effective result for exec without
+approval. This is a static host baseline: session overrides and runtime sandbox
+routing are not collected, and remote node approvals remain unresolved.
 
 The library it builds on (`core.sysml`, `cases.sysml`, `skills.sysml`, copied
 from Assembly) is written next to the export, so each export folder compiles on
@@ -109,6 +121,9 @@ OpenClawInferred.sysml  inference.json   (with --infer)
 `versions.json` lists the versions, newest first, and `index.html` is a static
 page (no network, opens from `file://`) to browse them and see the diff of each
 file since the previous version.
+
+Snapshots use `openclaw-snapshot/5`. Older snapshot schemas are rejected;
+collect the instance again before exporting or comparing snapshots.
 
 ## Develop
 

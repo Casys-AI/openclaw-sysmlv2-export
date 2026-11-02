@@ -4,7 +4,8 @@ Read an OpenClaw instance without changing it, keep a sanitized snapshot, emit
 SysML v2 on the Assembly library, run doctor findings and diff two snapshots.
 v0 is one-way: nothing is written back to OpenClaw.
 
-Target: OpenClaw **2026.6.10**. The anonymized fixture in
+Targets: OpenClaw **2026.10.x**, using the 2026.10.9 documentation, and the
+legacy **2026.6.10** catalog. The anonymized fixture in
 [`test/fixtures/openclaw-2026.6.10-anon/`](test/fixtures/openclaw-2026.6.10-anon/README.md)
 comes from a real instance.
 
@@ -26,6 +27,24 @@ comes from a real instance.
 3. **Prose.** Instruction files, skills, cron prompts and hook templates are
    referenced by relative path, SHA-256 and byte size. Their bodies never enter
    the snapshot, the SysML or any output.
+4. **Versioned tool catalogs.** A recorded `2026.10.x` version selects the
+   documented 2026.10 groups and profiles; every other version selects the
+   2026.6.10 catalog. An absent version is recorded as `unknown`.
+   `OPENCLAW_VERSION_UNVERIFIED` remains an info finding for versions outside
+   those targets. Only documented entries are used. The 2026.10 restricted
+   profiles expose `gateway` for updates only: the whole-tool grant model
+   cannot express that action limit, so it withholds the automatic grant and
+   emits `TOOL_PROFILE_PARTIAL`, naming the profile. Explicit policy additions
+   still apply (`gateway/config-tools/tool-policy.md`).
+5. **Plugin profile contributions.** Read `toolMetadata.<tool>.profiles` from
+   each listed manifest and merge its declared tools into the selected profile.
+   A contribution does not bypass later allow/deny or sandbox gates
+   (`plugins/manifest/capabilities.md`).
+6. **Effective host exec posture.** Keep configured mode/security/ask, selected
+   host approval security/ask, and their stricter result separately per agent.
+   Doctor and command-grant emission use the effective result. This is a
+   static host baseline; session permissions and runtime sandbox routing are
+   not collected (`tools/exec.md`, `tools/exec-approvals.md`).
 
 ## Pipeline
 
@@ -66,11 +85,12 @@ fields above runs on the raw config before projection, and the output tests
 scan with its `EMAIL_ADDRESS_PATTERN` and `JWT_PATTERN` besides the canaries.
 Do not write a third redaction mechanism.
 
-**Snapshot** is JSON with `schema: "openclaw-snapshot/4"`, sorted keys, arrays
+**Snapshot** is JSON with `schema: "openclaw-snapshot/5"`, sorted keys, arrays
 sorted by id, no clock reads. Same instance → same bytes. Version 2 added
 `plugins` and made `cron[].agentId` nullable; version 3 added agent `memory` and
-instance `memoryBackend`; version 4 adds `mcpServers`, exec command metadata and
-`execApprovals`. Released schema versions are never extended in place.
+instance `memoryBackend`; version 4 added `mcpServers`, exec command metadata and
+`execApprovals`; version 5 adds plugin `toolProfiles` and configured, approval
+and effective host exec posture. Released schema versions are never extended in place.
 Older shapes are rejected, so collect again.
 
 ## Mapping
@@ -79,10 +99,10 @@ Older shapes are rejected, so collect again.
 | --- | --- |
 | agent (`agents.list`, implicit `main`) | `part def … :> OpenClawAgent`, with `OpenClawAgent :> AssemblyCore::SoftwareOperator`; id, display name, emoji, primary and fallback models |
 | effective tools | `ToolGrant` items (tool, layer, owning plugin) referenced by the agent |
-| plugin declaring tools | `OpenClawPlugin` part (id, enabled, tools, optional tools) |
+| plugin declaring tools | `OpenClawPlugin` part (id, enabled, tools, optional tools, profile contributions) |
 | memory policy, notes and backend | `AgentMemory` per agent and one `MemoryBackend` part |
 | `mcp.servers` | `McpServer` parts; whole-server `ToolGrant`s owned by `bundle-mcp` |
-| exec safe bins and approval allowlists | `CommandGrant` items for agents with `exec` under `allowlist` security; one `ExecApprovals` part when stored |
+| exec safe bins and approval allowlists | `CommandGrant` items for agents with `exec` under effective `allowlist` security; one `ExecApprovals` part when stored |
 | sandbox | `Sandbox` part: mode, scope, workspace access, image, read-only root, network, memory, cpus, bind count and modes, environment names |
 | channel account | `ChannelAccount` part (channel, account id, DM and group policies) |
 | binding | connection agent ↔ account, with the peer kind only |
@@ -95,15 +115,16 @@ Older shapes are rejected, so collect again.
 | `subagents.allowAgents` | delegation rule (from, to) |
 | `tools.agentToAgent` | messaging policy (allowed targets) |
 | model provider | provider name, API kind, model ids |
-| `tools.exec`, `tools.elevated` | `ExecutionPosture` (host, security, ask, elevated, elevated channels count, safe bins/profile names, trusted-directory and path-prepend counts, strict inline evaluation) |
+| `tools.exec`, `tools.elevated`, host approvals | `ExecutionPosture` (host, configured mode/security/ask, approval security/ask, effective security/ask, elevated, elevated channels count, safe bins/profile names, trusted-directory and path-prepend counts, strict inline evaluation) |
 
 Runtime state (last run, errors, tokens) stays in the snapshot for the doctor
 and the diff. It is not model content. Identifiers become valid SysML names;
 names that cannot be made valid use quoted names.
 
-Resolve OpenClaw semantics from its 2026.6.10 sources or docs, and cite the
-file in a comment. When a rule stays ambiguous, emit an `info` finding instead
-of guessing.
+Resolve OpenClaw semantics from the selected version's sources or docs, and
+cite the file in a comment. When a rule stays ambiguous or a documented group
+or profile is only partly representable, use the known subset and emit an
+`info` finding naming it instead of guessing.
 
 ## Doctor
 
@@ -112,7 +133,7 @@ recovery }`. Initial rules:
 
 | Code | Severity | Condition |
 | --- | --- | --- |
-| `EXEC_WITHOUT_APPROVAL` | error | `exec` reachable with security `full` and ask `off` |
+| `EXEC_WITHOUT_APPROVAL` | error | `exec` reachable with effective security `full` and effective ask `off` |
 | `AGENT_WITHOUT_SANDBOX` | warning | agent with `exec` and no sandbox |
 | `EXTERNAL_BIND_SOURCES` | warning | `dangerouslyAllowExternalBindSources: true` |
 | `AGENT_TO_AGENT_WILDCARD` | warning | `agentToAgent.allow` contains `*` |
@@ -128,7 +149,7 @@ are not reported.
 ## Diff
 
 Changes between two snapshots: agent added/removed, model, grants, sandbox,
-execution (including commands), memory, binding, plugin and MCP server
+execution (including configured, approval and effective posture and commands), memory, binding, plugin and MCP server
 added/removed/changed, memory backend, exec approvals, skill added/removed/digest,
 instruction digest, cron job and schedule.
 Each change names its subject and before/after values (never secrets).
@@ -143,9 +164,10 @@ compiled sources.
 ### 1. Plugins and their tools (implemented)
 
 **Where OpenClaw keeps it.** Each native plugin's `openclaw.plugin.json`
-declares its tools in `contracts.tools`, and optional ones in
-`toolMetadata.<tool>.optional` (`plugins/building-plugins.md`, Registering
-tools). Manifests live in several places: bundled ones in
+declares its tools in `contracts.tools`, optional ones in
+`toolMetadata.<tool>.optional` (`plugins/tool-plugins.md`), and profile
+contributions in `toolMetadata.<tool>.profiles`
+(`plugins/manifest/capabilities.md`). Manifests live in several places: bundled ones in
 `<openclaw package>/dist/extensions/<id>/`, npm installs under
 `<state>/npm/projects/<encoded-package>/` (`plugins/dependency-resolution.md`),
 linked paths from `plugins.load.paths`, plus global and workspace roots.
@@ -157,7 +179,8 @@ these paths.
 `openclaw plugins list --json`: per plugin `id`, `enabled`, `rootDir` and
 `contracts.tools` (registry view, read cold; `cli/plugins/list.md`). The
 inventory omits `toolMetadata`, so the collector reads the manifest at
-`rootDir` for plugins that declare tools, and takes only the optional flags.
+`rootDir` for plugins that declare tools, and takes only the optional flags
+and profile contributions.
 `api.runtime` exposes no plugin registry to a plugin (`plugins/sdk-runtime.md`),
 and `api.runtime.gateway.request` (which could call `plugins.list` or
 `tools.catalog`) rejects external plugins
@@ -169,8 +192,12 @@ same way (`dist/openclaw-cli-invocation-*.mjs`), and `dist/index.js` and
 takes the same JSON with `collect --plugins <file>`. Without an inventory,
 `plugins` is `null` and `PLUGIN_INVENTORY_ABSENT` (info) says so.
 
-**Snapshot.** `plugins: { id, enabled, tools[], optionalTools[] }[] | null`,
-only for plugins that declare at least one tool, sorted by id.
+**Snapshot.** `plugins: { id, enabled, tools[], optionalTools[], toolProfiles[] }[] | null`,
+only for plugins that declare at least one tool, sorted by id. Each
+`toolProfiles` entry is `{ id: toolName, profiles: string[] }`, with sorted,
+deduplicated profiles and entries sorted by tool id. Only declared tools with
+nonempty profile contributions are kept. Profile names must be `minimal`,
+`coding`, `messaging` or `full`; invalid metadata is `INVALID_INPUT`.
 
 **Policy** (`gateway/config-tools/tool-policy.md`):
 
@@ -182,22 +209,25 @@ only for plugins that declare at least one tool, sorted by id.
   allow and deny list, sandbox included.
 - An optional tool needs an explicit opt-in in one of the session's policies:
   its name or a glob, its plugin id, `group:plugins`, `*`, or an explicit
-  `full` profile. An unset profile does not opt in. The sandbox policy counts
+  `full` profile, or a selected profile to which the manifest attaches it.
+  An unset profile does not opt in. The sandbox policy counts
   for the sandbox layer (`catalogPolicies` in `dist/tool-resolution-*.mjs`).
 - `TOOL_CATALOG_INCOMPLETE` fires only for names that neither the built-in
   catalog nor any listed plugin declares.
-- Not modelled: `toolMetadata.<tool>.profiles`, which adds a plugin tool to a
-  restricted profile. Under such a profile the tool gets no grant, the
-  conservative direction.
+- `toolMetadata.<tool>.profiles` adds a plugin tool to each named profile's
+  allowlist. An unattached tool remains excluded by a restricted profile unless
+  another explicit entry allows it. Global, agent, provider and sandbox
+  restrictions remain authoritative (`plugins/manifest/capabilities.md`).
 
 **SysML.** `OpenClawPlugin` part (`pluginId`, `enabled`, `tools`,
-`optionalTools`) and `ToolGrant.pluginId` for grants of plugin-owned tools.
+`optionalTools`, serialized `toolProfiles`) and `ToolGrant.pluginId` for grants
+of plugin-owned tools.
 
 **Doctor.** No new rule. Coded errors: `PLUGIN_LIST_FAILED` (the command failed
 or printed no JSON) and `PLUGIN_MANIFEST_READ_FAILED` (a listed plugin with
 tools has no regular `openclaw.plugin.json`).
 
-**Privacy.** Only ids, the enabled flag and tool names are kept. `rootDir`,
+**Privacy.** Only ids, the enabled flag, tool names and profile names are kept. `rootDir`,
 `source`, `trust.*`, `workspaceDir`, package names, versions and plugin
 config never enter the plugin inventory. The separate memory backend projection
 below retains only its named configuration fields.
@@ -376,11 +406,13 @@ and `headers` values (names only), `oauth.*` except `identity`, `clientCert`,
 - Config, global and per agent: `tools.exec.safeBins` and its per-agent twin
   (bare names; `tools/exec-approvals-advanced.md`, Safe bins), plus
   `safeBinProfiles` keyed by binary, `safeBinTrustedDirs` and `pathPrepend`
-  (host paths), and `strictInlineEval` (`tools/exec.md`).
+  (host paths), and `strictInlineEval` (`tools/exec.md`). `tools.exec.mode`
+  supplies the configured posture, or the legacy `security` / `ask` fields.
 - Host approvals: `state/openclaw.sqlite`, table `exec_approvals_config`, the
   row with `config_key = 'current'` (`tools/exec-approvals.md`, Settings and
   storage; `dist/exec-approvals-sqlite-*.mjs`).
-  - Its `raw_json` holds `defaults` and `agents.<id>.allowlist[]` entries:
+  - Its `raw_json` holds default and per-agent approval policy, plus
+    `agents.<id>.allowlist[]` entries:
     `pattern` (a bare command-name glob, or a resolved-path glob),
     `argPattern`, and `lastUsed*`.
   - Approvals can only tighten the config posture.
@@ -392,6 +424,9 @@ and `headers` values (names only), `oauth.*` except `identity`, `clientCert`,
 **Snapshot.**
 
 - Per agent, `execution` gains:
+  - `mode` (`null` for a legacy or unset mode) and configured `security` / `ask`;
+  - `approvals: { security, ask }`, the selected local host policy, with nullable
+    fields when omitted, and `effective: { security, ask }`, the stricter result;
   - `safeBins` (`null` when unset; the docs disagree on the default list);
   - `safeBinProfiles` (names only), `trustedDirCount`, `pathPrependCount`,
     `strictInlineEval`;
@@ -408,6 +443,31 @@ and `headers` values (names only), `oauth.*` except `identity`, `clientCert`,
   the current row. Each agent receives only its own stored allowlist; the
   wildcard list is not inherited because the docs leave its storage ambiguous.
 
+**Posture resolution** (`tools/exec.md`, `tools/exec-approvals.md`). Each config
+scope accepts either `mode` or legacy security/ask; a mixed scope is
+`INVALID_INPUT`. An agent mode replaces both global policy fields. Agent legacy
+fields clear an inherited mode and override only the supplied fields
+(`dist/exec-policy-DDPEdabr.mjs`, `applyExecPolicyLayer`). Mode `ask` and `auto`
+both resolve to `allowlist` / `on-miss`; keeping `mode` preserves the distinction.
+Unconfigured 2026.10 gateway/node host baselines are `full` / `off`; explicit
+`host: "sandbox"` defaults to `deny` / `off`. Undocumented older defaults stay
+`unknown`.
+
+Approval security and ask resolve independently from agent id, then `*`, then
+defaults (`dist/exec-approvals-resolver-C1cTECqF.mjs`, supplementing the per-agent
+override described in `tools/exec-approvals.md`). An omitted approval field
+inherits the configured value. The effective security is the stricter of
+`deny` < `allowlist` < `full`, and effective ask the stricter of
+`off` < `on-miss` < `always`. Unknown inputs remain unknown unless `deny` or
+`always` already determines that dimension. Invalid input values are coded
+errors, never permissive defaults.
+
+The local SQLite policy cannot establish the approvals of a remote `host:
+"node"`. Its effective posture remains unknown except for decisive configured
+restrictions, with `NODE_EXEC_APPROVALS_UNRESOLVED` (info). No session overrides,
+full-session or elevated-full exceptions, or runtime sandbox routing are
+inferred. The retained posture is the static host baseline.
+
 Agent exec fields replace global fields, including empty arrays; profile keys
 instead merge per key, so `safeBinProfiles` keeps their union (`tools/exec.md`).
 `strictInlineEval` defaults to false. Effective safe bins add restricted
@@ -421,15 +481,19 @@ an `exec` grant.
 
 - `CommandGrant` items (`command`, `kind`, `argsRestricted`), referenced by the
   agent like `ToolGrant`. They are emitted only for agents that hold an `exec`
-  grant under security `allowlist`, the only mode where they apply.
+  grant under effective security `allowlist`, the only mode where they apply.
 - `ExecutionPosture` gains `safeBins`, `safeBinProfiles`, `trustedDirCount`,
-  `pathPrependCount` and `strictInlineEval`.
+  `pathPrependCount` and `strictInlineEval`, plus configured `mode`,
+  `approvalSecurity`, `approvalAsk`, `effectiveSecurity` and `effectiveAsk`.
+  Existing `security` / `ask` attributes retain the configured posture.
 - `ExecApprovals` holds `defaultSecurity`, `defaultAsk`, `askFallback`,
   `autoAllowSkills` and the serialized `wildcardCommands`, only when the
   snapshot has approval configuration.
 
 **Doctor** (mirrors `gateway/security/audit-checks.md`):
 
+- `EXEC_WITHOUT_APPROVAL` tests the effective security/ask pair, so a restrictive
+  host approval policy suppresses the finding even when config requests full/off.
 - `SAFE_BIN_INTERPRETER_UNPROFILED` (warning): an interpreter in `safeBins`
   without a `safeBinProfiles` entry.
 - `EXEC_ALLOWLIST_WILDCARD` (warning): an agent or wildcard-list command is `*`. The
@@ -439,8 +503,11 @@ an `exec` grant.
 only), `lastUsedCommand`, `lastResolvedPath`, timestamps, entry ids,
 `socket.*`, `safeBinTrustedDirs` and `pathPrepend` values.
 
-**Diff.** Agent commands are included in `agent.execution`. Approval configuration
-changes produce `exec.approvals` with subject `instance`.
+**Diff.** Configured posture, selected approvals, effective posture and agent
+commands are included in `agent.execution`. Retaining all three postures shows
+which policy side changed even when the effective result stays the same.
+Instance approval defaults and wildcard command changes produce
+`exec.approvals` with subject `instance`.
 
 ## Invariants and tests
 

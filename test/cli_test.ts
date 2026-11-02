@@ -88,6 +88,9 @@ Deno.test("CLI rejects unknown flags and invalid snapshot boundaries", async () 
     for (
       const bad of [{ ...snapshot, schema: "unknown/1" }, {
         ...snapshot,
+        schema: "openclaw-snapshot/4",
+      }, {
+        ...snapshot,
         unexpected: "CANARY-EXTRA",
       }]
     ) {

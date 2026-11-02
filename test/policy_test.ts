@@ -22,6 +22,7 @@ function tools(
   plugins: Plugin[] | null = null,
   findings: Finding[] = [],
   mcpPrefixes: string[] = [],
+  version: string | null = null,
 ) {
   return resolvePolicy(
     "test",
@@ -32,6 +33,7 @@ function tools(
     plugins,
     findings,
     mcpPrefixes,
+    version,
   );
 }
 Deno.test("tool profiles, additive grants and deny intersections cannot restore a denied tool", () => {
@@ -104,18 +106,26 @@ Deno.test("unresolved sandbox defaults grant nothing; model restrictions remove 
 });
 
 const plugins: Plugin[] = [
-  { id: "quotes", enabled: true, tools: ["quote"], optionalTools: [] },
+  {
+    id: "quotes",
+    enabled: true,
+    tools: ["quote"],
+    optionalTools: [],
+    toolProfiles: [],
+  },
   {
     id: "flows",
     enabled: true,
     tools: ["flow_list", "flow_run"],
     optionalTools: ["flow_run"],
+    toolProfiles: [],
   },
   {
     id: "board",
     enabled: false,
     tools: ["board_list", "browser"],
     optionalTools: [],
+    toolProfiles: [],
   },
 ];
 const granted = (r: ReturnType<typeof tools>) => r.grants.map((g) => g.tool);
@@ -170,6 +180,7 @@ const mcp: Plugin[] = [{
   enabled: true,
   tools: ["docs__*", "outlook-graph__*"],
   optionalTools: [],
+  toolProfiles: [],
 }];
 
 Deno.test("MCP pseudo tools follow enabled inventory and implicit profile grants", () => {
@@ -182,6 +193,167 @@ Deno.test("MCP pseudo tools follow enabled inventory and implicit profile grants
   );
   const disabled = [{ ...mcp[0], enabled: false }];
   assert(!granted(tools({}, {}, "off", disabled)).includes("docs__*"));
+});
+
+Deno.test("2026.10 catalogs replace old groups and profiles only for that version family", () => {
+  const run = (version: string | null, global: Record<string, unknown>) =>
+    granted(tools(global, {}, "off", null, [], [], version));
+  for (const version of ["2026.10.0", "2026.10.9", "2026.10.11-beta.1"]) {
+    const coding = run(version, { profile: "coding" });
+    for (
+      const name of [
+        "sessions_search",
+        "create_goal",
+        "view_image",
+        "music_generate",
+        "theme",
+        "automations",
+      ]
+    ) {
+      assert(coding.includes(name), name);
+    }
+    for (const name of ["image", "update_plan", "tts", "gateway", "openclaw"]) {
+      assert(!coding.includes(name), name);
+    }
+    const ui = run(version, { allow: ["group:ui"] });
+    assert.deepEqual(ui, [
+      "browser",
+      "canvas",
+      "dashboard",
+      "portal",
+      "screen",
+      "show_widget",
+      "terminal",
+      "theme",
+    ]);
+    assert.deepEqual(run(version, { allow: ["cron"] }), ["automations"]);
+    assert(!run(version, { deny: ["cron"] }).includes("automations"));
+  }
+  for (const version of [null, "2026.6.10", "2026.11.1", "2026.100.1"]) {
+    assert(run(version, { profile: "coding" }).includes("image"));
+    assert(!run(version, { profile: "coding" }).includes("view_image"));
+    assert.deepEqual(run(version, { allow: ["cron"] }), ["cron"]);
+  }
+});
+
+Deno.test("2026.10 group:openclaw excludes filesystem, exec, canvas and plugin-owned tools", () => {
+  const owned = [{ ...plugins[0], tools: ["browser", "quote"] }];
+  const result = granted(
+    tools({ allow: ["group:openclaw"] }, {}, "off", owned, [], [], "2026.10.9"),
+  );
+  for (
+    const name of [
+      "read",
+      "write",
+      "edit",
+      "apply_patch",
+      "exec",
+      "process",
+      "canvas",
+      "browser",
+      "quote",
+      "transcripts",
+    ]
+  ) {
+    assert(!result.includes(name), name);
+  }
+  for (
+    const name of [
+      "computer",
+      "automations",
+      "pdf",
+      "ask_user",
+      "sessions_search",
+    ]
+  ) {
+    assert(result.includes(name), name);
+  }
+});
+
+Deno.test("restricted 2026.10 profiles report their unrepresented gateway action subset", () => {
+  for (const profile of ["minimal", "coding", "messaging"]) {
+    const findings: Finding[] = [];
+    const result = tools(
+      { profile },
+      {},
+      "off",
+      null,
+      findings,
+      [],
+      "2026.10.9",
+    );
+    assert(!granted(result).includes("gateway"));
+    assert(
+      findings.some((f) =>
+        f.code === "TOOL_PROFILE_PARTIAL" && f.severity === "info" &&
+        f.context.includes(profile)
+      ),
+    );
+    assert(
+      granted(
+        tools(
+          { profile, alsoAllow: ["gateway"] },
+          {},
+          "off",
+          null,
+          [],
+          [],
+          "2026.10.9",
+        ),
+      ).includes("gateway"),
+    );
+  }
+});
+
+Deno.test("plugin profile attachments admit only matching tools through all policy gates", () => {
+  const inventory = plugins.map((p) => ({
+    ...p,
+    toolProfiles: p.id === "flows"
+      ? [{ id: "flow_run", profiles: ["coding", "messaging"] }]
+      : [],
+  }));
+  const run = (
+    global: Record<string, unknown>,
+    agent = {},
+    mode: Sandbox["mode"] = "off",
+  ) => granted(tools(global, agent, mode, inventory, [], [], "2026.10.9"));
+  assert(run({ profile: "coding" }).includes("flow_run"));
+  assert(!run({ profile: "coding" }).includes("flow_list"));
+  assert(!run({ profile: "minimal" }).includes("flow_run"));
+  assert(!run({}).includes("flow_run"));
+  assert(!run({ profile: "coding", deny: ["flows"] }).includes("flow_run"));
+  assert(!run({ profile: "coding", allow: ["read"] }).includes("flow_run"));
+  assert(
+    !run({ profile: "coding", byProvider: { openai: { profile: "minimal" } } })
+      .includes("flow_run"),
+  );
+  assert(
+    run({ profile: "coding", byProvider: { openai: { profile: "messaging" } } })
+      .includes("flow_run"),
+  );
+  assert(
+    !run({ profile: "coding" }, {
+      sandbox: { tools: { allow: ["read"], deny: [] } },
+    }, "all").includes("flow_run"),
+  );
+  assert(
+    run({ profile: "coding" }, {
+      sandbox: { tools: { allow: ["flows"], deny: [] } },
+    }, "all").includes("flow_run"),
+  );
+  assert(
+    !granted(
+      tools(
+        { profile: "coding" },
+        {},
+        "off",
+        inventory.map((p) => ({ ...p, enabled: false })),
+        [],
+        [],
+        "2026.10.9",
+      ),
+    ).includes("flow_run"),
+  );
 });
 
 Deno.test("MCP server globs, bundle-mcp and group:plugins expand in sandbox policy", () => {

@@ -53,7 +53,7 @@ export function emit(snapshot: Snapshot): Map<string, string> {
   for (const a of [...snapshot.agents].sort((a, b) => a.id < b.id ? -1 : 1)) {
     // docs/tools/exec-approvals.md, exec.security: command allowlists apply
     // only to allowlist security and cannot grant access to the exec tool.
-    const commands = a.execution.security === "allowlist" &&
+    const commands = a.execution.effective.security === "allowlist" &&
         a.grants.some((g) => g.tool === "exec")
       ? a.execution.commands
       : [];
@@ -107,10 +107,17 @@ export function emit(snapshot: Snapshot): Map<string, string> {
       }, "            "),
       "        }",
     );
-    const { commands: _commands, ...execution } = a.execution;
+    const { commands: _commands, approvals, effective, ...execution } =
+      a.execution;
     lines.push(
       "        part execution : ExecutionPosture {",
-      attrs(execution, "            "),
+      attrs({
+        ...execution,
+        approvalSecurity: approvals.security,
+        approvalAsk: approvals.ask,
+        effectiveSecurity: effective.security,
+        effectiveAsk: effective.ask,
+      }, "            "),
       "        }",
     );
     // docs/concepts/memory.md: root MEMORY.md is the curated layer; its
@@ -287,6 +294,7 @@ export function emit(snapshot: Snapshot): Map<string, string> {
         enabled: p.enabled,
         tools: p.tools,
         optionalTools: p.optionalTools,
+        toolProfiles: p.toolProfiles,
       }),
       "    }",
     );

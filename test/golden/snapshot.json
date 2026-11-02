@@ -88,6 +88,10 @@
       ],
       "emoji": "💬",
       "execution": {
+        "approvals": {
+          "ask": "on-miss",
+          "security": "allowlist"
+        },
         "ask": "off",
         "commands": [
           {
@@ -103,9 +107,14 @@
             "kind": "safe-bin"
           }
         ],
+        "effective": {
+          "ask": "on-miss",
+          "security": "allowlist"
+        },
         "elevated": true,
         "elevatedChannelsCount": 1,
         "host": "auto",
+        "mode": null,
         "pathPrependCount": 1,
         "safeBinProfiles": [
           "wc"
@@ -383,6 +392,10 @@
       ],
       "emoji": "🏋️",
       "execution": {
+        "approvals": {
+          "ask": "on-miss",
+          "security": "allowlist"
+        },
         "ask": "off",
         "commands": [
           {
@@ -398,9 +411,14 @@
             "kind": "safe-bin"
           }
         ],
+        "effective": {
+          "ask": "on-miss",
+          "security": "allowlist"
+        },
         "elevated": true,
         "elevatedChannelsCount": 1,
         "host": "auto",
+        "mode": null,
         "pathPrependCount": 1,
         "safeBinProfiles": [
           "wc"
@@ -688,6 +706,10 @@
       ],
       "emoji": "🖖",
       "execution": {
+        "approvals": {
+          "ask": "on-miss",
+          "security": "allowlist"
+        },
         "ask": "off",
         "commands": [
           {
@@ -703,9 +725,14 @@
             "kind": "safe-bin"
           }
         ],
+        "effective": {
+          "ask": "on-miss",
+          "security": "allowlist"
+        },
         "elevated": true,
         "elevatedChannelsCount": 1,
         "host": "auto",
+        "mode": null,
         "pathPrependCount": 1,
         "safeBinProfiles": [
           "wc"
@@ -987,6 +1014,10 @@
       ],
       "emoji": null,
       "execution": {
+        "approvals": {
+          "ask": "on-miss",
+          "security": "allowlist"
+        },
         "ask": "off",
         "commands": [
           {
@@ -1002,9 +1033,14 @@
             "kind": "safe-bin"
           }
         ],
+        "effective": {
+          "ask": "on-miss",
+          "security": "allowlist"
+        },
         "elevated": true,
         "elevatedChannelsCount": 1,
         "host": "auto",
+        "mode": null,
         "pathPrependCount": 1,
         "safeBinProfiles": [
           "wc"
@@ -1345,6 +1381,10 @@
       ],
       "emoji": "🔍",
       "execution": {
+        "approvals": {
+          "ask": "on-miss",
+          "security": "allowlist"
+        },
         "ask": "on-miss",
         "commands": [
           {
@@ -1372,9 +1412,14 @@
             "kind": "safe-bin"
           }
         ],
+        "effective": {
+          "ask": "on-miss",
+          "security": "allowlist"
+        },
         "elevated": true,
         "elevatedChannelsCount": 1,
         "host": "auto",
+        "mode": null,
         "pathPrependCount": 1,
         "safeBinProfiles": [
           "wc"
@@ -1960,6 +2005,10 @@
       ],
       "emoji": "🌸",
       "execution": {
+        "approvals": {
+          "ask": "on-miss",
+          "security": "allowlist"
+        },
         "ask": "off",
         "commands": [
           {
@@ -1975,9 +2024,14 @@
             "kind": "safe-bin"
           }
         ],
+        "effective": {
+          "ask": "on-miss",
+          "security": "allowlist"
+        },
         "elevated": true,
         "elevatedChannelsCount": 1,
         "host": "auto",
+        "mode": null,
         "pathPrependCount": 1,
         "safeBinProfiles": [
           "wc"
@@ -3095,6 +3149,7 @@
       "enabled": true,
       "id": "browser",
       "optionalTools": [],
+      "toolProfiles": [],
       "tools": [
         "browser"
       ]
@@ -3103,6 +3158,7 @@
       "enabled": true,
       "id": "memory-core",
       "optionalTools": [],
+      "toolProfiles": [],
       "tools": [
         "memory_get",
         "memory_search"
@@ -3112,6 +3168,14 @@
       "enabled": true,
       "id": "stock-quotes",
       "optionalTools": [],
+      "toolProfiles": [
+        {
+          "id": "stock_quote",
+          "profiles": [
+            "coding"
+          ]
+        }
+      ],
       "tools": [
         "stock_quote"
       ]
@@ -3122,6 +3186,7 @@
       "optionalTools": [
         "whatsapp_login"
       ],
+      "toolProfiles": [],
       "tools": [
         "whatsapp_login"
       ]
@@ -3133,6 +3198,7 @@
         "board_claim",
         "board_list"
       ],
+      "toolProfiles": [],
       "tools": [
         "board_claim",
         "board_list"
@@ -3156,5 +3222,5 @@
       ]
     }
   ],
-  "schema": "openclaw-snapshot/4"
+  "schema": "openclaw-snapshot/5"
 }

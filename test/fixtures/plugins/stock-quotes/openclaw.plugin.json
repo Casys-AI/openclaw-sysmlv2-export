@@ -2,6 +2,10 @@
   "id": "stock-quotes",
   "name": "Stock Quotes",
   "contracts": { "tools": ["stock_quote"] },
+  "toolMetadata": {
+    "stock_quote": { "profiles": ["coding"] },
+    "undeclared_tool": { "profiles": ["CANARY-UNDECLARED-PROFILE"] }
+  },
   "configSchema": {
     "type": "object",
     "properties": { "apiKey": { "type": "string", "default": "CANARY-SECRET-PLUGIN-1" } }
