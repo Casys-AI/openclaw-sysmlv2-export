@@ -45,9 +45,9 @@ files by name, size and SHA-256, presence of `.git`, and a memory-note inventory
 with no note names), skills as OpenClaw discovers them (`SKILL.md` anywhere under
 `skills/`; inner symlinks followed once, outer ones skipped with a finding,
 broken ones reported; only the frontmatter `name` is read), sibling backups
-`openclaw.json.*` (count only) and cron jobs from `state/openclaw.sqlite`,
-table `cron_jobs`, opened with a read-only URI and the columns listed in the
-fixture's `state/cron_jobs.json`. Relative workspace paths resolve against the
+`openclaw.json.*` (count only), cron jobs and exec approval configuration from
+`state/openclaw.sqlite`, tables `cron_jobs` and `exec_approvals_config`, opened
+once read-only with `PRAGMA query_only` in a rolled-back transaction. Relative workspace paths resolve against the
 OpenClaw home. With a plugin inventory (the output of `openclaw plugins list
 --json`), it also reads `openclaw.plugin.json` in the `rootDir` of each plugin
 that declares tools (see Families). It uses only `node:` APIs (`fs`, `path`,
@@ -66,10 +66,12 @@ fields above runs on the raw config before projection, and the output tests
 scan with its `EMAIL_ADDRESS_PATTERN` and `JWT_PATTERN` besides the canaries.
 Do not write a third redaction mechanism.
 
-**Snapshot** is JSON with `schema: "openclaw-snapshot/3"`, sorted keys, arrays
+**Snapshot** is JSON with `schema: "openclaw-snapshot/4"`, sorted keys, arrays
 sorted by id, no clock reads. Same instance → same bytes. Version 2 added
-`plugins` and made `cron[].agentId` nullable; version 3 adds agent `memory` and
-instance `memoryBackend`. Older shapes are rejected, so collect again.
+`plugins` and made `cron[].agentId` nullable; version 3 added agent `memory` and
+instance `memoryBackend`; version 4 adds `mcpServers`, exec command metadata and
+`execApprovals`. Released schema versions are never extended in place.
+Older shapes are rejected, so collect again.
 
 ## Mapping
 
@@ -79,6 +81,8 @@ instance `memoryBackend`. Older shapes are rejected, so collect again.
 | effective tools | `ToolGrant` items (tool, layer, owning plugin) referenced by the agent |
 | plugin declaring tools | `OpenClawPlugin` part (id, enabled, tools, optional tools) |
 | memory policy, notes and backend | `AgentMemory` per agent and one `MemoryBackend` part |
+| `mcp.servers` | `McpServer` parts; whole-server `ToolGrant`s owned by `bundle-mcp` |
+| exec safe bins and approval allowlists | `CommandGrant` items for agents with `exec` under `allowlist` security; one `ExecApprovals` part when stored |
 | sandbox | `Sandbox` part: mode, scope, workspace access, image, read-only root, network, memory, cpus, bind count and modes, environment names |
 | channel account | `ChannelAccount` part (channel, account id, DM and group policies) |
 | binding | connection agent ↔ account, with the peer kind only |
@@ -91,7 +95,7 @@ instance `memoryBackend`. Older shapes are rejected, so collect again.
 | `subagents.allowAgents` | delegation rule (from, to) |
 | `tools.agentToAgent` | messaging policy (allowed targets) |
 | model provider | provider name, API kind, model ids |
-| `tools.exec`, `tools.elevated` | `ExecutionPosture` (security, ask, elevated, elevated channels count) |
+| `tools.exec`, `tools.elevated` | `ExecutionPosture` (host, security, ask, elevated, elevated channels count, safe bins/profile names, trusted-directory and path-prepend counts, strict inline evaluation) |
 
 Runtime state (last run, errors, tokens) stays in the snapshot for the doctor
 and the diff. It is not model content. Identifiers become valid SysML names;
@@ -124,14 +128,15 @@ are not reported.
 ## Diff
 
 Changes between two snapshots: agent added/removed, model, grants, sandbox,
-binding, plugin added/removed/changed, skill added/removed/digest, instruction
-digest, cron job and schedule.
+execution (including commands), memory, binding, plugin and MCP server
+added/removed/changed, memory backend, exec approvals, skill added/removed/digest,
+instruction digest, cron job and schedule.
 Each change names its subject and before/after values (never secrets).
 
 ## Families — 2 November 2026
 
-Four families extend the export, kept light. Families 1 and 2 are implemented; 3 and 4
-are designed here and not implemented yet. Doc paths are relative to the
+Four families extend the export, kept light. All four are implemented.
+Doc paths are relative to the
 `docs/` folder of the OpenClaw 2026.10.9 package; `dist/` paths name its
 compiled sources.
 
@@ -297,7 +302,7 @@ backend changes produce `memory.backend` with subject `instance`.
   `allowedChatIds`, `deniedChatIds`, `transcriptDir`, `model`.
 - Inference keeps excluding `MEMORY.md` and never reads `memory/`.
 
-### 3. MCP servers (designed)
+### 3. MCP servers (implemented)
 
 **Where OpenClaw keeps it.**
 
@@ -309,7 +314,7 @@ backend changes produce `memory.backend` with subject `instance`.
 - `auth: "oauth"` and `oauth.identity` describe OAuth; its tokens live in
   `state/openclaw.sqlite`, table `mcp_oauth_stores`, and are never read.
 - Plugin manifests can declare `mcpServers` (`plugins/manifest/surfaces.md`),
-  and bundles ship `.mcp.json`. Both are out of v1.
+  and bundles ship `.mcp.json`. Those and `nodeHost.mcp.servers` are out of scope.
 - Tools surface as plugin `bundle-mcp` tools named `<prefix>__<tool>`. The
   prefix is the server name made provider-safe (`sanitizeServerName` in
   `dist/agent-bundle-mcp-names-*.mjs`), and policy matching is
@@ -317,33 +322,54 @@ backend changes produce `memory.backend` with subject `instance`.
 
 **Snapshot.** `mcpServers` at instance level: `id`, `toolPrefix`, `enabled`,
 `transport`, `oauth`, `oauthIdentity`, `toolFilter` (`include`, `exclude`),
-`envNames`, `headerNames`, `argCount`.
+`envNames`, `headerNames`, `argCount`, sorted by `id`, or `[]` when absent.
+Entries are projected independently from the raw server keys, so a key such
+as `token` is retained. Enablement defaults to true. `oauth` means
+`auth === "oauth"`; only `oauth.identity` is retained, or null when absent.
+Tool-filter arrays default to empty; they describe the server's own filter
+and do not change whole-server grants.
+
+Prefix assignment follows `sanitizeServerName` and `assignSafeServerNames`:
+replace characters outside `[A-Za-z0-9_-]` with `-`, add `mcp-` when the result
+does not start with a letter, truncate to 30 characters, resolve collisions
+with `-2`, `-3` and so on in declaration order, then lowercase for policy.
+An explicit transport wins; `type: "http"` means `streamable-http`; otherwise
+command presence means `stdio` and URL presence means `sse`. Both or neither
+present, or an unsupported transport, is `INVALID_INPUT`. Command and URL
+values are never inspected by this projection.
 
 **Policy.**
 
-- Tool names are discovered at runtime, so each server becomes one pseudo tool
+- Tool names are discovered at runtime, so each enabled server becomes one pseudo tool
   `<prefix>__*` of a synthetic `bundle-mcp` plugin, enabled with no optional
-  tools, and the family 1 policy resolves it.
+  tools, and the family 1 policy resolves it alongside the plugin inventory.
+  The synthetic plugin is omitted from `snapshot.plugins`.
 - The `coding` and `messaging` profiles implicitly allow `bundle-mcp`
   (`tool-policy.md`).
 - The grant `ToolGrant { tool: "<prefix>__*", pluginId: "bundle-mcp" }` means
   "any tool of this server".
 - An allow list that names single server tools gives no grant;
-  `MCP_TOOL_SUBSET_UNRESOLVED` (info) reports it.
+  `MCP_TOOL_SUBSET_UNRESOLVED` (info, agent subject) reports it. These names,
+  `bundle-mcp` and server pseudo tools are known to `TOOL_CATALOG_INCOMPLETE`.
 
-**SysML.** `McpServer` part with the snapshot fields.
+**SysML.** `McpServer` parts retain `serverId`, `toolPrefix`, `enabled`,
+`transport`, `oauth`, `oauthIdentity`, flattened `toolInclude`/`toolExclude`,
+`envNames`, `headerNames` and `argCount`.
+
+**Diff.** MCP changes produce `mcp.added`, `mcp.removed` and `mcp.changed`.
 
 **Doctor.**
 
-- `MCP_SANDBOX_GATE` (warning): the agent has a host grant for a server but
-  none on its sandbox layer. `openclaw doctor` checks the same shape.
+- `MCP_SANDBOX_GATE` (info): sandbox mode is not `off`, at least one configured
+  server is enabled, and the agent has no server pseudo-tool grant on its
+  sandbox layer. `openclaw doctor` checks the same shape.
 - Header values join `plaintextSecretCount` and so `PLAINTEXT_SECRET_IN_CONFIG`.
 
 **Privacy.** Never kept: `url`, `command`, `args` (count only), `cwd`, `env`
 and `headers` values (names only), `oauth.*` except `identity`, `clientCert`,
 `clientKey`, and the OAuth tables.
 
-### 4. CLI and exec allowlists (designed)
+### 4. CLI and exec allowlists (implemented)
 
 **Where OpenClaw keeps it.**
 
@@ -360,7 +386,8 @@ and `headers` values (names only), `oauth.*` except `identity`, `clientCert`,
   - Approvals can only tighten the config posture.
   - Allowlists and safe bins apply only when security is `allowlist` (modes
     `allowlist`, `ask` and `auto`).
-- Legacy `exec-approvals.json` is import-only and not read.
+- Legacy `exec-approvals.json` is import-only and not read. Neither is the
+  `operator_approvals` ledger.
 
 **Snapshot.**
 
@@ -368,29 +395,52 @@ and `headers` values (names only), `oauth.*` except `identity`, `clientCert`,
   - `safeBins` (`null` when unset; the docs disagree on the default list);
   - `safeBinProfiles` (names only), `trustedDirCount`, `pathPrependCount`,
     `strictInlineEval`;
-  - `commands`: `{ command, kind: "safe-bin" | "name" | "path", argsRestricted }`.
-    A path pattern keeps only its last segment.
+  - `commands`: `{ id, command, kind: "safe-bin" | "name" | "path", argsRestricted }`,
+    sorted by `id`, where `id` is `${kind}:${command}`. A pattern containing
+    `/` or beginning with `~` is a path and keeps only its last segment;
+    other name patterns are kept as written. `argsRestricted` records
+    `argPattern` presence. Duplicate ids collapse and remain restricted only
+    when every collapsed entry is restricted.
 - At instance level, `execApprovals` holds the approval `defaults` and the
-  `*` allowlist, or `null` when the table or row is absent.
+  `*` allowlist as `wildcardCommands`, or `null` when the table or current row
+  is absent. Defaults are nullable `security`, `ask`, `askFallback` and
+  `autoAllowSkills`. The table is checked through `sqlite_master` before reading
+  the current row. Each agent receives only its own stored allowlist; the
+  wildcard list is not inherited because the docs leave its storage ambiguous.
+
+Agent exec fields replace global fields, including empty arrays; profile keys
+instead merge per key, so `safeBinProfiles` keeps their union (`tools/exec.md`).
+`strictInlineEval` defaults to false. Effective safe bins add restricted
+`safe-bin` commands except `awk`, `sed` and `jq`, which OpenClaw always denies
+as safe bins (`tools/exec-approvals-advanced.md`). They remain in `safeBins` as
+configured. Unset safe bins add no commands and produce
+`SAFE_BINS_DEFAULT_UNRESOLVED` (info, agent subject) only when the agent holds
+an `exec` grant.
 
 **SysML.**
 
 - `CommandGrant` items (`command`, `kind`, `argsRestricted`), referenced by the
   agent like `ToolGrant`. They are emitted only for agents that hold an `exec`
   grant under security `allowlist`, the only mode where they apply.
-- `ExecutionPosture` gains `safeBins`, `trustedDirCount` and
-  `strictInlineEval`.
+- `ExecutionPosture` gains `safeBins`, `safeBinProfiles`, `trustedDirCount`,
+  `pathPrependCount` and `strictInlineEval`.
+- `ExecApprovals` holds `defaultSecurity`, `defaultAsk`, `askFallback`,
+  `autoAllowSkills` and the serialized `wildcardCommands`, only when the
+  snapshot has approval configuration.
 
 **Doctor** (mirrors `gateway/security/audit-checks.md`):
 
 - `SAFE_BIN_INTERPRETER_UNPROFILED` (warning): an interpreter in `safeBins`
   without a `safeBinProfiles` entry.
-- `EXEC_ALLOWLIST_WILDCARD` (warning): a pattern whose command is `*`. The
+- `EXEC_ALLOWLIST_WILDCARD` (warning): an agent or wildcard-list command is `*`. The
   audit has no check on allowlist content.
 
 **Privacy.** Never kept: directories of path patterns, `argPattern` (presence
 only), `lastUsedCommand`, `lastResolvedPath`, timestamps, entry ids,
 `socket.*`, `safeBinTrustedDirs` and `pathPrepend` values.
+
+**Diff.** Agent commands are included in `agent.execution`. Approval configuration
+changes produce `exec.approvals` with subject `instance`.
 
 ## Invariants and tests
 
@@ -403,7 +453,7 @@ only), `lastUsedCommand`, `lastResolvedPath`, timestamps, entry ids,
 - **Golden files.** Snapshot, SysML, findings for the fixture, reviewed.
 - **Doctor.** One positive and one negative case per rule.
 - **Collector.** Tests copy the fixture to a temp dir, build
-  `state/openclaw.sqlite` from `state/cron_jobs.json` and add `.git` or backups
+  `state/openclaw.sqlite` from every `state/*.json` table fixture and add `.git` or backups
   where a case needs them. No binary is committed.
 
 ## Interfaces

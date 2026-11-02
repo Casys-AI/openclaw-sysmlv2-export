@@ -13,24 +13,31 @@ evolving agentic systems from SysML v2.
 
 ## What it exports
 
-| OpenClaw                                | SysML v2                                                     |
-| --------------------------------------- | ------------------------------------------------------------ |
-| Agents, models, identities              | `part def … :> OpenClawAgent` (a `SoftwareOperator`)         |
-| Tool policy                             | Effective, positive `ToolGrant`s per agent (host or sandbox) |
-| Plugins that declare tools              | `OpenClawPlugin` parts; their tools join the grants          |
-| Memory policy, notes and backend        | `AgentMemory` per agent; one `MemoryBackend`                 |
-| Sandboxes                               | `Sandbox` parts: image, network, mounts, environment _names_ |
-| Channel accounts and bindings           | `ChannelAccount` parts and agent ↔ account connections       |
-| Cron jobs and heartbeats                | Scheduled case types with cron or interval schedules         |
-| Hooks                                   | `ExternalTrigger` parts                                      |
-| Skills and instruction files            | References with path, SHA-256 and size                       |
-| Delegation and agent-to-agent messaging | Delegation rules and a messaging policy                      |
+| OpenClaw                                | SysML v2                                                           |
+| --------------------------------------- | ------------------------------------------------------------------ |
+| Agents, models, identities              | `part def … :> OpenClawAgent` (a `SoftwareOperator`)               |
+| Tool policy                             | Effective, positive `ToolGrant`s per agent (host or sandbox)       |
+| Plugins that declare tools              | `OpenClawPlugin` parts; their tools join the grants                |
+| Memory policy, notes and backend        | `AgentMemory` per agent; one `MemoryBackend`                       |
+| Configured MCP servers                  | `McpServer` parts; server-wide `ToolGrant`s owned by `bundle-mcp`  |
+| Exec safe bins and approval allowlists  | `ExecutionPosture`, `ExecApprovals` and applicable `CommandGrant`s |
+| Sandboxes                               | `Sandbox` parts: image, network, mounts, environment _names_       |
+| Channel accounts and bindings           | `ChannelAccount` parts and agent ↔ account connections             |
+| Cron jobs and heartbeats                | Scheduled case types with cron or interval schedules               |
+| Hooks                                   | `ExternalTrigger` parts                                            |
+| Skills and instruction files            | References with path, SHA-256 and size                             |
+| Delegation and agent-to-agent messaging | Delegation rules and a messaging policy                            |
 
 Plugin tools come from OpenClaw's own inventory: the plugin runs
 `openclaw plugins list --json` and reads each listed manifest only to learn
 which tools are optional. A disabled plugin's tools get no grant, and an
 optional tool needs an explicit allow entry (its name, its plugin id,
 `group:plugins`) or the `full` profile.
+
+MCP grants describe whole configured servers; individual tool names require
+runtime discovery and produce an informational finding. Exec commands keep
+binary names and argument-restriction flags. They become command grants only
+when the agent has the `exec` tool and uses `allowlist` security.
 
 The library it builds on (`core.sysml`, `cases.sysml`, `skills.sysml`, copied
 from Assembly) is written next to the export, so each export folder compiles on
@@ -55,6 +62,9 @@ a separate `OpenClawInferred` package and are never admitted automatically.
   referenced by digest. Environment variables keep their names only.
 - Memory notes keep only counts, dates, byte totals and digests; note names,
   extra search paths and Active Memory prompts or chat ids are excluded.
+- MCP environment and header values, launch commands, URLs and arguments are
+  excluded. Exec approval paths keep only their final segment; argument
+  patterns, socket credentials and usage history are excluded.
 - Two layers: an allowlist projection, then
   [`@logtape/redaction`](https://jsr.io/@logtape/redaction).
 - Inference sends only behavior files to the agent's own model, never
