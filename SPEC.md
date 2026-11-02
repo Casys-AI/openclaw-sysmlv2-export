@@ -18,7 +18,8 @@ comes from a real instance.
    raw OpenClaw policy is kept as provenance (snapshot, `doc` text), never as a
    negative grant.
 2. **Vocabulary.** A package `OpenClawImport` specializes `AssemblyCore` and
-   holds the new definitions (`OpenClawAgent`, `ToolGrant`, `CronSchedule`,
+   holds the new definitions (`OpenClawAgent`, `OpenClawTool`, `ToolGrant`,
+   `AgentContext`, `CronSchedule`,
    `ChannelAccount`, `Sandbox`…). Nothing changes in Assembly's library
    (`apps/live-builder/models/` there). Definitions may move into the core
    later.
@@ -42,9 +43,18 @@ comes from a real instance.
    (`plugins/manifest/capabilities.md`).
 6. **Effective host exec posture.** Keep configured mode/security/ask, selected
    host approval security/ask, and their stricter result separately per agent.
-   Doctor and command-grant emission use the effective result. This is a
+   Doctor and CLI grant emission use the effective result. This is a
    static host baseline; session permissions and runtime sandbox routing are
    not collected (`tools/exec.md`, `tools/exec-approvals.md`).
+7. **Assembly categories.** Emission follows Assembly's categories. Tools are
+   one category: built-in, plugin, MCP and CLI are origins (`ToolOrigin`) of
+   `OpenClawTool :> AssemblyCore::ExecutableCapability`, listed once in an
+   instance tool catalog that grants reference. Plugins and MCP servers remain
+   providers. Instruction files, skills and memory form each agent's
+   `AgentContext`, Assembly's context-and-memory category; OpenClaw memory
+   stays an inventory, never `APEMemory`. The instance package nests one
+   package per category. The snapshot schema is unchanged: this is emission
+   only.
 
 ## Pipeline
 
@@ -95,27 +105,39 @@ Older shapes are rejected, so collect again.
 
 ## Mapping
 
-| OpenClaw | SysML (`OpenClawImport` + instance package) |
-| --- | --- |
-| agent (`agents.list`, implicit `main`) | `part def … :> OpenClawAgent`, with `OpenClawAgent :> AssemblyCore::SoftwareOperator`; id, display name, emoji, primary and fallback models |
-| effective tools | `ToolGrant` items (tool, layer, owning plugin) referenced by the agent |
-| plugin declaring tools | `OpenClawPlugin` part (id, enabled, tools, optional tools, profile contributions) |
-| memory policy, notes and backend | `AgentMemory` per agent and one `MemoryBackend` part |
-| `mcp.servers` | `McpServer` parts; whole-server `ToolGrant`s owned by `bundle-mcp` |
-| exec safe bins and approval allowlists | `CommandGrant` items for agents with `exec` under effective `allowlist` security; one `ExecApprovals` part when stored |
-| sandbox | `Sandbox` part: mode, scope, workspace access, image, read-only root, network, memory, cpus, bind count and modes, environment names |
-| channel account | `ChannelAccount` part (channel, account id, DM and group policies) |
-| binding | connection agent ↔ account, with the peer kind only |
-| cron job | case type with `AssemblyCases::EnvelopeKind::deterministic` and a `CronSchedule :> AssemblyCases::Schedule` (expression, time zone); `every` maps to `AssemblyCases::Every` |
-| heartbeat | case type with `reassessment` envelope and `Every` |
-| hook mapping | `ExternalTrigger` (name, target agent, delivery channel) |
-| workspace skill | `APESkills::InitialSkill` (id, source path, digest) |
-| bundled skill entry | `BundledSkill` (name, enabled) |
-| instruction file | `InstructionFile` (path, sha256, bytes) |
-| `subagents.allowAgents` | delegation rule (from, to) |
-| `tools.agentToAgent` | messaging policy (allowed targets) |
-| model provider | provider name, API kind, model ids |
-| `tools.exec`, `tools.elevated`, host approvals | `ExecutionPosture` (host, configured mode/security/ask, approval security/ask, effective security/ask, elevated, elevated channels count, safe bins/profile names, trusted-directory and path-prepend counts, strict inline evaluation) |
+The instance package `OpenClawInstance` nests one package per Assembly
+category, each with a short `doc`: `Operators`, `Tools`, `Context`, `Cases`,
+`Entries` and `Authority`. References across them are qualified
+(`Authority::grant_…`, `Tools::toolCatalog.tool_…`, `Operators::agent_…`). An
+agent's context, sandbox and exec posture stay parts of its agent usage.
+
+| Category | OpenClaw | SysML (`OpenClawImport` + instance package) |
+| --- | --- | --- |
+| Operators | agent (`agents.list`, implicit `main`) | `part def … :> OpenClawAgent`, with `OpenClawAgent :> AssemblyCore::SoftwareOperator`; id, display name, emoji, primary and fallback models; one `context` part |
+| Operators | model provider | `ModelProvider` (name, API kind, model ids) |
+| Tools | granted tool: built-in, plugin, MCP server, exec command | one `OpenClawTool :> AssemblyCore::ExecutableCapability` in `toolCatalog`: tool id, `ToolOrigin` (`builtin`, `plugin`, `mcp`, `cli`), provider (plugin id, MCP server id or `exec`), optional flag |
+| Tools | plugin declaring tools | `OpenClawPlugin` provider (id, enabled, tools, optional tools, profile contributions) |
+| Tools | `mcp.servers` | `McpServer` providers; a granted server is the catalog tool `<prefix>__*` |
+| Context | instruction file | `InstructionFile` (path, sha256, bytes) in the agent's `AgentContext.instructions` |
+| Context | workspace skill | `APESkills::InitialSkill` (id, source path, digest) in `AgentContext.skills` |
+| Context | memory policy and notes | `AgentMemory` as `AgentContext.memory` |
+| Context | memory backend | one `MemoryBackend` part |
+| Context | bundled skill entry | `BundledSkill` (name, enabled) |
+| Cases | cron job | case type with `AssemblyCases::EnvelopeKind::deterministic` and a `CronSchedule :> AssemblyCases::Schedule` (expression, time zone); `every` maps to `AssemblyCases::Every` |
+| Cases | heartbeat | case type with `reassessment` envelope and `Every` |
+| Entries | channel account | `ChannelAccount` part (channel, account id, DM and group policies) |
+| Entries | binding | connection agent ↔ account, with the peer kind only |
+| Entries | hook mapping | `ExternalTrigger` (name, target agent, delivery channel) |
+| Authority | effective tools | `ToolGrant` items (catalog tool reference, layer) referenced by the agent |
+| Authority | exec safe bins and approval allowlists | `ToolGrant`s of `cli` tools (command kind, args restricted) on the layer of each `exec` grant, under effective `allowlist` security; one `ExecApprovals` part when stored |
+| Authority | `tools.exec`, `tools.elevated`, host approvals | `ExecutionPosture` per agent (host, configured mode/security/ask, approval security/ask, effective security/ask, elevated, elevated channels count, safe bins/profile names, trusted-directory and path-prepend counts, strict inline evaluation) |
+| Authority | sandbox | `Sandbox` part per agent: mode, scope, workspace access, image, read-only root, network, memory, cpus, bind count and modes, environment names |
+| Authority | `subagents.allowAgents` | delegation rule (from, to) |
+| Authority | `tools.agentToAgent` | messaging policy (allowed targets) |
+
+The catalog holds every tool granted to at least one agent, once; a provider's
+ungranted tools stay listed on the provider only. Built-in tools have no
+provider.
 
 Runtime state (last run, errors, tokens) stays in the snapshot for the doctor
 and the diff. It is not model content. Identifiers become valid SysML names;
@@ -219,9 +241,9 @@ nonempty profile contributions are kept. Profile names must be `minimal`,
   another explicit entry allows it. Global, agent, provider and sandbox
   restrictions remain authoritative (`plugins/manifest/capabilities.md`).
 
-**SysML.** `OpenClawPlugin` part (`pluginId`, `enabled`, `tools`,
-`optionalTools`, serialized `toolProfiles`) and `ToolGrant.pluginId` for grants
-of plugin-owned tools.
+**SysML.** `OpenClawPlugin` provider part (`pluginId`, `enabled`, `tools`,
+`optionalTools`, serialized `toolProfiles`). A granted plugin tool is a catalog
+tool with origin `plugin`, the plugin id as provider and its optional flag.
 
 **Doctor.** No new rule. Coded errors: `PLUGIN_LIST_FAILED` (the command failed
 or printed no JSON) and `PLUGIN_MANIFEST_READ_FAILED` (a listed plugin with
@@ -300,7 +322,7 @@ Other regular Markdown files count recursively, including nested dated files.
 
 **SysML.**
 
-- `OpenClawImport` gains an `AgentMemory` part per agent, with flat attributes:
+- Each agent's `AgentContext` holds its `AgentMemory`, with flat attributes:
   the search fields, `curatedSha256`/`curatedBytes` from `MEMORY.md`, and the
   daily inventory.
 - It also gains one `MemoryBackend` part.
@@ -376,8 +398,9 @@ values are never inspected by this projection.
   The synthetic plugin is omitted from `snapshot.plugins`.
 - The `coding` and `messaging` profiles implicitly allow `bundle-mcp`
   (`tool-policy.md`).
-- The grant `ToolGrant { tool: "<prefix>__*", pluginId: "bundle-mcp" }` means
-  "any tool of this server".
+- A grant of `<prefix>__*` means "any tool of this server". In SysML it
+  references the catalog tool `<prefix>__*` with origin `mcp` and the server id
+  as provider; the synthetic `bundle-mcp` owner is not emitted.
 - An allow list that names single server tools gives no grant;
   `MCP_TOOL_SUBSET_UNRESOLVED` (info, agent subject) reports it. These names,
   `bundle-mcp` and server pseudo tools are known to `TOOL_CATALOG_INCOMPLETE`.
@@ -479,9 +502,12 @@ an `exec` grant.
 
 **SysML.**
 
-- `CommandGrant` items (`command`, `kind`, `argsRestricted`), referenced by the
-  agent like `ToolGrant`. They are emitted only for agents that hold an `exec`
-  grant under effective security `allowlist`, the only mode where they apply.
+- Each command is a catalog tool with origin `cli`, provider `exec` and the
+  command as tool id. For each of the agent's `exec` grants, every command gets
+  a `ToolGrant` on that grant's layer, with `commandKind` (`safe-bin`, `name`
+  or `path`) and `argsRestricted`. They are emitted only for agents that hold
+  an `exec` grant under effective security `allowlist`, the only mode where
+  they apply.
 - `ExecutionPosture` gains `safeBins`, `safeBinProfiles`, `trustedDirCount`,
   `pathPrependCount` and `strictInlineEval`, plus configured `mode`,
   `approvalSecurity`, `approvalAsk`, `effectiveSecurity` and `effectiveAsk`.

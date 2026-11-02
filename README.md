@@ -13,20 +13,25 @@ evolving agentic systems from SysML v2.
 
 ## What it exports
 
-| OpenClaw                                | SysML v2                                                           |
-| --------------------------------------- | ------------------------------------------------------------------ |
-| Agents, models, identities              | `part def … :> OpenClawAgent` (a `SoftwareOperator`)               |
-| Tool policy                             | Effective, positive `ToolGrant`s per agent (host or sandbox)       |
-| Plugins that declare tools              | `OpenClawPlugin` parts; their tools join the grants                |
-| Memory policy, notes and backend        | `AgentMemory` per agent; one `MemoryBackend`                       |
-| Configured MCP servers                  | `McpServer` parts; server-wide `ToolGrant`s owned by `bundle-mcp`  |
-| Exec safe bins and approval allowlists  | `ExecutionPosture`, `ExecApprovals` and applicable `CommandGrant`s |
-| Sandboxes                               | `Sandbox` parts: image, network, mounts, environment _names_       |
-| Channel accounts and bindings           | `ChannelAccount` parts and agent ↔ account connections             |
-| Cron jobs and heartbeats                | Scheduled case types with cron or interval schedules               |
-| Hooks                                   | `ExternalTrigger` parts                                            |
-| Skills and instruction files            | References with path, SHA-256 and size                             |
-| Delegation and agent-to-agent messaging | Delegation rules and a messaging policy                            |
+The instance package groups the model by Assembly's categories, one nested
+package each.
+
+| Category  | OpenClaw                                        | SysML v2                                                                                     |
+| --------- | ----------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Operators | Agents, models, identities; model providers     | `part def … :> OpenClawAgent` (a `SoftwareOperator`); `ModelProvider` parts                  |
+| Tools     | Built-in, plugin, MCP and CLI tools             | One catalog of `OpenClawTool`s (an `ExecutableCapability`) with their origin and provider    |
+| Tools     | Plugins that declare tools, MCP servers         | `OpenClawPlugin` and `McpServer` providers                                                   |
+| Context   | Instruction files, skills, memory policy, notes | One `AgentContext` per agent: file references (path, SHA-256, size), skills, `AgentMemory`   |
+| Context   | Bundled skills, memory backend                  | `BundledSkill` entries and one `MemoryBackend`                                               |
+| Cases     | Cron jobs and heartbeats                        | Scheduled case types with cron or interval schedules                                         |
+| Entries   | Channel accounts, bindings, hooks               | `ChannelAccount` parts, agent ↔ account connections, `ExternalTrigger` parts                 |
+| Authority | Tool policy, exec allowlists                    | Effective, positive `ToolGrant`s per agent and layer (host or sandbox), each naming one tool |
+| Authority | Exec posture and approvals, sandboxes           | `ExecutionPosture`, `ExecApprovals`, `Sandbox` (image, network, mounts, environment _names_) |
+| Authority | Delegation and agent-to-agent messaging         | Delegation rules and a messaging policy                                                      |
+
+MCP and CLI are origins of tools, not categories. OpenClaw memory is kept as an
+inventory: it is not Assembly's governed memory, since OpenClaw has no admission
+or validity window.
 
 Tool groups and profiles follow the recorded OpenClaw version: `2026.10.x` uses
 the 2026.10 catalog, and other versions use the 2026.6.10 catalog with an
@@ -42,9 +47,10 @@ policy restrictions still apply. Optional tools need an explicit allow entry, a
 matching profile attachment, or the `full` profile.
 
 MCP grants describe whole configured servers; individual tool names require
-runtime discovery and produce an informational finding. Exec commands keep
-binary names and argument-restriction flags. They become command grants only
-when the agent has the `exec` tool and effective `allowlist` security.
+runtime discovery and produce an informational finding. Exec commands become CLI
+tools named after their binary; their grants keep the argument-restriction flag
+and exist only when the agent has the `exec` tool and effective `allowlist`
+security.
 
 Exec posture keeps the configured policy, selected host approvals and their
 stricter result separately. Doctor checks that effective result for exec without
