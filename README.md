@@ -60,10 +60,31 @@ core.sysml  cases.sysml  skills.sysml
 inference.json  OpenClawInferred.sysml   (with --infer)
 ```
 
-`versions.json` lists the runs, newest first, and `index.html` is a static page
-(no network, opens from `file://`) to browse them and see what changed in each
-file since the previous run. Set `plugins.entries.sysmlv2-export.config.outDir`
-to write elsewhere by default.
+`versions.json` lists the runs, newest first, and `index.html` is the viewer.
+Set `plugins.entries.sysmlv2-export.config.outDir` to write elsewhere by
+default.
+
+## Viewer
+
+`index.html` draws each version as SysML v2 diagrams. It is one static page: no
+network, it opens from `file://`, and the diagrams are laid out when the export
+runs. Pick a version, then a view:
+
+- **System**: each agent as a part with its context (instructions, skills,
+  memory) and its granted tools by origin, connected to its channel accounts
+  through its bindings.
+- **Tools**: the tool catalog by origin and provider. Each tool shows which
+  agents hold it, on the host or in the sandbox.
+- **Scheduled tasks**: cron jobs and heartbeats with their schedules, linked to
+  the agent they wake.
+- **Behaviour** (with inference): each agent's proposed procedures as action
+  flows, with decisions, hand-offs and escalations, and its rules with the lines
+  they come from.
+
+Click an element to see its attributes and its exact SysML text. Elements added
+or changed since the previous version are highlighted, and removed ones are
+listed. Files and Changes show each file and its diff since the previous
+version.
 
 ## What it exports
 
@@ -145,4 +166,6 @@ are listed in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
-MIT. The copied Assembly SysML library keeps Assembly's MIT license.
+MIT. The copied Assembly SysML library keeps Assembly's MIT license. The plugin
+bundle includes [elkjs](https://github.com/kieler/elkjs) 0.9.3, under the
+Eclipse Public License 2.0, to lay the diagrams out.

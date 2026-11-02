@@ -6,8 +6,9 @@ one is allowed to use, their instructions, skills and memory, cron jobs and
 heartbeats, channels, sandboxes and exec settings. On request, each agent's own
 model proposes the procedures and rules written in its instruction files.
 
-Every run is kept as a version, with an offline page to browse the files and see
-what changed since the previous run.
+Every run is kept as a version, with an offline page that draws it as SysML v2
+diagrams (system, tools, scheduled tasks, inferred behaviour), shows each
+element's SysML text and highlights what changed since the previous run.
 
 Status: 0.1.0, preview. Requires OpenClaw 2026.10.9 or later.
 
@@ -46,4 +47,5 @@ the SysML files, and updates `versions.json` and the viewer, `index.html`.
   proposals are kept apart and never admitted automatically.
 
 Source, documentation and specification:
-<https://github.com/Casys-AI/openclaw-sysmlv2-export>. MIT license.
+<https://github.com/Casys-AI/openclaw-sysmlv2-export>. MIT license; the bundle
+includes elkjs 0.9.3 (Eclipse Public License 2.0) for diagram layout.

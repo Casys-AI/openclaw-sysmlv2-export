@@ -47,7 +47,9 @@ calls the next.
 | doctor   | `doctor(snapshot) → Finding[]`         | Experimental: collector findings plus the doctor rules (§7.2). Deno CLI only. |
 | diff     | `diff(a, b) → Change[]`                | Structural changes between two snapshots (§8).                                |
 | validate | `validate(files) → Diagnostics`        | Compiles files with Assembly's pinned Toolkit. Used by tests only.            |
-| viewer   | `viewerPage(versions) → html`          | Static page over the kept versions (§10.5).                                   |
+| views    | `diagramViews(snapshot, inference)`    | The viewer's diagram model: nodes and edges per view, each with its SysML.    |
+| layout   | `layoutView(view) → Scene`             | Positions a view with elkjs, at export time (§10.5). Asynchronous.            |
+| viewer   | `viewerPage(versions) → html`          | Static page over the kept versions (§10.5). Asynchronous.                     |
 | infer    | `parseAgentInference`, `emitInferred`  | Validates a model's answer and emits `OpenClawInferred.sysml` (§9).           |
 
 A plugin run is: list plugins (`openclaw plugins list --json`) → collect → emit
@@ -654,10 +656,35 @@ inference.json  OpenClawInferred.sysml      (with inference)
 `<outDir>/versions.json` lists the runs, newest first: id, creation time, agent
 count, and inference counts (or null). `<outDir>/index.html` is regenerated
 after each run: one self-contained page (no network, opens from `file://`) that
-lists the versions, shows each file, and shows the unified diff of each file
-since the previous version, computed at export time. File texts shared by
-several versions are stored once, and the embedded data cannot close its script
-element.
+draws each version as SysML v2 diagrams, shows each file, and shows the unified
+diff of each file since the previous version.
+
+| View            | Content                                                                                                                                                         |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| System          | Agent part usages with compartments (attributes, context, tools by origin and layer), channel accounts grouped by channel, `AgentBinding` connections.          |
+| Tools           | The `Tools` package: catalog tools by origin, plugin and MCP providers as parts, declared but ungranted tools dashed; one grant slot per agent (host, sandbox). |
+| Scheduled tasks | Heartbeats and cron jobs as `ScheduledCase` parts with schedule and state, an owner edge to the agent they wake; an unknown target is a dashed reference.       |
+| Behaviour       | Per agent with inference: one `action def` frame per procedure (start, actions, decisions, hand-offs and escalations to agents or actors, done), its rules.     |
+
+- **Same data as the text.** Views are built from the version's own
+  `snapshot.json` and `inference.json`, with the emitter's grant resolution.
+  Each element names its declarations (qualified names) in the version's emitted
+  files; the inspector shows their exact lines and opens them under Files.
+- **Layout at export time.** `elkjs` 0.9.3 (pinned, layered algorithm,
+  deterministic options) places System, Scheduled tasks and Behaviour; Tools is
+  packed on shelves, since no edge orders it. Text is measured with Helvetica's
+  metrics, the font the diagrams use (or its metric twins Arial and Liberation
+  Sans); rows that do not fit end with an ellipsis, and the page squeezes any
+  text that still overflows. The page itself only draws SVG.
+- **Changes.** Against the previous version, an element is added when its id is
+  new, changed when its attributes or SysML text differ (frames by their
+  attributes), removed when it is gone; a view the previous version lacked is
+  new.
+- **Unreadable snapshots.** A version whose snapshot fails this viewer's schema
+  check keeps its files and diffs, without diagrams.
+- **Determinism and size.** Same versions, same bytes. File texts and view
+  payloads shared by several versions are stored once, and the embedded data
+  cannot close its script element.
 
 ### 10.6 Deno CLI
 
@@ -767,6 +794,10 @@ Failures are `{ code, context, recovery }` errors, never findings.
     and versions; the doctor stays experimental and out of the plugin. Why: a
     diagnostic is only meaningful when read against Assembly's theory of the
     system, which the export does not carry yet.
+14. **Diagrams laid out at export time.** The plugin lays the views out with
+    elkjs and embeds their geometry. Why: the page stays small and works from
+    `file://` without a 1.6 MB layout engine in every page, and the same input
+    gives the same page; the plugin bundle carries elkjs instead.
 
 ## 14. Verification
 
@@ -779,5 +810,10 @@ Failures are `{ code, context, recovery }` errors, never findings.
   compiles alone with Assembly's pinned Toolkit with zero errors
   (`deno task test:toolkit`, which needs `ASSEMBLY_DIR` and
   `SYSML_TOOLKIT_DIR`).
+- **Viewer.** The fixture's views hold the expected nodes and edges; every
+  element names a declaration of the emitted files; layout is deterministic,
+  keeps children inside their container and never overlaps siblings; a new
+  element is highlighted against the previous version; hostile names cannot
+  escape the embedded data.
 - **Collector.** Tests copy the fixture to a temporary directory and build
   `state/openclaw.sqlite` from `state/*.json`; no binary is committed.
