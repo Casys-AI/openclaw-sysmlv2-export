@@ -10,23 +10,25 @@
     "doctor": "deno run --cached-only --allow-read cli.ts doctor",
     "diff": "deno run --cached-only --allow-read cli.ts diff",
     "check": "deno check --cached-only src/*.ts cli.ts plugin/core.ts test/*.ts test/support/*.ts",
-    "test": "deno test --cached-only --allow-read --allow-write --allow-env=SYSML_TOOLKIT_DIR,TMPDIR,TMP,TEMP --ignore=test/toolkit_test.ts test/",
-    "test:toolkit": "deno test --cached-only --allow-read --allow-write --allow-env --allow-run test/toolkit_test.ts",
-    "plugin:build": "deno bundle --platform=node -o plugin/core.mjs plugin/core.ts"
+    "test": "deno test --cached-only --allow-read --allow-write --allow-env=SYSML_TOOLKIT_WASM_ARCHIVE,TMPDIR,TMP,TEMP test/",
+    "test:toolkit": "deno test --cached-only --allow-read --allow-write --allow-env=SYSML_TOOLKIT_WASM_ARCHIVE,TMPDIR,TMP,TEMP test/toolkit_test.ts test/toolkit_install_test.ts",
+    "plugin:build": "deno bundle --platform=node -o plugin/core.mjs plugin/core.ts && deno bundle --platform=node -o plugin/toolkit-worker.mjs src/toolkit-worker.ts"
   },
   "fmt": {
     "exclude": [
       "test/fixtures",
       "test/golden",
       "plugin/core.mjs",
-      "plugin/THIRD_PARTY_NOTICES.md"
+      "plugin/THIRD_PARTY_NOTICES.md",
+      "plugin/toolkit-worker.mjs"
     ]
   },
   "lint": {
     "exclude": [
       "test/fixtures",
       "test/golden",
-      "plugin/core.mjs"
+      "plugin/core.mjs",
+      "plugin/toolkit-worker.mjs"
     ]
   }
 }

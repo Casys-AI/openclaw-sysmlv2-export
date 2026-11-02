@@ -24,14 +24,19 @@
   "files": [
     "index.mjs",
     "core.mjs",
+    "toolkit-worker.mjs",
     "openclaw.plugin.json",
     "README.md",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md"
   ],
-  "peerDependencies": { "openclaw": ">=2026.10.9" },
+  "peerDependencies": {
+    "openclaw": ">=2026.10.9"
+  },
   "openclaw": {
-    "extensions": ["./index.mjs"],
+    "extensions": [
+      "./index.mjs"
+    ],
     "compat": {
       "pluginApi": ">=2026.10.9",
       "minGatewayVersion": "2026.10.9"

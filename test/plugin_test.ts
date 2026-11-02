@@ -36,6 +36,21 @@ Deno.test("plugin runs are kept as versions", async (t) => {
       null,
       new Date("2026-11-02T10:15:00.250Z"),
     );
+    const skipped = {
+      status: "skipped",
+      errors: 0,
+      code: "TOOLKIT_NOT_INSTALLED",
+      recovery: "openclaw sysmlv2-toolkit install",
+    };
+    assert.deepEqual(first.validation, skipped);
+    assert.deepEqual(
+      JSON.parse(await readFile(join(first.outDir, "validation.json"), "utf8")),
+      {
+        validation: skipped,
+        errors: [],
+        warnings: [],
+      },
+    );
     const config = join(fixture.home, "openclaw.json");
     await writeFile(
       config,
@@ -60,11 +75,13 @@ Deno.test("plugin runs are kept as versions", async (t) => {
           id: "2026-11-02T10-20-00Z",
           createdAt: "2026-11-02T10:20:00.000Z",
           agents: 6,
+          validation: skipped,
           inferred: { procedures: 0, rules: 1, failed: 0 },
         }, {
           id: "2026-11-02T10-15-00Z",
           createdAt: "2026-11-02T10:15:00.250Z",
           agents: 6,
+          validation: skipped,
           inferred: null,
         }],
       );
@@ -82,6 +99,7 @@ Deno.test("plugin runs are kept as versions", async (t) => {
           "inference.json",
           "skills.sysml",
           "snapshot.json",
+          "validation.json",
         ]);
         for (const [name, text] of ASSEMBLY_LIBRARY) {
           assert.match(text, /^\/\/ Copied from Assembly apps\/live-builder/);

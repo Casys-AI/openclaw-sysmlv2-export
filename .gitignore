@@ -1,2 +1,3 @@
 .DS_Store
 plugin/core.mjs
+plugin/toolkit-worker.mjs

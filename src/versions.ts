@@ -1,7 +1,10 @@
+import type { ValidationSummary } from "./validate.ts";
+
 /** One plugin export run, as listed in versions.json (newest first). */
 export interface VersionEntry {
   id: string;
   createdAt: string;
+  validation?: ValidationSummary;
   agents: number;
   inferred: { procedures: number; rules: number; failed: number } | null;
 }

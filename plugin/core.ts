@@ -30,6 +30,8 @@ import {
 } from "../src/snapshot.ts";
 import { type VersionEntry, versionId, withVersion } from "../src/versions.ts";
 import { viewerPage } from "../src/viewer.ts";
+import { validationReport, type ValidationSummary } from "../src/validate.ts";
+export { installToolkit, toolkitStatus } from "../src/toolkit-install.ts";
 
 /** One model call about one agent: the raw text and the model that answered. */
 export type Complete = (
@@ -45,6 +47,7 @@ export interface ExportSummary {
   viewer: string;
   agents: number;
   inferred: { procedures: number; rules: number; failed: string[] } | null;
+  validation: ValidationSummary;
 }
 
 /** Rereads an instruction file only if it is still inside the workspace and
@@ -303,10 +306,19 @@ export async function runExport(
       : e;
   });
   for (const [name, text] of files) await writeFile(join(dir, name), text);
+  const { validation, diagnostics } = await validationReport(
+    new Map([...files].filter(([name]) => name.endsWith(".sysml"))),
+    stateDir,
+  );
+  await writeFile(
+    join(dir, "validation.json"),
+    canonical({ validation, ...diagnostics }),
+  );
   const versions = withVersion(await readVersions(outDir), {
     id: version,
     createdAt: now.toISOString(),
     agents: snapshot.agents.length,
+    validation,
     inferred: inferred && {
       procedures: inferred.procedures,
       rules: inferred.rules,
@@ -329,6 +341,7 @@ export async function runExport(
     version,
     viewer,
     agents: snapshot.agents.length,
+    validation,
     inferred,
   };
 }
