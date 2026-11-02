@@ -12,6 +12,11 @@
       "name": "sysmlv2-export",
       "description": "Export this instance to SysML v2 for Assembly",
       "hasSubcommands": false
+    },
+    {
+      "name": "sysmlv2-toolkit",
+      "description": "Install or verify the SysML WebAssembly Toolkit",
+      "hasSubcommands": true
     }
   ],
   "configSchema": {

@@ -3,7 +3,12 @@
 import { isAbsolute, join, relative } from "node:path";
 import process from "node:process";
 import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
-import { pluginList, runExport } from "./core.mjs";
+import {
+  installToolkit,
+  pluginList,
+  runExport,
+  toolkitStatus,
+} from "./core.mjs";
 
 const PURPOSE = "sysmlv2-export.infer";
 
@@ -88,6 +93,12 @@ function summarize(s) {
       lines.push(`Inference failed for ${s.inferred.failed.join("; ")}`);
     }
   }
+  const v = s.validation;
+  lines.push(
+    `Validation: ${v.status} (${v.errors} errors)${
+      v.code ? ` — ${v.code}` : ""
+    }${v.recovery ? `; ${v.recovery}` : ""}`,
+  );
   return lines.join("\n");
 }
 
@@ -162,6 +173,33 @@ export default definePluginEntry({
     );
 
     api.registerCli(({ program }) => {
+      const toolkit = program.command("sysmlv2-toolkit")
+        .description("Install or verify the pinned SysML WebAssembly Toolkit");
+      const toolkitAction = (action) => async (options) => {
+        try {
+          const { stateDir } = paths(api);
+          const result = await action(stateDir, options);
+          process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+        } catch (error) {
+          if (typeof error?.toJSON !== "function") throw error;
+          process.stdout.write(`${JSON.stringify(error.toJSON(), null, 2)}\n`);
+          process.exitCode = 1;
+        }
+      };
+      toolkit.command("install")
+        .description("Download and verify the pinned public release")
+        .option(
+          "--from <archive.tgz>",
+          "Install from a local archive without network access",
+        )
+        .action(
+          toolkitAction((stateDir, options) =>
+            installToolkit(stateDir, { from: options.from })
+          ),
+        );
+      toolkit.command("status")
+        .description("Verify the installed Toolkit files")
+        .action(toolkitAction(toolkitStatus));
       program.command("sysmlv2-export")
         .description("Export this instance to SysML v2 for Assembly")
         .option(
@@ -193,6 +231,10 @@ export default definePluginEntry({
         name: "sysmlv2-export",
         description: "Export this instance to SysML v2 for Assembly",
         hasSubcommands: false,
+      }, {
+        name: "sysmlv2-toolkit",
+        description: "Install or verify the SysML WebAssembly Toolkit",
+        hasSubcommands: true,
       }],
     });
   },
