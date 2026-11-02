@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { main, run } from "../cli.ts";
 import { ExportError } from "../src/error.ts";
 import { createFixture } from "./support/fixture.ts";
@@ -112,6 +112,30 @@ Deno.test("CLI rejects unknown flags and invalid snapshot boundaries", async () 
   } finally {
     await fixture.cleanup();
     await rm(output, { recursive: true, force: true });
+  }
+});
+
+Deno.test("CLI collect takes an optional plugin inventory file", async () => {
+  const fixture = await createFixture();
+  try {
+    const out = join(dirname(fixture.pluginsFile), "snapshot.json");
+    await run([
+      "collect",
+      "--home",
+      fixture.home,
+      "--plugins",
+      fixture.pluginsFile,
+      "--out",
+      out,
+    ]);
+    assert.ok(JSON.parse(await readFile(out, "utf8")).plugins.length > 0);
+    await assert.rejects(
+      () => run(["collect", "--home", fixture.home, "--plugins", "--out", out]),
+      (error: unknown) =>
+        error instanceof ExportError && error.code === "CLI_USAGE",
+    );
+  } finally {
+    await fixture.cleanup();
   }
 });
 

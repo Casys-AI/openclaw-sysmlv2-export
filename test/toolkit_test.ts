@@ -13,7 +13,15 @@ Deno.test({
     const output = await mkdtemp(join(tmpdir(), "openclaw-toolkit-test-"));
     try {
       const snapshot = join(output, "snapshot.json"), dir = join(output, "out");
-      await run(["collect", "--home", fixture.home, "--out", snapshot]);
+      await run([
+        "collect",
+        "--home",
+        fixture.home,
+        "--plugins",
+        fixture.pluginsFile,
+        "--out",
+        snapshot,
+      ]);
       await run(["export", "--snapshot", snapshot, "--out", dir]);
       const files = new Map<string, string>();
       for (const name of await readdir(dir)) {

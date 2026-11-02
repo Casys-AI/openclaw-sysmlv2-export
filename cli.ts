@@ -14,25 +14,34 @@ export async function run(args: string[]): Promise<unknown> {
     throw new ExportError(
       "CLI_USAGE",
       "Invalid command or arguments",
-      "Use collect --home DIR --out FILE; export --snapshot FILE --out DIR; doctor --snapshot FILE; diff A B.",
+      "Use collect --home DIR [--plugins FILE] --out FILE; export --snapshot FILE --out DIR; doctor --snapshot FILE; diff A B.",
     );
   };
-  const flags = (expected: string[]) => {
-    if (rest.length !== expected.length * 2) return usage();
+  const flags = (expected: string[], optional: string[] = []) => {
+    if (rest.length % 2) return usage();
     const values: Record<string, string> = {};
     for (let i = 0; i < rest.length; i += 2) {
       if (
-        !expected.includes(rest[i]) || Object.hasOwn(values, rest[i]) ||
-        !rest[i + 1] || rest[i + 1].startsWith("--")
+        ![...expected, ...optional].includes(rest[i]) ||
+        Object.hasOwn(values, rest[i]) || !rest[i + 1] ||
+        rest[i + 1].startsWith("--")
       ) return usage();
       values[rest[i]] = rest[i + 1];
     }
+    if (!expected.every((k) => Object.hasOwn(values, k))) return usage();
     return values;
   };
   const snapshot = async (path: string) =>
     parseSnapshot(json(await readFile(path, "utf8")));
   if (command === "collect") {
-    const f = flags(["--home", "--out"]), s = await collect(f["--home"]);
+    // --plugins: the output of `openclaw plugins list --json`.
+    const f = flags(["--home", "--out"], ["--plugins"]);
+    const s = await collect(
+      f["--home"],
+      Object.hasOwn(f, "--plugins")
+        ? json(await readFile(f["--plugins"], "utf8"))
+        : null,
+    );
     await writeFile(f["--out"], canonical(s), { flag: "wx", mode: 0o600 });
     return {
       schema: s.schema,
