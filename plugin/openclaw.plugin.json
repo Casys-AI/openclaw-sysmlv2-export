@@ -5,6 +5,7 @@
   "version": "0.1.0",
   "activation": { "onStartup": true },
   "contracts": { "tools": ["assembly_export"] },
+  "toolMetadata": { "assembly_export": { "optional": true } },
   "commandAliases": [{ "name": "assembly_export", "kind": "runtime-slash" }],
   "cliCommands": [
     {
