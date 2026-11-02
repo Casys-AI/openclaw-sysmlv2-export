@@ -16,7 +16,8 @@ The export reads an OpenClaw instance without changing it and turns it into:
 - a **SysML v2 model** built on Assembly's library, grouped by Assembly
   category;
 - on request, **inferred procedures and rules** proposed by a model from each
-  agent's behaviour files, kept apart from extracted facts.
+  agent's behaviour files and scheduled-task prompts, kept apart from extracted
+  facts.
 
 Each plugin run is kept as a version, browsable and comparable in an offline
 viewer.
@@ -541,29 +542,47 @@ effective result stays the same.
 
 ## 9. Inference
 
-Prose (instruction files) describes roles, procedures, escalations and hand-offs
-that the configuration does not hold. Inference asks a model to propose them;
-the proposals are never admitted automatically.
+Prose (behaviour files and scheduled-task prompts) describes roles, procedures,
+escalations and hand-offs that the configuration does not hold. Inference asks a
+model to propose them; the proposals are never admitted automatically.
 
-- **Input.** Per agent, its behaviour files only: top-level instruction files
-  named in capitals (`AGENTS.md`, `SOUL.md`, `TOOLS.md`, `IDENTITY.md`…), except
-  `MEMORY.md` and `USER.md`. Other workspace notes, `memory/` and cron prompts
-  are never sent. Each file is reread only if it is still inside the workspace
-  and still has the collected digest (`INSTRUCTION_CHANGED` otherwise).
+- **Input.** Per agent, its behaviour files: top-level instruction files named
+  in capitals (`AGENTS.md`, `SOUL.md`, `TOOLS.md`, `IDENTITY.md`…), except
+  `MEMORY.md` and `USER.md`. Other workspace notes and `memory/` are never sent.
+  Each file is reread only if it is still inside the workspace and still has the
+  collected digest (`INSTRUCTION_CHANGED` otherwise). Also included are enabled
+  and disabled cron jobs with `payloadKind: agentTurn` and a prompt targeting
+  that agent, labelled `cron:<job id>`, and its heartbeat prompt, labelled
+  `heartbeat`, when present. Jobs with `agentId: null` are skipped. At inference
+  time cron prompts are reread from `state/openclaw.sqlite`
+  (`cron_jobs.job_json` → `payload.message`) in a read-only transaction, and
+  heartbeat prompts from `openclaw.json` with the collector's agent/default
+  inheritance. The raw text must match the snapshot's `FileRef.sha256`; cron
+  ownership and payload kind must still match too. Changed, missing or
+  unreadable prompts fail that agent with `INSTRUCTION_CHANGED`, without echoing
+  content. Prompt bodies remain in memory only; snapshot shape stays
+  `openclaw-snapshot/5`.
 - **Call.** One isolated completion per agent through `api.runtime.llm`
-  (`docs/plugins/sdk-runtime/models.md`): the prompt carries the numbered file
-  lines, the valid targets (agent ids, `owner`, `customer`) and the JSON Schema
-  of the answer; purpose `sysmlv2-export.infer`, execution
-  `isolated-agent-runtime`, 180 s timeout. In a chat the session's agent
-  answers; from the CLI each agent is analysed with its own model (`agentId`),
-  or with `--model`.
+  (`docs/plugins/sdk-runtime/models.md`): the prompt carries the numbered source
+  lines, scheduled-task metadata (schedule expression/time zone or interval, and
+  cron enablement), the valid targets (agent ids, `owner`, `customer`) and the
+  JSON Schema of the answer; purpose `sysmlv2-export.infer`, execution
+  `isolated-agent-runtime`, 180 s timeout. From the CLI, each agent is analysed
+  in its own context (`agentId`, which needs `llm.allowAgentIdOverride`), and
+  `--model` overrides the model (`llm.allowModelOverride`). A chat command's
+  model is bound to the session agent and OpenClaw lets no plugin override it
+  (`dist/runtime-llm.runtime-*.mjs`), so in chat every agent is analysed with
+  the session agent's model. A refusal fails that agent without a fallback. The
+  model is instructed to use each scheduled task's schedule as the inferred
+  procedure's trigger and to preserve disabled status; an unset time zone stays
+  unknown. Schedule metadata is separate from the numbered prompt lines.
 - **Validation** at the trust boundary (`parseAgentInference`): the answer must
   be about the agent asked; ids are unique kebab-case slugs; step kinds are
   `action`, `decision`, `handoff`, `escalation`, rule kinds `permission`,
   `constraint`, `prohibition`; targets belong to the known set; every procedure
-  has a step; citations name a file that was sent with a valid line range. Texts
-  are trimmed, cut at 300 characters, and e-mail addresses, JWTs, long
-  token-like strings and phone numbers are masked.
+  has a step; citations name a source belonging to that agent that was sent,
+  with a valid line range. Texts are trimmed, cut at 300 characters, and e-mail
+  addresses, JWTs, long token-like strings and phone numbers are masked.
 - **Failure** is per agent: the agent is listed in `failed` with a code and the
   export's own message (or `MODEL_FAILED` with a short, masked runtime message);
   other agents continue.
@@ -571,8 +590,10 @@ the proposals are never admitted automatically.
   its role, procedures with ordered steps and source, rules with source) and
   `OpenClawInferred.sysml`: package `OpenClawInferred`, one `action def` per
   procedure with one `action` per step and `first … then …` successions, one
-  `requirement def` per rule. Each `doc` cites the source file, lines and
-  SHA-256. The package stays separate from extracted facts, so the snapshot and
+  `requirement def` per rule. Each `doc` cites the source label, lines and
+  SHA-256 (for example, `source cron:<job id>:1-3 sha256 <digest>`). Raw prompts
+  are never written to these outputs or the snapshot; model text is masked as
+  above. The package stays separate from extracted facts, so the snapshot and
   its diff stay deterministic.
 
 ## 10. Plugin interfaces
@@ -593,8 +614,8 @@ replaces the output directory; `--open` opens the viewer with `open` (macOS) or
 
 ### 10.2 Chat command
 
-`/sysmlv2_export` exports; `/sysmlv2_export infer` also infers, with the
-session's model. The command requires an authorized sender (the owner) on chat
+`/sysmlv2_export` exports; `/sysmlv2_export infer` also infers, with each
+agent's own model. The command requires an authorized sender (the owner) on chat
 surfaces and the `operator.admin` scope for gateway clients. Replies show paths
 relative to `<state dir>` and never absolute host paths.
 
@@ -606,11 +627,11 @@ offered only to the owner's unsandboxed sessions.
 
 ### 10.4 Settings
 
-| Setting                                                   | Effect                                                                                             |
-| --------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
-| `plugins.entries.sysmlv2-export.config.outDir`            | Output directory; default `<state dir>/sysmlv2-export`.                                            |
-| `plugins.entries.sysmlv2-export.llm.allowAgentIdOverride` | Required for CLI inference on agents other than the default (`docs/gateway/config-extensions.md`). |
-| `plugins.entries.sysmlv2-export.llm.allowModelOverride`   | Required for `--model`.                                                                            |
+| Setting                                                   | Effect                                                                        |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `plugins.entries.sysmlv2-export.config.outDir`            | Output directory; default `<state dir>/sysmlv2-export`.                       |
+| `plugins.entries.sysmlv2-export.llm.allowAgentIdOverride` | Required for inference on other agents (`docs/gateway/config-extensions.md`). |
+| `plugins.entries.sysmlv2-export.llm.allowModelOverride`   | Required for `--model`.                                                       |
 
 The plugin inventory comes from OpenClaw itself. The plugin runtime gives an
 external plugin no plugin registry (`docs/plugins/sdk-runtime.md`) and the
@@ -691,8 +712,8 @@ Failures are `{ code, context, recovery }` errors, never findings.
   is never read.
 - **Versions.** Versions other than 2026.6.10 and 2026.10.x use the 2026.6.10
   catalog. Empty allowlists are treated as granting nothing.
-- **Inference** reads behaviour files only, not cron prompts, and depends on the
-  model; its output is a proposal.
+- **Inference** reads behaviour files and scheduled-task prompts, and depends on
+  the model; its output is a proposal.
 - **Diagnostics.** The plugin reports no doctor findings in 0.1.0; collector
   findings stay in the snapshot.
 - **Diff** does not compare agent names, raw policies, channel accounts, hooks,

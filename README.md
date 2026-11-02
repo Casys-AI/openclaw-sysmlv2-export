@@ -44,7 +44,8 @@ openclaw sysmlv2-export --out ./exports  # another output directory
 ```
 
 - In a chat: `/sysmlv2_export`, or `/sysmlv2_export infer` to infer with the
-  session's model. Only the owner can run it.
+  conversation agent's model (OpenClaw binds a chat command to that agent). Only
+  the owner can run it.
 - The agent tool `sysmlv2_export` exports without calling a model. It is
   optional: allow it explicitly, for instance with `tools.alsoAllow`.
 - From the command line, `--infer` analyses each agent with its own model. Allow
@@ -110,9 +111,10 @@ compiles on its own.
   history are excluded.
 - Two layers: an allowlist projection, then
   [`@logtape/redaction`](https://jsr.io/@logtape/redaction).
-- Inference sends only behaviour files (`AGENTS.md`, `SOUL.md`, `TOOLS.md`…) to
-  the model of one of your agents, never `MEMORY.md`, `USER.md` or other notes.
-  Contact details and token-like strings in the answer are masked.
+- Inference sends behaviour files (`AGENTS.md`, `SOUL.md`, `TOOLS.md`…) and that
+  agent's cron/heartbeat prompts to the model of one of your agents, never
+  `MEMORY.md`, `USER.md` or other notes. Contact details and token-like strings
+  in the answer are masked.
 - Chat replies never show absolute host paths.
 
 ## Develop

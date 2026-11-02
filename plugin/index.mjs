@@ -31,9 +31,11 @@ async function inventory(api) {
 }
 
 /** An isolated call: one user message, no tools, fresh context (models.md).
- * Outside a session, each agent is analysed in its own context (agentId);
- * overrides need plugins.entries.sysmlv2-export.llm.allowAgentIdOverride and
- * allowModelOverride. */
+ * From the CLI each agent is analysed in its own context (agentId), which
+ * needs plugins.entries.sysmlv2-export.llm.allowAgentIdOverride (and
+ * allowModelOverride for --model). A chat command's llm is bound to the
+ * session agent and refuses any other agentId (runtime-llm: "cannot override
+ * the active session agent"), so chat calls never pass one. */
 function completeWith(llm, model, selectAgent) {
   return async (prompt, agentId) => {
     const result = await llm.complete({

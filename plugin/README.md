@@ -24,7 +24,8 @@ openclaw sysmlv2-export                 # export
 openclaw sysmlv2-export --infer --open  # with inference, then open the viewer
 ```
 
-- In a chat: `/sysmlv2_export`, or `/sysmlv2_export infer` (owner only).
+- In a chat: `/sysmlv2_export`, or `/sysmlv2_export infer` with the conversation
+  agent's model (owner only).
 - The agent tool `sysmlv2_export` exports without calling a model. It is
   optional: allow it explicitly, for instance with `tools.alsoAllow`.
 - `--infer` on the command line analyses each agent with its own model and needs

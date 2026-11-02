@@ -2,10 +2,10 @@ import { EMAIL_ADDRESS_PATTERN, JWT_PATTERN } from "@logtape/redaction";
 import { invalid } from "./error.ts";
 import { arr, enumeration, number, obj, required, text } from "./input.ts";
 import { name } from "./emit.ts";
-import type { Snapshot } from "./snapshot.ts";
+import type { Agent, Cron, FileRef, Snapshot } from "./snapshot.ts";
 
 /** Inference contract (`openclaw-inference/1`, SPEC.md "Inference"): proposals
- * a model infers from an agent's instruction files. They stay apart from
+ * a model infers from an agent's instructions. They stay apart from
  * extracted facts and are not admitted. */
 export interface Source {
   file: string;
@@ -51,7 +51,7 @@ const sourceSchema = {
   properties: {
     file: {
       type: "string",
-      description: "Instruction file name, e.g. AGENTS.md",
+      description: "Source label, e.g. AGENTS.md, cron:<job id> or heartbeat",
     },
     fromLine: { type: "integer", minimum: 1 },
     toLine: { type: "integer", minimum: 1 },
@@ -124,10 +124,37 @@ export const AGENT_INFERENCE_SCHEMA = {
   },
 };
 
-/** The instruction given to the agent; its files travel inline, numbered. */
+/** Only agent turns with a prompt and an explicit owner are inference sources. */
+export function cronSources(snapshot: Snapshot, agentId: string): Cron[] {
+  return snapshot.cron.filter((job) =>
+    job.agentId === agentId && job.payloadKind === "agentTurn" &&
+    job.prompt !== null
+  );
+}
+
+/** Stable labels resolve to collected digests, never to prompt bodies. */
+function sourceFiles(snapshot: Snapshot, agent: Agent): Map<string, FileRef> {
+  return new Map([
+    ...agent.workspace.instructions.map((f): [string, FileRef] => [f.path, f]),
+    ...cronSources(snapshot, agent.id).map((job): [string, FileRef] => [
+      `cron:${job.id}`,
+      job.prompt!,
+    ]),
+    ...(agent.heartbeat?.prompt
+      ? [["heartbeat", agent.heartbeat.prompt] as [string, FileRef]]
+      : []),
+  ]);
+}
+
+/** Instructions travel inline, numbered; schedule metadata is not a source line. */
 export function inferencePrompt(
   agentId: string,
-  files: { path: string; text: string }[],
+  files: {
+    path: string;
+    text: string;
+    schedule?: Cron["schedule"];
+    enabled?: boolean;
+  }[],
   agents: { id: string; name: string }[],
 ): string {
   const targets = [
@@ -135,21 +162,27 @@ export function inferencePrompt(
     "owner",
     "customer",
   ];
-  const body = files.map((f) =>
-    `### ${f.path}\n${
+  const body = files.map((f) => {
+    const schedule = f.schedule
+      ? `Scheduled task${
+        f.enabled === undefined ? "" : f.enabled ? " (enabled)" : " (disabled)"
+      }; schedule: ${JSON.stringify(f.schedule)}\n`
+      : "";
+    return `### ${f.path}\n${schedule}${
       f.text.split("\n").map((l, i) => `${i + 1}: ${l}`).join("\n")
-    }`
-  ).join("\n\n");
+    }`;
+  }).join("\n\n");
   return [
-    `Describe how the OpenClaw agent \`${agentId}\` works, from its instruction files below.`,
+    `Describe how the OpenClaw agent \`${agentId}\` works, from its instruction sources below.`,
     "Extract its procedures as ordered steps, and its rules (permissions, constraints, prohibitions).",
+    "For a scheduled task (cron or heartbeat), use its schedule as the procedure trigger, including expression and time zone or interval. Preserve disabled status; a null time zone is unknown, not UTC.",
     "Mark a step as handoff or escalation when work goes to another agent, the owner or the customer, and name that target.",
     `A target is one of these ids, written without the name in parentheses: ${
       targets.join(", ")
     }. Use null otherwise.`,
-    `Cite each procedure and rule with the file and line range it comes from, among: ${
+    `Cite each procedure and rule with the source label and line range it comes from, among: ${
       files.map((f) => f.path).join(", ")
-    }. Describe only what the files say; do not invent steps.`,
+    }. Describe only what the sources say; do not invent steps.`,
     "Ids are lowercase kebab-case and unique across procedures, steps and rules.",
     "Do not copy secrets, names of people or contact details: describe roles instead.",
     "Answer with one JSON object only, no prose and no code fence, matching this JSON Schema:",
@@ -172,6 +205,7 @@ function id(v: unknown, seen: Set<string>): string {
 const SENSITIVE = [
   EMAIL_ADDRESS_PATTERN.pattern,
   JWT_PATTERN.pattern,
+  /CANARY-[A-Za-z0-9_-]+/,
   /[A-Za-z0-9_\-]{32,}/,
   /\+?\d[\d ().-]{7,}\d/,
 ].map((p) =>
@@ -187,7 +221,9 @@ function phrase(v: unknown): string {
 function source(v: unknown, files: Set<string>): Source {
   const o = obj(v), file = required(o.file);
   const fromLine = number(o.fromLine), toLine = number(o.toLine);
-  if (!files.has(file)) invalid("Inference cites an unknown instruction file");
+  if (!files.has(file)) {
+    invalid("Inference cites an unknown instruction source");
+  }
   if (!fromLine || !toLine || fromLine < 1 || toLine < fromLine) {
     invalid("Invalid inference line range");
   }
@@ -206,9 +242,9 @@ export function parseAgentInference(
   if (agentId !== expectedAgentId) invalid("Inference names another agent");
   const agent = snapshot.agents.find((a) => a.id === agentId) ??
     invalid("Inference names an unknown agent");
-  // Citations may only point at files the model actually received.
+  // Citations may only point at this agent's sources that the model received.
   const files = new Set(
-    agent.workspace.instructions.map((f) => f.path).filter((p) =>
+    [...sourceFiles(snapshot, agent).keys()].filter((p) =>
       !sentFiles || sentFiles.includes(p)
     ),
   );
@@ -275,13 +311,13 @@ export function emitInferred(
     "    private import ScalarValues::*;",
     `    ${
       doc(
-        `Proposals inferred by ${inference.model} from agent instruction files. Not admitted: accept or decline each one.`,
+        `Proposals inferred by ${inference.model} from agent instruction sources. Not admitted: accept or decline each one.`,
       )
     }`,
   ];
   const fileOf = (agentId: string, s: Source) => {
-    const f = snapshot.agents.find((a) => a.id === agentId)!.workspace
-      .instructions.find((i) => i.path === s.file)!;
+    const agent = snapshot.agents.find((a) => a.id === agentId)!;
+    const f = sourceFiles(snapshot, agent).get(s.file)!;
     return `source ${s.file}:${s.fromLine}-${s.toLine} sha256 ${f.sha256}`;
   };
   for (

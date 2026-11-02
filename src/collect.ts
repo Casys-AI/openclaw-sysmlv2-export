@@ -894,7 +894,8 @@ export async function collect(
             everyMs: duration(hb.every),
             target: text(hb.target, "none")!,
             prompt: prose(
-              hb.prompt,
+              { ...obj(rawDefaults.heartbeat), ...obj(original.heartbeat) }
+                .prompt,
               `openclaw.json#/agents/${id}/heartbeat/prompt`,
             ),
           };

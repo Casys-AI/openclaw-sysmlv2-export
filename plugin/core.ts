@@ -8,19 +8,26 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { join, resolve, sep } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { collect } from "../src/collect.ts";
 import { emit } from "../src/emit.ts";
 import { ExportError } from "../src/error.ts";
 import {
   type AgentInference,
+  cronSources,
   emitInferred,
   inferencePrompt,
   parseAgentInference,
 } from "../src/infer.ts";
-import { json } from "../src/input.ts";
+import { arr, json, obj, required } from "../src/input.ts";
 import { ASSEMBLY_LIBRARY } from "../src/library.ts";
 import { digest } from "../src/redaction.ts";
-import { canonical, type FileRef } from "../src/snapshot.ts";
+import {
+  type Agent,
+  canonical,
+  type Cron,
+  type FileRef,
+} from "../src/snapshot.ts";
 import { type VersionEntry, versionId, withVersion } from "../src/versions.ts";
 import { viewerPage } from "../src/viewer.ts";
 
@@ -43,12 +50,6 @@ export interface ExportSummary {
 /** Rereads an instruction file only if it is still inside the workspace and
  * still has the bytes the collector hashed. */
 async function collected(root: string, file: FileRef): Promise<string> {
-  const changed = () =>
-    new ExportError(
-      "INSTRUCTION_CHANGED",
-      "An instruction file moved or changed after collection",
-      "Run the export again.",
-    );
   const base = await realpath(root),
     target = await realpath(join(root, file.path));
   if (target !== base && !target.startsWith(`${base}${sep}`)) throw changed();
@@ -57,7 +58,91 @@ async function collected(root: string, file: FileRef): Promise<string> {
   return bytes.toString("utf8");
 }
 
-/** Only behavior files reach the model: bootstrap-style names (AGENTS.md,
+function changed(): ExportError {
+  return new ExportError(
+    "INSTRUCTION_CHANGED",
+    "An instruction source moved, changed or became unreadable after collection",
+    "Run the export again.",
+  );
+}
+
+/** Raw prose is released only against the digest collected for this source. */
+function verified(value: unknown, file: FileRef): string {
+  if (typeof value !== "string" || digest(value) !== file.sha256) {
+    throw changed();
+  }
+  return value;
+}
+
+/** Read only the selected jobs, including committed WAL records, without
+ * retaining bodies in the snapshot or exposing database/parser errors. */
+function collectedCron(stateDir: string, jobs: Cron[]) {
+  if (!jobs.length) return [];
+  let db: DatabaseSync | undefined;
+  try {
+    db = new DatabaseSync(join(stateDir, "state", "openclaw.sqlite"), {
+      readOnly: true,
+    });
+    db.exec("PRAGMA query_only=ON; BEGIN");
+    const query = db.prepare("SELECT job_json FROM cron_jobs WHERE job_id = ?");
+    const sources = jobs.map((job) => {
+      const current = obj(json(required(query.get(job.id)?.job_json))),
+        payload = obj(current.payload);
+      if (current.agentId !== job.agentId || payload.kind !== "agentTurn") {
+        throw changed();
+      }
+      return {
+        path: `cron:${job.id}`,
+        text: verified(payload.message, job.prompt!),
+        schedule: job.schedule,
+        enabled: job.enabled,
+      };
+    });
+    db.exec("ROLLBACK");
+    return sources;
+  } catch {
+    throw changed();
+  } finally {
+    db?.close();
+  }
+}
+
+/** Match the collector's keyed/list agent precedence and heartbeat inheritance. */
+async function collectedHeartbeat(stateDir: string, agent: Agent) {
+  const heartbeat = agent.heartbeat;
+  if (!heartbeat?.prompt) return [];
+  try {
+    const config = obj(
+        json(await readFile(join(stateDir, "openclaw.json"), "utf8")),
+      ),
+      agents = obj(config.agents),
+      entries = obj(agents.entries);
+    const own = obj(
+      Object.keys(entries).length
+        ? entries[agent.id]
+        : arr(agents.list).map(obj).find((a) => a.id === agent.id),
+    );
+    const hb = {
+      ...obj(obj(agents.defaults).heartbeat),
+      ...obj(own.heartbeat),
+    };
+    return [{
+      path: "heartbeat",
+      text: verified(hb.prompt, heartbeat.prompt),
+      enabled: heartbeat.everyMs > 0,
+      schedule: {
+        kind: "every" as const,
+        everyMs: heartbeat.everyMs,
+        expression: null,
+        timezone: null,
+      },
+    }];
+  } catch {
+    throw changed();
+  }
+}
+
+/** Workspace sources are behavior files: bootstrap-style names (AGENTS.md,
  * SOUL.md, TOOLS.md…), never the agent's memory or its owner's profile, nor
  * other notes kept in the workspace. */
 function isBehavior(f: FileRef): boolean {
@@ -70,7 +155,7 @@ function modelError(e: unknown): string {
   const code = (e as { code?: unknown })?.code;
   const name = typeof code === "string" ? code : (e as Error)?.name ?? "Error";
   const message = String((e as Error)?.message ?? "").slice(0, 160)
-    .replace(/[A-Za-z0-9_\-]{24,}/g, "[redacted]");
+    .replace(/CANARY-[A-Za-z0-9_-]+|[A-Za-z0-9_\-]{24,}/g, "[redacted]");
   return message ? `${name}: ${message}` : name;
 }
 
@@ -84,7 +169,7 @@ function jsonObject(text: string): unknown {
       "Retry the inference; check the agent's model.",
     );
   }
-  return JSON.parse(text.slice(start, end + 1));
+  return json(text.slice(start, end + 1));
 }
 
 /** The plugin inventory from a run of `openclaw plugins list --json` through
@@ -158,15 +243,19 @@ export async function runExport(
     let model = "unknown";
     for (const agent of snapshot.agents) {
       const behavior = agent.workspace.instructions.filter(isBehavior);
-      if (!behavior.length) continue;
       const root = resolve(stateDir, agent.workspace.path);
       try {
-        const sources = await Promise.all(
-          behavior.map(async (f) => ({
-            path: f.path,
-            text: await collected(root, f),
-          })),
-        );
+        const sources = [
+          ...await Promise.all(
+            behavior.map(async (f) => ({
+              path: f.path,
+              text: await collected(root, f),
+            })),
+          ),
+          ...collectedCron(stateDir, cronSources(snapshot, agent.id)),
+          ...await collectedHeartbeat(stateDir, agent),
+        ];
+        if (!sources.length) continue;
         const answer = await complete(
           inferencePrompt(agent.id, sources, snapshot.agents),
           agent.id,
@@ -177,7 +266,7 @@ export async function runExport(
             jsonObject(answer.text),
             snapshot,
             agent.id,
-            behavior.map((f) => f.path),
+            sources.map((f) => f.path),
           ),
         );
       } catch (e) {
