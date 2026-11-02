@@ -74,13 +74,20 @@ function inferenceOf(files: Record<string, string>): Inference | null {
   }
 }
 
+/** A view of a version as the page shows it, and what each of its elements is
+ * compared by against the previous version. */
+interface VersionView {
+  data: ViewData;
+  signatures: Map<string, string>;
+}
+
 /** A version's views, laid out, each element located in the version's own
  * SysML files; null when this viewer cannot read its snapshot (an older
  * schema): the page then shows its files only. */
 async function versionViews(
   files: Record<string, string>,
   scenes: Map<string, Scene>,
-): Promise<ViewData[] | null> {
+): Promise<VersionView[] | null> {
   const snapshot = snapshotOf(files);
   if (!snapshot) return null;
   const index = new Map<string, Map<string, [number, number]>>();
@@ -91,59 +98,72 @@ async function versionViews(
       const at = index.get(r.file)!.get(r.qname);
       return at ? [[r.file, ...at] as [string, number, number]] : [];
     });
-  const out: ViewData[] = [];
+  const lines = new Map<string, string[]>();
+  const text = ([file, from, to]: [string, number, number]) => {
+    if (!lines.has(file)) lines.set(file, files[file].split("\n"));
+    return lines.get(file)!.slice(from - 1, to).join("\n");
+  };
+  const out: VersionView[] = [];
   for (const view of diagramViews(snapshot, inferenceOf(files))) {
     const drawn = drawing(view), key = JSON.stringify(drawn);
     if (drawn.nodes.length && !scenes.has(key)) {
       scenes.set(key, await layoutView(drawn));
     }
-    out.push({
-      id: view.id,
-      title: view.title,
-      group: view.group,
-      scene: scenes.get(key) ?? null,
-      table: tableData(view),
-      elements: Object.fromEntries([
-        ...view.nodes.map((
-          n,
-        ) => [n.id, { a: n.attributes, s: locate(n.sysml) }]),
-        ...view.edges.filter((e) => e.sysml.length).map((e) => [
-          e.id,
-          { a: e.attributes, s: locate(e.sysml) },
-        ]),
+    const elements: ViewData["elements"] = Object.fromEntries([
+      ...view.nodes.map((
+        n,
+      ) => [n.id, { a: n.attributes, s: locate(n.sysml) }]),
+      ...view.edges.filter((e) => e.sysml.length).map((e) => [
+        e.id,
+        { a: e.attributes, s: locate(e.sysml) },
       ]),
+    ]);
+    // A drawn container compares by its attributes, as its SysML spans its
+    // contents; a row that sums declarations up, by their SysML, as its
+    // figures follow from them; any other element, by both.
+    const containers = new Set(
+      drawn.nodes.filter((n) => n.shape === "frame" || n.shape === "group")
+        .map((n) => n.id),
+    );
+    const t = view.table;
+    const derived = new Set(
+      t?.kind === "elements" && t.derived
+        ? [...t.rows, ...t.summary ? [t.summary] : []]
+        : [],
+    );
+    out.push({
+      data: {
+        id: view.id,
+        title: view.title,
+        group: view.group,
+        scene: scenes.get(key) ?? null,
+        table: tableData(view),
+        elements,
+      },
+      signatures: new Map(
+        Object.entries(elements).map(([id, e]) => [
+          id,
+          JSON.stringify(
+            containers.has(id)
+              ? e.a
+              : derived.has(id)
+              ? e.s.map(text)
+              : [e.a, e.s.map(text)],
+          ),
+        ]),
+      ),
     });
   }
   return out;
 }
 
 /** What changed in a view since the previous version: the elements added, the
- * elements whose attributes or SysML text changed (containers by attributes
- * only, so a change inside a frame marks that element and not the frame), and
- * the elements removed, drawn or in its table. A view the previous version did
- * not have is new. */
-function viewChanges(
-  view: ViewData,
-  files: Record<string, string>,
-  previous: ViewData | undefined,
-  previousFiles: Record<string, string>,
-) {
-  if (!previous) return { isNew: true, added: [], changed: [], removed: [] };
-  const containers = new Set(
-    (view.scene?.nodes ?? []).filter((n) =>
-      n.shape === "frame" || n.shape === "group"
-    ).map((n) => n.id),
-  );
-  const slice = (
-    f: Record<string, string>,
-    [file, from, to]: [string, number, number],
-  ) => f[file].split("\n").slice(from - 1, to).join("\n");
-  const signature = (v: ViewData, f: Record<string, string>, id: string) => {
-    const e = v.elements[id];
-    return JSON.stringify(
-      containers.has(id) ? e.a : [e.a, e.s.map((s) => slice(f, s))],
-    );
-  };
+ * elements whose signature changed (see versionViews: a change inside a frame
+ * marks that element and not the frame), and the elements removed, drawn or in
+ * its table. A view the previous version did not have is new. */
+function viewChanges(now: VersionView, before: VersionView | undefined) {
+  if (!before) return { isNew: true, added: [], changed: [], removed: [] };
+  const view = now.data, previous = before.data;
   // Every node is drawn or in the table, and so is every edge with SysML;
   // drawn edges are never listed as removed.
   const lines = (v: ViewData) => v.scene?.edges.map((e) => e.id) ?? [];
@@ -154,15 +174,15 @@ function viewChanges(
     const drawn = new Set(lines(v));
     return Object.keys(v.elements).filter((id) => !drawn.has(id));
   };
-  const before = new Set(ids(previous)), now = new Set(ids(view));
+  const earlier = new Set(ids(previous)), current = new Set(ids(view));
   return {
     isNew: false,
-    added: [...now].filter((id) => !before.has(id)),
-    changed: [...now].filter((id) =>
-      before.has(id) && view.elements[id] && previous.elements[id] &&
-      signature(view, files, id) !== signature(previous, previousFiles, id)
-    ),
-    removed: shown(previous).filter((id) => !now.has(id)),
+    added: [...current].filter((id) => !earlier.has(id)),
+    changed: [...current].filter((id) => {
+      const a = now.signatures.get(id), b = before.signatures.get(id);
+      return a !== undefined && b !== undefined && a !== b;
+    }),
+    removed: shown(previous).filter((id) => !current.has(id)),
   };
 }
 
@@ -183,7 +203,7 @@ export async function viewerPage(versions: ViewerVersion[]): Promise<string> {
     return kept.get(key)!;
   };
   const scenes = new Map<string, Scene>();
-  const views: (ViewData[] | null)[] = [];
+  const views: (VersionView[] | null)[] = [];
   for (const v of versions) views.push(await versionViews(v.files, scenes));
   const data = {
     texts,
@@ -198,14 +218,9 @@ export async function viewerPage(versions: ViewerVersion[]): Promise<string> {
         ),
         changes: previous ? changes(previous.files, v.files) : null,
         views: views[i]?.map((view) => ({
-          view: keep(view),
+          view: keep(view.data),
           delta: before
-            ? viewChanges(
-              view,
-              v.files,
-              before.find((p) => p.id === view.id),
-              previous.files,
-            )
+            ? viewChanges(view, before.find((p) => p.data.id === view.data.id))
             : null,
         })) ?? null,
       };

@@ -111,6 +111,10 @@ export type ViewTable =
     views: Record<string, string[]> | null;
     /** An element whose attributes sum the rows up, or null. */
     summary: string | null;
+    /** The rows' (and summary's) figures follow from the declarations they
+     * name: they change when those do, not when a figure that comes from
+     * elsewhere (inference) does. */
+    derived: boolean;
   }
   | { kind: "week"; rows: WeekRow[] };
 export interface DiagramView {
@@ -505,9 +509,10 @@ function overviewView(
       sysml: [
         inst("Operators", name("Agent", a.id)),
         inst("Operators", name("agent", a.id)),
-        ...accounts.map(({ binding }) =>
-          inst("Entries", name("binding", binding.id))
-        ),
+        ...accounts.flatMap(({ binding, account }) => [
+          inst("Entries", name("binding", binding.id)),
+          inst("Entries", name("account", account.id)),
+        ]),
         ...cases(a.id).map((c) => c.ref),
       ],
     });
@@ -543,6 +548,7 @@ function overviewView(
         ]),
       ),
       summary: totals.id,
+      derived: true,
     },
   };
 }
@@ -1060,6 +1066,7 @@ function behaviourView(
         facet: "kind",
         views: null,
         summary: null,
+        derived: false,
       }
       : null,
   };

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { emit } from "../src/emit.ts";
+import { emitInferred, type Inference } from "../src/infer.ts";
 import { canonical, parseSnapshot, type Snapshot } from "../src/snapshot.ts";
 import { viewerPage, type ViewerVersion } from "../src/viewer.ts";
 
@@ -112,6 +113,25 @@ Deno.test("an element added since the previous version is highlighted", async ()
     [table.rows[cell[0]].id, table.columns[cell[1]].id, cell[2]],
     ["tool:cron", "agent:coach", "s"],
   );
+});
+
+Deno.test("an Overview row changes with the declarations it sums up, not with inference", async () => {
+  const inference: Inference = JSON.parse(
+    await readFile(
+      new URL("./fixtures/inference.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  const next = structuredClone(snapshot);
+  next.accounts.find((a) => a.id === "telegram:lead")!.enabled = false;
+  const later = version("2026-11-02T10-20-00Z", next);
+  later.files["inference.json"] = JSON.stringify(inference);
+  Object.assign(later.files, Object.fromEntries(emitInferred(next, inference)));
+  const data = dataOf(
+    await viewerPage([later, version("2026-11-02T10-15-00Z", snapshot)]),
+  );
+  const { delta } = viewOf(data, data.versions[0], "overview");
+  assert.deepEqual([delta.added, delta.changed], [[], ["agent:lead"]]);
 });
 
 Deno.test("a version whose snapshot this viewer cannot read keeps its files", async () => {
