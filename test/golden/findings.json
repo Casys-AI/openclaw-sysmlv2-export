@@ -70,6 +70,13 @@
     "subject": "secretary"
   },
   {
+    "code": "EXEC_ALLOWLIST_WILDCARD",
+    "context": "An exec allowlist command matches every executable name.",
+    "recovery": "Replace the wildcard with the intended command names or binary paths.",
+    "severity": "warning",
+    "subject": "instance"
+  },
+  {
     "code": "EXEC_WITHOUT_APPROVAL",
     "context": "Exec is policy-reachable with security full and ask off.",
     "recovery": "Restrict exec security or require approvals.",
@@ -96,13 +103,6 @@
     "recovery": "Restrict exec security or require approvals.",
     "severity": "error",
     "subject": "field"
-  },
-  {
-    "code": "EXEC_WITHOUT_APPROVAL",
-    "context": "Exec is policy-reachable with security full and ask off.",
-    "recovery": "Restrict exec security or require approvals.",
-    "severity": "error",
-    "subject": "lead"
   },
   {
     "code": "EXEC_WITHOUT_APPROVAL",
@@ -196,11 +196,81 @@
     "subject": "instance"
   },
   {
+    "code": "MCP_SANDBOX_GATE",
+    "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
+    "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
+    "severity": "info",
+    "subject": "client"
+  },
+  {
+    "code": "MCP_SANDBOX_GATE",
+    "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
+    "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
+    "severity": "info",
+    "subject": "coach"
+  },
+  {
+    "code": "MCP_SANDBOX_GATE",
+    "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
+    "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
+    "severity": "info",
+    "subject": "devbox"
+  },
+  {
+    "code": "MCP_SANDBOX_GATE",
+    "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
+    "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
+    "severity": "info",
+    "subject": "secretary"
+  },
+  {
     "code": "PLAINTEXT_SECRET_IN_CONFIG",
-    "context": "35 plaintext credential or environment values were excluded.",
+    "context": "37 plaintext credential or environment values were excluded.",
     "recovery": "Replace plaintext credentials with supported secret references.",
     "severity": "error",
     "subject": "instance"
+  },
+  {
+    "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
+    "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+    "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
+    "severity": "warning",
+    "subject": "client"
+  },
+  {
+    "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
+    "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+    "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
+    "severity": "warning",
+    "subject": "coach"
+  },
+  {
+    "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
+    "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+    "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
+    "severity": "warning",
+    "subject": "devbox"
+  },
+  {
+    "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
+    "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+    "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
+    "severity": "warning",
+    "subject": "field"
+  },
+  {
+    "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
+    "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+    "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
+    "severity": "warning",
+    "subject": "lead"
+  },
+  {
+    "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
+    "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+    "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
+    "severity": "warning",
+    "subject": "secretary"
   },
   {
     "code": "STATIC_TOOL_AVAILABILITY",

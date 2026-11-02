@@ -89,10 +89,35 @@
       "emoji": "💬",
       "execution": {
         "ask": "off",
+        "commands": [
+          {
+            "argsRestricted": true,
+            "command": "python3",
+            "id": "safe-bin:python3",
+            "kind": "safe-bin"
+          },
+          {
+            "argsRestricted": true,
+            "command": "wc",
+            "id": "safe-bin:wc",
+            "kind": "safe-bin"
+          }
+        ],
         "elevated": true,
         "elevatedChannelsCount": 1,
         "host": "auto",
-        "security": "full"
+        "pathPrependCount": 1,
+        "safeBinProfiles": [
+          "wc"
+        ],
+        "safeBins": [
+          "jq",
+          "python3",
+          "wc"
+        ],
+        "security": "full",
+        "strictInlineEval": false,
+        "trustedDirCount": 1
       },
       "grants": [
         {
@@ -359,10 +384,35 @@
       "emoji": "🏋️",
       "execution": {
         "ask": "off",
+        "commands": [
+          {
+            "argsRestricted": true,
+            "command": "python3",
+            "id": "safe-bin:python3",
+            "kind": "safe-bin"
+          },
+          {
+            "argsRestricted": true,
+            "command": "wc",
+            "id": "safe-bin:wc",
+            "kind": "safe-bin"
+          }
+        ],
         "elevated": true,
         "elevatedChannelsCount": 1,
         "host": "auto",
-        "security": "full"
+        "pathPrependCount": 1,
+        "safeBinProfiles": [
+          "wc"
+        ],
+        "safeBins": [
+          "jq",
+          "python3",
+          "wc"
+        ],
+        "security": "full",
+        "strictInlineEval": false,
+        "trustedDirCount": 1
       },
       "grants": [
         {
@@ -639,10 +689,35 @@
       "emoji": "🖖",
       "execution": {
         "ask": "off",
+        "commands": [
+          {
+            "argsRestricted": true,
+            "command": "python3",
+            "id": "safe-bin:python3",
+            "kind": "safe-bin"
+          },
+          {
+            "argsRestricted": true,
+            "command": "wc",
+            "id": "safe-bin:wc",
+            "kind": "safe-bin"
+          }
+        ],
         "elevated": true,
         "elevatedChannelsCount": 1,
         "host": "auto",
-        "security": "full"
+        "pathPrependCount": 1,
+        "safeBinProfiles": [
+          "wc"
+        ],
+        "safeBins": [
+          "jq",
+          "python3",
+          "wc"
+        ],
+        "security": "full",
+        "strictInlineEval": false,
+        "trustedDirCount": 1
       },
       "grants": [
         {
@@ -913,16 +988,46 @@
       "emoji": null,
       "execution": {
         "ask": "off",
+        "commands": [
+          {
+            "argsRestricted": true,
+            "command": "python3",
+            "id": "safe-bin:python3",
+            "kind": "safe-bin"
+          },
+          {
+            "argsRestricted": true,
+            "command": "wc",
+            "id": "safe-bin:wc",
+            "kind": "safe-bin"
+          }
+        ],
         "elevated": true,
         "elevatedChannelsCount": 1,
         "host": "auto",
-        "security": "full"
+        "pathPrependCount": 1,
+        "safeBinProfiles": [
+          "wc"
+        ],
+        "safeBins": [
+          "jq",
+          "python3",
+          "wc"
+        ],
+        "security": "full",
+        "strictInlineEval": false,
+        "trustedDirCount": 1
       },
       "grants": [
         {
           "id": "sandbox:browser",
           "layer": "sandbox",
           "tool": "browser"
+        },
+        {
+          "id": "sandbox:docs__*",
+          "layer": "sandbox",
+          "tool": "docs__*"
         },
         {
           "id": "sandbox:edit",
@@ -1079,7 +1184,8 @@
             "session_status",
             "message",
             "browser",
-            "tts"
+            "tts",
+            "docs__*"
           ],
           "alsoAllow": [],
           "deny": [
@@ -1239,11 +1345,48 @@
       ],
       "emoji": "🔍",
       "execution": {
-        "ask": "off",
+        "ask": "on-miss",
+        "commands": [
+          {
+            "argsRestricted": false,
+            "command": "rg",
+            "id": "name:rg",
+            "kind": "name"
+          },
+          {
+            "argsRestricted": true,
+            "command": "git",
+            "id": "path:git",
+            "kind": "path"
+          },
+          {
+            "argsRestricted": true,
+            "command": "python3",
+            "id": "safe-bin:python3",
+            "kind": "safe-bin"
+          },
+          {
+            "argsRestricted": true,
+            "command": "wc",
+            "id": "safe-bin:wc",
+            "kind": "safe-bin"
+          }
+        ],
         "elevated": true,
         "elevatedChannelsCount": 1,
         "host": "auto",
-        "security": "full"
+        "pathPrependCount": 1,
+        "safeBinProfiles": [
+          "wc"
+        ],
+        "safeBins": [
+          "jq",
+          "python3",
+          "wc"
+        ],
+        "security": "allowlist",
+        "strictInlineEval": false,
+        "trustedDirCount": 1
       },
       "grants": [
         {
@@ -1270,6 +1413,11 @@
           "id": "host:cron",
           "layer": "host",
           "tool": "cron"
+        },
+        {
+          "id": "host:docs__*",
+          "layer": "host",
+          "tool": "docs__*"
         },
         {
           "id": "host:edit",
@@ -1325,6 +1473,11 @@
           "id": "host:nodes",
           "layer": "host",
           "tool": "nodes"
+        },
+        {
+          "id": "host:outlook-graph__*",
+          "layer": "host",
+          "tool": "outlook-graph__*"
         },
         {
           "id": "host:pdf",
@@ -1808,10 +1961,35 @@
       "emoji": "🌸",
       "execution": {
         "ask": "off",
+        "commands": [
+          {
+            "argsRestricted": true,
+            "command": "python3",
+            "id": "safe-bin:python3",
+            "kind": "safe-bin"
+          },
+          {
+            "argsRestricted": true,
+            "command": "wc",
+            "id": "safe-bin:wc",
+            "kind": "safe-bin"
+          }
+        ],
         "elevated": true,
         "elevatedChannelsCount": 1,
         "host": "auto",
-        "security": "full"
+        "pathPrependCount": 1,
+        "safeBinProfiles": [
+          "wc"
+        ],
+        "safeBins": [
+          "jq",
+          "python3",
+          "wc"
+        ],
+        "security": "full",
+        "strictInlineEval": false,
+        "trustedDirCount": 1
       },
       "grants": [
         {
@@ -2803,6 +2981,22 @@
   "environmentNames": [
     "NODE_PATH"
   ],
+  "execApprovals": {
+    "defaults": {
+      "ask": "on-miss",
+      "askFallback": "deny",
+      "autoAllowSkills": false,
+      "security": "allowlist"
+    },
+    "wildcardCommands": [
+      {
+        "argsRestricted": false,
+        "command": "*",
+        "id": "path:*",
+        "kind": "path"
+      }
+    ]
+  },
   "hooks": [
     {
       "agentId": "lead",
@@ -2815,6 +3009,59 @@
         "path": "openclaw.json#/hooks/mappings/0/messageTemplate",
         "sha256": "b7b734e170d526bd7f9599afa6eb09455078aeff359e068360fab35e9578fdc5"
       }
+    }
+  ],
+  "mcpServers": [
+    {
+      "argCount": 0,
+      "enabled": false,
+      "envNames": [],
+      "headerNames": [],
+      "id": "9tools",
+      "oauth": false,
+      "oauthIdentity": null,
+      "toolFilter": {
+        "exclude": [],
+        "include": []
+      },
+      "toolPrefix": "mcp-9tools",
+      "transport": "sse"
+    },
+    {
+      "argCount": 0,
+      "enabled": true,
+      "envNames": [],
+      "headerNames": [
+        "Authorization"
+      ],
+      "id": "Outlook Graph",
+      "oauth": true,
+      "oauthIdentity": "per-requester",
+      "toolFilter": {
+        "exclude": [],
+        "include": []
+      },
+      "toolPrefix": "outlook-graph",
+      "transport": "streamable-http"
+    },
+    {
+      "argCount": 2,
+      "enabled": true,
+      "envNames": [
+        "DOCS_TOKEN"
+      ],
+      "headerNames": [],
+      "id": "docs",
+      "oauth": false,
+      "oauthIdentity": null,
+      "toolFilter": {
+        "exclude": [],
+        "include": [
+          "search_*"
+        ]
+      },
+      "toolPrefix": "docs",
+      "transport": "stdio"
     }
   ],
   "memoryBackend": {
@@ -2842,7 +3089,7 @@
     "enabled": true
   },
   "openclawVersion": "2026.6.10",
-  "plaintextSecretCount": 35,
+  "plaintextSecretCount": 37,
   "plugins": [
     {
       "enabled": true,
@@ -2909,5 +3156,5 @@
       ]
     }
   ],
-  "schema": "openclaw-snapshot/3"
+  "schema": "openclaw-snapshot/4"
 }

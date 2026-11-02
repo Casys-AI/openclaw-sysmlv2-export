@@ -16,6 +16,12 @@ Deno.test("diff reports structural mutations and additions/removals deterministi
     agent.model.primary = "test/model";
     agent.grants.push({ id: "test-grant", tool: "test-tool", layer: "host" });
     agent.sandbox.network = "none";
+    agent.execution.commands.push({
+      id: "name:diff-test",
+      command: "diff-test",
+      kind: "name",
+      argsRestricted: false,
+    });
     agent.memory.search.enabled = !agent.memory.search.enabled;
     agent.workspace.skills[0].sha256 = "a".repeat(64);
     agent.workspace.instructions[0].sha256 = "b".repeat(64);
@@ -23,6 +29,10 @@ Deno.test("diff reports structural mutations and additions/removals deterministi
     agent.workspace.skills.push({ ...removedSkill, id: "new-skill" });
     after.bindings[0].peerKind = "group";
     after.plugins![0].enabled = false;
+    after.mcpServers[0].enabled = !after.mcpServers[0].enabled;
+    const removedMcp = after.mcpServers.pop()!;
+    after.mcpServers.push({ ...removedMcp, id: "new-server" });
+    after.execApprovals!.defaults.ask = "always";
     after.memoryBackend.slot = "none";
     after.cron[0].schedule.expression = "0 0 * * *";
     after.cron[0].enabled = !after.cron[0].enabled;
@@ -37,9 +47,14 @@ Deno.test("diff reports structural mutations and additions/removals deterministi
         "agent.model",
         "agent.grants",
         "agent.sandbox",
+        "agent.execution",
         "agent.memory",
         "binding.changed",
         "plugin.changed",
+        "mcp.changed",
+        "mcp.added",
+        "mcp.removed",
+        "exec.approvals",
         "memory.backend",
         "skill.digest",
         "instruction.digest",

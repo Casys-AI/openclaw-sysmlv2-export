@@ -67,6 +67,8 @@ export function diff(a: Snapshot, b: Snapshot): Change[] {
   });
   entities("binding", a.bindings, b.bindings);
   entities("plugin", a.plugins ?? [], b.plugins ?? []);
+  entities("mcp", a.mcpServers, b.mcpServers);
+  compare("exec.approvals", "instance", a.execApprovals, b.execApprovals);
   compare("memory.backend", "instance", a.memoryBackend, b.memoryBackend);
   entities("cron", a.cron, b.cron, (old, next) => {
     compare("cron.schedule", old.id, old.schedule, next.schedule);

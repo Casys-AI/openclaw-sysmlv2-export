@@ -178,6 +178,12 @@
             "coach",
             "client"
           ]
+        },
+        "tools": {
+          "exec": {
+            "security": "allowlist",
+            "ask": "on-miss"
+          }
         }
       },
       {
@@ -264,7 +270,8 @@
                 "session_status",
                 "message",
                 "browser",
-                "tts"
+                "tts",
+                "docs__*"
               ],
               "deny": [
                 "canvas",
@@ -689,7 +696,21 @@
     },
     "exec": {
       "security": "full",
-      "ask": "off"
+      "ask": "off",
+      "safeBins": [
+        "jq",
+        "python3",
+        "wc"
+      ],
+      "safeBinProfiles": {
+        "wc": {}
+      },
+      "safeBinTrustedDirs": [
+        "CANARY-PATH-42"
+      ],
+      "pathPrepend": [
+        "CANARY-PATH-43"
+      ]
     },
     "elevated": {
       "enabled": true,
@@ -1232,6 +1253,41 @@
       },
       "llama-cpp": {
         "enabled": true
+      }
+    }
+  },
+  "mcp": {
+    "servers": {
+      "docs": {
+        "command": "CANARY-COMMAND-2",
+        "args": [
+          "CANARY-ARG-1",
+          "CANARY-ARG-2"
+        ],
+        "env": {
+          "DOCS_TOKEN": "CANARY-SECRET-61"
+        },
+        "toolFilter": {
+          "include": [
+            "search_*"
+          ]
+        }
+      },
+      "Outlook Graph": {
+        "url": "CANARY-URL-1",
+        "transport": "streamable-http",
+        "headers": {
+          "Authorization": "CANARY-SECRET-62"
+        },
+        "auth": "oauth",
+        "oauth": {
+          "identity": "per-requester",
+          "scope": "CANARY-SCOPE-1"
+        }
+      },
+      "9tools": {
+        "url": "CANARY-URL-2",
+        "enabled": false
       }
     }
   }

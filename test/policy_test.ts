@@ -21,6 +21,7 @@ function tools(
   mode: Sandbox["mode"] = "off",
   plugins: Plugin[] | null = null,
   findings: Finding[] = [],
+  mcpPrefixes: string[] = [],
 ) {
   return resolvePolicy(
     "test",
@@ -30,6 +31,7 @@ function tools(
     "openai/model",
     plugins,
     findings,
+    mcpPrefixes,
   );
 }
 Deno.test("tool profiles, additive grants and deny intersections cannot restore a denied tool", () => {
@@ -161,4 +163,64 @@ Deno.test("TOOL_CATALOG_INCOMPLETE fires only for names no plugin declares", () 
   };
   assert.equal(incomplete(["board_list", "flows", "quote"]), false);
   assert.equal(incomplete(["telegram"]), true);
+});
+
+const mcp: Plugin[] = [{
+  id: "bundle-mcp",
+  enabled: true,
+  tools: ["docs__*", "outlook-graph__*"],
+  optionalTools: [],
+}];
+
+Deno.test("MCP pseudo tools follow enabled inventory and implicit profile grants", () => {
+  for (const profile of [undefined, "coding", "messaging"]) {
+    const result = granted(tools({ profile }, {}, "off", mcp));
+    assert(result.includes("docs__*") && result.includes("outlook-graph__*"));
+  }
+  assert(
+    !granted(tools({ profile: "minimal" }, {}, "off", mcp)).includes("docs__*"),
+  );
+  const disabled = [{ ...mcp[0], enabled: false }];
+  assert(!granted(tools({}, {}, "off", disabled)).includes("docs__*"));
+});
+
+Deno.test("MCP server globs, bundle-mcp and group:plugins expand in sandbox policy", () => {
+  for (const allow of [["docs__*"], ["bundle-mcp"], ["group:plugins"], ["*"]]) {
+    const result = tools(
+      {},
+      {
+        sandbox: { tools: { allow, deny: [] } },
+      },
+      "all",
+      mcp,
+    );
+    assert.deepEqual(
+      granted(result).filter((tool) => tool.endsWith("__*")),
+      allow[0] === "docs__*" ? ["docs__*"] : mcp[0].tools,
+    );
+  }
+});
+
+Deno.test("MCP subsets are known but cannot grant a whole server", () => {
+  for (const entry of ["docs__search", "docs__**"]) {
+    const findings: Finding[] = [];
+    assert.deepEqual(
+      tools({ allow: [entry] }, {}, "off", mcp, findings).grants,
+      [],
+    );
+    assert.deepEqual(findings.map((f) => [f.code, f.severity, f.subject]), [
+      ["MCP_TOOL_SUBSET_UNRESOLVED", "info", "test"],
+    ]);
+  }
+  const findings: Finding[] = [];
+  const result = tools(
+    { allow: ["bundle-mcp", "disabled__*", "disabled__search"] },
+    {},
+    "off",
+    null,
+    findings,
+    ["disabled"],
+  );
+  assert.deepEqual(result.grants, []);
+  assert.deepEqual(findings.map((f) => f.code), ["MCP_TOOL_SUBSET_UNRESOLVED"]);
 });

@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { EMAIL_ADDRESS_PATTERN, JWT_PATTERN } from "@logtape/redaction";
 import { collect } from "../src/collect.ts";
 import { doctor } from "../src/doctor.ts";
-import { emit } from "../src/emit.ts";
+import { emit, name } from "../src/emit.ts";
 import { canonical } from "../src/snapshot.ts";
 import { createFixture } from "./support/fixture.ts";
 
@@ -95,6 +95,60 @@ Deno.test("memory emission omits unset metadata while keeping empty inventory co
       /attribute :>> (?:curated\w+|searchProvider|searchModel|searchFallback|rememberAcrossConversations|dailyFirstDate|dailyLastDate|dailySha256|slot|dreaming\w+|activeMemory\w+|persistTranscripts) =/,
     );
     assert.doesNotMatch(instance, /= (?:null|undefined);/);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+Deno.test("MCP ownership and command grants preserve their policy scope", async () => {
+  const fixture = await createFixture();
+  try {
+    const snapshot = await collect(fixture.home, fixture.plugins);
+    const agent = snapshot.agents.find((a) => a.id === "lead")!;
+    snapshot.agents = [agent];
+    const instance = emit(snapshot).get("OpenClawInstance.sysml")!;
+    for (const server of snapshot.mcpServers) {
+      assert.ok(
+        instance.includes(`part ${name("mcp", server.id)} : McpServer`),
+      );
+    }
+    assert.match(instance, /attribute :>> pluginId = "bundle-mcp";/);
+    assert.ok(
+      !instance.includes(
+        `part ${name("plugin", "bundle-mcp")} : OpenClawPlugin`,
+      ),
+    );
+    assert.match(instance, /part execApprovals : ExecApprovals/);
+    assert.doesNotMatch(instance, /attribute :>> commands =/);
+    assert.ok(agent.execution.commands.length > 0);
+
+    for (const layer of ["host", "sandbox"] as const) {
+      agent.grants = [{ id: `${layer}:exec`, tool: "exec", layer }];
+      agent.execution.security = "allowlist";
+      const allowed = emit(snapshot).get("OpenClawInstance.sysml")!;
+      for (const command of agent.execution.commands) {
+        assert.ok(allowed.includes(
+          `ref item ${name("command", command.id)} : CommandGrant = ${
+            name("cmd", `${agent.id}:${command.id}`)
+          };`,
+        ));
+        assert.ok(allowed.includes(
+          `item ${name("cmd", `${agent.id}:${command.id}`)} : CommandGrant {`,
+        ));
+      }
+    }
+    for (const security of ["full", "deny"]) {
+      agent.execution.security = security;
+      assert.doesNotMatch(
+        emit(snapshot).get("OpenClawInstance.sysml")!,
+        /: CommandGrant/,
+      );
+    }
+    agent.execution.security = "allowlist";
+    agent.grants = [];
+    snapshot.execApprovals = null;
+    const absent = emit(snapshot).get("OpenClawInstance.sysml")!;
+    assert.doesNotMatch(absent, /: CommandGrant|part execApprovals/);
   } finally {
     await fixture.cleanup();
   }

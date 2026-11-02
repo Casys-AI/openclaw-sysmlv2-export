@@ -111,6 +111,11 @@ package OpenClawInstance {
             attribute :>> ask = "off";
             attribute :>> elevated = true;
             attribute :>> elevatedChannelsCount = 1;
+            attribute :>> safeBins = "[\"jq\",\"python3\",\"wc\"]";
+            attribute :>> safeBinProfiles = "[\"wc\"]";
+            attribute :>> trustedDirCount = 1;
+            attribute :>> pathPrependCount = 1;
+            attribute :>> strictInlineEval = false;
         }
         part memory : AgentMemory {
             attribute :>> searchEnabled = true;
@@ -341,6 +346,11 @@ package OpenClawInstance {
             attribute :>> ask = "off";
             attribute :>> elevated = true;
             attribute :>> elevatedChannelsCount = 1;
+            attribute :>> safeBins = "[\"jq\",\"python3\",\"wc\"]";
+            attribute :>> safeBinProfiles = "[\"wc\"]";
+            attribute :>> trustedDirCount = 1;
+            attribute :>> pathPrependCount = 1;
+            attribute :>> strictInlineEval = false;
         }
         part memory : AgentMemory {
             attribute :>> searchEnabled = true;
@@ -577,6 +587,11 @@ package OpenClawInstance {
             attribute :>> ask = "off";
             attribute :>> elevated = true;
             attribute :>> elevatedChannelsCount = 1;
+            attribute :>> safeBins = "[\"jq\",\"python3\",\"wc\"]";
+            attribute :>> safeBinProfiles = "[\"wc\"]";
+            attribute :>> trustedDirCount = 1;
+            attribute :>> pathPrependCount = 1;
+            attribute :>> strictInlineEval = false;
         }
         part memory : AgentMemory {
             attribute :>> searchEnabled = true;
@@ -752,7 +767,8 @@ package OpenClawInstance {
       "session_status",
       "message",
       "browser",
-      "tts"
+      "tts",
+      "docs__*"
     ],
     "alsoAllow": [],
     "deny": [
@@ -771,6 +787,7 @@ package OpenClawInstance {
   }
 } */
         ref item 'grant_sandbox:browser' : ToolGrant = 'tool_field:sandbox:browser';
+        ref item 'grant_sandbox:docs__*' : ToolGrant = 'tool_field:sandbox:docs__*';
         ref item 'grant_sandbox:edit' : ToolGrant = 'tool_field:sandbox:edit';
         ref item 'grant_sandbox:exec' : ToolGrant = 'tool_field:sandbox:exec';
         ref item 'grant_sandbox:image' : ToolGrant = 'tool_field:sandbox:image';
@@ -806,6 +823,11 @@ package OpenClawInstance {
             attribute :>> ask = "off";
             attribute :>> elevated = true;
             attribute :>> elevatedChannelsCount = 1;
+            attribute :>> safeBins = "[\"jq\",\"python3\",\"wc\"]";
+            attribute :>> safeBinProfiles = "[\"wc\"]";
+            attribute :>> trustedDirCount = 1;
+            attribute :>> pathPrependCount = 1;
+            attribute :>> strictInlineEval = false;
         }
         part memory : AgentMemory {
             attribute :>> searchEnabled = true;
@@ -898,6 +920,11 @@ package OpenClawInstance {
         attribute :>> tool = "browser";
         attribute :>> layer = "sandbox";
         attribute :>> pluginId = "browser";
+    }
+    item 'tool_field:sandbox:docs__*' : ToolGrant {
+        attribute :>> tool = "docs__*";
+        attribute :>> layer = "sandbox";
+        attribute :>> pluginId = "bundle-mcp";
     }
     item 'tool_field:sandbox:edit' : ToolGrant {
         attribute :>> tool = "edit";
@@ -1002,6 +1029,7 @@ package OpenClawInstance {
         ref item 'grant_host:canvas' : ToolGrant = 'tool_lead:host:canvas';
         ref item 'grant_host:code_execution' : ToolGrant = 'tool_lead:host:code_execution';
         ref item 'grant_host:cron' : ToolGrant = 'tool_lead:host:cron';
+        ref item 'grant_host:docs__*' : ToolGrant = 'tool_lead:host:docs__*';
         ref item 'grant_host:edit' : ToolGrant = 'tool_lead:host:edit';
         ref item 'grant_host:exec' : ToolGrant = 'tool_lead:host:exec';
         ref item 'grant_host:gateway' : ToolGrant = 'tool_lead:host:gateway';
@@ -1013,6 +1041,7 @@ package OpenClawInstance {
         ref item 'grant_host:message' : ToolGrant = 'tool_lead:host:message';
         ref item 'grant_host:music_generate' : ToolGrant = 'tool_lead:host:music_generate';
         ref item 'grant_host:nodes' : ToolGrant = 'tool_lead:host:nodes';
+        ref item 'grant_host:outlook-graph__*' : ToolGrant = 'tool_lead:host:outlook-graph__*';
         ref item 'grant_host:pdf' : ToolGrant = 'tool_lead:host:pdf';
         ref item 'grant_host:process' : ToolGrant = 'tool_lead:host:process';
         ref item 'grant_host:read' : ToolGrant = 'tool_lead:host:read';
@@ -1033,6 +1062,10 @@ package OpenClawInstance {
         ref item 'grant_host:whatsapp_login' : ToolGrant = 'tool_lead:host:whatsapp_login';
         ref item 'grant_host:write' : ToolGrant = 'tool_lead:host:write';
         ref item 'grant_host:x_search' : ToolGrant = 'tool_lead:host:x_search';
+        ref item 'command_name:rg' : CommandGrant = 'cmd_lead:name:rg';
+        ref item 'command_path:git' : CommandGrant = 'cmd_lead:path:git';
+        ref item 'command_safe-bin:python3' : CommandGrant = 'cmd_lead:safe-bin:python3';
+        ref item 'command_safe-bin:wc' : CommandGrant = 'cmd_lead:safe-bin:wc';
     }
     part agent_lead : Agent_lead {
         part sandbox : Sandbox {
@@ -1047,10 +1080,15 @@ package OpenClawInstance {
         }
         part execution : ExecutionPosture {
             attribute :>> host = "auto";
-            attribute :>> security = "full";
-            attribute :>> ask = "off";
+            attribute :>> security = "allowlist";
+            attribute :>> ask = "on-miss";
             attribute :>> elevated = true;
             attribute :>> elevatedChannelsCount = 1;
+            attribute :>> safeBins = "[\"jq\",\"python3\",\"wc\"]";
+            attribute :>> safeBinProfiles = "[\"wc\"]";
+            attribute :>> trustedDirCount = 1;
+            attribute :>> pathPrependCount = 1;
+            attribute :>> strictInlineEval = false;
         }
         part memory : AgentMemory {
             attribute :>> searchEnabled = true;
@@ -1295,6 +1333,11 @@ package OpenClawInstance {
         attribute :>> tool = "cron";
         attribute :>> layer = "host";
     }
+    item 'tool_lead:host:docs__*' : ToolGrant {
+        attribute :>> tool = "docs__*";
+        attribute :>> layer = "host";
+        attribute :>> pluginId = "bundle-mcp";
+    }
     item 'tool_lead:host:edit' : ToolGrant {
         attribute :>> tool = "edit";
         attribute :>> layer = "host";
@@ -1340,6 +1383,11 @@ package OpenClawInstance {
     item 'tool_lead:host:nodes' : ToolGrant {
         attribute :>> tool = "nodes";
         attribute :>> layer = "host";
+    }
+    item 'tool_lead:host:outlook-graph__*' : ToolGrant {
+        attribute :>> tool = "outlook-graph__*";
+        attribute :>> layer = "host";
+        attribute :>> pluginId = "bundle-mcp";
     }
     item 'tool_lead:host:pdf' : ToolGrant {
         attribute :>> tool = "pdf";
@@ -1422,6 +1470,26 @@ package OpenClawInstance {
     item 'tool_lead:host:x_search' : ToolGrant {
         attribute :>> tool = "x_search";
         attribute :>> layer = "host";
+    }
+    item 'cmd_lead:name:rg' : CommandGrant {
+        attribute :>> command = "rg";
+        attribute :>> kind = "name";
+        attribute :>> argsRestricted = false;
+    }
+    item 'cmd_lead:path:git' : CommandGrant {
+        attribute :>> command = "git";
+        attribute :>> kind = "path";
+        attribute :>> argsRestricted = true;
+    }
+    item 'cmd_lead:safe-bin:python3' : CommandGrant {
+        attribute :>> command = "python3";
+        attribute :>> kind = "safe-bin";
+        attribute :>> argsRestricted = true;
+    }
+    item 'cmd_lead:safe-bin:wc' : CommandGrant {
+        attribute :>> command = "wc";
+        attribute :>> kind = "safe-bin";
+        attribute :>> argsRestricted = true;
     }
     part 'delegation_lead:client' : DelegationRule {
         attribute :>> fromAgent = "lead";
@@ -1563,6 +1631,11 @@ package OpenClawInstance {
             attribute :>> ask = "off";
             attribute :>> elevated = true;
             attribute :>> elevatedChannelsCount = 1;
+            attribute :>> safeBins = "[\"jq\",\"python3\",\"wc\"]";
+            attribute :>> safeBinProfiles = "[\"wc\"]";
+            attribute :>> trustedDirCount = 1;
+            attribute :>> pathPrependCount = 1;
+            attribute :>> strictInlineEval = false;
         }
         part memory : AgentMemory {
             attribute :>> searchEnabled = true;
@@ -2142,6 +2215,50 @@ package OpenClawInstance {
         attribute :>> enabled = false;
         attribute :>> tools = "[\"board_claim\",\"board_list\"]";
         attribute :>> optionalTools = "[\"board_claim\",\"board_list\"]";
+    }
+    part mcp_9tools : McpServer {
+        attribute :>> serverId = "9tools";
+        attribute :>> toolPrefix = "mcp-9tools";
+        attribute :>> enabled = false;
+        attribute :>> transport = "sse";
+        attribute :>> oauth = false;
+        attribute :>> toolInclude = "[]";
+        attribute :>> toolExclude = "[]";
+        attribute :>> envNames = "[]";
+        attribute :>> headerNames = "[]";
+        attribute :>> argCount = 0;
+    }
+    part 'mcp_Outlook Graph' : McpServer {
+        attribute :>> serverId = "Outlook Graph";
+        attribute :>> toolPrefix = "outlook-graph";
+        attribute :>> enabled = true;
+        attribute :>> transport = "streamable-http";
+        attribute :>> oauth = true;
+        attribute :>> oauthIdentity = "per-requester";
+        attribute :>> toolInclude = "[]";
+        attribute :>> toolExclude = "[]";
+        attribute :>> envNames = "[]";
+        attribute :>> headerNames = "[\"Authorization\"]";
+        attribute :>> argCount = 0;
+    }
+    part mcp_docs : McpServer {
+        attribute :>> serverId = "docs";
+        attribute :>> toolPrefix = "docs";
+        attribute :>> enabled = true;
+        attribute :>> transport = "stdio";
+        attribute :>> oauth = false;
+        attribute :>> toolInclude = "[\"search_*\"]";
+        attribute :>> toolExclude = "[]";
+        attribute :>> envNames = "[\"DOCS_TOKEN\"]";
+        attribute :>> headerNames = "[]";
+        attribute :>> argCount = 2;
+    }
+    part execApprovals : ExecApprovals {
+        attribute :>> defaultSecurity = "allowlist";
+        attribute :>> defaultAsk = "on-miss";
+        attribute :>> askFallback = "deny";
+        attribute :>> autoAllowSkills = false;
+        attribute :>> wildcardCommands = "[{\"id\":\"path:*\",\"command\":\"*\",\"kind\":\"path\",\"argsRestricted\":false}]";
     }
     part memoryBackend : MemoryBackend {
         attribute :>> dreamingEnabled = true;

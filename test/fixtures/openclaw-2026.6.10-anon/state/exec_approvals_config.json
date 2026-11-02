@@ -1,0 +1,21 @@
+{
+  "table": "exec_approvals_config",
+  "columns": [
+    "config_key",
+    "raw_json",
+    "has_socket_token",
+    "agent_count",
+    "allowlist_count",
+    "updated_at_ms"
+  ],
+  "rows": [
+    {
+      "config_key": "current",
+      "raw_json": "{\"socket\": {\"path\": \"CANARY-PATH-40\", \"token\": \"CANARY-SECRET-60\"}, \"defaults\": {\"security\": \"allowlist\", \"ask\": \"on-miss\", \"askFallback\": \"deny\", \"autoAllowSkills\": false}, \"agents\": {\"lead\": {\"allowlist\": [{\"id\": \"CANARY-ID-40\", \"pattern\": \"rg\", \"lastUsedAt\": 1, \"lastUsedCommand\": \"CANARY-COMMAND-1\", \"lastResolvedPath\": \"CANARY-PATH-41\"}, {\"id\": \"e2\", \"pattern\": \"CANARY-DIR-1/bin/git\", \"argPattern\": \"CANARY-ARGS-1\"}]}, \"*\": {\"allowlist\": [{\"id\": \"e3\", \"pattern\": \"~/.local/bin/*\"}]}}}",
+      "has_socket_token": 1,
+      "agent_count": 2,
+      "allowlist_count": 3,
+      "updated_at_ms": 1
+    }
+  ]
+}

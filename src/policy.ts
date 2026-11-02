@@ -40,6 +40,9 @@ const profiles: Record<string, string[] | null> = {
   full: null,
   minimal: ["session_status"],
   coding: [
+    // docs/gateway/config-tools/tool-policy.md: coding and messaging implicitly
+    // allow configured MCP tools through their synthetic plugin owner.
+    "bundle-mcp",
     "group:fs",
     "group:runtime",
     "group:web",
@@ -52,6 +55,7 @@ const profiles: Record<string, string[] | null> = {
     "video_generate",
   ],
   messaging: [
+    "bundle-mcp",
     "group:messaging",
     "sessions_list",
     "sessions_history",
@@ -84,6 +88,12 @@ type Groups = ReadonlyMap<string, string[]>;
 function matches(tool: string, patterns: string[], groups: Groups): boolean {
   return patterns.some((raw) => {
     const p = raw.toLowerCase() === "bash" ? "exec" : raw.toLowerCase();
+    // docs/plugins/bundles.md, Tool naming: individual tools are discovered at
+    // runtime. A subset pattern cannot stand in for a whole-server grant.
+    if (
+      tool.endsWith("__*") && groups.get("bundle-mcp")?.includes(tool) &&
+      p.startsWith(tool.slice(0, -1)) && p !== tool
+    ) return false;
     const group = groups.get(p);
     if (group) return group.includes(tool);
     return new RegExp(
@@ -125,6 +135,7 @@ export function resolvePolicy(
   model: string | null,
   plugins: Plugin[] | null,
   findings: Finding[],
+  mcpPrefixes: string[] = [],
 ): Pick<Agent, "grants" | "policy"> {
   // docs/gateway/config-tools/tool-policy.md (2026.10): plugin tools join the
   // catalog; group:plugins and each plugin id expand to them. A name that a
@@ -239,6 +250,27 @@ export function resolvePolicy(
   const entries = [g, a, p, ap, s].flatMap(
     (x) => [...x.allow ?? [], ...x.alsoAllow, ...x.deny],
   );
+  // docs/gateway/config-tools/tool-policy.md, MCP sandbox policy, and
+  // docs/plugins/bundles.md, Tool naming: server tools are runtime names.
+  const mcpTools = unique([
+    ...(groups.get("bundle-mcp") ?? []).filter((tool) => tool.endsWith("__*")),
+    ...mcpPrefixes.map((prefix) => `${prefix}__*`),
+  ]);
+  const mcpSubset = (entry: string) =>
+    mcpTools.some((tool) =>
+      entry.toLowerCase().startsWith(tool.slice(0, -1)) &&
+      entry.toLowerCase() !== tool
+    );
+  if (entries.some(mcpSubset)) {
+    findings.push(
+      info(
+        "MCP_TOOL_SUBSET_UNRESOLVED",
+        id,
+        "Policy names a subset of server tools whose runtime catalog is unknown; subset entries grant no whole server.",
+        "Inspect the server's live tools or use its server glob; docs/gateway/config-tools/tool-policy.md.",
+      ),
+    );
+  }
   if ([g, a, p, ap, s].some((p) => p.allow?.length === 0)) {
     findings.push(
       info(
@@ -262,7 +294,8 @@ export function resolvePolicy(
   if (
     entries.some((x) =>
       x !== "*" && x !== "bash" && !groups.has(x) && !BUILTINS.includes(x) &&
-      !declared.has(x)
+      !declared.has(x) && x.toLowerCase() !== "bundle-mcp" &&
+      !mcpTools.includes(x.toLowerCase()) && !mcpSubset(x)
     )
   ) {
     findings.push(

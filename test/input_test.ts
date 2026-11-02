@@ -74,10 +74,22 @@ Deno.test("unknown fields are excluded and plaintext counting recognizes referen
     plaintextSecretCount({
       password: "x",
       env: { PLAIN: "secret", REF: "${ENV}" },
+      mcp: {
+        servers: {
+          docs: {
+            headers: {
+              Authorization: "secret",
+              Referenced: "${ENV}",
+              Empty: "",
+              SecretRef: { source: "env", provider: "default", id: "HEADER" },
+            },
+          },
+        },
+      },
       apiKey: { source: "env", provider: "default", id: "KEY" },
       accounts: { secretary: { enabled: true } },
     }),
-    2,
+    3,
   );
   const fixture = await createFixture();
   try {

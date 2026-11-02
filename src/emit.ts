@@ -37,15 +37,26 @@ function every(ms: number): string {
   }\n        }`;
 }
 export function emit(snapshot: Snapshot): Map<string, string> {
+  // docs/gateway/config-tools/tool-policy.md: configured MCP tools belong to
+  // bundle-mcp; the synthetic plugin is not part of the plugin inventory.
   const owner = (tool: string) =>
-    snapshot.plugins?.find((p) => p.enabled && p.tools.includes(tool))?.id ??
-      null;
+    snapshot.mcpServers.some((s) => s.enabled && tool === `${s.toolPrefix}__*`)
+      ? "bundle-mcp"
+      : snapshot.plugins?.find((p) => p.enabled && p.tools.includes(tool))
+        ?.id ??
+        null;
   const lines = [
     "package OpenClawInstance {",
     "    private import OpenClawImport::*;",
     "    private import ScalarValues::*;",
   ];
   for (const a of [...snapshot.agents].sort((a, b) => a.id < b.id ? -1 : 1)) {
+    // docs/tools/exec-approvals.md, exec.security: command allowlists apply
+    // only to allowlist security and cannot grant access to the exec tool.
+    const commands = a.execution.security === "allowlist" &&
+        a.grants.some((g) => g.tool === "exec")
+      ? a.execution.commands
+      : [];
     lines.push(
       `    part def ${name("Agent", a.id)} :> OpenClawAgent {`,
       attrs({
@@ -65,6 +76,13 @@ export function emit(snapshot: Snapshot): Map<string, string> {
       lines.push(
         `        ref item ${name("grant", g.id)} : ToolGrant = ${
           name("tool", `${a.id}:${g.id}`)
+        };`,
+      );
+    }
+    for (const c of commands) {
+      lines.push(
+        `        ref item ${name("command", c.id)} : CommandGrant = ${
+          name("cmd", `${a.id}:${c.id}`)
         };`,
       );
     }
@@ -89,9 +107,10 @@ export function emit(snapshot: Snapshot): Map<string, string> {
       }, "            "),
       "        }",
     );
+    const { commands: _commands, ...execution } = a.execution;
     lines.push(
       "        part execution : ExecutionPosture {",
-      attrs(a.execution, "            "),
+      attrs(execution, "            "),
       "        }",
     );
     // docs/concepts/memory.md: root MEMORY.md is the curated layer; its
@@ -135,6 +154,17 @@ export function emit(snapshot: Snapshot): Map<string, string> {
       lines.push(
         `    item ${name("tool", `${a.id}:${g.id}`)} : ToolGrant {`,
         attrs({ tool: g.tool, layer: g.layer, pluginId: owner(g.tool) }),
+        "    }",
+      );
+    }
+    for (const c of commands) {
+      lines.push(
+        `    item ${name("cmd", `${a.id}:${c.id}`)} : CommandGrant {`,
+        attrs({
+          command: c.command,
+          kind: c.kind,
+          argsRestricted: c.argsRestricted,
+        }),
         "    }",
       );
     }
@@ -257,6 +287,39 @@ export function emit(snapshot: Snapshot): Map<string, string> {
         enabled: p.enabled,
         tools: p.tools,
         optionalTools: p.optionalTools,
+      }),
+      "    }",
+    );
+  }
+  for (const s of snapshot.mcpServers) {
+    lines.push(
+      `    part ${name("mcp", s.id)} : McpServer {`,
+      attrs({
+        serverId: s.id,
+        toolPrefix: s.toolPrefix,
+        enabled: s.enabled,
+        transport: s.transport,
+        oauth: s.oauth,
+        oauthIdentity: s.oauthIdentity,
+        toolInclude: s.toolFilter.include,
+        toolExclude: s.toolFilter.exclude,
+        envNames: s.envNames,
+        headerNames: s.headerNames,
+        argCount: s.argCount,
+      }),
+      "    }",
+    );
+  }
+  if (snapshot.execApprovals !== null) {
+    const { defaults, wildcardCommands } = snapshot.execApprovals;
+    lines.push(
+      "    part execApprovals : ExecApprovals {",
+      attrs({
+        defaultSecurity: defaults.security,
+        defaultAsk: defaults.ask,
+        askFallback: defaults.askFallback,
+        autoAllowSkills: defaults.autoAllowSkills,
+        wildcardCommands,
       }),
       "    }",
     );

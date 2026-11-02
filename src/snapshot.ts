@@ -58,6 +58,12 @@ export interface Agent {
     ask: string;
     elevated: boolean;
     elevatedChannelsCount: number;
+    safeBins: string[] | null;
+    safeBinProfiles: string[];
+    trustedDirCount: number;
+    pathPrependCount: number;
+    strictInlineEval: boolean;
+    commands: CommandGrant[];
   };
   memory: {
     search: {
@@ -121,6 +127,24 @@ export interface Plugin {
   /** `toolMetadata.<tool>.optional`: exposed only on explicit opt-in. */
   optionalTools: string[];
 }
+export interface CommandGrant {
+  id: string;
+  command: string;
+  kind: "safe-bin" | "name" | "path";
+  argsRestricted: boolean;
+}
+export interface McpServer {
+  id: string;
+  toolPrefix: string;
+  enabled: boolean;
+  transport: "stdio" | "sse" | "streamable-http";
+  oauth: boolean;
+  oauthIdentity: string | null;
+  toolFilter: { include: string[]; exclude: string[] };
+  envNames: string[];
+  headerNames: string[];
+  argCount: number;
+}
 export interface Finding {
   code: string;
   severity: "error" | "warning" | "info";
@@ -129,7 +153,7 @@ export interface Finding {
   recovery: string;
 }
 export interface Snapshot {
-  schema: "openclaw-snapshot/3";
+  schema: "openclaw-snapshot/4";
   openclawVersion: string;
   plaintextSecretCount: number;
   backupCount: number;
@@ -161,6 +185,16 @@ export interface Snapshot {
   providers: { id: string; api: string | null; models: string[] }[];
   /** Null when no plugin inventory was supplied to the collector. */
   plugins: Plugin[] | null;
+  mcpServers: McpServer[];
+  execApprovals: {
+    defaults: {
+      security: string | null;
+      ask: string | null;
+      askFallback: string | null;
+      autoAllowSkills: boolean | null;
+    };
+    wildcardCommands: CommandGrant[];
+  } | null;
   memoryBackend: {
     slot: string | null;
     dreaming: {
@@ -225,8 +259,14 @@ const finding: Shape = {
   context: str,
   recovery: str,
 };
+const command: Shape = {
+  id: str,
+  command: str,
+  kind: { enum: ["safe-bin", "name", "path"] },
+  argsRestricted: bool,
+};
 const shape: Shape = {
-  schema: { enum: ["openclaw-snapshot/3"] },
+  schema: { enum: ["openclaw-snapshot/4"] },
   openclawVersion: str,
   plaintextSecretCount: num,
   backupCount: num,
@@ -272,6 +312,12 @@ const shape: Shape = {
       ask: str,
       elevated: bool,
       elevatedChannelsCount: num,
+      safeBins: nullable(strings),
+      safeBinProfiles: strings,
+      trustedDirCount: num,
+      pathPrependCount: num,
+      strictInlineEval: bool,
+      commands: [command],
     },
     memory: {
       search: {
@@ -345,6 +391,27 @@ const shape: Shape = {
     tools: strings,
     optionalTools: strings,
   }]),
+  mcpServers: [{
+    id: str,
+    toolPrefix: str,
+    enabled: bool,
+    transport: { enum: ["stdio", "sse", "streamable-http"] },
+    oauth: bool,
+    oauthIdentity: ns,
+    toolFilter: { include: strings, exclude: strings },
+    envNames: strings,
+    headerNames: strings,
+    argCount: num,
+  }],
+  execApprovals: nullable({
+    defaults: {
+      security: ns,
+      ask: ns,
+      askFallback: ns,
+      autoAllowSkills: nullable(bool),
+    },
+    wildcardCommands: [command],
+  }),
   memoryBackend: {
     slot: ns,
     dreaming: { enabled: nullable(bool), frequency: ns, timezone: ns },

@@ -52,7 +52,7 @@ Deno.test("plugin runs are kept as versions", async (t) => {
     await t.step("versions.json lists the runs newest first", async () => {
       assert.equal(first.outDir, join(out, "2026-11-02T10-15-00Z"));
       assert.equal(second.version, "2026-11-02T10-20-00Z");
-      const findings = { error: 7, warning: 14, info: 25 };
+      const findings = { error: 6, warning: 21, info: 29 };
       assert.deepEqual(
         JSON.parse(await readFile(join(out, "versions.json"), "utf8")),
         [{

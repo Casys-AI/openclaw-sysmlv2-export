@@ -25,9 +25,11 @@ import { info, model, resolvePolicy } from "./policy.ts";
 import {
   type Agent,
   byId,
+  type CommandGrant,
   type Cron,
   type FileRef,
   type Finding,
+  type McpServer,
   parseSnapshot,
   type Plugin,
   type Sandbox,
@@ -45,6 +47,128 @@ function agentEntries(agents: Obj): { config: Obj; raw: Obj }[] {
     ? Object.entries(entries).map(([id, v]) => ({ ...obj(v), id }))
     : arr(agents.list).map(obj);
   return raws.map((raw) => ({ raw, config: { ...redact(raw), id: raw.id } }));
+}
+/** docs/cli/mcp/registry.md and transports.md: saved, enabled-by-default
+ * definitions, OAuth identity and tool filters. Like agentEntries, redact
+ * each entry independently so a server named "token" remains in the inventory. */
+function mcpServers(raw: Obj): McpServer[] {
+  const used = new Set<string>();
+  return byId(
+    Object.entries(obj(obj(raw.mcp).servers)).map(([id, value]) => {
+      // Port of sanitizeToolFragment / sanitizeServerName / assignSafeServerNames
+      // in OpenClaw 2026.10.9 dist/agent-bundle-mcp-names-CFVETBL6.mjs.
+      // Assign case-insensitive collisions in declaration order, before sorting.
+      const normalized = id.trim().replace(/[^A-Za-z0-9_-]/g, "-") || "mcp";
+      const base =
+        (/^[A-Za-z]/.test(normalized) ? normalized : `mcp-${normalized}`).slice(
+          0,
+          30,
+        );
+      let prefix = base;
+      for (let n = 2; used.has(prefix.toLowerCase()); n++) {
+        const suffix = `-${n}`;
+        prefix = `${base.slice(0, Math.max(1, 30 - suffix.length))}${suffix}`;
+      }
+      used.add(prefix.toLowerCase());
+      const original = obj(value), server = redact(original);
+      // docs/cli/mcp/transports.md: HTTP alias, explicit transport, or SSE for
+      // an implicit URL transport. Command/URL values never enter this projection.
+      const command = Object.hasOwn(original, "command");
+      const url = Object.hasOwn(original, "url");
+      const transport = server.transport === undefined
+        ? (server.type === "http"
+          ? "streamable-http"
+          : command
+          ? "stdio"
+          : "sse")
+        : server.transport;
+      if (
+        command === url ||
+        typeof transport !== "string" ||
+        !["stdio", "sse", "streamable-http"].includes(transport)
+      ) invalid("Unsupported MCP server transport");
+      const filter = obj(server.toolFilter);
+      return {
+        id,
+        toolPrefix: prefix.toLowerCase(),
+        enabled: boolean(server.enabled, true),
+        transport: transport as McpServer["transport"],
+        // The redactor masks auth/oauth containers. Retain only their documented
+        // mode and identity metadata (docs/cli/mcp/transports.md), never credentials.
+        oauth: original.auth === "oauth",
+        oauthIdentity: text(obj(original.oauth).identity),
+        toolFilter: {
+          include: strings(filter.include),
+          exclude: strings(filter.exclude),
+        },
+        envNames: environmentNames(original.env),
+        headerNames: environmentNames(original.headers),
+        argCount: arr(original.args).length,
+      };
+    }),
+  );
+}
+
+/** docs/tools/exec-approvals.md, Allowlist (per agent) / argPattern: keep
+ * executable names and the presence of an argv restriction, never its text.
+ * Distinct paths with the same basename collapse conservatively. */
+function allowlist(raw: unknown): CommandGrant[] {
+  const commands = new Map<string, CommandGrant>();
+  for (const value of arr(raw)) {
+    const entry = obj(value), pattern = required(entry.pattern);
+    const kind = pattern.includes("/") || pattern.startsWith("~")
+      ? "path"
+      : "name";
+    const command = kind === "path" ? pattern.split("/").at(-1)! : pattern;
+    const id = `${kind}:${command}`, previous = commands.get(id);
+    commands.set(id, {
+      id,
+      command,
+      kind,
+      argsRestricted: Object.hasOwn(entry, "argPattern") &&
+        (previous?.argsRestricted ?? true),
+    });
+  }
+  return byId([...commands.values()]);
+}
+
+function execApprovals(db: DatabaseSync): {
+  execApprovals: Snapshot["execApprovals"];
+  commandsByAgent: Map<string, CommandGrant[]>;
+} {
+  // dist/openclaw-state-schema-Cr2v_hbj.mjs defines the table; the authoritative
+  // row key is "current" in dist/exec-approvals-sqlite-CbRxT0B7.mjs (2026.10.9).
+  const table = db.prepare(
+    "SELECT name FROM sqlite_master WHERE type='table' AND name='exec_approvals_config'",
+  ).get();
+  const row = table
+    ? db.prepare(
+      "SELECT raw_json FROM exec_approvals_config WHERE config_key = 'current'",
+    ).get()
+    : undefined;
+  const commandsByAgent = new Map<string, CommandGrant[]>();
+  if (!row) return { execApprovals: null, commandsByAgent };
+  const config = obj(json(required(row.raw_json))),
+    defaults = obj(config.defaults);
+  for (const [id, value] of Object.entries(obj(config.agents))) {
+    commandsByAgent.set(id, allowlist(obj(value).allowlist));
+  }
+  return {
+    execApprovals: {
+      defaults: {
+        security: text(defaults.security),
+        ask: text(defaults.ask),
+        askFallback: text(defaults.askFallback),
+        autoAllowSkills: defaults.autoAllowSkills === undefined
+          ? null
+          : boolean(defaults.autoAllowSkills, false),
+      },
+      // docs/tools/exec-approvals.md describes per-agent lists without resolving
+      // the wildcard storage semantics. Preserve it separately, never inherit it.
+      wildcardCommands: commandsByAgent.get("*") ?? [],
+    },
+    commandsByAgent,
+  };
 }
 /** 2026.10 exec modes as the 2026.6 security/ask pair the snapshot keeps. */
 const EXEC_MODES: Record<string, [string, string]> = {
@@ -394,7 +518,11 @@ function sandbox(
     ),
   };
 }
-function cron(home: string, findings: Finding[]): Cron[] {
+function state(home: string, findings: Finding[]): {
+  cron: Cron[];
+  execApprovals: Snapshot["execApprovals"];
+  commandsByAgent: Map<string, CommandGrant[]>;
+} {
   const path = join(home, "state", "openclaw.sqlite");
   // docs/automation/cron-jobs.md: state/openclaw.sqlite is authoritative.
   // Deno 2.9.7 node:sqlite resolves a file: URI as a literal local path with
@@ -478,13 +606,14 @@ function cron(home: string, findings: Finding[]): Cron[] {
         },
       };
     });
+    const approvals = execApprovals(db);
     db.exec("ROLLBACK");
-    return byId(result);
+    return { cron: byId(result), ...approvals };
   } catch (e) {
     if (e instanceof ExportError) throw e;
     throw ioError(
-      "CRON_READ_FAILED",
-      "Cannot read the required cron_jobs columns from the read-only SQLite database",
+      "STATE_READ_FAILED",
+      "Cannot read cron jobs and exec approvals from the read-only SQLite database",
     );
   } finally {
     db?.close();
@@ -559,6 +688,20 @@ export async function collect(
       global = obj(config.tools),
       rawGlobal = obj(raw.tools),
       inventory = pluginList === null ? null : await plugins(pluginList);
+    const servers = mcpServers(raw), stored = state(home, findings);
+    // docs/gateway/config-tools/tool-policy.md: MCP tools are owned by bundle-mcp.
+    // This synthetic inventory entry is policy-only, never a snapshot plugin.
+    const pseudoTools = servers.filter((s) => s.enabled).map((s) =>
+      `${s.toolPrefix}__*`
+    );
+    const policyInventory = pseudoTools.length
+      ? [...inventory ?? [], {
+        id: "bundle-mcp",
+        enabled: true,
+        tools: pseudoTools,
+        optionalTools: [],
+      }]
+      : inventory;
     if (version !== "2026.6.10") {
       findings.push(
         info(
@@ -604,8 +747,9 @@ export async function collect(
         tools,
         sb,
         m.primary,
-        inventory,
+        policyInventory,
         findings,
+        servers.map((s) => s.toolPrefix),
       );
       // docs/tools/browser.md: both plugin and browser configuration can disable
       // the tool; an active sandbox browser has its separate configuration.
@@ -626,6 +770,20 @@ export async function collect(
         );
       }
       const ex = { ...obj(global.exec), ...obj(tools.exec) };
+      // docs/tools/exec.md: agent fields replace global fields (even []), while
+      // safeBinProfiles overrides individual keys. Only directory counts survive.
+      const rawEx = { ...obj(rawGlobal.exec), ...obj(rawTools.exec) };
+      const safeBins = ex.safeBins === undefined ? null : strings(ex.safeBins);
+      // docs/tools/exec-approvals-advanced.md: argv policy restricts safe bins;
+      // awk, sed and jq are always denied, even when explicitly configured.
+      const safeCommands: CommandGrant[] = unique(safeBins ?? [])
+        .filter((command) => !["awk", "sed", "jq"].includes(command))
+        .map((command) => ({
+          id: `safe-bin:${command}`,
+          command,
+          kind: "safe-bin",
+          argsRestricted: true,
+        }));
       const elev = obj(rawGlobal.elevated), ae = obj(rawTools.elevated);
       const globalChannels = Object.keys(obj(elev.allowFrom)).filter((k) =>
         strings(obj(elev.allowFrom)[k]).length > 0
@@ -658,7 +816,7 @@ export async function collect(
       const [security, ask] = mode !== null && mode in EXEC_MODES
         ? EXEC_MODES[mode]
         : [ex.security, ex.ask];
-      const execution = {
+      const execution: Agent["execution"] = {
         host: enumeration(
           ex.host,
           ["auto", "sandbox", "gateway", "node"],
@@ -677,7 +835,27 @@ export async function collect(
         ),
         elevated,
         elevatedChannelsCount: channels.length,
+        safeBins,
+        safeBinProfiles: unique([
+          ...Object.keys(obj(obj(rawGlobal.exec).safeBinProfiles)),
+          ...Object.keys(obj(obj(rawTools.exec).safeBinProfiles)),
+        ]),
+        trustedDirCount: arr(rawEx.safeBinTrustedDirs).length,
+        pathPrependCount: arr(rawEx.pathPrepend).length,
+        strictInlineEval: boolean(ex.strictInlineEval, false),
+        commands: byId([
+          ...safeCommands,
+          ...stored.commandsByAgent.get(id) ?? [],
+        ]),
       };
+      if (safeBins === null && resolved.grants.some((g) => g.tool === "exec")) {
+        findings.push(info(
+          "SAFE_BINS_DEFAULT_UNRESOLVED",
+          id,
+          "Safe bins are unset; the docs disagree on the default list, so no default command grants are inferred.",
+          "Set tools.exec.safeBins explicitly; compare docs/tools/exec.md and docs/tools/exec-approvals-advanced.md.",
+        ));
+      }
       if (execution.security === "unknown" || execution.ask === "unknown") {
         findings.push(
           info(
@@ -788,7 +966,7 @@ export async function collect(
         ...identity,
       };
     });
-    const jobs = cron(home, findings),
+    const jobs = stored.cron,
       ids = new Set(agents.map((a) => a.id));
     for (const binding of bindings) {
       if (
@@ -859,7 +1037,7 @@ export async function collect(
     );
     const messaging = obj(global.agentToAgent);
     const result: Snapshot = {
-      schema: "openclaw-snapshot/3",
+      schema: "openclaw-snapshot/4",
       openclawVersion: text(obj(config.meta).lastTouchedVersion, "2026.6.10")!,
       plaintextSecretCount: plaintextSecretCount(raw),
       backupCount: (await readdir(home, { withFileTypes: true })).filter((e) =>
@@ -874,6 +1052,8 @@ export async function collect(
       bundledSkills: byId(bundledSkills),
       providers: byId(providers),
       plugins: inventory,
+      mcpServers: servers,
+      execApprovals: stored.execApprovals,
       memoryBackend: memoryBackend(config),
       messaging: {
         enabled: boolean(messaging.enabled, false),

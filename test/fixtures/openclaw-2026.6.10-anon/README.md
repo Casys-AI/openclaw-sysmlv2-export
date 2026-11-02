@@ -11,8 +11,10 @@ plugins and cron jobs.
   stable neutral aliases. The original bodies were not copied.
 - `memory/` notes, Memory Core dreaming config and Active Memory's `promptAppend`
   and `allowedChatIds` are synthetic additions for memory export tests.
-- `state/cron_jobs.json` holds rows of the `cron_jobs` table (subset of
-  columns). Tests build `state/openclaw.sqlite` from it.
+- MCP servers, exec safe bins and approval allowlists are synthetic additions
+  for MCP and command-grant export tests.
+- `state/*.json` hold rows of the named SQLite tables (subsets of columns).
+  Tests build `state/openclaw.sqlite` from them in one loop.
 - Workspace `.git` directories and `openclaw.json.*` backups are not included;
   tests add them where needed. The real instance had a Git repository in the
   default workspace only and many manual config backups.

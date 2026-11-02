@@ -198,6 +198,8 @@ Deno.test("2026.10 exec modes keep the no-approval posture visible", async () =>
       const path = join(fixture.home, "openclaw.json");
       const config = JSON.parse(await readFile(path, "utf8"));
       config.meta.lastTouchedVersion = version;
+      delete config.agents.list.find((a: { id: string }) => a.id === "lead")
+        .tools.exec;
       if (exec === undefined) delete config.tools.exec;
       else config.tools.exec = exec;
       await writeFile(path, JSON.stringify(config));
@@ -560,6 +562,324 @@ Deno.test("memory backend projects only allowed settings and both Active Memory 
       frequency: null,
       timezone: null,
     });
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+Deno.test("MCP projection keeps server metadata, names and counts only", async () => {
+  const fixture = await createFixture();
+  try {
+    const snapshot = await collect(fixture.home, fixture.plugins);
+    assert.deepEqual(snapshot.mcpServers, [
+      {
+        id: "9tools",
+        toolPrefix: "mcp-9tools",
+        enabled: false,
+        transport: "sse",
+        oauth: false,
+        oauthIdentity: null,
+        toolFilter: { include: [], exclude: [] },
+        envNames: [],
+        headerNames: [],
+        argCount: 0,
+      },
+      {
+        id: "Outlook Graph",
+        toolPrefix: "outlook-graph",
+        enabled: true,
+        transport: "streamable-http",
+        oauth: true,
+        oauthIdentity: "per-requester",
+        toolFilter: { include: [], exclude: [] },
+        envNames: [],
+        headerNames: ["Authorization"],
+        argCount: 0,
+      },
+      {
+        id: "docs",
+        toolPrefix: "docs",
+        enabled: true,
+        transport: "stdio",
+        oauth: false,
+        oauthIdentity: null,
+        toolFilter: { include: ["search_*"], exclude: [] },
+        envNames: ["DOCS_TOKEN"],
+        headerNames: [],
+        argCount: 2,
+      },
+    ]);
+    assert.ok(!snapshot.plugins!.some((p) => p.id === "bundle-mcp"));
+    const lead = snapshot.agents.find((a) => a.id === "lead")!;
+    assert.ok(lead.grants.some((g) => g.tool === "docs__*"));
+    assert.ok(lead.grants.some((g) => g.tool === "outlook-graph__*"));
+    assert.ok(
+      !snapshot.agents.some((a) =>
+        a.grants.some((g) => g.tool === "mcp-9tools__*")
+      ),
+    );
+    assert.doesNotMatch(canonical(snapshot), /CANARY-/);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+Deno.test("MCP prefixes preserve redacted dictionary keys and declaration-order collisions", async () => {
+  const fixture = await createFixture();
+  try {
+    const path = join(fixture.home, "openclaw.json");
+    const config = JSON.parse(await readFile(path, "utf8"));
+    const long = "x".repeat(35);
+    config.mcp.servers = Object.fromEntries([
+      ["token", { command: "CANARY-COMMAND-3" }],
+      ["docs!", { command: "CANARY-COMMAND-4", enabled: false }],
+      ["Docs?", { url: "CANARY-URL-3", type: "http" }],
+      ["DOCS-", { url: "CANARY-URL-4" }],
+      [long, { url: "CANARY-URL-5" }],
+      [long + "a", { url: "CANARY-URL-6" }],
+      ["  ", { url: "CANARY-URL-7" }],
+    ]);
+    await writeFile(path, JSON.stringify(config));
+    const snapshot = await collect(fixture.home);
+    assert.deepEqual(snapshot.mcpServers.map((s) => [s.id, s.toolPrefix]), [
+      ["  ", "mcp"],
+      ["DOCS-", "docs--3"],
+      ["Docs?", "docs--2"],
+      ["docs!", "docs-"],
+      ["token", "token"],
+      [long, "x".repeat(30)],
+      [long + "a", "x".repeat(28) + "-2"],
+    ]);
+    assert.equal(
+      snapshot.mcpServers.find((s) => s.id === "Docs?")!.transport,
+      "streamable-http",
+    );
+    assert.doesNotMatch(canonical(snapshot), /CANARY-/);
+    delete config.mcp;
+    await writeFile(path, JSON.stringify(config));
+    assert.deepEqual((await collect(fixture.home)).mcpServers, []);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+Deno.test("MCP rejects ambiguous, missing and unsupported transports with a coded error", async () => {
+  const fixture = await createFixture();
+  try {
+    const path = join(fixture.home, "openclaw.json");
+    const config = JSON.parse(await readFile(path, "utf8"));
+    for (
+      const server of [
+        { command: "CANARY-COMMAND-5", url: "CANARY-URL-8" },
+        { transport: "stdio" },
+        { url: "CANARY-URL-9", transport: "unsupported" },
+        { url: "CANARY-URL-10", transport: null },
+      ]
+    ) {
+      config.mcp.servers = { docs: server };
+      await writeFile(path, JSON.stringify(config));
+      await assert.rejects(() => collect(fixture.home), (error: unknown) => {
+        assert.ok(error instanceof ExportError);
+        assert.equal(error.code, "INVALID_INPUT");
+        assert.equal(error.context, "Unsupported MCP server transport");
+        assert.doesNotMatch(JSON.stringify(error), /CANARY-/);
+        return true;
+      });
+    }
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+Deno.test("exec projects safe bins and SQLite allowlists without private metadata", async () => {
+  const fixture = await createFixture();
+  try {
+    const snapshot = await collect(fixture.home);
+    const execution = snapshot.agents.find((a) => a.id === "lead")!.execution;
+    assert.deepEqual(execution, {
+      host: "auto",
+      security: "allowlist",
+      ask: "on-miss",
+      elevated: true,
+      elevatedChannelsCount: 1,
+      safeBins: ["jq", "python3", "wc"],
+      safeBinProfiles: ["wc"],
+      trustedDirCount: 1,
+      pathPrependCount: 1,
+      strictInlineEval: false,
+      commands: [
+        { id: "name:rg", command: "rg", kind: "name", argsRestricted: false },
+        { id: "path:git", command: "git", kind: "path", argsRestricted: true },
+        {
+          id: "safe-bin:python3",
+          command: "python3",
+          kind: "safe-bin",
+          argsRestricted: true,
+        },
+        {
+          id: "safe-bin:wc",
+          command: "wc",
+          kind: "safe-bin",
+          argsRestricted: true,
+        },
+      ],
+    });
+    assert.deepEqual(snapshot.execApprovals, {
+      defaults: {
+        security: "allowlist",
+        ask: "on-miss",
+        askFallback: "deny",
+        autoAllowSkills: false,
+      },
+      wildcardCommands: [{
+        id: "path:*",
+        command: "*",
+        kind: "path",
+        argsRestricted: false,
+      }],
+    });
+    assert.ok(
+      snapshot.agents.every((a) =>
+        !a.execution.commands.some((c) => c.command === "*")
+      ),
+    );
+    assert.doesNotMatch(
+      canonical(snapshot),
+      /CANARY-|argPattern|lastUsedCommand|lastResolvedPath|socket/,
+    );
+    const db = new DatabaseSync(join(fixture.home, "state", "openclaw.sqlite"));
+    try {
+      db.exec("DELETE FROM exec_approvals_config WHERE config_key = 'current'");
+    } finally {
+      db.close();
+    }
+    assert.equal((await collect(fixture.home)).execApprovals, null);
+    const withoutRow = new DatabaseSync(
+      join(fixture.home, "state", "openclaw.sqlite"),
+    );
+    try {
+      withoutRow.exec("DROP TABLE exec_approvals_config");
+    } finally {
+      withoutRow.close();
+    }
+    const absent = await collect(fixture.home);
+    assert.equal(absent.execApprovals, null);
+    assert.ok(
+      absent.agents.find((a) => a.id === "lead")!.execution.commands.every((
+        c,
+      ) => c.kind === "safe-bin"),
+    );
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+Deno.test("exec replaces agent lists, merges profile keys and leaves default safe bins unresolved", async () => {
+  const fixture = await createFixture();
+  try {
+    const path = join(fixture.home, "openclaw.json");
+    const config = JSON.parse(await readFile(path, "utf8"));
+    const lead = config.agents.list.find((a: { id: string }) =>
+      a.id === "lead"
+    );
+    config.tools.exec.strictInlineEval = true;
+    Object.assign(lead.tools.exec, {
+      safeBins: [],
+      safeBinProfiles: { python3: {}, wc: {} },
+      safeBinTrustedDirs: [],
+      pathPrepend: [],
+      strictInlineEval: false,
+    });
+    await writeFile(path, JSON.stringify(config));
+    const execution = (await collect(fixture.home)).agents.find((a) =>
+      a.id === "lead"
+    )!.execution;
+    assert.deepEqual(execution.safeBins, []);
+    assert.deepEqual(execution.safeBinProfiles, ["python3", "wc"]);
+    assert.equal(execution.trustedDirCount, 0);
+    assert.equal(execution.pathPrependCount, 0);
+    assert.equal(execution.strictInlineEval, false);
+    assert.ok(execution.commands.every((c) => c.kind !== "safe-bin"));
+    lead.tools.exec.safeBins = ["awk", "sed", "jq", "wc", "wc"];
+    await writeFile(path, JSON.stringify(config));
+    assert.deepEqual(
+      (await collect(fixture.home)).agents.find((a) => a.id === "lead")!
+        .execution.commands
+        .filter((c) => c.kind === "safe-bin").map((c) => c.command),
+      ["wc"],
+    );
+    delete lead.tools.exec.safeBins;
+    delete config.tools.exec.safeBins;
+    lead.tools.deny = ["exec"];
+    await writeFile(path, JSON.stringify(config));
+    const snapshot = await collect(fixture.home);
+    assert.ok(snapshot.agents.every((a) => a.execution.safeBins === null));
+    assert.ok(
+      snapshot.agents.every((a) =>
+        !a.execution.commands.some((c) => c.kind === "safe-bin")
+      ),
+    );
+    assert.deepEqual(
+      snapshot.ambiguities.filter((f) =>
+        f.code === "SAFE_BINS_DEFAULT_UNRESOLVED"
+      )
+        .map((f) => f.subject).sort(),
+      snapshot.agents.filter((a) => a.grants.some((g) => g.tool === "exec"))
+        .map((a) => a.id).sort(),
+    );
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+Deno.test("exec collapses command identities and preserves restrictions only when every entry restricts args", async () => {
+  const fixture = await createFixture();
+  try {
+    const db = new DatabaseSync(join(fixture.home, "state", "openclaw.sqlite"));
+    try {
+      db.prepare(
+        "UPDATE exec_approvals_config SET raw_json = ? WHERE config_key = 'current'",
+      ).run(JSON.stringify({
+        agents: {
+          lead: {
+            allowlist: [
+              { pattern: "CANARY-DIR-2/bin/git", argPattern: "CANARY-ARGS-2" },
+              { pattern: "CANARY-DIR-3/bin/git" },
+              { pattern: "rg", argPattern: "CANARY-ARGS-3" },
+              { pattern: "rg", argPattern: "" },
+              { pattern: "git*" },
+            ],
+          },
+        },
+      }));
+    } finally {
+      db.close();
+    }
+    const snapshot = await collect(fixture.home);
+    assert.deepEqual(
+      snapshot.agents.find((a) => a.id === "lead")!.execution.commands
+        .filter((c) => c.kind !== "safe-bin"),
+      [
+        {
+          id: "name:git*",
+          command: "git*",
+          kind: "name",
+          argsRestricted: false,
+        },
+        { id: "name:rg", command: "rg", kind: "name", argsRestricted: true },
+        { id: "path:git", command: "git", kind: "path", argsRestricted: false },
+      ],
+    );
+    assert.deepEqual(snapshot.execApprovals, {
+      defaults: {
+        security: null,
+        ask: null,
+        askFallback: null,
+        autoAllowSkills: null,
+      },
+      wildcardCommands: [],
+    });
+    assert.doesNotMatch(canonical(snapshot), /CANARY-/);
   } finally {
     await fixture.cleanup();
   }

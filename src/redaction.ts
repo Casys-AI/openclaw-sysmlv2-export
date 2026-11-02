@@ -5,7 +5,9 @@ import type { FileRef } from "./snapshot.ts";
 
 const fields = [
   ...DEFAULT_REDACT_FIELDS,
-  /^(env|vars|baseUrl|peer|guilds?|guildId|users?|userId|allowFrom|groupAllowFrom|allowSendTo|binds|extraHosts|prompt|messageTemplate|payload_message|last_error|delivery_to|to)$/i,
+  // docs/tools/mcp.md and docs/cli/mcp/transports.md: connection headers,
+  // arguments, locations and client credentials are not retained metadata.
+  /^(env|vars|headers|args|url|cwd|clientCert|clientKey|baseUrl|peer|guilds?|guildId|users?|userId|allowFrom|groupAllowFrom|allowSendTo|binds|extraHosts|prompt|messageTemplate|payload_message|last_error|delivery_to|to)$/i,
 ];
 export function redact(raw: Obj): Obj {
   // 2.4.2 does not export redactProperties from its public entrypoint.
@@ -24,7 +26,7 @@ export function redact(raw: Obj): Obj {
   });
   return result;
 }
-/** Counts non-empty credential leaves and environment values, never peer IDs.
+/** Counts non-empty credential leaves, environment and header values, never peer IDs.
  * SecretRef and ${ENV_NAME} references are not plaintext credentials.
  * Counting is metadata extraction, not another redaction implementation. */
 export function plaintextSecretCount(raw: unknown): number {
@@ -40,7 +42,8 @@ export function plaintextSecretCount(raw: unknown): number {
     if (!v || typeof v !== "object") return 0;
     return Object.entries(v).reduce((sum, [key, value]) =>
       sum +
-      (/^(env|vars)$/i.test(key)
+      // docs/plugins/bundles.md, Transports: headers support secret references.
+      (/^(env|vars|headers)$/i.test(key)
         ? leaves(value)
         : /(?:password|passwd|passphrase|secret|token|api.?key|private.?key|credential)s?$/i
             .test(key) && typeof value !== "boolean"

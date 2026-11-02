@@ -1,4 +1,60 @@
 import type { Finding, Snapshot } from "./snapshot.ts";
+
+// OpenClaw 2026.10.9 dist/exec-safe-bin-runtime-policy-CgvU47MQ.mjs:
+// the interpreter list and versioned-name rule behind audit-BzL_D921.mjs's
+// tools.exec.safe_bins_interpreter_unprofiled finding.
+const interpreters = new Set([
+  "ash",
+  "awk",
+  "bash",
+  "busybox",
+  "bun",
+  "cmd",
+  "cmd.exe",
+  "cscript",
+  "dash",
+  "deno",
+  "fish",
+  "gawk",
+  "gsed",
+  "ksh",
+  "lua",
+  "mawk",
+  "nawk",
+  "node",
+  "nodejs",
+  "perl",
+  "php",
+  "powershell",
+  "powershell.exe",
+  "pypy",
+  "pwsh",
+  "pwsh.exe",
+  "python",
+  "python2",
+  "python3",
+  "ruby",
+  "sed",
+  "sh",
+  "toybox",
+  "wscript",
+  "zsh",
+]);
+function unprofiledInterpreter(
+  bins: string[] | null,
+  profiles: string[],
+): boolean {
+  // dist/exec-safe-bin-trust-tdUplWO7.mjs: normalizeSafeBinName strips paths
+  // and executable suffixes; normalizeSafeBinProfileName trims and lowercases.
+  const names = new Set(profiles.map((p) => p.trim().toLowerCase()));
+  return (bins ?? []).some((bin) => {
+    const name = bin.trim().toLowerCase().split(/[\\/]/).at(-1)!
+      .replace(/\.(?:exe|cmd|bat|com)$/i, "");
+    return !names.has(name) && (interpreters.has(name) ||
+      /^(?:python|ruby|perl|php|node)\d+(?:\.\d+)?$/.test(name));
+  });
+}
+
 export function doctor(snapshot: Snapshot): Finding[] {
   const findings = [...snapshot.ambiguities];
   const add = (
@@ -8,7 +64,50 @@ export function doctor(snapshot: Snapshot): Finding[] {
     context: string,
     recovery: string,
   ) => findings.push({ code, severity, subject, context, recovery });
+  const mcpTools = new Set(
+    snapshot.mcpServers.filter((s) => s.enabled).map((s) =>
+      `${s.toolPrefix}__*`
+    ),
+  );
+  // docs/tools/exec-approvals.md: path and command-name patterns are globs.
+  const wildcard = (subject: string, commands: { command: string }[]) => {
+    if (commands.some((c) => c.command === "*")) {
+      add(
+        "EXEC_ALLOWLIST_WILDCARD",
+        "warning",
+        subject,
+        "An exec allowlist command matches every executable name.",
+        "Replace the wildcard with the intended command names or binary paths.",
+      );
+    }
+  };
   for (const a of snapshot.agents) {
+    // docs/gateway/config-tools/tool-policy.md: MCP tools need a separate
+    // sandbox-layer grant even when a normal tool profile allows bundle-mcp.
+    if (
+      a.sandbox.mode !== "off" && mcpTools.size > 0 &&
+      !a.grants.some((g) => g.layer === "sandbox" && mcpTools.has(g.tool))
+    ) {
+      add(
+        "MCP_SANDBOX_GATE",
+        "info",
+        a.id,
+        "Enabled MCP servers have no tool grant in the sandbox layer.",
+        "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
+      );
+    }
+    if (
+      unprofiledInterpreter(a.execution.safeBins, a.execution.safeBinProfiles)
+    ) {
+      add(
+        "SAFE_BIN_INTERPRETER_UNPROFILED",
+        "warning",
+        a.id,
+        "An interpreter or runtime in safeBins has no explicit argv profile.",
+        "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
+      );
+    }
+    wildcard(a.id, a.execution.commands);
     const exec = a.grants.some((g) => g.tool === "exec");
     if (exec && a.execution.security === "full" && a.execution.ask === "off") {
       add(
@@ -84,6 +183,7 @@ export function doctor(snapshot: Snapshot): Finding[] {
       );
     }
   }
+  wildcard("instance", snapshot.execApprovals?.wildcardCommands ?? []);
   if (snapshot.messaging.allowedTargets.includes("*")) {
     add(
       "AGENT_TO_AGENT_WILDCARD",

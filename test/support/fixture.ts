@@ -1,4 +1,12 @@
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  cp,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -6,7 +14,7 @@ import { fileURLToPath } from "node:url";
 
 type FixtureValue = string | number | null;
 
-interface CronFixture {
+interface TableFixture {
   table: string;
   columns: string[];
   rows: Record<string, FixtureValue>[];
@@ -53,36 +61,41 @@ export async function createFixture(
       plugin.rootDir = join(root, "plugins", plugin.rootDir);
     }
     await writeFile(pluginsFile, JSON.stringify(plugins));
-    const fixture: CronFixture = JSON.parse(
-      await readFile(join(home, "state", "cron_jobs.json"), "utf8"),
-    );
     const database = new DatabaseSync(join(home, "state", "openclaw.sqlite"));
     try {
-      // The JSON lists the real column subset. Infer affinity from all rows;
-      // entirely null columns are text, preserving their null values below.
-      const definitions = fixture.columns.map((column) => {
-        const values = fixture.rows.map((row) => row[column]).filter((value) =>
-          value !== null && value !== undefined
+      for (const entry of (await readdir(join(home, "state"))).sort()) {
+        if (!entry.endsWith(".json")) continue;
+        const fixture: TableFixture = JSON.parse(
+          await readFile(join(home, "state", entry), "utf8"),
         );
-        const numeric = values.length > 0 &&
-          values.every((value) => typeof value === "number");
-        const affinity = numeric
-          ? values.every((value) => Number.isInteger(value))
-            ? "INTEGER"
-            : "REAL"
-          : "TEXT";
-        return `${identifier(column)} ${affinity}`;
-      });
-      database.exec(
-        `CREATE TABLE ${identifier(fixture.table)} (${definitions.join(", ")})`,
-      );
-      const insert = database.prepare(
-        `INSERT INTO ${identifier(fixture.table)} (${
-          fixture.columns.map(identifier).join(", ")
-        }) VALUES (${fixture.columns.map(() => "?").join(", ")})`,
-      );
-      for (const row of fixture.rows) {
-        insert.run(...fixture.columns.map((column) => row[column] ?? null));
+        // Each JSON lists the real column subset. Infer affinity from all rows;
+        // entirely null columns are text, preserving their null values below.
+        const definitions = fixture.columns.map((column) => {
+          const values = fixture.rows.map((row) => row[column]).filter((
+            value,
+          ) => value !== null && value !== undefined);
+          const numeric = values.length > 0 &&
+            values.every((value) => typeof value === "number");
+          const affinity = numeric
+            ? values.every((value) => Number.isInteger(value))
+              ? "INTEGER"
+              : "REAL"
+            : "TEXT";
+          return `${identifier(column)} ${affinity}`;
+        });
+        database.exec(
+          `CREATE TABLE ${identifier(fixture.table)} (${
+            definitions.join(", ")
+          })`,
+        );
+        const insert = database.prepare(
+          `INSERT INTO ${identifier(fixture.table)} (${
+            fixture.columns.map(identifier).join(", ")
+          }) VALUES (${fixture.columns.map(() => "?").join(", ")})`,
+        );
+        for (const row of fixture.rows) {
+          insert.run(...fixture.columns.map((column) => row[column] ?? null));
+        }
       }
     } finally {
       database.close();

@@ -17,6 +17,36 @@ function baseline(): Promise<Snapshot> {
 }
 
 const rules: [string, (s: Snapshot, positive: boolean) => void][] = [
+  ["MCP_SANDBOX_GATE", (s, yes) => {
+    for (const a of s.agents) a.sandbox.mode = "off";
+    const server = s.mcpServers[0];
+    server.enabled = true;
+    const a = s.agents[0];
+    a.sandbox.mode = "all";
+    a.grants = [{
+      id: "test-mcp",
+      tool: `${server.toolPrefix}__*`,
+      layer: yes ? "host" : "sandbox",
+    }];
+  }],
+  ["SAFE_BIN_INTERPRETER_UNPROFILED", (s, yes) => {
+    for (const a of s.agents) a.execution.safeBins = null;
+    const execution = s.agents[0].execution;
+    execution.safeBins = ["python3", "python3.12", "PowerShell.EXE", "wc"];
+    execution.safeBinProfiles = yes
+      ? ["wc"]
+      : ["python3", "python3.12", " PowerShell "];
+  }],
+  ["EXEC_ALLOWLIST_WILDCARD", (s, yes) => {
+    for (const a of s.agents) a.execution.commands = [];
+    s.execApprovals!.wildcardCommands = [];
+    s.agents[0].execution.commands = [{
+      id: yes ? "path:*" : "name:git*",
+      command: yes ? "*" : "git*",
+      kind: yes ? "path" : "name",
+      argsRestricted: false,
+    }];
+  }],
   ["EXEC_WITHOUT_APPROVAL", (s, yes) => {
     for (const a of s.agents) a.execution.ask = "always";
     const a = s.agents[0];
@@ -86,6 +116,41 @@ for (const [code, arrange] of rules) {
     }
   });
 }
+
+Deno.test("doctor MCP gate requires an enabled server and a sandbox context", async () => {
+  const snapshot = structuredClone(await baseline());
+  snapshot.ambiguities = [];
+  for (const a of snapshot.agents) {
+    a.grants = [];
+    a.sandbox.mode = "non-main";
+  }
+  for (const server of snapshot.mcpServers) server.enabled = false;
+  assert.ok(!doctor(snapshot).some((f) => f.code === "MCP_SANDBOX_GATE"));
+  snapshot.mcpServers[0].enabled = true;
+  for (const a of snapshot.agents) a.sandbox.mode = "off";
+  assert.ok(!doctor(snapshot).some((f) => f.code === "MCP_SANDBOX_GATE"));
+  snapshot.agents[0].sandbox.mode = "non-main";
+  assert.deepEqual(
+    doctor(snapshot).filter((f) => f.code === "MCP_SANDBOX_GATE")
+      .map((f) => [f.subject, f.severity]),
+    [[snapshot.agents[0].id, "info"]],
+  );
+});
+
+Deno.test("doctor reports wildcard approvals independently of agent commands", async () => {
+  const snapshot = structuredClone(await baseline());
+  snapshot.ambiguities = [];
+  for (const a of snapshot.agents) a.execution.commands = [];
+  assert.deepEqual(
+    doctor(snapshot).filter((f) => f.code === "EXEC_ALLOWLIST_WILDCARD")
+      .map((f) => [f.subject, f.severity]),
+    [["instance", "warning"]],
+  );
+  snapshot.execApprovals = null;
+  assert.ok(
+    !doctor(snapshot).some((f) => f.code === "EXEC_ALLOWLIST_WILDCARD"),
+  );
+});
 
 Deno.test("doctor memory findings respect disabled search and explicit recall", async () => {
   const snapshot = structuredClone(await baseline());

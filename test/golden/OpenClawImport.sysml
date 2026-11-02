@@ -8,6 +8,7 @@ package OpenClawImport {
         attribute fallbackModels : String;
     }
     item def ToolGrant { attribute tool : String; attribute layer : String; attribute pluginId : String; }
+    item def CommandGrant { attribute command : String; attribute kind : String; attribute argsRestricted : Boolean; }
     part def Sandbox {
         attribute mode : String; attribute scope : String;
         attribute workspaceAccess : String; attribute image : String;
@@ -45,7 +46,26 @@ package OpenClawImport {
     part def MessagingPolicy { attribute enabled : Boolean; attribute allowedTargets : String; }
     part def ModelProvider { attribute name : String; attribute apiKind : String; attribute modelIds : String; }
     part def OpenClawPlugin { attribute pluginId : String; attribute enabled : Boolean; attribute tools : String; attribute optionalTools : String; }
-    part def ExecutionPosture { attribute host : String; attribute security : String; attribute ask : String; attribute elevated : Boolean; attribute elevatedChannelsCount : Integer; }
+    part def McpServer {
+        attribute serverId : String; attribute toolPrefix : String;
+        attribute enabled : Boolean; attribute transport : String;
+        attribute oauth : Boolean; attribute oauthIdentity : String;
+        attribute toolInclude : String; attribute toolExclude : String;
+        attribute envNames : String; attribute headerNames : String;
+        attribute argCount : Integer;
+    }
+    part def ExecutionPosture {
+        attribute host : String; attribute security : String; attribute ask : String;
+        attribute elevated : Boolean; attribute elevatedChannelsCount : Integer;
+        attribute safeBins : String; attribute safeBinProfiles : String;
+        attribute trustedDirCount : Integer; attribute pathPrependCount : Integer;
+        attribute strictInlineEval : Boolean;
+    }
+    part def ExecApprovals {
+        attribute defaultSecurity : String; attribute defaultAsk : String;
+        attribute askFallback : String; attribute autoAllowSkills : Boolean;
+        attribute wildcardCommands : String;
+    }
     part def AgentMemory {
         attribute searchEnabled : Boolean; attribute searchProvider : String;
         attribute searchModel : String; attribute searchFallback : String;
