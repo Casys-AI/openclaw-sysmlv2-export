@@ -902,12 +902,19 @@ function toolsScene(view: DiagramView): Scene {
   };
   const grid = (chips: DiagramNode[], cols: number) =>
     flow(chips.map(chip), cols * chipW + (cols - 1) * gap, gap);
+  // A plugin's or server's tools: two columns, more once they would stand
+  // taller than wide.
+  const square = (n: number) =>
+    Math.min(
+      n,
+      Math.max(2, Math.ceil(Math.sqrt(n * (chipH + gap) / (chipW + gap)))),
+    );
   const group = (n: DiagramNode, cols: number, minW = 0, minH = 0): Box => {
     const inside = kids.get(n.id) ?? [];
     const leaves = inside.filter((k) => k.shape === "tool");
     const frames = inside.filter((k) => k.shape !== "tool").map((f) => {
       const chips = kids.get(f.id) ?? [];
-      return container(f, grid(chips, Math.min(chips.length, 2)));
+      return container(f, grid(chips, square(chips.length)));
     });
     const content = frames.length
       ? flow(frames, Math.max(...frames.map((f) => f.w)) * 3 + 24, 12)

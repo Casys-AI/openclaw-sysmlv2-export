@@ -54,3 +54,20 @@ Deno.test("a Behaviour view with many rules stays wider than tall", async () => 
   const scene = await layoutView(view);
   assert.ok(scene.w > scene.h, `${scene.w} × ${scene.h}`);
 });
+
+Deno.test("a plugin with many tools stands no taller than wide", async () => {
+  const tools = Array.from({ length: 44 }, (_, i) => `tool_${i}`);
+  const many = {
+    ...snapshot,
+    plugins: [...snapshot.plugins!, {
+      ...snapshot.plugins![0],
+      id: "many",
+      tools,
+    }],
+  };
+  const view = diagramViews(many, inference).find((v) => v.id === "tools")!;
+  const frame = (await layoutView(view)).nodes.find((n) =>
+    n.id === "plugin:many"
+  )!;
+  assert.ok(frame.h <= frame.w, `${frame.w} × ${frame.h}`);
+});
