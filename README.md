@@ -73,19 +73,19 @@ openclaw plugins install --link "$(pwd)/plugin" --force --accept-capabilities
 ## Use
 
 ```sh
-openclaw assembly-export                 # export + doctor
-openclaw assembly-export --infer --open  # with inference, then open the viewer
-openclaw assembly-export --infer --model anthropic/claude-sonnet-5-5
+openclaw sysmlv2-export                 # export + doctor
+openclaw sysmlv2-export --infer --open  # with inference, then open the viewer
+openclaw sysmlv2-export --infer --model anthropic/claude-sonnet-5-5
 ```
 
-- In a chat: `/assembly_export` or `/assembly_export infer`.
-- The agent tool `assembly_export` (export and doctor, no model call) must be
+- In a chat: `/sysmlv2_export` or `/sysmlv2_export infer`.
+- The agent tool `sysmlv2_export` (export and doctor, no model call) must be
   allowed explicitly, for instance with `tools.alsoAllow`.
 - Outside a chat, inference analyses each agent in its own context. Allow it
-  with `plugins.entries.assembly-export.llm.allowAgentIdOverride: true`, and
+  with `plugins.entries.sysmlv2-export.llm.allowAgentIdOverride: true`, and
   `allowModelOverride: true` for `--model`.
 
-Each run writes `<state dir>/assembly-export/<UTC time>/`:
+Each run writes `<state dir>/sysmlv2-export/<UTC time>/`:
 
 ```text
 snapshot.json  findings.json  OpenClawImport.sysml  OpenClawInstance.sysml

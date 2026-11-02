@@ -5,14 +5,14 @@ import process from "node:process";
 import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
 import { pluginList, runExport } from "./core.mjs";
 
-const PURPOSE = "assembly-export.infer";
+const PURPOSE = "sysmlv2-export.infer";
 
 /** api.runtime is only available inside handlers (registration-mode.md). */
 function paths(api) {
   const stateDir = api.runtime.state.resolveStateDir(process.env);
   return {
     stateDir,
-    outDir: api.pluginConfig?.outDir ?? join(stateDir, "assembly-export"),
+    outDir: api.pluginConfig?.outDir ?? join(stateDir, "sysmlv2-export"),
   };
 }
 
@@ -32,7 +32,7 @@ async function inventory(api) {
 
 /** An isolated call: one user message, no tools, fresh context (models.md).
  * Outside a session, each agent is analysed in its own context (agentId);
- * overrides need plugins.entries.assembly-export.llm.allowAgentIdOverride and
+ * overrides need plugins.entries.sysmlv2-export.llm.allowAgentIdOverride and
  * allowModelOverride. */
 function completeWith(llm, model, selectAgent) {
   return async (prompt, agentId) => {
@@ -93,15 +93,15 @@ function summarize(s) {
 }
 
 export default definePluginEntry({
-  id: "assembly-export",
-  name: "Assembly Export",
+  id: "sysmlv2-export",
+  name: "OpenClaw SysML v2 Export",
   description:
     "Export this OpenClaw instance as SysML v2 for Assembly, with doctor findings and inferred procedures.",
   register(api) {
     // The export discloses the whole instance: owner only on chat surfaces,
     // operator.admin for gateway clients (plugin-command-execution enforces it).
     api.registerCommand({
-      name: "assembly_export",
+      name: "sysmlv2_export",
       description:
         "Export to SysML for Assembly. Add `infer` to propose procedures from agent prose.",
       acceptsArgs: true,
@@ -132,7 +132,7 @@ export default definePluginEntry({
     api.registerTool(
       (ctx) =>
         ctx.senderIsOwner !== true || ctx.sandboxed ? null : ({
-          name: "assembly_export",
+          name: "sysmlv2_export",
           label: "Assembly export",
           description:
             "Export this OpenClaw instance (agents, tool grants, plugins, sandboxes, channels, cron, skills) to SysML v2 for Assembly and run its configuration doctor. Returns where the files and the version viewer are and the findings count. Does not call a model.",
@@ -159,11 +159,11 @@ export default definePluginEntry({
             };
           },
         }),
-      { name: "assembly_export", optional: true },
+      { name: "sysmlv2_export", optional: true },
     );
 
     api.registerCli(({ program }) => {
-      program.command("assembly-export")
+      program.command("sysmlv2-export")
         .description("Export this instance to SysML v2 for Assembly")
         .option(
           "--infer",
@@ -191,7 +191,7 @@ export default definePluginEntry({
         });
     }, {
       descriptors: [{
-        name: "assembly-export",
+        name: "sysmlv2-export",
         description: "Export this instance to SysML v2 for Assembly",
         hasSubcommands: false,
       }],
