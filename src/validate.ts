@@ -1,7 +1,6 @@
 import { ExportError } from "./error.ts";
 export interface Diagnostics {
   errors: { code: string; context: string; recovery: string }[];
-  warnings: string[];
 }
 const COMPILER =
   "apps/live-builder/src/adapters/out/sysml-toolkit/compilation/compiler.ts";
@@ -34,7 +33,7 @@ export async function validate(
     await new ToolkitCompiler({ packageDir, timeoutMs: 60000 }).compile(
       Object.fromEntries(files),
     );
-    return { errors: [], warnings: [] };
+    return { errors: [] };
   } catch {
     return {
       errors: [{
@@ -43,7 +42,6 @@ export async function validate(
         recovery:
           "Check Toolkit installation and the emitted source files locally; native/compiler messages are not echoed to avoid exposing source input.",
       }],
-      warnings: [],
     };
   }
 }
