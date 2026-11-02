@@ -1,20 +1,20 @@
-# Anonymized and genericized OpenClaw 2026.6.10 instance
+# Anonymized OpenClaw 2026.6.10 instance
 
-Taken read-only from an instance, then anonymized and genericized. The structure
-is preserved: agents, tool policies, sandboxes, channels, bindings, hooks, skills,
-plugins and cron jobs.
+A test fixture with the shape of an OpenClaw 2026.6.10 instance: six agents with
+their tool policies, sandboxes, channels, bindings, hooks, skills, plugins and
+cron jobs. It was derived from a real configuration: the structure and policies
+are kept, while names, identifiers, secrets and prose were replaced.
 
-- Agent and account ids are aliases.
+- Agent and account ids are aliases; identifying skill names use stable neutral
+  aliases.
 - Every secret, peer id, URL, path and prompt is a `CANARY-<KIND>-<n>` marker.
   No output of the export may contain `CANARY-`.
-- Instruction files and skills are placeholders; identifying skill names use
-  stable neutral aliases. The original bodies were not copied.
-- `memory/` notes, Memory Core dreaming config and Active Memory's `promptAppend`
-  and `allowedChatIds` are synthetic additions for memory export tests.
-- MCP servers, exec safe bins and approval allowlists are synthetic additions
-  for MCP and command-grant export tests.
-- `state/*.json` hold rows of the named SQLite tables (subsets of columns).
-  Tests build `state/openclaw.sqlite` from them in one loop.
+- Instruction files and skills are placeholders; the original bodies were not
+  copied.
+- `memory/` notes, the Memory Core dreaming settings, Active Memory's
+  `promptAppend` and `allowedChatIds`, MCP servers, exec safe bins and approval
+  allowlists are synthetic additions for the tests that cover them.
+- `state/*.json` hold rows (a subset of columns) of the named SQLite tables. The
+  tests build `state/openclaw.sqlite` from them; no binary is committed.
 - Workspace `.git` directories and `openclaw.json.*` backups are not included;
-  tests add them where needed. The real instance had a Git repository in the
-  default workspace only and many manual config backups.
+  the tests add them where a case needs them.
