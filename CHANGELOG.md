@@ -1,5 +1,30 @@
 # Changelog
 
+## Unreleased
+
+Viewer only: the emitted SysML, the snapshot schema and the inference contract
+are unchanged.
+
+- **Overview.** The viewer opens on a table of the agents: model, host or
+  sandbox, tools by origin, channel accounts, scheduled tasks, context and, with
+  inference, procedures and rules, under the instance's totals. Each row names
+  the declarations it sums up and links to the agent in the other views.
+- **Tools as an allocation matrix.** The Tools diagram becomes a SysML
+  allocation matrix of tools (by origin and provider) against agents, each cell
+  an agent's grant on the host, in the sandbox or both. Header and first column
+  stay in place, groups fold and count each agent's tools, a filter keeps the
+  matching tools, and rows, columns and cells show what changed and open their
+  SysML.
+- **Rules as a requirements table.** A Behaviour view keeps its procedures as
+  action flows and lists its rules under them: name, kind, text and source,
+  sortable and filtered by kind, each linked to its SysML lines.
+- **A week of scheduled tasks.** Under the Scheduled tasks diagram, a 7 × 24
+  hour strip per task shows when each cron schedule fires, in its own time zone,
+  and the intervals that run all week; one-shot and date-bound schedules are
+  listed as not weekly.
+- A table under a diagram can be resized, and schedules in words also read day
+  ranges and names (`MON-FRI`).
+
 ## 0.1.0 — preview
 
 First release, for OpenClaw 2026.10.9 and later.

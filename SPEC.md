@@ -47,8 +47,9 @@ calls the next.
 | doctor   | `doctor(snapshot) → Finding[]`         | Experimental: collector findings plus the doctor rules (§7.2). Deno CLI only. |
 | diff     | `diff(a, b) → Change[]`                | Structural changes between two snapshots (§8).                                |
 | validate | `validate(files) → Diagnostics`        | Compiles files with Assembly's pinned Toolkit. Used by tests only.            |
-| views    | `diagramViews(snapshot, inference)`    | The viewer's diagram model: nodes and edges per view, each with its SysML.    |
-| layout   | `layoutView(view) → Scene`             | Positions a view with elkjs, at export time (§10.5). Asynchronous.            |
+| views    | `diagramViews(snapshot, inference)`    | The viewer's model: nodes and edges per view, each with its SysML; its table. |
+| layout   | `layoutView(view) → Scene`             | Positions a view's drawn elements with elkjs, at export time. Asynchronous.   |
+| tables   | `drawing(view)`, `tableData(view)`     | Splits a view into what is drawn and its table, shaped for the page (§10.5).  |
 | viewer   | `viewerPage(versions) → html`          | Static page over the kept versions (§10.5). Asynchronous.                     |
 | infer    | `parseAgentInference`, `emitInferred`  | Validates a model's answer and emits `OpenClawInferred.sysml` (§9).           |
 
@@ -656,30 +657,47 @@ inference.json  OpenClawInferred.sysml      (with inference)
 `<outDir>/versions.json` lists the runs, newest first: id, creation time, agent
 count, and inference counts (or null). `<outDir>/index.html` is regenerated
 after each run: one self-contained page (no network, opens from `file://`) that
-draws each version as SysML v2 diagrams, shows each file, and shows the unified
-diff of each file since the previous version.
+shows each version as SysML v2 views (diagrams and tables), shows each file, and
+shows the unified diff of each file since the previous version.
 
-| View            | Content                                                                                                                                                         |
-| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| System          | Agent part usages with compartments (attributes, context, tools by origin and layer), channel accounts grouped by channel, `AgentBinding` connections.          |
-| Tools           | The `Tools` package: catalog tools by origin, plugin and MCP providers as parts, declared but ungranted tools dashed; one grant slot per agent (host, sandbox). |
-| Scheduled tasks | Heartbeats and cron jobs as `ScheduledCase` parts with schedule and state, an owner edge to the agent they wake; an unknown target is a dashed reference.       |
-| Behaviour       | Per agent with inference: one `action def` frame per procedure (start, actions, decisions, hand-offs and escalations to agents or actors, done), its rules.     |
+| View            | Content                                                                                                                                                                                                                                                 |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Overview        | The first view. A table, one row per agent: model, host or sandbox, tools by origin, bound channel accounts, scheduled tasks enabled, context and, with inference, procedures and rules; the instance's totals above; links to the agent's other views. |
+| System          | Agent part usages with compartments (attributes, context, tools by origin and layer), channel accounts grouped by channel, `AgentBinding` connections.                                                                                                  |
+| Tools           | The `Tools` package as a SysML allocation matrix: catalog tools grouped by origin and by plugin or MCP provider, against the agents; each cell an agent's `ToolGrant`s (host, sandbox or both); declared but ungranted tools dashed.                    |
+| Scheduled tasks | Heartbeats and cron jobs as `ScheduledCase` parts with schedule and state, an owner edge to the agent they wake (an unknown target is a dashed reference), and the week in which each fires.                                                            |
+| Behaviour       | Per agent with inference: one `action def` frame per procedure (start, actions, decisions, hand-offs and escalations to agents or actors, done), and its rules (`requirement def`s) as a table of kind, text and source.                                |
 
 - **Same data as the text.** Views are built from the version's own
-  `snapshot.json` and `inference.json`, with the emitter's grant resolution.
-  Each element names its declarations (qualified names) in the version's emitted
-  files; the inspector shows their exact lines and opens them under Files.
+  `snapshot.json` and `inference.json`, with the emitter's grant resolution;
+  every figure of the Overview is counted from them. Each element (a node, a
+  table row, a matrix column or cell) names its declarations (qualified names)
+  in the version's emitted files: an Overview row names the agent's def and
+  usage, its bindings and its cases. The inspector shows their exact lines and
+  opens them under Files.
 - **Layout at export time.** `elkjs` 0.9.3 (pinned, layered algorithm,
-  deterministic options) places System, Scheduled tasks and Behaviour; Tools is
-  packed on shelves, since no edge orders it. Text is measured with Helvetica's
-  metrics, the font the diagrams use (or its metric twins Arial and Liberation
-  Sans); rows that do not fit end with an ellipsis, and the page squeezes any
-  text that still overflows. The page itself only draws SVG.
+  deterministic options) places System, Scheduled tasks and Behaviour's
+  procedures. Text is measured with Helvetica's metrics, the font the diagrams
+  use (or its metric twins Arial and Liberation Sans); rows that do not fit end
+  with an ellipsis, and the page squeezes any text that still overflows. Tables
+  are shaped at export time too: rows in order with their headers, matrix cells
+  by row and column. The page draws SVG and renders HTML tables, with sorting, a
+  filter and folding but no layout.
+- **Tables.** A view lists the elements it shows as a table instead of drawing
+  them (a matrix's columns, rows and cells; an element table's rows with some
+  attributes as columns, filtered by a facet such as a rule's kind or where an
+  agent runs). A table under a diagram can be resized.
+- **Week.** A cron schedule is placed in a 7 × 24 hour week when its day of
+  month and month are `*` (or `?`) and its fields are numbers, ranges, steps,
+  lists or day names, with five fields or six (seconds first): hours are in its
+  own time zone, or the gateway host's when it has none. An interval under a day
+  is a band over the whole week, its start being unknown; one-shot, date-bound
+  and longer schedules are listed as not weekly.
 - **Changes.** Against the previous version, an element is added when its id is
   new, changed when its attributes or SysML text differ (frames by their
-  attributes), removed when it is gone; a view the previous version lacked is
-  new.
+  attributes), removed when it is gone; table rows, columns and cells count as
+  elements, so a new grant is a new cell and marks its tool's row as changed. A
+  view the previous version lacked is new.
 - **Unreadable snapshots.** A version whose snapshot fails this viewer's schema
   check keeps its files and diffs, without diagrams.
 - **Determinism and size.** Same versions, same bytes. File texts and view
@@ -798,6 +816,12 @@ Failures are `{ code, context, recovery }` errors, never findings.
     elkjs and embeds their geometry. Why: the page stays small and works from
     `file://` without a 1.6 MB layout engine in every page, and the same input
     gives the same page; the plugin bundle carries elkjs instead.
+15. **Tables for long lists, diagrams for structure.** Grants are an allocation
+    matrix, rules a requirements table and the Overview a table of agents;
+    procedures, bindings and schedules stay diagrams. Why: a grant relates two
+    lists, and past a few dozen tools a diagram of them cannot be read, while a
+    matrix stays readable at 128 tools by 20 agents; rules have no structure to
+    draw. A table row is still an element with its SysML, as in a diagram.
 
 ## 14. Verification
 
@@ -810,10 +834,12 @@ Failures are `{ code, context, recovery }` errors, never findings.
   compiles alone with Assembly's pinned Toolkit with zero errors
   (`deno task test:toolkit`, which needs `ASSEMBLY_DIR` and
   `SYSML_TOOLKIT_DIR`).
-- **Viewer.** The fixture's views hold the expected nodes and edges; every
-  element names a declaration of the emitted files; layout is deterministic,
-  keeps children inside their container and never overlaps siblings; a new
-  element is highlighted against the previous version; hostile names cannot
-  escape the embedded data.
+- **Viewer.** The fixture's views hold the expected nodes and edges, the Tools
+  matrix one cell per grant, a Behaviour view its rules as a table and the
+  Overview each agent's figures and links; cron expressions are placed in the
+  week or refused; every element names a declaration of the emitted files;
+  layout is deterministic, keeps children inside their container and never
+  overlaps siblings; a new element, and a new matrix cell, is highlighted
+  against the previous version; hostile names cannot escape the embedded data.
 - **Collector.** Tests copy the fixture to a temporary directory and build
   `state/openclaw.sqlite` from `state/*.json`; no binary is committed.
