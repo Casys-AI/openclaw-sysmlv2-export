@@ -42,9 +42,10 @@ the SysML files, and updates `versions.json` and the viewer, `index.html`.
 - Secret values, tokens, API keys, URLs, people's ids and host paths are never
   exported. Files are referenced by path and digest, never copied.
 - Inference sends only an agent's behaviour files (`AGENTS.md`, `SOUL.md`,
-  `TOOLS.md`…) to the model of one of your agents, never `MEMORY.md`, `USER.md`
-  or other notes, and masks contact details and tokens in the answer. Its
-  proposals are kept apart and never admitted automatically.
+  `TOOLS.md`…) and its cron and heartbeat prompts to the model of one of your
+  agents, never `MEMORY.md`, `USER.md` or other notes, and masks contact details
+  and tokens in the answer. Its proposals are kept apart and never admitted
+  automatically.
 
 Source, documentation and specification:
 <https://github.com/Casys-AI/openclaw-sysmlv2-export>. MIT license; the bundle
