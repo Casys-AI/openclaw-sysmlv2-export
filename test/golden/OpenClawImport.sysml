@@ -7,8 +7,35 @@ package OpenClawImport {
         attribute primaryModel : String;
         attribute fallbackModels : String;
     }
-    item def ToolGrant { attribute tool : String; attribute layer : String; attribute pluginId : String; }
-    item def CommandGrant { attribute command : String; attribute kind : String; attribute argsRestricted : Boolean; }
+    enum def ToolOrigin {
+        doc /* Where a tool comes from. MCP and CLI are origins of tools, not
+         * separate categories. */
+        builtin; plugin; mcp; cli;
+    }
+    part def OpenClawTool :> AssemblyCore::ExecutableCapability {
+        doc /* One tool of the instance. toolId is OpenClaw's tool name. An MCP
+         * tool <prefix>__* stands for every tool of its server; a CLI tool is a
+         * command that the exec tool may run. provider names the plugin, the
+         * MCP server or exec; built-in tools have none. */
+        attribute toolId : String;
+        attribute origin : ToolOrigin;
+        attribute provider : String [0..1];
+        attribute optional : Boolean;
+    }
+    part def ToolCatalog {
+        doc /* Every tool granted to at least one agent, listed once. */
+        part tools : OpenClawTool [0..*];
+    }
+    item def ToolGrant {
+        doc /* An effective, positive grant of one catalog tool to one agent on
+         * one policy layer (host or sandbox). A CLI grant also records how the
+         * exec allowlist names the command (safe-bin, name or path) and whether
+         * its arguments are restricted. */
+        ref tool : OpenClawTool;
+        attribute layer : String;
+        attribute commandKind : String [0..1];
+        attribute argsRestricted : Boolean [0..1];
+    }
     part def Sandbox {
         attribute mode : String; attribute scope : String;
         attribute workspaceAccess : String; attribute image : String;
@@ -45,8 +72,16 @@ package OpenClawImport {
     part def DelegationRule { attribute fromAgent : String; attribute toAgent : String; }
     part def MessagingPolicy { attribute enabled : Boolean; attribute allowedTargets : String; }
     part def ModelProvider { attribute name : String; attribute apiKind : String; attribute modelIds : String; }
-    part def OpenClawPlugin { attribute pluginId : String; attribute enabled : Boolean; attribute tools : String; attribute optionalTools : String; attribute toolProfiles : String; }
+    part def OpenClawPlugin {
+        doc /* Tool provider: its granted tools appear in the tool catalog with
+         * origin plugin and this plugin as provider. */
+        attribute pluginId : String; attribute enabled : Boolean;
+        attribute tools : String; attribute optionalTools : String;
+        attribute toolProfiles : String;
+    }
     part def McpServer {
+        doc /* Tool provider: its granted tools appear in the tool catalog with
+         * origin mcp and this server as provider. */
         attribute serverId : String; attribute toolPrefix : String;
         attribute enabled : Boolean; attribute transport : String;
         attribute oauth : Boolean; attribute oauthIdentity : String;

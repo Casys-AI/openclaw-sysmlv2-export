@@ -79,21 +79,21 @@ package OpenClawInstance {
     "profile": null
   }
 } */
-            ref item 'grant_sandbox:browser' : ToolGrant = Authority::'tool_client:sandbox:browser';
-            ref item 'grant_sandbox:edit' : ToolGrant = Authority::'tool_client:sandbox:edit';
-            ref item 'grant_sandbox:exec' : ToolGrant = Authority::'tool_client:sandbox:exec';
-            ref item 'grant_sandbox:image' : ToolGrant = Authority::'tool_client:sandbox:image';
-            ref item 'grant_sandbox:message' : ToolGrant = Authority::'tool_client:sandbox:message';
-            ref item 'grant_sandbox:read' : ToolGrant = Authority::'tool_client:sandbox:read';
-            ref item 'grant_sandbox:session_status' : ToolGrant = Authority::'tool_client:sandbox:session_status';
-            ref item 'grant_sandbox:sessions_history' : ToolGrant = Authority::'tool_client:sandbox:sessions_history';
-            ref item 'grant_sandbox:sessions_list' : ToolGrant = Authority::'tool_client:sandbox:sessions_list';
-            ref item 'grant_sandbox:sessions_send' : ToolGrant = Authority::'tool_client:sandbox:sessions_send';
-            ref item 'grant_sandbox:sessions_spawn' : ToolGrant = Authority::'tool_client:sandbox:sessions_spawn';
-            ref item 'grant_sandbox:subagents' : ToolGrant = Authority::'tool_client:sandbox:subagents';
-            ref item 'grant_sandbox:write' : ToolGrant = Authority::'tool_client:sandbox:write';
-            ref item 'command_safe-bin:python3' : CommandGrant = Authority::'cmd_client:safe-bin:python3';
-            ref item 'command_safe-bin:wc' : CommandGrant = Authority::'cmd_client:safe-bin:wc';
+            ref item 'grant_sandbox:browser' : ToolGrant = Authority::'grant_client:sandbox:browser';
+            ref item 'grant_sandbox:edit' : ToolGrant = Authority::'grant_client:sandbox:edit';
+            ref item 'grant_sandbox:exec' : ToolGrant = Authority::'grant_client:sandbox:exec';
+            ref item 'grant_sandbox:image' : ToolGrant = Authority::'grant_client:sandbox:image';
+            ref item 'grant_sandbox:message' : ToolGrant = Authority::'grant_client:sandbox:message';
+            ref item 'grant_sandbox:read' : ToolGrant = Authority::'grant_client:sandbox:read';
+            ref item 'grant_sandbox:session_status' : ToolGrant = Authority::'grant_client:sandbox:session_status';
+            ref item 'grant_sandbox:sessions_history' : ToolGrant = Authority::'grant_client:sandbox:sessions_history';
+            ref item 'grant_sandbox:sessions_list' : ToolGrant = Authority::'grant_client:sandbox:sessions_list';
+            ref item 'grant_sandbox:sessions_send' : ToolGrant = Authority::'grant_client:sandbox:sessions_send';
+            ref item 'grant_sandbox:sessions_spawn' : ToolGrant = Authority::'grant_client:sandbox:sessions_spawn';
+            ref item 'grant_sandbox:subagents' : ToolGrant = Authority::'grant_client:sandbox:subagents';
+            ref item 'grant_sandbox:write' : ToolGrant = Authority::'grant_client:sandbox:write';
+            ref item 'grant_sandbox:cli:safe-bin:python3' : ToolGrant = Authority::'grant_client:sandbox:cli:safe-bin:python3';
+            ref item 'grant_sandbox:cli:safe-bin:wc' : ToolGrant = Authority::'grant_client:sandbox:cli:safe-bin:wc';
         }
         part agent_client : Agent_client {
             part sandbox : Sandbox {
@@ -260,24 +260,24 @@ package OpenClawInstance {
     "profile": null
   }
 } */
-            ref item 'grant_sandbox:browser' : ToolGrant = Authority::'tool_coach:sandbox:browser';
-            ref item 'grant_sandbox:edit' : ToolGrant = Authority::'tool_coach:sandbox:edit';
-            ref item 'grant_sandbox:exec' : ToolGrant = Authority::'tool_coach:sandbox:exec';
-            ref item 'grant_sandbox:gateway' : ToolGrant = Authority::'tool_coach:sandbox:gateway';
-            ref item 'grant_sandbox:image' : ToolGrant = Authority::'tool_coach:sandbox:image';
-            ref item 'grant_sandbox:message' : ToolGrant = Authority::'tool_coach:sandbox:message';
-            ref item 'grant_sandbox:read' : ToolGrant = Authority::'tool_coach:sandbox:read';
-            ref item 'grant_sandbox:session_status' : ToolGrant = Authority::'tool_coach:sandbox:session_status';
-            ref item 'grant_sandbox:sessions_history' : ToolGrant = Authority::'tool_coach:sandbox:sessions_history';
-            ref item 'grant_sandbox:sessions_list' : ToolGrant = Authority::'tool_coach:sandbox:sessions_list';
-            ref item 'grant_sandbox:sessions_send' : ToolGrant = Authority::'tool_coach:sandbox:sessions_send';
-            ref item 'grant_sandbox:sessions_spawn' : ToolGrant = Authority::'tool_coach:sandbox:sessions_spawn';
-            ref item 'grant_sandbox:subagents' : ToolGrant = Authority::'tool_coach:sandbox:subagents';
-            ref item 'grant_sandbox:web_fetch' : ToolGrant = Authority::'tool_coach:sandbox:web_fetch';
-            ref item 'grant_sandbox:web_search' : ToolGrant = Authority::'tool_coach:sandbox:web_search';
-            ref item 'grant_sandbox:write' : ToolGrant = Authority::'tool_coach:sandbox:write';
-            ref item 'command_safe-bin:python3' : CommandGrant = Authority::'cmd_coach:safe-bin:python3';
-            ref item 'command_safe-bin:wc' : CommandGrant = Authority::'cmd_coach:safe-bin:wc';
+            ref item 'grant_sandbox:browser' : ToolGrant = Authority::'grant_coach:sandbox:browser';
+            ref item 'grant_sandbox:edit' : ToolGrant = Authority::'grant_coach:sandbox:edit';
+            ref item 'grant_sandbox:exec' : ToolGrant = Authority::'grant_coach:sandbox:exec';
+            ref item 'grant_sandbox:gateway' : ToolGrant = Authority::'grant_coach:sandbox:gateway';
+            ref item 'grant_sandbox:image' : ToolGrant = Authority::'grant_coach:sandbox:image';
+            ref item 'grant_sandbox:message' : ToolGrant = Authority::'grant_coach:sandbox:message';
+            ref item 'grant_sandbox:read' : ToolGrant = Authority::'grant_coach:sandbox:read';
+            ref item 'grant_sandbox:session_status' : ToolGrant = Authority::'grant_coach:sandbox:session_status';
+            ref item 'grant_sandbox:sessions_history' : ToolGrant = Authority::'grant_coach:sandbox:sessions_history';
+            ref item 'grant_sandbox:sessions_list' : ToolGrant = Authority::'grant_coach:sandbox:sessions_list';
+            ref item 'grant_sandbox:sessions_send' : ToolGrant = Authority::'grant_coach:sandbox:sessions_send';
+            ref item 'grant_sandbox:sessions_spawn' : ToolGrant = Authority::'grant_coach:sandbox:sessions_spawn';
+            ref item 'grant_sandbox:subagents' : ToolGrant = Authority::'grant_coach:sandbox:subagents';
+            ref item 'grant_sandbox:web_fetch' : ToolGrant = Authority::'grant_coach:sandbox:web_fetch';
+            ref item 'grant_sandbox:web_search' : ToolGrant = Authority::'grant_coach:sandbox:web_search';
+            ref item 'grant_sandbox:write' : ToolGrant = Authority::'grant_coach:sandbox:write';
+            ref item 'grant_sandbox:cli:safe-bin:python3' : ToolGrant = Authority::'grant_coach:sandbox:cli:safe-bin:python3';
+            ref item 'grant_sandbox:cli:safe-bin:wc' : ToolGrant = Authority::'grant_coach:sandbox:cli:safe-bin:wc';
         }
         part agent_coach : Agent_coach {
             part sandbox : Sandbox {
@@ -439,23 +439,23 @@ package OpenClawInstance {
     "profile": null
   }
 } */
-            ref item 'grant_sandbox:browser' : ToolGrant = Authority::'tool_devbox:sandbox:browser';
-            ref item 'grant_sandbox:edit' : ToolGrant = Authority::'tool_devbox:sandbox:edit';
-            ref item 'grant_sandbox:exec' : ToolGrant = Authority::'tool_devbox:sandbox:exec';
-            ref item 'grant_sandbox:image' : ToolGrant = Authority::'tool_devbox:sandbox:image';
-            ref item 'grant_sandbox:message' : ToolGrant = Authority::'tool_devbox:sandbox:message';
-            ref item 'grant_sandbox:read' : ToolGrant = Authority::'tool_devbox:sandbox:read';
-            ref item 'grant_sandbox:session_status' : ToolGrant = Authority::'tool_devbox:sandbox:session_status';
-            ref item 'grant_sandbox:sessions_history' : ToolGrant = Authority::'tool_devbox:sandbox:sessions_history';
-            ref item 'grant_sandbox:sessions_list' : ToolGrant = Authority::'tool_devbox:sandbox:sessions_list';
-            ref item 'grant_sandbox:sessions_send' : ToolGrant = Authority::'tool_devbox:sandbox:sessions_send';
-            ref item 'grant_sandbox:sessions_spawn' : ToolGrant = Authority::'tool_devbox:sandbox:sessions_spawn';
-            ref item 'grant_sandbox:subagents' : ToolGrant = Authority::'tool_devbox:sandbox:subagents';
-            ref item 'grant_sandbox:web_fetch' : ToolGrant = Authority::'tool_devbox:sandbox:web_fetch';
-            ref item 'grant_sandbox:web_search' : ToolGrant = Authority::'tool_devbox:sandbox:web_search';
-            ref item 'grant_sandbox:write' : ToolGrant = Authority::'tool_devbox:sandbox:write';
-            ref item 'command_safe-bin:python3' : CommandGrant = Authority::'cmd_devbox:safe-bin:python3';
-            ref item 'command_safe-bin:wc' : CommandGrant = Authority::'cmd_devbox:safe-bin:wc';
+            ref item 'grant_sandbox:browser' : ToolGrant = Authority::'grant_devbox:sandbox:browser';
+            ref item 'grant_sandbox:edit' : ToolGrant = Authority::'grant_devbox:sandbox:edit';
+            ref item 'grant_sandbox:exec' : ToolGrant = Authority::'grant_devbox:sandbox:exec';
+            ref item 'grant_sandbox:image' : ToolGrant = Authority::'grant_devbox:sandbox:image';
+            ref item 'grant_sandbox:message' : ToolGrant = Authority::'grant_devbox:sandbox:message';
+            ref item 'grant_sandbox:read' : ToolGrant = Authority::'grant_devbox:sandbox:read';
+            ref item 'grant_sandbox:session_status' : ToolGrant = Authority::'grant_devbox:sandbox:session_status';
+            ref item 'grant_sandbox:sessions_history' : ToolGrant = Authority::'grant_devbox:sandbox:sessions_history';
+            ref item 'grant_sandbox:sessions_list' : ToolGrant = Authority::'grant_devbox:sandbox:sessions_list';
+            ref item 'grant_sandbox:sessions_send' : ToolGrant = Authority::'grant_devbox:sandbox:sessions_send';
+            ref item 'grant_sandbox:sessions_spawn' : ToolGrant = Authority::'grant_devbox:sandbox:sessions_spawn';
+            ref item 'grant_sandbox:subagents' : ToolGrant = Authority::'grant_devbox:sandbox:subagents';
+            ref item 'grant_sandbox:web_fetch' : ToolGrant = Authority::'grant_devbox:sandbox:web_fetch';
+            ref item 'grant_sandbox:web_search' : ToolGrant = Authority::'grant_devbox:sandbox:web_search';
+            ref item 'grant_sandbox:write' : ToolGrant = Authority::'grant_devbox:sandbox:write';
+            ref item 'grant_sandbox:cli:safe-bin:python3' : ToolGrant = Authority::'grant_devbox:sandbox:cli:safe-bin:python3';
+            ref item 'grant_sandbox:cli:safe-bin:wc' : ToolGrant = Authority::'grant_devbox:sandbox:cli:safe-bin:wc';
         }
         part agent_devbox : Agent_devbox {
             part sandbox : Sandbox {
@@ -615,24 +615,24 @@ package OpenClawInstance {
     "profile": null
   }
 } */
-            ref item 'grant_sandbox:browser' : ToolGrant = Authority::'tool_field:sandbox:browser';
-            ref item 'grant_sandbox:docs__*' : ToolGrant = Authority::'tool_field:sandbox:docs__*';
-            ref item 'grant_sandbox:edit' : ToolGrant = Authority::'tool_field:sandbox:edit';
-            ref item 'grant_sandbox:exec' : ToolGrant = Authority::'tool_field:sandbox:exec';
-            ref item 'grant_sandbox:image' : ToolGrant = Authority::'tool_field:sandbox:image';
-            ref item 'grant_sandbox:message' : ToolGrant = Authority::'tool_field:sandbox:message';
-            ref item 'grant_sandbox:pdf' : ToolGrant = Authority::'tool_field:sandbox:pdf';
-            ref item 'grant_sandbox:read' : ToolGrant = Authority::'tool_field:sandbox:read';
-            ref item 'grant_sandbox:session_status' : ToolGrant = Authority::'tool_field:sandbox:session_status';
-            ref item 'grant_sandbox:sessions_history' : ToolGrant = Authority::'tool_field:sandbox:sessions_history';
-            ref item 'grant_sandbox:sessions_list' : ToolGrant = Authority::'tool_field:sandbox:sessions_list';
-            ref item 'grant_sandbox:sessions_send' : ToolGrant = Authority::'tool_field:sandbox:sessions_send';
-            ref item 'grant_sandbox:sessions_spawn' : ToolGrant = Authority::'tool_field:sandbox:sessions_spawn';
-            ref item 'grant_sandbox:subagents' : ToolGrant = Authority::'tool_field:sandbox:subagents';
-            ref item 'grant_sandbox:tts' : ToolGrant = Authority::'tool_field:sandbox:tts';
-            ref item 'grant_sandbox:write' : ToolGrant = Authority::'tool_field:sandbox:write';
-            ref item 'command_safe-bin:python3' : CommandGrant = Authority::'cmd_field:safe-bin:python3';
-            ref item 'command_safe-bin:wc' : CommandGrant = Authority::'cmd_field:safe-bin:wc';
+            ref item 'grant_sandbox:browser' : ToolGrant = Authority::'grant_field:sandbox:browser';
+            ref item 'grant_sandbox:docs__*' : ToolGrant = Authority::'grant_field:sandbox:docs__*';
+            ref item 'grant_sandbox:edit' : ToolGrant = Authority::'grant_field:sandbox:edit';
+            ref item 'grant_sandbox:exec' : ToolGrant = Authority::'grant_field:sandbox:exec';
+            ref item 'grant_sandbox:image' : ToolGrant = Authority::'grant_field:sandbox:image';
+            ref item 'grant_sandbox:message' : ToolGrant = Authority::'grant_field:sandbox:message';
+            ref item 'grant_sandbox:pdf' : ToolGrant = Authority::'grant_field:sandbox:pdf';
+            ref item 'grant_sandbox:read' : ToolGrant = Authority::'grant_field:sandbox:read';
+            ref item 'grant_sandbox:session_status' : ToolGrant = Authority::'grant_field:sandbox:session_status';
+            ref item 'grant_sandbox:sessions_history' : ToolGrant = Authority::'grant_field:sandbox:sessions_history';
+            ref item 'grant_sandbox:sessions_list' : ToolGrant = Authority::'grant_field:sandbox:sessions_list';
+            ref item 'grant_sandbox:sessions_send' : ToolGrant = Authority::'grant_field:sandbox:sessions_send';
+            ref item 'grant_sandbox:sessions_spawn' : ToolGrant = Authority::'grant_field:sandbox:sessions_spawn';
+            ref item 'grant_sandbox:subagents' : ToolGrant = Authority::'grant_field:sandbox:subagents';
+            ref item 'grant_sandbox:tts' : ToolGrant = Authority::'grant_field:sandbox:tts';
+            ref item 'grant_sandbox:write' : ToolGrant = Authority::'grant_field:sandbox:write';
+            ref item 'grant_sandbox:cli:safe-bin:python3' : ToolGrant = Authority::'grant_field:sandbox:cli:safe-bin:python3';
+            ref item 'grant_sandbox:cli:safe-bin:wc' : ToolGrant = Authority::'grant_field:sandbox:cli:safe-bin:wc';
         }
         part agent_field : Agent_field {
             part sandbox : Sandbox {
@@ -789,48 +789,48 @@ package OpenClawInstance {
     "profile": null
   }
 } */
-            ref item 'grant_host:agents_list' : ToolGrant = Authority::'tool_lead:host:agents_list';
-            ref item 'grant_host:browser' : ToolGrant = Authority::'tool_lead:host:browser';
-            ref item 'grant_host:canvas' : ToolGrant = Authority::'tool_lead:host:canvas';
-            ref item 'grant_host:code_execution' : ToolGrant = Authority::'tool_lead:host:code_execution';
-            ref item 'grant_host:cron' : ToolGrant = Authority::'tool_lead:host:cron';
-            ref item 'grant_host:docs__*' : ToolGrant = Authority::'tool_lead:host:docs__*';
-            ref item 'grant_host:edit' : ToolGrant = Authority::'tool_lead:host:edit';
-            ref item 'grant_host:exec' : ToolGrant = Authority::'tool_lead:host:exec';
-            ref item 'grant_host:gateway' : ToolGrant = Authority::'tool_lead:host:gateway';
-            ref item 'grant_host:heartbeat_respond' : ToolGrant = Authority::'tool_lead:host:heartbeat_respond';
-            ref item 'grant_host:image' : ToolGrant = Authority::'tool_lead:host:image';
-            ref item 'grant_host:image_generate' : ToolGrant = Authority::'tool_lead:host:image_generate';
-            ref item 'grant_host:memory_get' : ToolGrant = Authority::'tool_lead:host:memory_get';
-            ref item 'grant_host:memory_search' : ToolGrant = Authority::'tool_lead:host:memory_search';
-            ref item 'grant_host:message' : ToolGrant = Authority::'tool_lead:host:message';
-            ref item 'grant_host:music_generate' : ToolGrant = Authority::'tool_lead:host:music_generate';
-            ref item 'grant_host:nodes' : ToolGrant = Authority::'tool_lead:host:nodes';
-            ref item 'grant_host:outlook-graph__*' : ToolGrant = Authority::'tool_lead:host:outlook-graph__*';
-            ref item 'grant_host:pdf' : ToolGrant = Authority::'tool_lead:host:pdf';
-            ref item 'grant_host:process' : ToolGrant = Authority::'tool_lead:host:process';
-            ref item 'grant_host:read' : ToolGrant = Authority::'tool_lead:host:read';
-            ref item 'grant_host:session_status' : ToolGrant = Authority::'tool_lead:host:session_status';
-            ref item 'grant_host:sessions_history' : ToolGrant = Authority::'tool_lead:host:sessions_history';
-            ref item 'grant_host:sessions_list' : ToolGrant = Authority::'tool_lead:host:sessions_list';
-            ref item 'grant_host:sessions_send' : ToolGrant = Authority::'tool_lead:host:sessions_send';
-            ref item 'grant_host:sessions_spawn' : ToolGrant = Authority::'tool_lead:host:sessions_spawn';
-            ref item 'grant_host:sessions_yield' : ToolGrant = Authority::'tool_lead:host:sessions_yield';
-            ref item 'grant_host:skill_workshop' : ToolGrant = Authority::'tool_lead:host:skill_workshop';
-            ref item 'grant_host:stock_quote' : ToolGrant = Authority::'tool_lead:host:stock_quote';
-            ref item 'grant_host:subagents' : ToolGrant = Authority::'tool_lead:host:subagents';
-            ref item 'grant_host:tts' : ToolGrant = Authority::'tool_lead:host:tts';
-            ref item 'grant_host:update_plan' : ToolGrant = Authority::'tool_lead:host:update_plan';
-            ref item 'grant_host:video_generate' : ToolGrant = Authority::'tool_lead:host:video_generate';
-            ref item 'grant_host:web_fetch' : ToolGrant = Authority::'tool_lead:host:web_fetch';
-            ref item 'grant_host:web_search' : ToolGrant = Authority::'tool_lead:host:web_search';
-            ref item 'grant_host:whatsapp_login' : ToolGrant = Authority::'tool_lead:host:whatsapp_login';
-            ref item 'grant_host:write' : ToolGrant = Authority::'tool_lead:host:write';
-            ref item 'grant_host:x_search' : ToolGrant = Authority::'tool_lead:host:x_search';
-            ref item 'command_name:rg' : CommandGrant = Authority::'cmd_lead:name:rg';
-            ref item 'command_path:git' : CommandGrant = Authority::'cmd_lead:path:git';
-            ref item 'command_safe-bin:python3' : CommandGrant = Authority::'cmd_lead:safe-bin:python3';
-            ref item 'command_safe-bin:wc' : CommandGrant = Authority::'cmd_lead:safe-bin:wc';
+            ref item 'grant_host:agents_list' : ToolGrant = Authority::'grant_lead:host:agents_list';
+            ref item 'grant_host:browser' : ToolGrant = Authority::'grant_lead:host:browser';
+            ref item 'grant_host:canvas' : ToolGrant = Authority::'grant_lead:host:canvas';
+            ref item 'grant_host:code_execution' : ToolGrant = Authority::'grant_lead:host:code_execution';
+            ref item 'grant_host:cron' : ToolGrant = Authority::'grant_lead:host:cron';
+            ref item 'grant_host:docs__*' : ToolGrant = Authority::'grant_lead:host:docs__*';
+            ref item 'grant_host:edit' : ToolGrant = Authority::'grant_lead:host:edit';
+            ref item 'grant_host:exec' : ToolGrant = Authority::'grant_lead:host:exec';
+            ref item 'grant_host:gateway' : ToolGrant = Authority::'grant_lead:host:gateway';
+            ref item 'grant_host:heartbeat_respond' : ToolGrant = Authority::'grant_lead:host:heartbeat_respond';
+            ref item 'grant_host:image' : ToolGrant = Authority::'grant_lead:host:image';
+            ref item 'grant_host:image_generate' : ToolGrant = Authority::'grant_lead:host:image_generate';
+            ref item 'grant_host:memory_get' : ToolGrant = Authority::'grant_lead:host:memory_get';
+            ref item 'grant_host:memory_search' : ToolGrant = Authority::'grant_lead:host:memory_search';
+            ref item 'grant_host:message' : ToolGrant = Authority::'grant_lead:host:message';
+            ref item 'grant_host:music_generate' : ToolGrant = Authority::'grant_lead:host:music_generate';
+            ref item 'grant_host:nodes' : ToolGrant = Authority::'grant_lead:host:nodes';
+            ref item 'grant_host:outlook-graph__*' : ToolGrant = Authority::'grant_lead:host:outlook-graph__*';
+            ref item 'grant_host:pdf' : ToolGrant = Authority::'grant_lead:host:pdf';
+            ref item 'grant_host:process' : ToolGrant = Authority::'grant_lead:host:process';
+            ref item 'grant_host:read' : ToolGrant = Authority::'grant_lead:host:read';
+            ref item 'grant_host:session_status' : ToolGrant = Authority::'grant_lead:host:session_status';
+            ref item 'grant_host:sessions_history' : ToolGrant = Authority::'grant_lead:host:sessions_history';
+            ref item 'grant_host:sessions_list' : ToolGrant = Authority::'grant_lead:host:sessions_list';
+            ref item 'grant_host:sessions_send' : ToolGrant = Authority::'grant_lead:host:sessions_send';
+            ref item 'grant_host:sessions_spawn' : ToolGrant = Authority::'grant_lead:host:sessions_spawn';
+            ref item 'grant_host:sessions_yield' : ToolGrant = Authority::'grant_lead:host:sessions_yield';
+            ref item 'grant_host:skill_workshop' : ToolGrant = Authority::'grant_lead:host:skill_workshop';
+            ref item 'grant_host:stock_quote' : ToolGrant = Authority::'grant_lead:host:stock_quote';
+            ref item 'grant_host:subagents' : ToolGrant = Authority::'grant_lead:host:subagents';
+            ref item 'grant_host:tts' : ToolGrant = Authority::'grant_lead:host:tts';
+            ref item 'grant_host:update_plan' : ToolGrant = Authority::'grant_lead:host:update_plan';
+            ref item 'grant_host:video_generate' : ToolGrant = Authority::'grant_lead:host:video_generate';
+            ref item 'grant_host:web_fetch' : ToolGrant = Authority::'grant_lead:host:web_fetch';
+            ref item 'grant_host:web_search' : ToolGrant = Authority::'grant_lead:host:web_search';
+            ref item 'grant_host:whatsapp_login' : ToolGrant = Authority::'grant_lead:host:whatsapp_login';
+            ref item 'grant_host:write' : ToolGrant = Authority::'grant_lead:host:write';
+            ref item 'grant_host:x_search' : ToolGrant = Authority::'grant_lead:host:x_search';
+            ref item 'grant_host:cli:name:rg' : ToolGrant = Authority::'grant_lead:host:cli:name:rg';
+            ref item 'grant_host:cli:path:git' : ToolGrant = Authority::'grant_lead:host:cli:path:git';
+            ref item 'grant_host:cli:safe-bin:python3' : ToolGrant = Authority::'grant_lead:host:cli:safe-bin:python3';
+            ref item 'grant_host:cli:safe-bin:wc' : ToolGrant = Authority::'grant_lead:host:cli:safe-bin:wc';
         }
         part agent_lead : Agent_lead {
             part sandbox : Sandbox {
@@ -1154,21 +1154,21 @@ package OpenClawInstance {
     "profile": null
   }
 } */
-            ref item 'grant_sandbox:browser' : ToolGrant = Authority::'tool_secretary:sandbox:browser';
-            ref item 'grant_sandbox:edit' : ToolGrant = Authority::'tool_secretary:sandbox:edit';
-            ref item 'grant_sandbox:exec' : ToolGrant = Authority::'tool_secretary:sandbox:exec';
-            ref item 'grant_sandbox:image' : ToolGrant = Authority::'tool_secretary:sandbox:image';
-            ref item 'grant_sandbox:message' : ToolGrant = Authority::'tool_secretary:sandbox:message';
-            ref item 'grant_sandbox:read' : ToolGrant = Authority::'tool_secretary:sandbox:read';
-            ref item 'grant_sandbox:session_status' : ToolGrant = Authority::'tool_secretary:sandbox:session_status';
-            ref item 'grant_sandbox:sessions_history' : ToolGrant = Authority::'tool_secretary:sandbox:sessions_history';
-            ref item 'grant_sandbox:sessions_list' : ToolGrant = Authority::'tool_secretary:sandbox:sessions_list';
-            ref item 'grant_sandbox:sessions_send' : ToolGrant = Authority::'tool_secretary:sandbox:sessions_send';
-            ref item 'grant_sandbox:sessions_spawn' : ToolGrant = Authority::'tool_secretary:sandbox:sessions_spawn';
-            ref item 'grant_sandbox:subagents' : ToolGrant = Authority::'tool_secretary:sandbox:subagents';
-            ref item 'grant_sandbox:write' : ToolGrant = Authority::'tool_secretary:sandbox:write';
-            ref item 'command_safe-bin:python3' : CommandGrant = Authority::'cmd_secretary:safe-bin:python3';
-            ref item 'command_safe-bin:wc' : CommandGrant = Authority::'cmd_secretary:safe-bin:wc';
+            ref item 'grant_sandbox:browser' : ToolGrant = Authority::'grant_secretary:sandbox:browser';
+            ref item 'grant_sandbox:edit' : ToolGrant = Authority::'grant_secretary:sandbox:edit';
+            ref item 'grant_sandbox:exec' : ToolGrant = Authority::'grant_secretary:sandbox:exec';
+            ref item 'grant_sandbox:image' : ToolGrant = Authority::'grant_secretary:sandbox:image';
+            ref item 'grant_sandbox:message' : ToolGrant = Authority::'grant_secretary:sandbox:message';
+            ref item 'grant_sandbox:read' : ToolGrant = Authority::'grant_secretary:sandbox:read';
+            ref item 'grant_sandbox:session_status' : ToolGrant = Authority::'grant_secretary:sandbox:session_status';
+            ref item 'grant_sandbox:sessions_history' : ToolGrant = Authority::'grant_secretary:sandbox:sessions_history';
+            ref item 'grant_sandbox:sessions_list' : ToolGrant = Authority::'grant_secretary:sandbox:sessions_list';
+            ref item 'grant_sandbox:sessions_send' : ToolGrant = Authority::'grant_secretary:sandbox:sessions_send';
+            ref item 'grant_sandbox:sessions_spawn' : ToolGrant = Authority::'grant_secretary:sandbox:sessions_spawn';
+            ref item 'grant_sandbox:subagents' : ToolGrant = Authority::'grant_secretary:sandbox:subagents';
+            ref item 'grant_sandbox:write' : ToolGrant = Authority::'grant_secretary:sandbox:write';
+            ref item 'grant_sandbox:cli:safe-bin:python3' : ToolGrant = Authority::'grant_secretary:sandbox:cli:safe-bin:python3';
+            ref item 'grant_sandbox:cli:safe-bin:wc' : ToolGrant = Authority::'grant_secretary:sandbox:cli:safe-bin:wc';
         }
         part agent_secretary : Agent_secretary {
             part sandbox : Sandbox {
@@ -1290,7 +1290,230 @@ package OpenClawInstance {
         }
     }
     package Tools {
-        doc /* Tool providers: plugins that declare tools and configured MCP servers. */
+        doc /* One catalog of every granted tool, by origin (built-in, plugin, MCP, CLI). Plugins and MCP servers are providers. */
+        part toolCatalog : ToolCatalog {
+            part tool_agents_list :> tools {
+                attribute :>> toolId = "agents_list";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_canvas :> tools {
+                attribute :>> toolId = "canvas";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_code_execution :> tools {
+                attribute :>> toolId = "code_execution";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_cron :> tools {
+                attribute :>> toolId = "cron";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_edit :> tools {
+                attribute :>> toolId = "edit";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_exec :> tools {
+                attribute :>> toolId = "exec";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_gateway :> tools {
+                attribute :>> toolId = "gateway";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_heartbeat_respond :> tools {
+                attribute :>> toolId = "heartbeat_respond";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_image :> tools {
+                attribute :>> toolId = "image";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_image_generate :> tools {
+                attribute :>> toolId = "image_generate";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_message :> tools {
+                attribute :>> toolId = "message";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_music_generate :> tools {
+                attribute :>> toolId = "music_generate";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_nodes :> tools {
+                attribute :>> toolId = "nodes";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_pdf :> tools {
+                attribute :>> toolId = "pdf";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_process :> tools {
+                attribute :>> toolId = "process";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_read :> tools {
+                attribute :>> toolId = "read";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_session_status :> tools {
+                attribute :>> toolId = "session_status";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_sessions_history :> tools {
+                attribute :>> toolId = "sessions_history";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_sessions_list :> tools {
+                attribute :>> toolId = "sessions_list";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_sessions_send :> tools {
+                attribute :>> toolId = "sessions_send";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_sessions_spawn :> tools {
+                attribute :>> toolId = "sessions_spawn";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_sessions_yield :> tools {
+                attribute :>> toolId = "sessions_yield";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_skill_workshop :> tools {
+                attribute :>> toolId = "skill_workshop";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_subagents :> tools {
+                attribute :>> toolId = "subagents";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_tts :> tools {
+                attribute :>> toolId = "tts";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_update_plan :> tools {
+                attribute :>> toolId = "update_plan";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_video_generate :> tools {
+                attribute :>> toolId = "video_generate";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_web_fetch :> tools {
+                attribute :>> toolId = "web_fetch";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_web_search :> tools {
+                attribute :>> toolId = "web_search";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_write :> tools {
+                attribute :>> toolId = "write";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_x_search :> tools {
+                attribute :>> toolId = "x_search";
+                attribute :>> origin = ToolOrigin::builtin;
+                attribute :>> optional = false;
+            }
+            part tool_browser :> tools {
+                attribute :>> toolId = "browser";
+                attribute :>> origin = ToolOrigin::plugin;
+                attribute :>> provider = "browser";
+                attribute :>> optional = false;
+            }
+            part tool_memory_get :> tools {
+                attribute :>> toolId = "memory_get";
+                attribute :>> origin = ToolOrigin::plugin;
+                attribute :>> provider = "memory-core";
+                attribute :>> optional = false;
+            }
+            part tool_memory_search :> tools {
+                attribute :>> toolId = "memory_search";
+                attribute :>> origin = ToolOrigin::plugin;
+                attribute :>> provider = "memory-core";
+                attribute :>> optional = false;
+            }
+            part tool_stock_quote :> tools {
+                attribute :>> toolId = "stock_quote";
+                attribute :>> origin = ToolOrigin::plugin;
+                attribute :>> provider = "stock-quotes";
+                attribute :>> optional = false;
+            }
+            part tool_whatsapp_login :> tools {
+                attribute :>> toolId = "whatsapp_login";
+                attribute :>> origin = ToolOrigin::plugin;
+                attribute :>> provider = "whatsapp";
+                attribute :>> optional = true;
+            }
+            part 'tool_docs__*' :> tools {
+                attribute :>> toolId = "docs__*";
+                attribute :>> origin = ToolOrigin::mcp;
+                attribute :>> provider = "docs";
+                attribute :>> optional = false;
+            }
+            part 'tool_outlook-graph__*' :> tools {
+                attribute :>> toolId = "outlook-graph__*";
+                attribute :>> origin = ToolOrigin::mcp;
+                attribute :>> provider = "Outlook Graph";
+                attribute :>> optional = false;
+            }
+            part 'tool_cli:git' :> tools {
+                attribute :>> toolId = "git";
+                attribute :>> origin = ToolOrigin::cli;
+                attribute :>> provider = "exec";
+                attribute :>> optional = false;
+            }
+            part 'tool_cli:python3' :> tools {
+                attribute :>> toolId = "python3";
+                attribute :>> origin = ToolOrigin::cli;
+                attribute :>> provider = "exec";
+                attribute :>> optional = false;
+            }
+            part 'tool_cli:rg' :> tools {
+                attribute :>> toolId = "rg";
+                attribute :>> origin = ToolOrigin::cli;
+                attribute :>> provider = "exec";
+                attribute :>> optional = false;
+            }
+            part 'tool_cli:wc' :> tools {
+                attribute :>> toolId = "wc";
+                attribute :>> origin = ToolOrigin::cli;
+                attribute :>> provider = "exec";
+                attribute :>> optional = false;
+            }
+        }
         part plugin_browser : OpenClawPlugin {
             attribute :>> pluginId = "browser";
             attribute :>> enabled = true;
@@ -1795,532 +2018,533 @@ package OpenClawInstance {
         }
     }
     package Authority {
-        doc /* Effective tool and command grants per agent, delegation and agent-to-agent messaging rules, and host exec approvals. */
-        item 'tool_client:sandbox:browser' : ToolGrant {
-            attribute :>> tool = "browser";
-            attribute :>> layer = "sandbox";
-            attribute :>> pluginId = "browser";
-        }
-        item 'tool_client:sandbox:edit' : ToolGrant {
-            attribute :>> tool = "edit";
+        doc /* Effective tool grants per agent and layer, delegation and agent-to-agent messaging rules, and host exec approvals. */
+        item 'grant_client:sandbox:browser' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_browser;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_client:sandbox:exec' : ToolGrant {
-            attribute :>> tool = "exec";
+        item 'grant_client:sandbox:edit' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_edit;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_client:sandbox:image' : ToolGrant {
-            attribute :>> tool = "image";
+        item 'grant_client:sandbox:exec' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_exec;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_client:sandbox:message' : ToolGrant {
-            attribute :>> tool = "message";
+        item 'grant_client:sandbox:image' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_image;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_client:sandbox:read' : ToolGrant {
-            attribute :>> tool = "read";
+        item 'grant_client:sandbox:message' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_message;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_client:sandbox:session_status' : ToolGrant {
-            attribute :>> tool = "session_status";
+        item 'grant_client:sandbox:read' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_read;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_client:sandbox:sessions_history' : ToolGrant {
-            attribute :>> tool = "sessions_history";
+        item 'grant_client:sandbox:session_status' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_session_status;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_client:sandbox:sessions_list' : ToolGrant {
-            attribute :>> tool = "sessions_list";
+        item 'grant_client:sandbox:sessions_history' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_sessions_history;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_client:sandbox:sessions_send' : ToolGrant {
-            attribute :>> tool = "sessions_send";
+        item 'grant_client:sandbox:sessions_list' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_sessions_list;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_client:sandbox:sessions_spawn' : ToolGrant {
-            attribute :>> tool = "sessions_spawn";
+        item 'grant_client:sandbox:sessions_send' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_sessions_send;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_client:sandbox:subagents' : ToolGrant {
-            attribute :>> tool = "subagents";
+        item 'grant_client:sandbox:sessions_spawn' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_sessions_spawn;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_client:sandbox:write' : ToolGrant {
-            attribute :>> tool = "write";
+        item 'grant_client:sandbox:subagents' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_subagents;
             attribute :>> layer = "sandbox";
         }
-        item 'cmd_client:safe-bin:python3' : CommandGrant {
-            attribute :>> command = "python3";
-            attribute :>> kind = "safe-bin";
+        item 'grant_client:sandbox:write' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_write;
+            attribute :>> layer = "sandbox";
+        }
+        item 'grant_client:sandbox:cli:safe-bin:python3' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.'tool_cli:python3';
+            attribute :>> layer = "sandbox";
+            attribute :>> commandKind = "safe-bin";
             attribute :>> argsRestricted = true;
         }
-        item 'cmd_client:safe-bin:wc' : CommandGrant {
-            attribute :>> command = "wc";
-            attribute :>> kind = "safe-bin";
+        item 'grant_client:sandbox:cli:safe-bin:wc' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.'tool_cli:wc';
+            attribute :>> layer = "sandbox";
+            attribute :>> commandKind = "safe-bin";
             attribute :>> argsRestricted = true;
         }
-        item 'tool_coach:sandbox:browser' : ToolGrant {
-            attribute :>> tool = "browser";
-            attribute :>> layer = "sandbox";
-            attribute :>> pluginId = "browser";
-        }
-        item 'tool_coach:sandbox:edit' : ToolGrant {
-            attribute :>> tool = "edit";
+        item 'grant_coach:sandbox:browser' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_browser;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_coach:sandbox:exec' : ToolGrant {
-            attribute :>> tool = "exec";
+        item 'grant_coach:sandbox:edit' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_edit;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_coach:sandbox:gateway' : ToolGrant {
-            attribute :>> tool = "gateway";
+        item 'grant_coach:sandbox:exec' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_exec;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_coach:sandbox:image' : ToolGrant {
-            attribute :>> tool = "image";
+        item 'grant_coach:sandbox:gateway' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_gateway;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_coach:sandbox:message' : ToolGrant {
-            attribute :>> tool = "message";
+        item 'grant_coach:sandbox:image' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_image;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_coach:sandbox:read' : ToolGrant {
-            attribute :>> tool = "read";
+        item 'grant_coach:sandbox:message' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_message;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_coach:sandbox:session_status' : ToolGrant {
-            attribute :>> tool = "session_status";
+        item 'grant_coach:sandbox:read' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_read;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_coach:sandbox:sessions_history' : ToolGrant {
-            attribute :>> tool = "sessions_history";
+        item 'grant_coach:sandbox:session_status' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_session_status;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_coach:sandbox:sessions_list' : ToolGrant {
-            attribute :>> tool = "sessions_list";
+        item 'grant_coach:sandbox:sessions_history' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_sessions_history;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_coach:sandbox:sessions_send' : ToolGrant {
-            attribute :>> tool = "sessions_send";
+        item 'grant_coach:sandbox:sessions_list' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_sessions_list;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_coach:sandbox:sessions_spawn' : ToolGrant {
-            attribute :>> tool = "sessions_spawn";
+        item 'grant_coach:sandbox:sessions_send' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_sessions_send;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_coach:sandbox:subagents' : ToolGrant {
-            attribute :>> tool = "subagents";
+        item 'grant_coach:sandbox:sessions_spawn' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_sessions_spawn;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_coach:sandbox:web_fetch' : ToolGrant {
-            attribute :>> tool = "web_fetch";
+        item 'grant_coach:sandbox:subagents' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_subagents;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_coach:sandbox:web_search' : ToolGrant {
-            attribute :>> tool = "web_search";
+        item 'grant_coach:sandbox:web_fetch' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_web_fetch;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_coach:sandbox:write' : ToolGrant {
-            attribute :>> tool = "write";
+        item 'grant_coach:sandbox:web_search' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_web_search;
             attribute :>> layer = "sandbox";
         }
-        item 'cmd_coach:safe-bin:python3' : CommandGrant {
-            attribute :>> command = "python3";
-            attribute :>> kind = "safe-bin";
+        item 'grant_coach:sandbox:write' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_write;
+            attribute :>> layer = "sandbox";
+        }
+        item 'grant_coach:sandbox:cli:safe-bin:python3' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.'tool_cli:python3';
+            attribute :>> layer = "sandbox";
+            attribute :>> commandKind = "safe-bin";
             attribute :>> argsRestricted = true;
         }
-        item 'cmd_coach:safe-bin:wc' : CommandGrant {
-            attribute :>> command = "wc";
-            attribute :>> kind = "safe-bin";
+        item 'grant_coach:sandbox:cli:safe-bin:wc' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.'tool_cli:wc';
+            attribute :>> layer = "sandbox";
+            attribute :>> commandKind = "safe-bin";
             attribute :>> argsRestricted = true;
         }
-        item 'tool_devbox:sandbox:browser' : ToolGrant {
-            attribute :>> tool = "browser";
-            attribute :>> layer = "sandbox";
-            attribute :>> pluginId = "browser";
-        }
-        item 'tool_devbox:sandbox:edit' : ToolGrant {
-            attribute :>> tool = "edit";
+        item 'grant_devbox:sandbox:browser' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_browser;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_devbox:sandbox:exec' : ToolGrant {
-            attribute :>> tool = "exec";
+        item 'grant_devbox:sandbox:edit' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_edit;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_devbox:sandbox:image' : ToolGrant {
-            attribute :>> tool = "image";
+        item 'grant_devbox:sandbox:exec' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_exec;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_devbox:sandbox:message' : ToolGrant {
-            attribute :>> tool = "message";
+        item 'grant_devbox:sandbox:image' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_image;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_devbox:sandbox:read' : ToolGrant {
-            attribute :>> tool = "read";
+        item 'grant_devbox:sandbox:message' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_message;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_devbox:sandbox:session_status' : ToolGrant {
-            attribute :>> tool = "session_status";
+        item 'grant_devbox:sandbox:read' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_read;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_devbox:sandbox:sessions_history' : ToolGrant {
-            attribute :>> tool = "sessions_history";
+        item 'grant_devbox:sandbox:session_status' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_session_status;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_devbox:sandbox:sessions_list' : ToolGrant {
-            attribute :>> tool = "sessions_list";
+        item 'grant_devbox:sandbox:sessions_history' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_sessions_history;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_devbox:sandbox:sessions_send' : ToolGrant {
-            attribute :>> tool = "sessions_send";
+        item 'grant_devbox:sandbox:sessions_list' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_sessions_list;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_devbox:sandbox:sessions_spawn' : ToolGrant {
-            attribute :>> tool = "sessions_spawn";
+        item 'grant_devbox:sandbox:sessions_send' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_sessions_send;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_devbox:sandbox:subagents' : ToolGrant {
-            attribute :>> tool = "subagents";
+        item 'grant_devbox:sandbox:sessions_spawn' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_sessions_spawn;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_devbox:sandbox:web_fetch' : ToolGrant {
-            attribute :>> tool = "web_fetch";
+        item 'grant_devbox:sandbox:subagents' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_subagents;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_devbox:sandbox:web_search' : ToolGrant {
-            attribute :>> tool = "web_search";
+        item 'grant_devbox:sandbox:web_fetch' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_web_fetch;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_devbox:sandbox:write' : ToolGrant {
-            attribute :>> tool = "write";
+        item 'grant_devbox:sandbox:web_search' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_web_search;
             attribute :>> layer = "sandbox";
         }
-        item 'cmd_devbox:safe-bin:python3' : CommandGrant {
-            attribute :>> command = "python3";
-            attribute :>> kind = "safe-bin";
+        item 'grant_devbox:sandbox:write' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_write;
+            attribute :>> layer = "sandbox";
+        }
+        item 'grant_devbox:sandbox:cli:safe-bin:python3' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.'tool_cli:python3';
+            attribute :>> layer = "sandbox";
+            attribute :>> commandKind = "safe-bin";
             attribute :>> argsRestricted = true;
         }
-        item 'cmd_devbox:safe-bin:wc' : CommandGrant {
-            attribute :>> command = "wc";
-            attribute :>> kind = "safe-bin";
+        item 'grant_devbox:sandbox:cli:safe-bin:wc' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.'tool_cli:wc';
+            attribute :>> layer = "sandbox";
+            attribute :>> commandKind = "safe-bin";
             attribute :>> argsRestricted = true;
         }
-        item 'tool_field:sandbox:browser' : ToolGrant {
-            attribute :>> tool = "browser";
-            attribute :>> layer = "sandbox";
-            attribute :>> pluginId = "browser";
-        }
-        item 'tool_field:sandbox:docs__*' : ToolGrant {
-            attribute :>> tool = "docs__*";
-            attribute :>> layer = "sandbox";
-            attribute :>> pluginId = "bundle-mcp";
-        }
-        item 'tool_field:sandbox:edit' : ToolGrant {
-            attribute :>> tool = "edit";
+        item 'grant_field:sandbox:browser' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_browser;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_field:sandbox:exec' : ToolGrant {
-            attribute :>> tool = "exec";
+        item 'grant_field:sandbox:docs__*' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.'tool_docs__*';
             attribute :>> layer = "sandbox";
         }
-        item 'tool_field:sandbox:image' : ToolGrant {
-            attribute :>> tool = "image";
+        item 'grant_field:sandbox:edit' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_edit;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_field:sandbox:message' : ToolGrant {
-            attribute :>> tool = "message";
+        item 'grant_field:sandbox:exec' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_exec;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_field:sandbox:pdf' : ToolGrant {
-            attribute :>> tool = "pdf";
+        item 'grant_field:sandbox:image' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_image;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_field:sandbox:read' : ToolGrant {
-            attribute :>> tool = "read";
+        item 'grant_field:sandbox:message' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_message;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_field:sandbox:session_status' : ToolGrant {
-            attribute :>> tool = "session_status";
+        item 'grant_field:sandbox:pdf' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_pdf;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_field:sandbox:sessions_history' : ToolGrant {
-            attribute :>> tool = "sessions_history";
+        item 'grant_field:sandbox:read' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_read;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_field:sandbox:sessions_list' : ToolGrant {
-            attribute :>> tool = "sessions_list";
+        item 'grant_field:sandbox:session_status' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_session_status;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_field:sandbox:sessions_send' : ToolGrant {
-            attribute :>> tool = "sessions_send";
+        item 'grant_field:sandbox:sessions_history' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_sessions_history;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_field:sandbox:sessions_spawn' : ToolGrant {
-            attribute :>> tool = "sessions_spawn";
+        item 'grant_field:sandbox:sessions_list' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_sessions_list;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_field:sandbox:subagents' : ToolGrant {
-            attribute :>> tool = "subagents";
+        item 'grant_field:sandbox:sessions_send' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_sessions_send;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_field:sandbox:tts' : ToolGrant {
-            attribute :>> tool = "tts";
+        item 'grant_field:sandbox:sessions_spawn' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_sessions_spawn;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_field:sandbox:write' : ToolGrant {
-            attribute :>> tool = "write";
+        item 'grant_field:sandbox:subagents' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_subagents;
             attribute :>> layer = "sandbox";
         }
-        item 'cmd_field:safe-bin:python3' : CommandGrant {
-            attribute :>> command = "python3";
-            attribute :>> kind = "safe-bin";
+        item 'grant_field:sandbox:tts' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_tts;
+            attribute :>> layer = "sandbox";
+        }
+        item 'grant_field:sandbox:write' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_write;
+            attribute :>> layer = "sandbox";
+        }
+        item 'grant_field:sandbox:cli:safe-bin:python3' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.'tool_cli:python3';
+            attribute :>> layer = "sandbox";
+            attribute :>> commandKind = "safe-bin";
             attribute :>> argsRestricted = true;
         }
-        item 'cmd_field:safe-bin:wc' : CommandGrant {
-            attribute :>> command = "wc";
-            attribute :>> kind = "safe-bin";
+        item 'grant_field:sandbox:cli:safe-bin:wc' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.'tool_cli:wc';
+            attribute :>> layer = "sandbox";
+            attribute :>> commandKind = "safe-bin";
             attribute :>> argsRestricted = true;
         }
-        item 'tool_lead:host:agents_list' : ToolGrant {
-            attribute :>> tool = "agents_list";
+        item 'grant_lead:host:agents_list' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_agents_list;
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:browser' : ToolGrant {
-            attribute :>> tool = "browser";
-            attribute :>> layer = "host";
-            attribute :>> pluginId = "browser";
-        }
-        item 'tool_lead:host:canvas' : ToolGrant {
-            attribute :>> tool = "canvas";
+        item 'grant_lead:host:browser' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_browser;
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:code_execution' : ToolGrant {
-            attribute :>> tool = "code_execution";
+        item 'grant_lead:host:canvas' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_canvas;
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:cron' : ToolGrant {
-            attribute :>> tool = "cron";
+        item 'grant_lead:host:code_execution' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_code_execution;
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:docs__*' : ToolGrant {
-            attribute :>> tool = "docs__*";
-            attribute :>> layer = "host";
-            attribute :>> pluginId = "bundle-mcp";
-        }
-        item 'tool_lead:host:edit' : ToolGrant {
-            attribute :>> tool = "edit";
+        item 'grant_lead:host:cron' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_cron;
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:exec' : ToolGrant {
-            attribute :>> tool = "exec";
+        item 'grant_lead:host:docs__*' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.'tool_docs__*';
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:gateway' : ToolGrant {
-            attribute :>> tool = "gateway";
+        item 'grant_lead:host:edit' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_edit;
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:heartbeat_respond' : ToolGrant {
-            attribute :>> tool = "heartbeat_respond";
+        item 'grant_lead:host:exec' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_exec;
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:image' : ToolGrant {
-            attribute :>> tool = "image";
+        item 'grant_lead:host:gateway' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_gateway;
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:image_generate' : ToolGrant {
-            attribute :>> tool = "image_generate";
+        item 'grant_lead:host:heartbeat_respond' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_heartbeat_respond;
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:memory_get' : ToolGrant {
-            attribute :>> tool = "memory_get";
-            attribute :>> layer = "host";
-            attribute :>> pluginId = "memory-core";
-        }
-        item 'tool_lead:host:memory_search' : ToolGrant {
-            attribute :>> tool = "memory_search";
-            attribute :>> layer = "host";
-            attribute :>> pluginId = "memory-core";
-        }
-        item 'tool_lead:host:message' : ToolGrant {
-            attribute :>> tool = "message";
+        item 'grant_lead:host:image' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_image;
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:music_generate' : ToolGrant {
-            attribute :>> tool = "music_generate";
+        item 'grant_lead:host:image_generate' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_image_generate;
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:nodes' : ToolGrant {
-            attribute :>> tool = "nodes";
+        item 'grant_lead:host:memory_get' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_memory_get;
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:outlook-graph__*' : ToolGrant {
-            attribute :>> tool = "outlook-graph__*";
-            attribute :>> layer = "host";
-            attribute :>> pluginId = "bundle-mcp";
-        }
-        item 'tool_lead:host:pdf' : ToolGrant {
-            attribute :>> tool = "pdf";
+        item 'grant_lead:host:memory_search' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_memory_search;
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:process' : ToolGrant {
-            attribute :>> tool = "process";
+        item 'grant_lead:host:message' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_message;
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:read' : ToolGrant {
-            attribute :>> tool = "read";
+        item 'grant_lead:host:music_generate' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_music_generate;
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:session_status' : ToolGrant {
-            attribute :>> tool = "session_status";
+        item 'grant_lead:host:nodes' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_nodes;
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:sessions_history' : ToolGrant {
-            attribute :>> tool = "sessions_history";
+        item 'grant_lead:host:outlook-graph__*' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.'tool_outlook-graph__*';
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:sessions_list' : ToolGrant {
-            attribute :>> tool = "sessions_list";
+        item 'grant_lead:host:pdf' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_pdf;
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:sessions_send' : ToolGrant {
-            attribute :>> tool = "sessions_send";
+        item 'grant_lead:host:process' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_process;
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:sessions_spawn' : ToolGrant {
-            attribute :>> tool = "sessions_spawn";
+        item 'grant_lead:host:read' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_read;
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:sessions_yield' : ToolGrant {
-            attribute :>> tool = "sessions_yield";
+        item 'grant_lead:host:session_status' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_session_status;
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:skill_workshop' : ToolGrant {
-            attribute :>> tool = "skill_workshop";
+        item 'grant_lead:host:sessions_history' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_sessions_history;
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:stock_quote' : ToolGrant {
-            attribute :>> tool = "stock_quote";
-            attribute :>> layer = "host";
-            attribute :>> pluginId = "stock-quotes";
-        }
-        item 'tool_lead:host:subagents' : ToolGrant {
-            attribute :>> tool = "subagents";
+        item 'grant_lead:host:sessions_list' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_sessions_list;
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:tts' : ToolGrant {
-            attribute :>> tool = "tts";
+        item 'grant_lead:host:sessions_send' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_sessions_send;
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:update_plan' : ToolGrant {
-            attribute :>> tool = "update_plan";
+        item 'grant_lead:host:sessions_spawn' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_sessions_spawn;
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:video_generate' : ToolGrant {
-            attribute :>> tool = "video_generate";
+        item 'grant_lead:host:sessions_yield' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_sessions_yield;
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:web_fetch' : ToolGrant {
-            attribute :>> tool = "web_fetch";
+        item 'grant_lead:host:skill_workshop' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_skill_workshop;
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:web_search' : ToolGrant {
-            attribute :>> tool = "web_search";
+        item 'grant_lead:host:stock_quote' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_stock_quote;
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:whatsapp_login' : ToolGrant {
-            attribute :>> tool = "whatsapp_login";
-            attribute :>> layer = "host";
-            attribute :>> pluginId = "whatsapp";
-        }
-        item 'tool_lead:host:write' : ToolGrant {
-            attribute :>> tool = "write";
+        item 'grant_lead:host:subagents' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_subagents;
             attribute :>> layer = "host";
         }
-        item 'tool_lead:host:x_search' : ToolGrant {
-            attribute :>> tool = "x_search";
+        item 'grant_lead:host:tts' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_tts;
             attribute :>> layer = "host";
         }
-        item 'cmd_lead:name:rg' : CommandGrant {
-            attribute :>> command = "rg";
-            attribute :>> kind = "name";
+        item 'grant_lead:host:update_plan' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_update_plan;
+            attribute :>> layer = "host";
+        }
+        item 'grant_lead:host:video_generate' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_video_generate;
+            attribute :>> layer = "host";
+        }
+        item 'grant_lead:host:web_fetch' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_web_fetch;
+            attribute :>> layer = "host";
+        }
+        item 'grant_lead:host:web_search' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_web_search;
+            attribute :>> layer = "host";
+        }
+        item 'grant_lead:host:whatsapp_login' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_whatsapp_login;
+            attribute :>> layer = "host";
+        }
+        item 'grant_lead:host:write' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_write;
+            attribute :>> layer = "host";
+        }
+        item 'grant_lead:host:x_search' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_x_search;
+            attribute :>> layer = "host";
+        }
+        item 'grant_lead:host:cli:name:rg' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.'tool_cli:rg';
+            attribute :>> layer = "host";
+            attribute :>> commandKind = "name";
             attribute :>> argsRestricted = false;
         }
-        item 'cmd_lead:path:git' : CommandGrant {
-            attribute :>> command = "git";
-            attribute :>> kind = "path";
+        item 'grant_lead:host:cli:path:git' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.'tool_cli:git';
+            attribute :>> layer = "host";
+            attribute :>> commandKind = "path";
             attribute :>> argsRestricted = true;
         }
-        item 'cmd_lead:safe-bin:python3' : CommandGrant {
-            attribute :>> command = "python3";
-            attribute :>> kind = "safe-bin";
+        item 'grant_lead:host:cli:safe-bin:python3' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.'tool_cli:python3';
+            attribute :>> layer = "host";
+            attribute :>> commandKind = "safe-bin";
             attribute :>> argsRestricted = true;
         }
-        item 'cmd_lead:safe-bin:wc' : CommandGrant {
-            attribute :>> command = "wc";
-            attribute :>> kind = "safe-bin";
+        item 'grant_lead:host:cli:safe-bin:wc' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.'tool_cli:wc';
+            attribute :>> layer = "host";
+            attribute :>> commandKind = "safe-bin";
             attribute :>> argsRestricted = true;
         }
-        item 'tool_secretary:sandbox:browser' : ToolGrant {
-            attribute :>> tool = "browser";
-            attribute :>> layer = "sandbox";
-            attribute :>> pluginId = "browser";
-        }
-        item 'tool_secretary:sandbox:edit' : ToolGrant {
-            attribute :>> tool = "edit";
+        item 'grant_secretary:sandbox:browser' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_browser;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_secretary:sandbox:exec' : ToolGrant {
-            attribute :>> tool = "exec";
+        item 'grant_secretary:sandbox:edit' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_edit;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_secretary:sandbox:image' : ToolGrant {
-            attribute :>> tool = "image";
+        item 'grant_secretary:sandbox:exec' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_exec;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_secretary:sandbox:message' : ToolGrant {
-            attribute :>> tool = "message";
+        item 'grant_secretary:sandbox:image' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_image;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_secretary:sandbox:read' : ToolGrant {
-            attribute :>> tool = "read";
+        item 'grant_secretary:sandbox:message' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_message;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_secretary:sandbox:session_status' : ToolGrant {
-            attribute :>> tool = "session_status";
+        item 'grant_secretary:sandbox:read' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_read;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_secretary:sandbox:sessions_history' : ToolGrant {
-            attribute :>> tool = "sessions_history";
+        item 'grant_secretary:sandbox:session_status' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_session_status;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_secretary:sandbox:sessions_list' : ToolGrant {
-            attribute :>> tool = "sessions_list";
+        item 'grant_secretary:sandbox:sessions_history' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_sessions_history;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_secretary:sandbox:sessions_send' : ToolGrant {
-            attribute :>> tool = "sessions_send";
+        item 'grant_secretary:sandbox:sessions_list' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_sessions_list;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_secretary:sandbox:sessions_spawn' : ToolGrant {
-            attribute :>> tool = "sessions_spawn";
+        item 'grant_secretary:sandbox:sessions_send' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_sessions_send;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_secretary:sandbox:subagents' : ToolGrant {
-            attribute :>> tool = "subagents";
+        item 'grant_secretary:sandbox:sessions_spawn' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_sessions_spawn;
             attribute :>> layer = "sandbox";
         }
-        item 'tool_secretary:sandbox:write' : ToolGrant {
-            attribute :>> tool = "write";
+        item 'grant_secretary:sandbox:subagents' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_subagents;
             attribute :>> layer = "sandbox";
         }
-        item 'cmd_secretary:safe-bin:python3' : CommandGrant {
-            attribute :>> command = "python3";
-            attribute :>> kind = "safe-bin";
+        item 'grant_secretary:sandbox:write' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.tool_write;
+            attribute :>> layer = "sandbox";
+        }
+        item 'grant_secretary:sandbox:cli:safe-bin:python3' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.'tool_cli:python3';
+            attribute :>> layer = "sandbox";
+            attribute :>> commandKind = "safe-bin";
             attribute :>> argsRestricted = true;
         }
-        item 'cmd_secretary:safe-bin:wc' : CommandGrant {
-            attribute :>> command = "wc";
-            attribute :>> kind = "safe-bin";
+        item 'grant_secretary:sandbox:cli:safe-bin:wc' : ToolGrant {
+            ref :>> tool = Tools::toolCatalog.'tool_cli:wc';
+            attribute :>> layer = "sandbox";
+            attribute :>> commandKind = "safe-bin";
             attribute :>> argsRestricted = true;
         }
         part 'delegation_client:coach' : DelegationRule {

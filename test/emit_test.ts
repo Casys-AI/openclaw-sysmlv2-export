@@ -100,42 +100,51 @@ Deno.test("memory emission omits unset metadata while keeping empty inventory co
   }
 });
 
-Deno.test("MCP ownership and command grants preserve their policy scope", async () => {
+Deno.test("granted tools are catalogued once by origin; CLI commands are granted on exec's layer", async () => {
   const fixture = await createFixture();
   try {
     const snapshot = await collect(fixture.home, fixture.plugins);
     const agent = snapshot.agents.find((a) => a.id === "lead")!;
     snapshot.agents = [agent];
-    const instance = emit(snapshot).get("OpenClawInstance.sysml")!;
-    for (const server of snapshot.mcpServers) {
-      assert.ok(
-        instance.includes(`part ${name("mcp", server.id)} : McpServer`),
+    const catalog = (text: string) =>
+      new Map(
+        [...text.matchAll(
+          /part (\S+) :> tools \{\n\s+attribute :>> toolId = "[^"]+";\n\s+attribute :>> origin = ToolOrigin::(\w+);\n(?:\s+attribute :>> provider = "([^"]+)";)?/g,
+        )].map((m) => [m[1], [m[2], m[3] ?? null]]),
       );
-    }
-    assert.match(instance, /attribute :>> pluginId = "bundle-mcp";/);
-    assert.ok(
-      !instance.includes(
-        `part ${name("plugin", "bundle-mcp")} : OpenClawPlugin`,
-      ),
-    );
-    assert.match(instance, /part execApprovals : ExecApprovals/);
-    assert.doesNotMatch(instance, /attribute :>> commands =/);
-    assert.ok(agent.execution.commands.length > 0);
+    const instance = emit(snapshot).get("OpenClawInstance.sysml")!;
+    const tools = catalog(instance);
+    const references = [
+      ...instance.matchAll(/ref :>> tool = Tools::toolCatalog\.(\S+);/g),
+    ].map((m) => m[1]);
+    assert.deepEqual(new Set(references), new Set(tools.keys()));
+    for (
+      const [tool, origin, provider] of [
+        ["exec", "builtin", null],
+        ["memory_search", "plugin", "memory-core"],
+        ["outlook-graph__*", "mcp", "Outlook Graph"],
+        ["cli:git", "cli", "exec"],
+      ]
+    ) assert.deepEqual(tools.get(name("tool", tool!)), [origin, provider]);
+    assert.doesNotMatch(instance, /bundle-mcp|CommandGrant/);
 
     for (const layer of ["host", "sandbox"] as const) {
       agent.grants = [{ id: `${layer}:exec`, tool: "exec", layer }];
       agent.execution.effective.security = "allowlist";
       const allowed = emit(snapshot).get("OpenClawInstance.sysml")!;
-      for (const command of agent.execution.commands) {
+      for (const c of agent.execution.commands) {
+        assert.equal(
+          catalog(allowed).get(name("tool", `cli:${c.command}`))?.[0],
+          "cli",
+        );
         assert.ok(allowed.includes(
-          `ref item ${
-            name("command", command.id)
-          } : CommandGrant = Authority::${
-            name("cmd", `${agent.id}:${command.id}`)
-          };`,
-        ));
-        assert.ok(allowed.includes(
-          `item ${name("cmd", `${agent.id}:${command.id}`)} : CommandGrant {`,
+          `item ${name("grant", `lead:${layer}:cli:${c.id}`)} : ToolGrant {\n` +
+            `            ref :>> tool = Tools::toolCatalog.${
+              name("tool", `cli:${c.command}`)
+            };\n` +
+            `            attribute :>> layer = "${layer}";\n` +
+            `            attribute :>> commandKind = "${c.kind}";\n` +
+            `            attribute :>> argsRestricted = ${c.argsRestricted};`,
         ));
       }
     }
@@ -143,14 +152,14 @@ Deno.test("MCP ownership and command grants preserve their policy scope", async 
       agent.execution.effective.security = security;
       assert.doesNotMatch(
         emit(snapshot).get("OpenClawInstance.sysml")!,
-        /: CommandGrant/,
+        /ToolOrigin::cli|commandKind/,
       );
     }
-    agent.execution.effective.security = "allowlist";
-    agent.grants = [];
     snapshot.execApprovals = null;
-    const absent = emit(snapshot).get("OpenClawInstance.sysml")!;
-    assert.doesNotMatch(absent, /: CommandGrant|part execApprovals/);
+    assert.doesNotMatch(
+      emit(snapshot).get("OpenClawInstance.sysml")!,
+      /part execApprovals/,
+    );
   } finally {
     await fixture.cleanup();
   }

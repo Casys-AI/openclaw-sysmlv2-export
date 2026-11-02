@@ -1,5 +1,10 @@
 import { OPENCLAW_IMPORT } from "./library.ts";
-import { canonical, type FileRef, type Snapshot } from "./snapshot.ts";
+import {
+  type Agent,
+  canonical,
+  type FileRef,
+  type Snapshot,
+} from "./snapshot.ts";
 
 export function name(prefix: string, id: string): string {
   const n = `${prefix}_${id}`;
@@ -44,28 +49,82 @@ function every(ms: number): string[] {
   ]);
 }
 
+const ORIGINS = ["builtin", "plugin", "mcp", "cli"] as const;
+interface Tool {
+  /** Catalog key: the tool name, or `cli:<command>` for a CLI tool. */
+  key: string;
+  toolId: string;
+  origin: typeof ORIGINS[number];
+  provider: string | null;
+  optional: boolean;
+}
+interface Grant {
+  id: string;
+  tool: Tool;
+  layer: string;
+  commandKind: string | null;
+  argsRestricted: boolean | null;
+}
+
+/** The agent's effective grants, each with the catalog tool it references:
+ * policy grants, then the CLI commands reachable through each exec grant. */
+function grants(snapshot: Snapshot, a: Agent): Grant[] {
+  const tool = (toolId: string): Tool => {
+    // docs/gateway/config-tools/tool-policy.md: configured MCP tools belong to
+    // bundle-mcp, named after their server; a plugin's declared name is its tool.
+    const server = snapshot.mcpServers.find((s) =>
+      s.enabled && toolId === `${s.toolPrefix}__*`
+    );
+    const plugin = server
+      ? undefined
+      : snapshot.plugins?.find((p) => p.enabled && p.tools.includes(toolId));
+    return {
+      key: toolId,
+      toolId,
+      origin: server ? "mcp" : plugin ? "plugin" : "builtin",
+      provider: server?.id ?? plugin?.id ?? null,
+      optional: plugin?.optionalTools.includes(toolId) ?? false,
+    };
+  };
+  const result: Grant[] = a.grants.map((g) => ({
+    id: g.id,
+    tool: tool(g.tool),
+    layer: g.layer,
+    commandKind: null,
+    argsRestricted: null,
+  }));
+  // docs/tools/exec-approvals.md, exec.security: command allowlists apply
+  // only to allowlist security and cannot grant access to the exec tool.
+  if (a.execution.effective.security !== "allowlist") return result;
+  for (const exec of a.grants.filter((g) => g.tool === "exec")) {
+    for (const c of a.execution.commands) {
+      result.push({
+        id: `${exec.layer}:cli:${c.id}`,
+        tool: {
+          key: `cli:${c.command}`,
+          toolId: c.command,
+          origin: "cli",
+          provider: "exec",
+          optional: false,
+        },
+        layer: exec.layer,
+        commandKind: c.kind,
+        argsRestricted: c.argsRestricted,
+      });
+    }
+  }
+  return result;
+}
+
 const group = (title: string, doc: string, body: string[]) =>
   block(`package ${title}`, [`doc /* ${doc} */`, ...body]);
 
 export function emit(snapshot: Snapshot): Map<string, string> {
-  // docs/gateway/config-tools/tool-policy.md: configured MCP tools belong to
-  // bundle-mcp; the synthetic plugin is not part of the plugin inventory.
-  const owner = (tool: string) =>
-    snapshot.mcpServers.some((s) => s.enabled && tool === `${s.toolPrefix}__*`)
-      ? "bundle-mcp"
-      : snapshot.plugins?.find((p) => p.enabled && p.tools.includes(tool))
-        ?.id ??
-        null;
   const agents = [...snapshot.agents].sort((a, b) => a.id < b.id ? -1 : 1);
-  // docs/tools/exec-approvals.md, exec.security: command allowlists apply
-  // only to allowlist security and cannot grant access to the exec tool.
-  const commands = new Map(agents.map((a) => [
-    a.id,
-    a.execution.effective.security === "allowlist" &&
-      a.grants.some((g) => g.tool === "exec")
-      ? a.execution.commands
-      : [],
-  ]));
+  const granted = new Map(agents.map((a) => [a.id, grants(snapshot, a)]));
+  const catalog = new Map(
+    [...granted.values()].flat().map((g) => [g.tool.key, g.tool]),
+  );
 
   const operators: string[] = [];
   for (const a of agents) {
@@ -81,14 +140,9 @@ export function emit(snapshot: Snapshot): Map<string, string> {
         `doc /* Sanitized OpenClaw tool policy provenance: ${
           canonical(a.policy).trim().replaceAll("*/", "* /")
         } */`,
-        ...a.grants.map((g) =>
+        ...granted.get(a.id)!.map((g) =>
           `ref item ${name("grant", g.id)} : ToolGrant = Authority::${
-            name("tool", `${a.id}:${g.id}`)
-          };`
-        ),
-        ...commands.get(a.id)!.map((c) =>
-          `ref item ${name("command", c.id)} : CommandGrant = Authority::${
-            name("cmd", `${a.id}:${c.id}`)
+            name("grant", `${a.id}:${g.id}`)
           };`
         ),
       ]),
@@ -169,7 +223,19 @@ export function emit(snapshot: Snapshot): Map<string, string> {
     ));
   }
 
-  const tools: string[] = [];
+  const tools = block(
+    "part toolCatalog : ToolCatalog",
+    [...catalog.values()].sort((a, b) =>
+      ORIGINS.indexOf(a.origin) - ORIGINS.indexOf(b.origin) ||
+      (a.toolId < b.toolId ? -1 : a.toolId > b.toolId ? 1 : 0)
+    ).flatMap((t) =>
+      block(`part ${name("tool", t.key)} :> tools`, [
+        ...attrs({ toolId: t.toolId }),
+        `attribute :>> origin = ToolOrigin::${t.origin};`,
+        ...attrs({ provider: t.provider, optional: t.optional }),
+      ])
+    ),
+  );
   for (const p of snapshot.plugins ?? []) {
     tools.push(...block(
       `part ${name("plugin", p.id)} : OpenClawPlugin`,
@@ -315,28 +381,16 @@ export function emit(snapshot: Snapshot): Map<string, string> {
 
   const authority: string[] = [];
   for (const a of agents) {
-    for (const g of a.grants) {
+    for (const g of granted.get(a.id)!) {
       authority.push(
-        ...block(
-          `item ${name("tool", `${a.id}:${g.id}`)} : ToolGrant`,
-          attrs({
-            tool: g.tool,
+        ...block(`item ${name("grant", `${a.id}:${g.id}`)} : ToolGrant`, [
+          `ref :>> tool = Tools::toolCatalog.${name("tool", g.tool.key)};`,
+          ...attrs({
             layer: g.layer,
-            pluginId: owner(g.tool),
+            commandKind: g.commandKind,
+            argsRestricted: g.argsRestricted,
           }),
-        ),
-      );
-    }
-    for (const c of commands.get(a.id)!) {
-      authority.push(
-        ...block(
-          `item ${name("cmd", `${a.id}:${c.id}`)} : CommandGrant`,
-          attrs({
-            command: c.command,
-            kind: c.kind,
-            argsRestricted: c.argsRestricted,
-          }),
-        ),
+        ]),
       );
     }
   }
@@ -375,7 +429,7 @@ export function emit(snapshot: Snapshot): Map<string, string> {
     ),
     ...group(
       "Tools",
-      "Tool providers: plugins that declare tools and configured MCP servers.",
+      "One catalog of every granted tool, by origin (built-in, plugin, MCP, CLI). Plugins and MCP servers are providers.",
       tools,
     ),
     ...group(
@@ -391,7 +445,7 @@ export function emit(snapshot: Snapshot): Map<string, string> {
     ),
     ...group(
       "Authority",
-      "Effective tool and command grants per agent, delegation and agent-to-agent messaging rules, and host exec approvals.",
+      "Effective tool grants per agent and layer, delegation and agent-to-agent messaging rules, and host exec approvals.",
       authority,
     ),
   ]);
