@@ -55,6 +55,34 @@ export function doctor(snapshot: Snapshot): Finding[] {
         "Place each skill in its own directory with SKILL.md.",
       );
     }
+    // docs/reference/memory-config.md: session sources and explicit recall
+    // make conversations searchable; a remote provider receives embeddings input.
+    const search = a.memory.search;
+    if (
+      search.enabled &&
+      (search.sources.includes("sessions") ||
+        search.rememberAcrossConversations === true)
+    ) {
+      add(
+        "MEMORY_SESSIONS_INDEXED",
+        "warning",
+        a.id,
+        "Memory search includes conversation transcripts.",
+        "Review session indexing and cross-conversation recall; docs/reference/memory-config.md.",
+      );
+    }
+    if (
+      search.enabled && search.provider !== null &&
+      search.provider !== "local" && search.provider !== "none"
+    ) {
+      add(
+        "MEMORY_REMOTE_EMBEDDINGS",
+        "info",
+        a.id,
+        "Memory search uses a remote embedding provider.",
+        "Review the embedding provider and its data handling; docs/reference/memory-config.md.",
+      );
+    }
   }
   if (snapshot.messaging.allowedTargets.includes("*")) {
     add(

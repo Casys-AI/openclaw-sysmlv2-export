@@ -57,6 +57,21 @@ const rules: [string, (s: Snapshot, positive: boolean) => void][] = [
     for (const a of s.agents) a.workspace.malformedSkills = [];
     s.agents[0].workspace.malformedSkills = yes ? ["skills/SKILL.md"] : [];
   }],
+  ["MEMORY_SESSIONS_INDEXED", (s, yes) => {
+    for (const a of s.agents) {
+      a.memory.search.sources = ["memory"];
+      a.memory.search.rememberAcrossConversations = false;
+    }
+    s.agents[0].memory.search.enabled = true;
+    s.agents[0].memory.search.sources = yes
+      ? ["memory", "sessions"]
+      : ["memory"];
+  }],
+  ["MEMORY_REMOTE_EMBEDDINGS", (s, yes) => {
+    for (const a of s.agents) a.memory.search.provider = "local";
+    s.agents[0].memory.search.enabled = true;
+    s.agents[0].memory.search.provider = yes ? "openai" : "none";
+  }],
 ];
 
 for (const [code, arrange] of rules) {
@@ -71,3 +86,33 @@ for (const [code, arrange] of rules) {
     }
   });
 }
+
+Deno.test("doctor memory findings respect disabled search and explicit recall", async () => {
+  const snapshot = structuredClone(await baseline());
+  snapshot.ambiguities = [];
+  snapshot.agents = snapshot.agents.slice(0, 1);
+  const search = snapshot.agents[0].memory.search;
+  search.sources = ["memory"];
+  search.rememberAcrossConversations = true;
+  for (const provider of [null, "local", "none", "openai"]) {
+    search.provider = provider;
+    for (const enabled of [false, true]) {
+      search.enabled = enabled;
+      const memory = doctor(snapshot).filter((f) =>
+        f.code.startsWith("MEMORY_")
+      );
+      assert.deepEqual(
+        memory.map((f) => [f.code, f.severity]),
+        enabled
+          ? [
+            ...(provider === "openai"
+              ? [["MEMORY_REMOTE_EMBEDDINGS", "info"]]
+              : []),
+            ["MEMORY_SESSIONS_INDEXED", "warning"],
+          ]
+          : [],
+      );
+      assert.ok(memory.every((f) => f.subject === snapshot.agents[0].id));
+    }
+  }
+});
