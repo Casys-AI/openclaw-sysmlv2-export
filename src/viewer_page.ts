@@ -638,7 +638,7 @@ function subtitle(view) {
   }
   return [
     ...view.scene ? [view.scene.nodes.filter((n) => !["frame", "group", "initial", "final"].includes(n.shape)).length + " elements"] : [],
-    ...t && t.kind === "elements" ? [t.rows.length + " " + t.title.toLowerCase()] : [],
+    ...t && t.kind === "elements" ? [t.rows.length + " " + (t.rows.length === 1 ? t.title.replace(/s$/, "") : t.title).toLowerCase()] : [],
   ].join(" · ");
 }
 
@@ -666,11 +666,11 @@ function renderDiagram(keepViewport) {
   document.getElementById("view-sub").textContent = subtitle(view);
   renderDelta(cur);
   renderLegend(view);
-  const keep = keepViewport && state.drawn && state.drawn.view === view.id;
+  const keep = keepViewport && state.drawn && state.drawn.view === view.id, kept = keep && state.drawn.scene;
   if (!keep) { state.selected = null; state.filter = ""; state.facet = null; state.sort = null; }
   document.getElementById("md").classList.toggle("hl", state.highlight);
   document.querySelector(".md-tools").hidden = !view.scene;
-  stage.hidden = !view.scene;
+  stage.hidden = !view.scene && Boolean(view.table);
   sheet.hidden = !view.table;
   sheet.classList.toggle("alone", !view.scene);
   document.getElementById("split").hidden = !(view.scene && view.table);
@@ -683,8 +683,8 @@ function renderDiagram(keepViewport) {
     renderTable(sheet, view, delta);
     if (keep) [sheet.scrollTop, sheet.scrollLeft] = at;
   }
-  if (view.scene) drawScene(view, delta, keep);
-  else canvas.replaceChildren();
+  if (view.scene) drawScene(view, delta, kept);
+  else canvas.replaceChildren(...view.table ? [] : [el("p", "md-empty", "Nothing to show in this view for this version.")]);
   if (state.focus && headOf(view, state.focus)) state.selected = state.focus;
   if (state.selected && !headOf(view, state.selected)) state.selected = null;
   if (state.selected) select(state.selected, state.selected === state.focus); else applyFocus();
@@ -746,7 +746,7 @@ function applyFocus() {
   if (!d) return;
   if (d.svg) {
     const focus = state.selected || state.hover;
-    const r = focus ? related(focus) : null;
+    const r = focus && d.scene.nodes.some((n) => n.id === focus) ? related(focus) : null;
     d.svg.classList.toggle("md-focus", Boolean(r));
     for (const g of d.world.querySelectorAll(".md-node")) {
       g.classList.toggle("lit", Boolean(r && r.nodes.has(g.dataset.id)));
@@ -775,13 +775,14 @@ function select(id, center) {
   const status = d && d.added.includes(id) ? "added" : d && d.changed.includes(id) ? "changed" : null;
   inspect(state.version, state.drawn.payload, id, status);
 }
-// Scrolls a table element into view, clearing the filter and unfolding the
-// groups that hide it.
+// Scrolls a table element into view; when the filter, the facet or folded
+// groups hide it, it clears them all.
 function reveal(id) {
   const sheet = document.getElementById("sheet");
   const find = () => [...sheet.querySelectorAll("[data-id]")].find((e) => e.dataset.id === id);
-  if (!find() && (state.filter || state.folded.size)) {
+  if (!find() && (state.filter || state.folded.size || state.facet !== null)) {
     state.filter = "";
+    state.facet = null;
     state.folded.clear();
     renderTable(sheet, state.drawn.payload, currentView().delta);
     applyFocus();
@@ -863,7 +864,7 @@ function showLines(vi, file, from, to) {
 function renderTable(box, view, delta) {
   const t = view.table, mark = marker(delta);
   if (t.kind === "matrix") renderMatrix(box, t, mark);
-  else if (t.kind === "week") renderWeek(box, view, t, mark);
+  else if (t.kind === "week") renderWeek(box, t, mark);
   else renderElements(box, view, t, mark);
 }
 function search(label) {
@@ -979,7 +980,7 @@ function renderElements(box, view, t, mark) {
       return b;
     }));
   }
-  const text = (r, c) => c < 0 ? r.name : r.values[c];
+  const text = (r, c) => c < 0 ? r.title || r.name : r.values[c];
   const table = el("table", "et"), head = el("tr"), tbody = el("tbody");
   [-1, ...t.columns.keys()].forEach((c) => {
     const sorted = state.sort && state.sort.col === c;
@@ -1004,7 +1005,7 @@ function renderElements(box, view, t, mark) {
   const rows = () => {
     const q = state.filter.trim().toLowerCase();
     const shown = t.rows.filter((r) => (facet < 0 || state.facet === null || r.values[facet] === state.facet) &&
-      (!q || [r.name, ...r.values].some((v) => v.toLowerCase().includes(q))));
+      (!q || [r.title || "", r.name, ...r.values].some((v) => v.toLowerCase().includes(q))));
     if (state.sort) shown.sort((a, b) => state.sort.dir * text(a, state.sort.col).localeCompare(text(b, state.sort.col), "en", { numeric: true }));
     tbody.replaceChildren(...shown.map((r) => {
       const tr = el("tr", (r.muted ? "muted" : "") + mark(r.id));
@@ -1039,12 +1040,13 @@ function renderElements(box, view, t, mark) {
   box.replaceChildren(...t.summary ? [summary(view, t.summary, mark)] : [], bar, table);
 }
 // When each scheduled task fires in a week, hour by hour, under the agent it
-// wakes. Hours are in each task's own time zone; an interval fires all week.
+// wakes. Hours are in each task's own time zone; an interval under a day fires
+// all week, from an unknown start.
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], HOUR = 5, DAY = 24 * HOUR + 4;
 function strip(row) {
   const g = sv("svg", { class: "wk-strip", width: 7 * DAY - 4, height: 16, "aria-hidden": "true" });
   DAYS.forEach((_, d) => g.append(sv("rect", { class: "wk-day", x: d * DAY, y: 0, width: 24 * HOUR, height: 16 })));
-  if (row.everyMs) {
+  if (row.everyMs && row.everyMs < 86400000) {
     const band = sv("rect", { class: "wk-band", x: 0, y: 5, width: 7 * DAY - 4, height: 6 });
     band.append(sv("title", {}, row.when + ", all week"));
     g.append(band);
@@ -1057,7 +1059,7 @@ function strip(row) {
   }
   return g;
 }
-function renderWeek(box, view, t, mark) {
+function renderWeek(box, t, mark) {
   const bar = el("div", "tb-bar");
   const key = (cls, text) => {
     const k = el("span", "tb-key");
@@ -1089,7 +1091,8 @@ function renderWeek(box, view, t, mark) {
       const name = el("th");
       name.dataset.id = r.node;
       name.tabIndex = 0;
-      name.append(el("span", "", r.label), el("small", "", r.when + (r.fires ? " · " + (r.zone || "gateway time") : r.everyMs ? "" : " · not weekly")));
+      const how = r.fires ? r.zone || "gateway time" : r.everyMs && r.everyMs < 86400000 ? "" : r.everyMs ? "start unknown" : "not weekly";
+      name.append(el("span", "", r.label), el("small", "", r.when + (how ? " · " + how : "")));
       const td = el("td");
       td.append(strip(r));
       tr.append(name, td);
@@ -1168,7 +1171,8 @@ function render(keepViewport) {
 }
 
 // ---- Events
-document.getElementById("version").onchange = (e) => { state.version = +e.target.value; state.range = null; render(true); };
+// Another version keeps the view, but its table may have other columns.
+document.getElementById("version").onchange = (e) => { state.version = +e.target.value; state.range = null; state.sort = null; state.facet = null; render(true); };
 document.getElementById("view").onchange = (e) => { state.view = e.target.value; render(); };
 for (const b of document.querySelectorAll(".tabs button")) b.onclick = () => { state.tab = b.dataset.tab; render(true); };
 document.getElementById("fit").onclick = fit;
@@ -1230,8 +1234,7 @@ sheet.addEventListener("click", (e) => {
   if (x) select(x.dataset.id, drawn(x.dataset.id));
 });
 sheet.addEventListener("keydown", (e) => {
-  const x = e.target.closest("[data-id]");
-  if (x && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); select(x.dataset.id, drawn(x.dataset.id)); }
+  if (e.target.dataset.id && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); select(e.target.dataset.id, drawn(e.target.dataset.id)); }
   else if (e.key === "Escape") select(null);
 });
 // Dragging the splitter sets the table's height; the diagram fits again.
@@ -1239,12 +1242,15 @@ const split = document.getElementById("split");
 split.addEventListener("pointerdown", (e) => { split.setPointerCapture(e.pointerId); split.dataset.drag = "1"; });
 split.addEventListener("pointermove", (e) => {
   if (!split.dataset.drag) return;
-  const bottom = sheet.getBoundingClientRect().bottom, room = document.getElementById("md").getBoundingClientRect().height;
-  state.sheetH = Math.round(Math.max(80, Math.min(room - 180, bottom - e.clientY - 4)));
+  // At least 80 px of table, and 120 px of diagram above it.
+  const bottom = sheet.getBoundingClientRect().bottom, room = document.querySelector(".md-main").getBoundingClientRect().height;
+  state.sheetH = Math.round(Math.max(80, Math.min(room - 120, bottom - e.clientY - 4)));
   sheet.style.height = state.sheetH + "px";
   sheet.style.maxHeight = "none";
 });
-split.addEventListener("pointerup", () => { delete split.dataset.drag; fit(); });
+for (const type of ["pointerup", "pointercancel", "lostpointercapture"]) {
+  split.addEventListener(type, () => { if (split.dataset.drag) { delete split.dataset.drag; fit(); } });
+}
 window.addEventListener("resize", () => { if (state.tab === "diagrams") fit(); });
 window.addEventListener("hashchange", () => { readHash(); render(); });
 readHash();

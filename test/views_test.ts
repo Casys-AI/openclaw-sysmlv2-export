@@ -206,6 +206,11 @@ Deno.test("the week shows when each scheduled task fires", () => {
 Deno.test("cron expressions repeat weekly only with any day of month and month", () => {
   assert.deepEqual(cronWeek("*/15 9 * * MON-FRI")?.[0], [9, 4]);
   assert.deepEqual(cronWeek("0 0 * * 0,7"), [[6 * 24, 1]]);
+  assert.deepEqual(cronWeek("0 9 * * FRI-SUN")?.map(([h]) => h), [
+    4 * 24 + 9,
+    5 * 24 + 9,
+    6 * 24 + 9,
+  ]);
   assert.deepEqual(cronWeek("30 0 9 * * ?")?.length, 7);
   for (
     const e of ["0 0 1 * *", "0 0 * 1 *", "0 24 * * *", "0 9 * * L", "@daily"]

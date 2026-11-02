@@ -90,7 +90,7 @@ export interface WeekRow {
   /** [hour of the week from Monday 00:00, times it fires in that hour], or
    * null unless it repeats weekly (see `cronWeek`). */
   fires: [number, number][] | null;
-  /** An interval's period: it fires all week, from an unknown start. */
+  /** An interval's period; its start is unknown. */
   everyMs: number | null;
 }
 /** The elements a view shows as a table instead of drawing them, by id, or
@@ -186,6 +186,33 @@ const ORIGIN_LABEL = {
 const byId = <T extends { id: string }>(values: T[]) =>
   [...values].sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 
+const WEEKDAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+/** The values of a cron field made of numbers, ranges, steps and lists, or
+ * null for anything else or a value above `max`. */
+function cronField(field: string, max: number): number[] | null {
+  const values = new Set<number>();
+  for (const part of field.split(",")) {
+    const m = part.match(/^(?:\*|(\d+)(?:-(\d+))?)(?:\/(\d+))?$/);
+    if (!m) return null;
+    const from = m[1] === undefined ? 0 : +m[1];
+    const to = m[2] !== undefined
+      ? +m[2]
+      : m[1] === undefined || m[3] !== undefined
+      ? max
+      : from;
+    const step = m[3] === undefined ? 1 : +m[3];
+    if (to > max || from > to || step < 1) return null;
+    for (let v = from; v <= to; v += step) values.add(v);
+  }
+  return [...values].sort((a, b) => a - b);
+}
+/** A day-of-week field with its day names as numbers; a range that ends on
+ * SUN ends on 7. */
+const cronDays = (field: string) =>
+  field.toUpperCase().replace(/-SUN\b/g, "-7").replace(
+    /[A-Z]+/g,
+    (d) => String(WEEKDAYS.indexOf(d)),
+  );
 /** A schedule in words when it is a plain daily or weekly cron; otherwise null. */
 export function scheduleText(
   kind: string,
@@ -200,22 +227,19 @@ export function scheduleText(
       : `every ${everyMs / 1000} s`;
   }
   const f = (expression ?? "").trim().split(/\s+/);
-  const nums = (s: string, max: number) =>
-    /^\d+(,\d+)*$/.test(s) && s.split(",").every((n) => +n <= max)
-      ? s.split(",").map(Number).sort((a, b) => a - b)
-      : null;
   if (kind !== "cron" || f.length !== 5 || f[2] !== "*" || f[3] !== "*") {
     return null;
   }
-  const minutes = nums(f[0], 59), hours = nums(f[1], 23);
-  const days = f[4] === "*" ? [] : nums(f[4], 7);
+  const minutes = cronField(f[0], 59), hours = cronField(f[1], 23);
+  const days = f[4] === "*" ? [] : cronField(cronDays(f[4]), 7);
   if (!minutes || !hours || !days || hours.length * minutes.length > 4) {
     return null;
   }
   const pad = (n: number) => String(n).padStart(2, "0");
   const times = hours.flatMap((h) => minutes.map((m) => `${pad(h)}:${pad(m)}`));
-  const names = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  return `${days.length ? days.map((d) => names[d]).join(", ") : "daily"} at ${
+  const names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const week = [...new Set(days.map((d) => (d + 6) % 7))].sort((a, b) => a - b);
+  return `${week.length ? week.map((d) => names[d]).join(", ") : "daily"} at ${
     times.join(", ")
   }`;
 }
@@ -262,26 +286,6 @@ function toolCount(granted: Grant[]): string {
     : "none";
 }
 
-const WEEKDAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
-/** The values of a cron field made of numbers, ranges, steps and lists, or
- * null for anything else or a value above `max`. */
-function cronField(field: string, max: number): number[] | null {
-  const values = new Set<number>();
-  for (const part of field.split(",")) {
-    const m = part.match(/^(?:\*|(\d+)(?:-(\d+))?)(?:\/(\d+))?$/);
-    if (!m) return null;
-    const from = m[1] === undefined ? 0 : +m[1];
-    const to = m[2] !== undefined
-      ? +m[2]
-      : m[1] === undefined || m[3] !== undefined
-      ? max
-      : from;
-    const step = m[3] === undefined ? 1 : +m[3];
-    if (to > max || from > to || step < 1) return null;
-    for (let v = from; v <= to; v += step) values.add(v);
-  }
-  return [...values].sort((a, b) => a - b);
-}
 /** When a cron expression fires in a week: [hour of the week from Monday
  * 00:00, times in that hour], in the expression's own time zone. Null unless
  * it repeats weekly: five fields (or six, seconds first), day of month and
@@ -292,9 +296,7 @@ export function cronWeek(expression: string): [number, number][] | null {
   if (f.length !== 6 || ![f[3], f[4]].every((x) => x === "*" || x === "?")) {
     return null;
   }
-  const days = f[5] === "?"
-    ? "*"
-    : f[5].replace(/[A-Z]+/g, (d) => String(WEEKDAYS.indexOf(d)));
+  const days = f[5] === "?" ? "*" : cronDays(f[5]);
   const [seconds, minutes, hours, weekdays] = [
     cronField(f[0], 59),
     cronField(f[1], 59),
@@ -370,6 +372,59 @@ function agentBlock(a: Agent, granted: Grant[]): DiagramNode {
   });
 }
 
+/** The instance's totals, as the Overview's summary. */
+function instanceTotals(
+  s: Snapshot,
+  granted: Map<string, Grant[]>,
+  inference: Inference | null,
+): DiagramNode {
+  const sum = (count: (a: Inference["agents"][number]) => number) =>
+    inference!.agents.reduce((n, a) => n + count(a), 0);
+  return node({
+    id: "instance",
+    shape: "block",
+    keyword: "package",
+    name: "OpenClawInstance",
+    attributes: [
+      ["agents", String(s.agents.length)],
+      ["tools", toolCount([...granted.values()].flat())],
+      ...(s.plugins?.length
+        ? [["plugins", enabledOf(s.plugins.map((p) => p.enabled))] as [
+          string,
+          string,
+        ]]
+        : []),
+      ...(s.mcpServers.length
+        ? [[
+          "MCP servers",
+          enabledOf(s.mcpServers.map((m) => m.enabled)),
+        ] as [string, string]]
+        : []),
+      ["channel accounts", enabledOf(s.accounts.map((a) => a.enabled))],
+      [
+        "scheduled tasks",
+        enabledOf([
+          ...s.agents.flatMap((a) =>
+            a.heartbeat ? [a.heartbeat.everyMs > 0] : []
+          ),
+          ...s.cron.map((j) => j.enabled),
+        ]),
+      ],
+      ...(inference
+        ? [[
+          "inferred",
+          inferredText(
+            sum((a) => a.procedures.length),
+            sum((a) => a.rules.length),
+          ),
+        ] as [string, string]]
+        : []),
+    ],
+  });
+}
+const inferredText = (procedures: number, rules: number) =>
+  `${plural(procedures, "procedure")} · ${plural(rules, "rule")}`;
+
 const RUNS_ON = {
   off: "host",
   all: "sandbox",
@@ -403,8 +458,6 @@ function overviewView(
   ];
   const inferredOf = (agentId: string) =>
     inference?.agents.find((x) => x.agentId === agentId);
-  const inferredText = (procedures: number, rules: number) =>
-    `${plural(procedures, "procedure")} · ${plural(rules, "rule")}`;
   const rows = agents.map((a) => {
     const id = `agent:${a.id}`, inferred = inferredOf(a.id);
     const accounts = bound(a.id);
@@ -459,47 +512,7 @@ function overviewView(
       ],
     });
   });
-  const totals = node({
-    id: "instance",
-    shape: "block",
-    keyword: "package",
-    name: "OpenClawInstance",
-    attributes: [
-      ["agents", String(agents.length)],
-      ["tools", toolCount([...granted.values()].flat())],
-      ...(s.plugins?.length
-        ? [["plugins", enabledOf(s.plugins.map((p) => p.enabled))] as [
-          string,
-          string,
-        ]]
-        : []),
-      ...(s.mcpServers.length
-        ? [[
-          "MCP servers",
-          enabledOf(s.mcpServers.map((m) => m.enabled)),
-        ] as [string, string]]
-        : []),
-      ["channel accounts", enabledOf(s.accounts.map((a) => a.enabled))],
-      [
-        "scheduled tasks",
-        enabledOf([
-          ...agents.flatMap((a) =>
-            a.heartbeat ? [a.heartbeat.everyMs > 0] : []
-          ),
-          ...s.cron.map((j) => j.enabled),
-        ]),
-      ],
-      ...(inference
-        ? [[
-          "inferred",
-          inferredText(
-            inference.agents.reduce((n, a) => n + a.procedures.length, 0),
-            inference.agents.reduce((n, a) => n + a.rules.length, 0),
-          ),
-        ] as [string, string]]
-        : []),
-    ],
-  });
+  const totals = instanceTotals(s, granted, inference);
   return {
     id: "overview",
     title: "Overview",

@@ -252,7 +252,7 @@ const BOLD = [
   389,
   584,
 ];
-type Role = "kw" | "name" | "type" | "sect" | "row" | "text" | "edge" | "tool";
+type Role = "kw" | "name" | "type" | "sect" | "row" | "text" | "edge";
 /** Font size and weight of each text role; the page's CSS uses the same. */
 const FONT: Record<Role, [number, boolean]> = {
   kw: [10, false],
@@ -262,7 +262,6 @@ const FONT: Record<Role, [number, boolean]> = {
   row: [11.5, false],
   text: [12, false],
   edge: [10.5, false],
-  tool: [11.5, false],
 };
 function advance(c: string, bold: boolean): number {
   const code = c.codePointAt(0)!;
