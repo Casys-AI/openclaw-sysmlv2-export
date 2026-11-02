@@ -497,7 +497,7 @@ function sandbox(
       info(
         "SANDBOX_BACKEND_UNRESOLVED",
         id,
-        "Non-Docker isolation settings are outside the v0 mapping.",
+        "Only Docker sandbox settings are mapped; this backend's isolation settings are not collected.",
         "Inspect the backend separately; docs/gateway/sandboxing.md.",
       ),
     );

@@ -4,8 +4,9 @@ import { arr, enumeration, number, obj, required, text } from "./input.ts";
 import { name } from "./emit.ts";
 import type { Snapshot } from "./snapshot.ts";
 
-/** v1 AI layer (SPEC "Next — v1"): proposals a model infers from an agent's
- * instruction files. They stay apart from extracted facts and are not admitted. */
+/** Inference contract (`openclaw-inference/1`, SPEC.md "Inference"): proposals
+ * a model infers from an agent's instruction files. They stay apart from
+ * extracted facts and are not admitted. */
 export interface Source {
   file: string;
   fromLine: number;

@@ -3,8 +3,9 @@ import core from "../sysml/core.sysml" with { type: "text" };
 import skills from "../sysml/skills.sysml" with { type: "text" };
 
 /** The Assembly packages the import builds on (AssemblyCore, AssemblyCases,
- * APESkills), copied from live-builder/models and shipped in every export
- * directory so it compiles alone. Embedded as text for the bundled plugin. */
+ * APESkills), copied from Assembly's model library (each file names its source
+ * commit) and shipped in every export directory so it compiles alone. Embedded
+ * as text for the bundled plugin. */
 export const ASSEMBLY_LIBRARY: ReadonlyMap<string, string> = new Map([
   ["core.sysml", core],
   ["cases.sysml", cases],

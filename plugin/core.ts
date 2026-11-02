@@ -25,7 +25,7 @@ import { canonical, type FileRef } from "../src/snapshot.ts";
 import { type VersionEntry, versionId, withVersion } from "../src/versions.ts";
 import { viewerPage } from "../src/viewer.ts";
 
-/** One model call about one agent: raw text and the model that answered out. */
+/** One model call about one agent: the raw text and the model that answered. */
 export type Complete = (
   prompt: string,
   agentId: string,

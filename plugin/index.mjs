@@ -167,11 +167,11 @@ export default definePluginEntry({
         .description("Export this instance to SysML v2 for Assembly")
         .option(
           "--infer",
-          "Propose procedures and rules from agent prose with the default agent's model",
+          "Propose procedures and rules from agent prose, each agent with its own model (needs llm.allowAgentIdOverride)",
         )
         .option(
           "--model <provider/model>",
-          "Model for --infer instead of the default agent's (needs llm.allowModelOverride)",
+          "Model for --infer instead of each agent's own (needs llm.allowModelOverride)",
         )
         .option("--out <dir>", "Output directory")
         .option("--open", "Open the version viewer (index.html) when done")
