@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { runExport } from "../plugin/core.ts";
+import { pluginList, runExport } from "../plugin/core.ts";
+import { ExportError } from "../src/error.ts";
 import { ASSEMBLY_LIBRARY } from "../src/library.ts";
 import { createFixture } from "./support/fixture.ts";
 
@@ -125,5 +126,19 @@ Deno.test("plugin runs are kept as versions", async (t) => {
   } finally {
     await fixture.cleanup();
     await rm(out, { recursive: true, force: true });
+  }
+});
+
+Deno.test("the plugin inventory command must succeed and print JSON", () => {
+  assert.deepEqual(pluginList({ code: 0, stdout: '{"plugins":[]}' }), {
+    plugins: [],
+  });
+  for (const result of [{ code: 1, stdout: "{}" }, { code: 0, stdout: "x" }]) {
+    assert.throws(
+      () => pluginList(result),
+      (error: unknown) =>
+        error instanceof ExportError &&
+        ["PLUGIN_LIST_FAILED", "INVALID_INPUT"].includes(error.code),
+    );
   }
 });

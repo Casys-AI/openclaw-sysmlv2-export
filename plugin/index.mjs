@@ -3,7 +3,7 @@
 import { isAbsolute, join, relative } from "node:path";
 import process from "node:process";
 import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
-import { runExport } from "./core.mjs";
+import { pluginList, runExport } from "./core.mjs";
 
 const PURPOSE = "assembly-export.infer";
 
@@ -14,6 +14,20 @@ function paths(api) {
     stateDir,
     outDir: api.pluginConfig?.outDir ?? join(stateDir, "assembly-export"),
   };
+}
+
+/** OpenClaw's plugin inventory (docs/cli/plugins/list.md). api.runtime gives
+ * an external plugin no plugin registry and gateway.request rejects it
+ * (plugins/sdk-runtime/gateway-and-nodes.md), so the plugin runs the current
+ * CLI the way OpenClaw re-invokes itself: this Node binary and the entry in
+ * argv[1] (dist/openclaw-cli-invocation). Read-only, about two seconds. */
+async function inventory(api) {
+  return pluginList(
+    await api.runtime.system.runCommandWithTimeout(
+      [process.execPath, process.argv[1], "plugins", "list", "--json"],
+      60_000,
+    ),
+  );
 }
 
 /** An isolated call: one user message, no tools, fresh context (models.md).
@@ -104,7 +118,7 @@ export default definePluginEntry({
         }
         const summary = await runExport(
           stateDir,
-          null,
+          await inventory(api),
           outDir,
           infer ? completeWith(llm) : null,
           new Date(),
@@ -121,7 +135,7 @@ export default definePluginEntry({
           name: "assembly_export",
           label: "Assembly export",
           description:
-            "Export this OpenClaw instance (agents, tool grants, sandboxes, channels, cron, skills) to SysML v2 for Assembly and run its configuration doctor. Returns where the files and the version viewer are and the findings count. Does not call a model.",
+            "Export this OpenClaw instance (agents, tool grants, plugins, sandboxes, channels, cron, skills) to SysML v2 for Assembly and run its configuration doctor. Returns where the files and the version viewer are and the findings count. Does not call a model.",
           parameters: {
             type: "object",
             properties: {},
@@ -130,7 +144,13 @@ export default definePluginEntry({
           async execute() {
             const { stateDir, outDir } = paths(api);
             const summary = shown(
-              await runExport(stateDir, null, outDir, null, new Date()),
+              await runExport(
+                stateDir,
+                await inventory(api),
+                outDir,
+                null,
+                new Date(),
+              ),
               stateDir,
             );
             return {
@@ -159,7 +179,7 @@ export default definePluginEntry({
           const { stateDir, outDir } = paths(api);
           const summary = await runExport(
             stateDir,
-            null,
+            await inventory(api),
             options.out ?? outDir,
             options.infer
               ? completeWith(api.runtime.llm, options.model, true)

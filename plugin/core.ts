@@ -18,6 +18,7 @@ import {
   inferencePrompt,
   parseAgentInference,
 } from "../src/infer.ts";
+import { json } from "../src/input.ts";
 import { ASSEMBLY_LIBRARY } from "../src/library.ts";
 import { digest } from "../src/redaction.ts";
 import { canonical, type FileRef } from "../src/snapshot.ts";
@@ -86,6 +87,22 @@ function jsonObject(text: string): unknown {
     );
   }
   return JSON.parse(text.slice(start, end + 1));
+}
+
+/** The plugin inventory from a run of `openclaw plugins list --json` through
+ * the plugin runtime's command runner: its parsed stdout, which the collector
+ * then validates. */
+export function pluginList(
+  result: { code: number | null; stdout: string },
+): unknown {
+  if (result.code !== 0) {
+    throw new ExportError(
+      "PLUGIN_LIST_FAILED",
+      "openclaw plugins list --json did not exit with status 0",
+      "Run openclaw plugins list --json on the host, fix what it reports, then export again.",
+    );
+  }
+  return json(result.stdout);
 }
 
 /** versions.json lists the runs kept in outDir; none before the first run. */
