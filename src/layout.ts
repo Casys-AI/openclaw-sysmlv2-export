@@ -489,6 +489,8 @@ interface Settings {
   layer?: (n: DiagramNode) => "FIRST" | "LAST" | undefined;
   /** The widest block, for nodes narrower than `max`. */
   width?: (n: DiagramNode) => number | undefined;
+  /** Top-level frames wrap into rows to fit a screen (see `layoutView`). */
+  wrap?: true;
 }
 function settings(view: DiagramView): Settings {
   if (view.id === "system") {
@@ -527,6 +529,7 @@ function settings(view: DiagramView): Settings {
       "elk.layered.spacing.nodeNodeBetweenLayers": "34",
       "elk.layered.spacing.edgeNodeBetweenLayers": "14",
     },
+    wrap: true,
   };
 }
 
@@ -549,11 +552,17 @@ const IN = "~in", OUT = "~out";
 /** The ELK graph of a view. Containers lay their contents out on their own,
  * so containers of one level line up; an edge from inside a container to an
  * element outside leaves through a port on the container's bottom side, as two
- * pieces that the scene joins again. */
+ * pieces that the scene joins again. Top-level nodes given a row go in it, as
+ * ELK partitions. */
 function build(
   view: DiagramView,
   { options, max, layer, width }: Settings,
+  rows?: Map<string, number>,
 ): { graph: ElkNode; scenes: Map<string, Sized["scene"]> } {
+  const row = (n: DiagramNode): Record<string, string> =>
+    rows && n.parent === null
+      ? { "elk.partitioning.partition": String(rows.get(n.id)) }
+      : {};
   const scenes = new Map<string, Sized["scene"]>();
   const kids = new Map<string | null, DiagramNode[]>();
   for (const n of view.nodes) {
@@ -580,6 +589,7 @@ function build(
           "elk.portConstraints": "FIXED_SIDE",
           "elk.nodeSize.constraints": "MINIMUM_SIZE",
           "elk.nodeSize.minimum": `(${Math.round(head.w)}, ${head.top + 24})`,
+          ...row(n),
         },
         ports: [],
         children: children.map(make),
@@ -614,12 +624,15 @@ function build(
         ...(constraint
           ? { "elk.layered.layering.layerConstraint": constraint }
           : {}),
+        ...row(n),
       },
     };
   };
   const graph: ElkNode = {
     id: "root",
-    layoutOptions: options,
+    layoutOptions: rows
+      ? { ...options, "elk.partitioning.activate": "true" }
+      : options,
     children: (kids.get(null) ?? []).map(make),
     edges: [],
   };
@@ -777,16 +790,47 @@ function moved(scene: Scene, dx: number, dy: number): Scene {
   };
 }
 
-async function laidOut(view: DiagramView, s: Settings): Promise<Scene> {
-  const { graph, scenes } = build(view, s);
+async function laidOut(
+  view: DiagramView,
+  s: Settings,
+  rows?: Map<string, number>,
+): Promise<Scene> {
+  const { graph, scenes } = build(view, s, rows);
   elk ??= engine();
   return sceneOf(view, scenes, await elk.layout(graph));
 }
 
+/** The aspect ratio a view is fitted into: a common screen. */
+const SCREEN = 16 / 9;
+/** The scale at which a scene fits a SCREEN-shaped viewport of height 1. */
+const shown = (s: Scene) => Math.min(SCREEN / s.w, 1 / s.h);
+/** Top-level frames in `count` rows, in order and as even as can be, the
+ * other top-level nodes in a row below them. */
+function rowsOf(view: DiagramView, count: number): Map<string, number> {
+  const top = view.nodes.filter((n) => n.parent === null);
+  const frames = top.filter((n) => n.shape === "frame");
+  return new Map(top.map((n) => [
+    n.id,
+    n.shape === "frame"
+      ? Math.floor(frames.indexOf(n) * count / frames.length)
+      : count,
+  ]));
+}
+
 /** Places a view's drawn elements (see tables.ts) as a layered graph: System,
  * Scheduled tasks, and a Behaviour view's procedures as flows above the
- * parties they hand work to. */
+ * parties they hand work to, in as many rows as make it show largest on a
+ * screen. */
 export async function layoutView(view: DiagramView): Promise<Scene> {
-  const scene = await laidOut(view, settings(view));
+  const s = settings(view);
+  let scene = await laidOut(view, s);
+  const frames = s.wrap
+    ? view.nodes.filter((n) => n.parent === null && n.shape === "frame").length
+    : 0;
+  for (let rows = 2; rows <= frames; rows++) {
+    const next = await laidOut(view, s, rowsOf(view, rows));
+    if (shown(next) <= shown(scene)) break;
+    scene = next;
+  }
   return { ...moved(scene, 24, 24), w: r1(scene.w + 48), h: r1(scene.h + 48) };
 }

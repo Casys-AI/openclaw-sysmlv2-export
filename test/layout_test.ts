@@ -42,3 +42,36 @@ Deno.test("layout is deterministic, nests containers and never overlaps siblings
     }
   }
 });
+
+Deno.test("a Behaviour view with many procedures wraps them into rows", async () => {
+  const [field] = inference.agents;
+  // Thirteen procedures, each handing off to the same three parties.
+  const procedures = Array.from({ length: 13 }, (_, i) => {
+    const p = field.procedures[i % 2];
+    return {
+      ...p,
+      id: `${p.id}-${i}`,
+      steps: p.steps.map((s) => ({ ...s, id: `${s.id}-${i}` })),
+    };
+  });
+  const view = drawing(
+    diagramViews(snapshot, {
+      ...inference,
+      agents: [{ ...field, procedures }],
+    }).find((v) => v.id === "behaviour:field")!,
+  );
+  const scene = await layoutView(view);
+  assert.ok(scene.w < 1.5 * (16 / 9) * scene.h, `${scene.w} × ${scene.h}`);
+  assert.deepEqual(
+    scene.nodes.map((n) => n.id).sort(),
+    view.nodes.map((n) => n.id).sort(),
+  );
+  const top = scene.nodes.filter((n) => !n.parent);
+  for (const n of top) {
+    for (const m of top) {
+      assert.ok(m === n || !overlaps(n, m), `${n.id} overlaps ${m.id}`);
+    }
+  }
+  assert.equal(scene.edges.length, view.edges.length);
+  assert.ok(scene.edges.every((e) => e.pts.length > 0));
+});
