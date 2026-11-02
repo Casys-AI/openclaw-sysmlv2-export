@@ -1,5 +1,6 @@
 import { invalid } from "./error.ts";
 import { enumeration, type Obj, obj } from "./input.ts";
+import { is202610 } from "./policy.ts";
 
 const SECURITY = ["deny", "allowlist", "full"] as const;
 const ASK = ["off", "on-miss", "always"] as const;
@@ -39,7 +40,7 @@ export function configuredExec(
   // docs/tools/exec-approvals.md, Policy knobs: gateway/node default full/off;
   // explicit sandbox defaults deny/off. Auto describes the host baseline here,
   // not the policy of a runtime sandbox. Older undocumented defaults stay unknown.
-  const modern = /^2026\.10\.\d+(?:[-+].*)?$/.test(version ?? "");
+  const modern = is202610(version);
   let result: ExecPolicy & { mode: Mode | null } = {
     mode: null,
     security: modern ? host === "sandbox" ? "deny" : "full" : "unknown",

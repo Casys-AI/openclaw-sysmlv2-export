@@ -3,7 +3,7 @@ import type { Agent, Finding, Plugin, Policy, Sandbox } from "./snapshot.ts";
 import { byId, unique } from "./snapshot.ts";
 
 // OpenClaw 2026.6.10 docs/gateway/config-tools.md, Tool profiles / Tool groups.
-export const GROUPS: Record<string, string[]> = {
+const groups202606: Record<string, string[]> = {
   "group:runtime": ["exec", "process", "code_execution"],
   "group:fs": ["read", "write", "edit", "apply_patch"],
   "group:sessions": [
@@ -30,12 +30,12 @@ export const GROUPS: Record<string, string[]> = {
     "tts",
   ],
 };
-export const BUILTINS = unique([
-  ...Object.values(GROUPS).flat(),
+const builtins202606 = unique([
+  ...Object.values(groups202606).flat(),
   "pdf",
   "skill_workshop",
 ]);
-GROUPS["group:openclaw"] = BUILTINS;
+groups202606["group:openclaw"] = builtins202606;
 type Profiles = Record<string, string[] | null>;
 const profiles202606: Profiles = {
   full: null,
@@ -265,8 +265,8 @@ export function resolvePolicy(
   const declared = new Set(plugins?.flatMap((x) => x.tools));
   const enabled = plugins?.filter((x) => x.enabled) ?? [];
   const modern = is202610(version);
-  const builtins = modern ? builtins202610 : BUILTINS;
-  const groups = new Map(Object.entries(modern ? groups202610 : GROUPS));
+  const builtins = modern ? builtins202610 : builtins202606;
+  const groups = new Map(Object.entries(modern ? groups202610 : groups202606));
   if (modern) {
     // docs/gateway/config-tools/tool-policy.md: cron aliases automations;
     // group:openclaw explicitly excludes plugin-owned tools.
