@@ -172,8 +172,9 @@ export function emit(snapshot: Snapshot): Map<string, string> {
       }),
       "        attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;",
     );
-    if (snapshot.agents.some((a) => a.id === j.agentId)) {
-      lines.push(`        ref part :>> owner = ${name("agent", j.agentId)};`);
+    const owner = snapshot.agents.find((a) => a.id === j.agentId);
+    if (owner) {
+      lines.push(`        ref part :>> owner = ${name("agent", owner.id)};`);
     }
     if (j.schedule.kind === "every") {
       lines.push(`        ${every(j.schedule.everyMs!)}`);

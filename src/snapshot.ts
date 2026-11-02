@@ -66,7 +66,8 @@ export interface Cron {
   id: string;
   name: string;
   enabled: boolean;
-  agentId: string;
+  /** Null when the job names no agent (memory-core's dreaming job, for one). */
+  agentId: string | null;
   schedule: {
     kind: "cron" | "every" | "at";
     expression: string | null;
@@ -254,7 +255,7 @@ const shape: Shape = {
     id: str,
     name: str,
     enabled: bool,
-    agentId: str,
+    agentId: ns,
     schedule: {
       kind: { enum: ["cron", "every", "at"] },
       expression: ns,

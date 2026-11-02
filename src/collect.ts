@@ -326,7 +326,7 @@ function cron(home: string, findings: Finding[]): Cron[] {
         id,
         name: required(job.name),
         enabled: boolean(job.enabled, true),
-        agentId: required(job.agentId),
+        agentId: text(job.agentId),
         schedule: { kind, expression, timezone, everyMs },
         sessionTarget: required(job.sessionTarget),
         wakeMode: required(job.wakeMode),
@@ -676,7 +676,19 @@ export async function collect(
       }
     }
     for (const job of jobs) {
-      if (!ids.has(job.agentId)) {
+      if (job.agentId === null) {
+        // 2026.10: plugin-managed jobs such as memory-core's dreaming sweep
+        // (docs/concepts/dreaming.md) name no agent; the execution agent is
+        // resolved at run time (docs/automation/cron-jobs/troubleshooting.md).
+        findings.push(
+          info(
+            "CRON_AGENT_UNRESOLVED",
+            job.id,
+            "The job names no agent; OpenClaw resolves its execution agent at run time.",
+            "Check the agent with openclaw automations show <jobId>; docs/automation/cron-jobs/troubleshooting.md.",
+          ),
+        );
+      } else if (!ids.has(job.agentId)) {
         findings.push(
           info(
             "UNRESOLVED_AGENT_REFERENCE",

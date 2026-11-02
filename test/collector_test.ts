@@ -9,6 +9,7 @@ import {
   writeFile,
 } from "node:fs/promises";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 import { EMAIL_ADDRESS_PATTERN, JWT_PATTERN } from "@logtape/redaction";
 import { collect } from "../src/collect.ts";
 import { ExportError } from "../src/error.ts";
@@ -271,6 +272,34 @@ Deno.test("a plugin listed with tools but no readable manifest fails with a code
       (error: unknown) =>
         error instanceof ExportError &&
         error.code === "PLUGIN_MANIFEST_READ_FAILED",
+    );
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+Deno.test("a cron job without agentId is kept unassigned with a finding", async () => {
+  const fixture = await createFixture();
+  try {
+    const db = new DatabaseSync(
+      join(fixture.home, "state", "openclaw.sqlite"),
+    );
+    const row = db.prepare("SELECT job_id, job_json FROM cron_jobs LIMIT 1")
+      .get()!;
+    const job = JSON.parse(String(row.job_json));
+    delete job.agentId;
+    db.prepare("UPDATE cron_jobs SET job_json = ? WHERE job_id = ?")
+      .run(JSON.stringify(job), row.job_id as string);
+    db.close();
+    const snapshot = await collect(fixture.home);
+    assert.equal(
+      snapshot.cron.find((j) => j.id === row.job_id)!.agentId,
+      null,
+    );
+    assert.ok(
+      snapshot.ambiguities.some((f) =>
+        f.code === "CRON_AGENT_UNRESOLVED" && f.subject === row.job_id
+      ),
     );
   } finally {
     await fixture.cleanup();
