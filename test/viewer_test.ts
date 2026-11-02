@@ -25,6 +25,11 @@ const dataOf = (page: string) =>
     )![1],
   );
 
+/** A version's entry for a view, in the page data. */
+// deno-lint-ignore no-explicit-any
+const viewOf = (data: any, version: any, id: string) =>
+  version.views.find((e: { view: number }) => data.views[e.view].id === id);
+
 Deno.test("viewer data can neither close its script nor open a comment", async () => {
   const text = "doc /* </script><script>alert(1)</script><!-- */";
   const hostile = structuredClone(snapshot);
@@ -36,7 +41,7 @@ Deno.test("viewer data can neither close its script nor open a comment", async (
   assert.ok(!page.includes("<!--") && !page.includes("<svg onload"));
   const data = dataOf(page);
   assert.ok(data.texts.includes(text));
-  const system = data.views[data.versions[0].views[0].view];
+  const system = data.views[viewOf(data, data.versions[0], "system").view];
   assert.match(
     JSON.stringify(system.scene),
     /displayName = \\"<\/script><svg onload=alert\(1\)>\\"/,
@@ -47,11 +52,6 @@ Deno.test("the same versions give the same page", async () => {
   const versions = [version("2026-11-02T10-15-00Z", snapshot)];
   assert.equal(await viewerPage(versions), await viewerPage(versions));
 });
-
-/** A version's entry for a view, in the page data. */
-// deno-lint-ignore no-explicit-any
-const viewOf = (data: any, version: any, id: string) =>
-  version.views.find((e: { view: number }) => data.views[e.view].id === id);
 
 Deno.test("an element added since the previous version is highlighted", async () => {
   const next = structuredClone(snapshot);
@@ -94,7 +94,7 @@ Deno.test("an element added since the previous version is highlighted", async ()
   ]);
   assert.equal(first.views[0].delta, null);
   // The new element's SysML is located in its own version's text.
-  const system = data.views[latest.views[0].view];
+  const system = data.views[viewOf(data, latest, "system").view];
   const [file, from] = system.elements["account:telegram:coach"].s[0];
   assert.match(
     data.texts[latest.files[file]].split("\n")[from - 1],

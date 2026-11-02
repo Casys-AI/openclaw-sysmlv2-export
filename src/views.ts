@@ -2,9 +2,9 @@ import { type Grant, grants, name, ORIGINS } from "./emit.ts";
 import type { Inference } from "./infer.ts";
 import type { Agent, Snapshot } from "./snapshot.ts";
 
-/** Diagram model of one version: the viewer's views (System, Tools, Scheduled
- * tasks and, with inference, one Behaviour view per agent) as nodes and edges,
- * built from the snapshot and inference the emitter reads. Each element names
+/** Diagram model of one version: the viewer's views (Overview, System, Tools,
+ * Scheduled tasks and, with inference, one Behaviour view per agent) as nodes
+ * and edges, built from the snapshot and inference the emitter reads. Each element names
  * the SysML declarations that state it, so a view and its text say the same
  * thing. A view may show some elements as a table instead of drawing them.
  * Pure, no geometry: layout.ts places the drawn elements and tables.ts shapes
@@ -89,6 +89,10 @@ export type ViewTable =
     columns: string[];
     /** A column whose values filter the rows, or null. */
     facet: string | null;
+    /** Per row, the other views that show it, or null. */
+    views: Record<string, string[]> | null;
+    /** An element whose attributes sum the rows up, or null. */
+    summary: string | null;
   };
 export interface DiagramView {
   id: string;
@@ -197,31 +201,54 @@ export function scheduleText(
   }`;
 }
 
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+const enabledOf = (flags: boolean[]) =>
+  flags.length
+    ? `${flags.filter(Boolean).length} of ${flags.length} enabled`
+    : "none";
 const layersOf = (granted: Grant[]) =>
   [...new Set(granted.map((g) => g.layer))].sort();
 
-function agentBlock(a: Agent, granted: Grant[]): DiagramNode {
+function memoryText(a: Agent): string {
   const { search, daily, otherCount } = a.memory;
   const curated = a.workspace.instructions.some((f) => f.path === "MEMORY.md");
-  const memory = [
+  return [
     search.enabled ? `search ${search.provider ?? "on"}` : "search off",
     ...(curated ? ["MEMORY.md"] : []),
-    `${daily.count} daily note${daily.count === 1 ? "" : "s"}`,
+    plural(daily.count, "daily note"),
     ...(otherCount ? [`${otherCount} other`] : []),
   ].join(" · ");
-  const layers = layersOf(granted);
-  const tools = ORIGINS.flatMap((origin) => {
-    const ids = [
+}
+/** The distinct tools of some grants by origin, leaving out empty origins. */
+function toolsByOrigin(granted: Grant[]): [string, string[]][] {
+  return ORIGINS.map((origin): [string, string[]] => [
+    ORIGIN_LABEL[origin],
+    [
       ...new Set(
         granted.filter((g) => g.tool.origin === origin).map((g) =>
           g.tool.toolId
         ),
       ),
-    ].sort();
-    return ids.length
-      ? [`${ORIGIN_LABEL[origin]} (${ids.length}): ${ids.join(", ")}`]
-      : [];
-  });
+    ].sort(),
+  ]).filter(([, ids]) => ids.length);
+}
+/** A count of tools with its split by origin: `16 · built-in 12, CLI 4`. */
+function toolCount(granted: Grant[]): string {
+  const origins = toolsByOrigin(granted);
+  const total = origins.reduce((sum, [, ids]) => sum + ids.length, 0);
+  return total
+    ? `${total} · ${
+      origins.map(([origin, ids]) => `${origin} ${ids.length}`).join(", ")
+    }`
+    : "none";
+}
+
+function agentBlock(a: Agent, granted: Grant[]): DiagramNode {
+  const memory = memoryText(a);
+  const layers = layersOf(granted);
+  const tools = toolsByOrigin(granted).map(([origin, ids]) =>
+    `${origin} (${ids.length}): ${ids.join(", ")}`
+  );
   const skills = a.workspace.skills.map((s) => s.id);
   return node({
     id: `agent:${a.id}`,
@@ -274,6 +301,170 @@ function agentBlock(a: Agent, granted: Grant[]): DiagramNode {
       inst("Operators", name("agent", a.id)),
     ],
   });
+}
+
+const RUNS_ON = {
+  off: "host",
+  all: "sandbox",
+  "non-main": "sandbox, except the main session",
+} as const;
+
+/** The instance at a glance: one row per agent summing up what the other
+ * views show of it, each naming the declarations it sums up, and the
+ * instance's totals. */
+function overviewView(
+  s: Snapshot,
+  granted: Map<string, Grant[]>,
+  inference: Inference | null,
+  others: DiagramView[],
+): DiagramView {
+  const agents = byId(s.agents);
+  const bound = (agentId: string) =>
+    s.bindings.filter((b) => b.agentId === agentId).flatMap((b) => {
+      const acc = s.accounts.find((x) => x.id === b.account);
+      return acc ? [{ binding: b, account: acc }] : [];
+    });
+  const cases = (agentId: string) => [
+    ...s.agents.filter((a) => a.id === agentId && a.heartbeat).map((a) => ({
+      enabled: a.heartbeat!.everyMs > 0,
+      ref: inst("Cases", name("heartbeat", a.id)),
+    })),
+    ...s.cron.filter((j) => j.agentId === agentId).map((j) => ({
+      enabled: j.enabled,
+      ref: inst("Cases", name("cron", j.id)),
+    })),
+  ];
+  const inferredOf = (agentId: string) =>
+    inference?.agents.find((x) => x.agentId === agentId);
+  const inferredText = (procedures: number, rules: number) =>
+    `${plural(procedures, "procedure")} · ${plural(rules, "rule")}`;
+  const rows = agents.map((a) => {
+    const id = `agent:${a.id}`, inferred = inferredOf(a.id);
+    const accounts = bound(a.id);
+    return node({
+      id,
+      shape: "block",
+      keyword: "part",
+      name: `agent_${a.id}`,
+      type: `Agent_${a.id}`,
+      text: a.name,
+      attributes: [
+        [
+          "model",
+          [
+            a.model.primary ?? "—",
+            ...(a.model.fallbacks.length
+              ? [plural(a.model.fallbacks.length, "fallback")]
+              : []),
+          ].join(" · "),
+        ],
+        ["runs on", RUNS_ON[a.sandbox.mode]],
+        ["tools", toolCount(granted.get(a.id)!)],
+        [
+          "channels",
+          list(
+            accounts.map(({ account }) =>
+              `${account.id}${account.enabled ? "" : " (disabled)"}`
+            ),
+          ),
+        ],
+        ["scheduled tasks", enabledOf(cases(a.id).map((c) => c.enabled))],
+        [
+          "context",
+          `${plural(a.workspace.instructions.length, "instruction")} · ${
+            plural(a.workspace.skills.length, "skill")
+          } · memory ${memoryText(a)}`,
+        ],
+        ...(inferred
+          ? [[
+            "inferred",
+            inferredText(inferred.procedures.length, inferred.rules.length),
+          ] as [string, string]]
+          : []),
+      ],
+      sysml: [
+        inst("Operators", name("Agent", a.id)),
+        inst("Operators", name("agent", a.id)),
+        ...accounts.map(({ binding }) =>
+          inst("Entries", name("binding", binding.id))
+        ),
+        ...cases(a.id).map((c) => c.ref),
+      ],
+    });
+  });
+  const totals = node({
+    id: "instance",
+    shape: "block",
+    keyword: "package",
+    name: "OpenClawInstance",
+    attributes: [
+      ["agents", String(agents.length)],
+      ["tools", toolCount([...granted.values()].flat())],
+      ...(s.plugins?.length
+        ? [["plugins", enabledOf(s.plugins.map((p) => p.enabled))] as [
+          string,
+          string,
+        ]]
+        : []),
+      ...(s.mcpServers.length
+        ? [[
+          "MCP servers",
+          enabledOf(s.mcpServers.map((m) => m.enabled)),
+        ] as [string, string]]
+        : []),
+      ["channel accounts", enabledOf(s.accounts.map((a) => a.enabled))],
+      [
+        "scheduled tasks",
+        enabledOf([
+          ...agents.flatMap((a) =>
+            a.heartbeat ? [a.heartbeat.everyMs > 0] : []
+          ),
+          ...s.cron.map((j) => j.enabled),
+        ]),
+      ],
+      ...(inference
+        ? [[
+          "inferred",
+          inferredText(
+            inference.agents.reduce((n, a) => n + a.procedures.length, 0),
+            inference.agents.reduce((n, a) => n + a.rules.length, 0),
+          ),
+        ] as [string, string]]
+        : []),
+    ],
+  });
+  return {
+    id: "overview",
+    title: "Overview",
+    group: "Structure",
+    nodes: [...rows, totals],
+    edges: [],
+    table: {
+      kind: "elements",
+      title: "Agents",
+      rows: rows.map((n) => n.id),
+      columns: [
+        "model",
+        "runs on",
+        "tools",
+        "channels",
+        "scheduled tasks",
+        "context",
+        ...(inference ? ["inferred"] : []),
+      ],
+      facet: "runs on",
+      views: Object.fromEntries(
+        agents.map((a) => [
+          `agent:${a.id}`,
+          others.filter((v) =>
+            v.id === `behaviour:${a.id}` ||
+            v.nodes.some((n) => n.id === `agent:${a.id}`)
+          ).map((v) => v.id),
+        ]),
+      ),
+      summary: totals.id,
+    },
+  };
 }
 
 function systemView(s: Snapshot, granted: Map<string, Grant[]>): DiagramView {
@@ -766,6 +957,8 @@ function behaviourView(
         rows: inference.rules.map((r) => `rule:${r.id}`),
         columns: ["kind", "text", "source"],
         facet: "kind",
+        views: null,
+        summary: null,
       }
       : null,
   };
@@ -783,8 +976,9 @@ function succession(source: string, target: string): DiagramEdge {
   };
 }
 
-/** The views of one version, in picker order. Behaviour views exist only
- * with inference, one per agent with at least one procedure or rule. */
+/** The views of one version, in picker order, the Overview first. Behaviour
+ * views exist only with inference, one per agent with at least one procedure
+ * or rule. */
 export function diagramViews(
   snapshot: Snapshot,
   inference: Inference | null,
@@ -804,5 +998,5 @@ export function diagramViews(
       views.push(behaviourView(snapshot, agent, a));
     }
   }
-  return views;
+  return [overviewView(snapshot, granted, inference, views), ...views];
 }

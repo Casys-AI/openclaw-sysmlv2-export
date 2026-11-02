@@ -29,8 +29,10 @@ export type TableData =
     title: string;
     columns: string[];
     facet: string | null;
-    /** Each row's values, column by column ("—" for an attribute it lacks). */
-    rows: (Head & { values: string[] })[];
+    /** Each row's values, column by column ("—" for an attribute it lacks),
+     * its display name, and the other views that show it. */
+    rows: (Head & { values: string[]; title?: string; views?: string[] })[];
+    summary: Head | null;
   };
 
 function head(n: DiagramNode): Head {
@@ -51,7 +53,7 @@ function tabled(table: ViewTable | null): Set<string> {
     case "matrix":
       return new Set([...table.columns, ...table.rows, ...table.cells]);
     case "elements":
-      return new Set(table.rows);
+      return new Set([...table.rows, ...table.summary ? [table.summary] : []]);
     default:
       return new Set();
   }
@@ -90,8 +92,11 @@ export function tableData(view: DiagramView): TableData | null {
         return {
           ...head(n),
           values: t.columns.map((c) => values.get(c) ?? "—"),
+          ...(n.text ? { title: n.text } : {}),
+          ...(t.views ? { views: t.views[id] } : {}),
         };
       }),
+      summary: t.summary ? head(nodes.get(t.summary)!) : null,
     };
   }
   const edges = new Map(view.edges.map((e) => [e.id, e]));

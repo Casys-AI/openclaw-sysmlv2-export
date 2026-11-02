@@ -165,8 +165,9 @@ svg.md-focus .md-edge.lit .md-line { stroke-width: 1.8; }
 .tb-bar button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--line-strong); }
 .tb-key { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
 .tb-note { margin-left: auto; font-style: italic; }
-.hl tr.added > th, .hl tr.added > td { background: var(--add-bg); }
-.hl tr.changed > th, .hl tr.changed > td { background: var(--warn-bg); }
+.hl tr.added > th, .hl tr.added > td { background: rgb(227 241 231 / 60%); }
+.hl tr.changed > th, .hl tr.changed > td { background: rgb(246 238 221 / 60%); }
+.hl tr.added > :first-child { box-shadow: inset 3px 0 var(--add); } .hl tr.changed > :first-child { box-shadow: inset 3px 0 var(--warn); }
 .hl th.added { box-shadow: inset 0 -3px var(--add); } .hl th.changed { box-shadow: inset 0 -3px var(--warn); }
 .hl td.added { box-shadow: inset 0 0 0 2px var(--add); } .hl td.changed { box-shadow: inset 0 0 0 2px var(--warn); }
 .mx { border-collapse: separate; border-spacing: 0; font-size: 12px; }
@@ -207,8 +208,17 @@ svg.md-focus .md-edge.lit .md-line { stroke-width: 1.8; }
 .et tr.selected > td { box-shadow: inset 0 1px var(--ink), inset 0 -1px var(--ink); }
 .et tr.muted > td { color: var(--muted); }
 .et-name { font-weight: 600; }
-.et-wrap { white-space: normal !important; min-width: 260px; }
+.et td.et-wrap { white-space: normal; min-width: 160px; }
 .et-facet { color: var(--muted); font-style: italic; }
+.et-name span { display: block; } .et-name small { color: var(--muted); font: 400 10.5px var(--mono); }
+.et td.et-views { white-space: normal; min-width: 120px; }
+.et-views button { all: unset; cursor: pointer; margin-right: 10px; color: var(--ink); text-decoration: underline; text-decoration-color: var(--line-strong); }
+.et-views button:hover { text-decoration-color: var(--ink); }
+.et-sum { display: flex; flex-wrap: wrap; gap: 10px; padding: 14px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.et-sum div { display: flex; flex-direction: column; gap: 2px; min-width: 120px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
+.et-sum span { font-size: 11px; color: var(--muted); }
+.et-sum strong { font-size: 13px; font-weight: 600; }
+.hl .et-sum.changed div { border-color: var(--warn); } .et-sum.selected div { border-color: var(--ink); }
 .et-src button { all: unset; display: block; cursor: pointer; font: 11px var(--mono); text-decoration: underline; text-decoration-color: var(--line-strong); }
 .et-src button:hover { text-decoration-color: var(--ink); }
 .g { display: inline-block; position: relative; width: 11px; height: 11px; border: 1.2px solid var(--md-stroke); border-radius: 2px; vertical-align: middle; }
@@ -285,8 +295,9 @@ const LEGENDS = {
     ["succession", "succession"]],
 };
 
-const state = { version: 0, tab: "diagrams", view: "system", file: "OpenClawInstance.sysml", range: null,
-  selected: null, hover: null, viewport: null, highlight: true, drawn: null,
+const state = { version: 0, tab: "diagrams", view: "overview", file: "OpenClawInstance.sysml", range: null,
+  // An element to select once its view is shown.
+  selected: null, focus: null, hover: null, viewport: null, highlight: true, drawn: null,
   // Tables: the text filter, folded groups, the facet value shown, the sort.
   filter: "", folded: new Set(), facet: null, sort: null };
 
@@ -520,7 +531,14 @@ function headOf(view, id) {
     if (cell) return { id, kw: "allocation", name: t.rows[cell[0]].name + " → " + t.columns[cell[1]].name };
     return t.columns.find((c) => c.id === id) || t.rows.find((r) => r.id === id) || null;
   }
-  return t.rows.find((r) => r.id === id) || null;
+  return t.rows.find((r) => r.id === id) || (t.summary && t.summary.id === id ? t.summary : null);
+}
+// Opens a view of this version and selects one of its elements, if it has it.
+function go(view, id) {
+  state.tab = "diagrams";
+  state.view = view;
+  state.focus = id;
+  render();
 }
 const nameOf = (n) => n.name || (n.lines || []).join(" ") || (n.label ? n.label.lines.join(" ") : n.shape);
 function button(text, onclick, cls) {
@@ -645,8 +663,10 @@ function renderDiagram(keepViewport) {
   }
   if (view.scene) drawScene(view, delta, keep);
   else canvas.replaceChildren();
+  if (state.focus && headOf(view, state.focus)) state.selected = state.focus;
   if (state.selected && !headOf(view, state.selected)) state.selected = null;
-  if (state.selected) select(state.selected, false); else applyFocus();
+  if (state.selected) select(state.selected, state.selected === state.focus); else applyFocus();
+  state.focus = null;
 }
 function drawScene(view, delta, keep) {
   const canvas = document.getElementById("canvas");
@@ -919,7 +939,8 @@ function renderMatrix(box, t, mark) {
   box.replaceChildren(bar, table);
 }
 // Elements with some of their attributes, sortable by column and filtered by
-// text and by the facet column's values; each row links to its SysML lines.
+// text and by the facet column's values; each row links to its SysML lines
+// and to the other views that show it. A summary's attributes come first.
 function renderElements(box, view, t, mark) {
   const facet = t.columns.indexOf(t.facet);
   const input = search("Filter " + t.title.toLowerCase());
@@ -948,24 +969,38 @@ function renderElements(box, view, t, mark) {
     cell.append(th);
     head.append(cell);
   });
+  const linked = t.rows.some((r) => r.views);
+  if (linked) head.append(el("th", "", "views"));
   head.append(el("th", "", "SysML"));
   const thead = el("thead");
   thead.append(head);
   table.append(thead, tbody);
   // Long values wrap; short ones stay on one line.
-  const wraps = t.columns.map((_, c) => t.rows.some((r) => r.values[c].length > 48));
+  const wraps = t.columns.map((_, c) => t.rows.some((r) => r.values[c].length > 24));
   const rows = () => {
     const q = state.filter.trim().toLowerCase();
     const shown = t.rows.filter((r) => (facet < 0 || state.facet === null || r.values[facet] === state.facet) &&
       (!q || [r.name, ...r.values].some((v) => v.toLowerCase().includes(q))));
-    if (state.sort) shown.sort((a, b) => state.sort.dir * text(a, state.sort.col).localeCompare(text(b, state.sort.col)));
+    if (state.sort) shown.sort((a, b) => state.sort.dir * text(a, state.sort.col).localeCompare(text(b, state.sort.col), "en", { numeric: true }));
     tbody.replaceChildren(...shown.map((r) => {
       const tr = el("tr", (r.muted ? "muted" : "") + mark(r.id));
       tr.dataset.id = r.id;
       tr.tabIndex = 0;
-      tr.append(el("td", "et-name", r.name), ...r.values.map((v, c) => el("td", (wraps[c] ? "et-wrap" : "") + (c === facet ? " et-facet" : ""), v)));
+      const name = el("td", "et-name");
+      if (r.title) name.append(el("span", "", r.title), el("small", "", r.name));
+      else name.textContent = r.name;
+      tr.append(name, ...r.values.map((v, c) => el("td", (wraps[c] ? "et-wrap" : "") + (c === facet ? " et-facet" : ""), v)));
+      if (linked) {
+        const links = el("td", "et-views");
+        for (const id of r.views || []) {
+          const v = payload(entryOf(state.version, id));
+          links.append(button(v.group === "Behaviour" ? "Behaviour" : v.title, (e) => { e.stopPropagation(); go(id, r.id); }));
+        }
+        tr.append(links);
+      }
+      // Its own declaration; the inspector lists the others.
       const src = el("td", "et-src");
-      for (const [file, from, to] of (view.elements[r.id] || { s: [] }).s) {
+      for (const [file, from, to] of view.elements[r.id].s.slice(0, 1)) {
         const b = button(file + ":" + from + (to > from ? "–" + to : ""), (e) => { e.stopPropagation(); showLines(state.version, file, from, to); });
         b.title = "Show in Files";
         src.append(b);
@@ -977,7 +1012,18 @@ function renderElements(box, view, t, mark) {
   };
   input.oninput = () => { state.filter = input.value; rows(); };
   rows();
-  box.replaceChildren(bar, table);
+  box.replaceChildren(...t.summary ? [summary(view, t.summary, mark)] : [], bar, table);
+}
+function summary(view, head, mark) {
+  const box = el("div", "et-sum" + mark(head.id));
+  box.dataset.id = head.id;
+  box.tabIndex = 0;
+  for (const [k, v] of view.elements[head.id].a) {
+    const tile = el("div");
+    tile.append(el("span", "", k), el("strong", "", v));
+    box.append(tile);
+  }
+  return box;
 }
 
 // ---- Files and changes

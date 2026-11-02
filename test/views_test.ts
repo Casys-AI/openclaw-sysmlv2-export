@@ -21,6 +21,7 @@ const edges = (v: DiagramView, kind: string) =>
 Deno.test("the fixture's views hold its agents, tools, schedules and procedures", () => {
   const views = diagramViews(snapshot, inference);
   assert.deepEqual(views.map((v) => v.id), [
+    "overview",
     "system",
     "tools",
     "schedules",
@@ -114,6 +115,37 @@ Deno.test("the fixture's views hold its agents, tools, schedules and procedures"
     "actor",
   );
   assert.equal(ids(behaviour, "rule:").length, 3);
+});
+
+Deno.test("the Overview sums each agent up and links it to its views", () => {
+  const overview = view(diagramViews(snapshot, inference), "overview");
+  const table = tableData(overview);
+  assert.ok(table?.kind === "elements" && table.summary);
+  const row = (id: string) => table.rows.find((r) => r.id === id)!;
+  const figures = (id: string) =>
+    Object.fromEntries(table.columns.map((c, i) => [c, row(id).values[i]]));
+  assert.deepEqual(figures("agent:lead"), {
+    model: "ollama/glm-5.1:cloud · 1 fallback",
+    "runs on": "host",
+    tools: "42 · built-in 31, plugin 5, MCP 2, CLI 4",
+    channels: "telegram:lead, discord:default",
+    "scheduled tasks": "1 of 5 enabled",
+    context:
+      "9 instructions · 32 skills · memory search local · MEMORY.md · 2 daily notes · 2 other",
+    inferred: "1 procedure · 1 rule",
+  });
+  assert.deepEqual(row("agent:lead").views, [
+    "system",
+    "tools",
+    "schedules",
+    "behaviour:lead",
+  ]);
+  assert.deepEqual(row("agent:client").views, ["system", "tools"]);
+  // Tasks the instance runs for no agent of its own still count.
+  const totals = new Map(
+    overview.nodes.find((n) => n.id === table.summary!.id)!.attributes,
+  );
+  assert.equal(totals.get("scheduled tasks"), "1 of 11 enabled");
 });
 
 Deno.test("a Behaviour view lists its rules in a table, not in its drawing", () => {
