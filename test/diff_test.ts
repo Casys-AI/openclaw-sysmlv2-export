@@ -7,7 +7,7 @@ import { createFixture } from "./support/fixture.ts";
 Deno.test("diff reports structural mutations and additions/removals deterministically", async () => {
   const fixture = await createFixture();
   try {
-    const before = await collect(fixture.home);
+    const before = await collect(fixture.home, fixture.plugins);
     assert.deepEqual(diff(before, structuredClone(before)), []);
     const after = structuredClone(before);
     const agent = after.agents.find((a) =>
@@ -21,6 +21,7 @@ Deno.test("diff reports structural mutations and additions/removals deterministi
     const removedSkill = agent.workspace.skills.pop()!;
     agent.workspace.skills.push({ ...removedSkill, id: "new-skill" });
     after.bindings[0].peerKind = "group";
+    after.plugins![0].enabled = false;
     after.cron[0].schedule.expression = "0 0 * * *";
     after.cron[0].enabled = !after.cron[0].enabled;
     const removed = after.agents.pop()!;
@@ -35,6 +36,7 @@ Deno.test("diff reports structural mutations and additions/removals deterministi
         "agent.grants",
         "agent.sandbox",
         "binding.changed",
+        "plugin.changed",
         "skill.digest",
         "instruction.digest",
         "cron.schedule",
