@@ -145,14 +145,15 @@ function viewChanges(
     );
   };
   // Every node is drawn or in the table, and so is every edge with SysML;
-  // only nodes and table elements can be listed as removed.
-  const shown = (v: ViewData) => {
-    const lines = new Set(v.scene?.edges.map((e) => e.id));
-    return Object.keys(v.elements).filter((id) => !lines.has(id));
-  };
+  // drawn edges are never listed as removed.
+  const lines = (v: ViewData) => v.scene?.edges.map((e) => e.id) ?? [];
   const ids = (v: ViewData) => [
-    ...new Set([...shown(v), ...v.scene?.edges.map((e) => e.id) ?? []]),
+    ...new Set([...Object.keys(v.elements), ...lines(v)]),
   ];
+  const shown = (v: ViewData) => {
+    const drawn = new Set(lines(v));
+    return Object.keys(v.elements).filter((id) => !drawn.has(id));
+  };
   const before = new Set(ids(previous)), now = new Set(ids(view));
   return {
     isNew: false,

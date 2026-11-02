@@ -186,9 +186,8 @@ svg.md-focus .md-edge.lit .md-line { stroke-width: 1.8; }
 .mx tbody th { position: sticky; left: 0; z-index: 1; padding: 3px 14px; text-align: left; font-weight: 400; white-space: nowrap; cursor: pointer; border-right: 1px solid var(--line); }
 .mx tbody td { padding: 2px 4px; text-align: center; }
 .mx td[data-id] { cursor: pointer; }
-.mx tr.d0 > th { padding-left: 28px; } .mx tr.d1 > th { padding-left: 44px; } .mx tr.d2 > th { padding-left: 60px; }
+.mx tr.d0 > th { padding-left: 28px; font-style: italic; color: var(--muted); } .mx tr.d1 > th { padding-left: 44px; } .mx tr.d2 > th { padding-left: 60px; }
 .mx-group > th { font-size: 11.5px; } .mx-group > th, .mx-group > td { background: var(--paper); }
-.mx tr.d0 > th { font-style: italic; color: var(--muted); }
 .mx-group .mx-kw { color: var(--muted); font-size: 10px; margin-right: 5px; }
 .mx-group .mx-name { font-weight: 600; } .mx tr.d0 .mx-name { font-weight: 500; }
 .mx-type { color: var(--muted); }
@@ -229,7 +228,7 @@ svg.md-focus .md-edge.lit .md-line { stroke-width: 1.8; }
 .wk thead th { position: sticky; top: 0; z-index: 1; background: var(--card); border-bottom: 1px solid var(--line-strong); color: var(--muted); font-weight: 500; }
 .wk tbody th[data-id] { cursor: pointer; padding-left: 28px; }
 .wk tbody th small { margin-left: 8px; color: var(--muted); }
-.wk-agent th { padding-top: 8px; font-weight: 600 !important; font: 600 11.5px var(--mono); }
+.wk-agent th { padding-top: 8px; font: 600 11.5px var(--mono); }
 .wk tr.muted th { color: var(--muted); }
 .wk tr th.selected { box-shadow: inset 3px 0 var(--ink); }
 .wk-strip { display: block; overflow: visible; }
@@ -243,7 +242,6 @@ svg.md-focus .md-edge.lit .md-line { stroke-width: 1.8; }
 .g.h, .g.b { background: var(--md-stroke); }
 .g.s { background: linear-gradient(to bottom right, transparent 50%, var(--md-stroke) 50%); }
 .g.b::after { content: ""; position: absolute; left: 1.5px; right: 1.5px; top: 3.6px; height: 1.3px; background: #fff; }
-.g.n { border-color: var(--line-strong); border-style: dashed; }
 
 /* Files and changes */
 nav.files { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 10px; }
@@ -657,6 +655,7 @@ function renderDiagram(keepViewport) {
     document.getElementById("legend").hidden = true;
     stage.hidden = false;
     sheet.hidden = true;
+    document.getElementById("split").hidden = true;
     canvas.replaceChildren(el("p", "md-empty", "No diagrams for this version: its snapshot uses a schema this viewer does not read. Its files are under Files."));
     state.drawn = null;
     return;
