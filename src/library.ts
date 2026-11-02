@@ -60,5 +60,21 @@ export const OPENCLAW_IMPORT = `package OpenClawImport {
     part def ModelProvider { attribute name : String; attribute apiKind : String; attribute modelIds : String; }
     part def OpenClawPlugin { attribute pluginId : String; attribute enabled : Boolean; attribute tools : String; attribute optionalTools : String; }
     part def ExecutionPosture { attribute host : String; attribute security : String; attribute ask : String; attribute elevated : Boolean; attribute elevatedChannelsCount : Integer; }
+    part def AgentMemory {
+        attribute searchEnabled : Boolean; attribute searchProvider : String;
+        attribute searchModel : String; attribute searchFallback : String;
+        attribute searchSources : String; attribute rememberAcrossConversations : Boolean;
+        attribute extraPathCount : Integer; attribute multimodal : Boolean;
+        attribute curatedSha256 : String; attribute curatedBytes : Integer;
+        attribute dailyCount : Integer; attribute dailyFirstDate : String;
+        attribute dailyLastDate : String; attribute dailyBytes : Integer;
+        attribute dailySha256 : String; attribute otherCount : Integer;
+    }
+    part def MemoryBackend {
+        attribute slot : String; attribute dreamingEnabled : Boolean;
+        attribute dreamingFrequency : String; attribute dreamingTimezone : String;
+        attribute activeMemoryEnabled : Boolean; attribute activeMemoryAgents : String;
+        attribute activeMemoryChatTypes : String; attribute persistTranscripts : Boolean;
+    }
 }
 `;

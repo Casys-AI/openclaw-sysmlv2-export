@@ -112,6 +112,17 @@ package OpenClawInstance {
             attribute :>> elevated = true;
             attribute :>> elevatedChannelsCount = 1;
         }
+        part memory : AgentMemory {
+            attribute :>> searchEnabled = true;
+            attribute :>> searchProvider = "local";
+            attribute :>> searchFallback = "none";
+            attribute :>> searchSources = "[\"memory\"]";
+            attribute :>> extraPathCount = 0;
+            attribute :>> multimodal = false;
+            attribute :>> dailyCount = 0;
+            attribute :>> dailyBytes = 0;
+            attribute :>> otherCount = 0;
+        }
         part 'skill_skill-ab' : APESkills::InitialSkill {
             attribute :>> id = "skill-ab";
             attribute :>> source = "skills/skill-ab/SKILL.md";
@@ -330,6 +341,17 @@ package OpenClawInstance {
             attribute :>> ask = "off";
             attribute :>> elevated = true;
             attribute :>> elevatedChannelsCount = 1;
+        }
+        part memory : AgentMemory {
+            attribute :>> searchEnabled = true;
+            attribute :>> searchProvider = "local";
+            attribute :>> searchFallback = "none";
+            attribute :>> searchSources = "[\"memory\"]";
+            attribute :>> extraPathCount = 0;
+            attribute :>> multimodal = false;
+            attribute :>> dailyCount = 0;
+            attribute :>> dailyBytes = 0;
+            attribute :>> otherCount = 0;
         }
         part 'skill_skill-f' : APESkills::InitialSkill {
             attribute :>> id = "skill-f";
@@ -556,6 +578,17 @@ package OpenClawInstance {
             attribute :>> elevated = true;
             attribute :>> elevatedChannelsCount = 1;
         }
+        part memory : AgentMemory {
+            attribute :>> searchEnabled = true;
+            attribute :>> searchProvider = "local";
+            attribute :>> searchFallback = "none";
+            attribute :>> searchSources = "[\"memory\"]";
+            attribute :>> extraPathCount = 0;
+            attribute :>> multimodal = false;
+            attribute :>> dailyCount = 0;
+            attribute :>> dailyBytes = 0;
+            attribute :>> otherCount = 0;
+        }
         part 'skill__archived/old-skill' : APESkills::InitialSkill {
             attribute :>> id = "_archived/old-skill";
             attribute :>> source = "skills/_archived/old-skill/SKILL.md";
@@ -773,6 +806,22 @@ package OpenClawInstance {
             attribute :>> ask = "off";
             attribute :>> elevated = true;
             attribute :>> elevatedChannelsCount = 1;
+        }
+        part memory : AgentMemory {
+            attribute :>> searchEnabled = true;
+            attribute :>> searchProvider = "local";
+            attribute :>> searchFallback = "none";
+            attribute :>> searchSources = "[\"memory\"]";
+            attribute :>> extraPathCount = 0;
+            attribute :>> multimodal = false;
+            attribute :>> curatedSha256 = "ddfeb3c332f684f758dda35ed067aac03c68b2934e6c44880934d825dd77f51f";
+            attribute :>> curatedBytes = 96;
+            attribute :>> dailyCount = 1;
+            attribute :>> dailyFirstDate = "2026-05-30";
+            attribute :>> dailyLastDate = "2026-05-30";
+            attribute :>> dailyBytes = 16;
+            attribute :>> dailySha256 = "371942c13809f135478a482a31bd56195e4c58dfdc1994e5ba661ce959e940c9";
+            attribute :>> otherCount = 0;
         }
         part 'skill__archived/old-skill' : APESkills::InitialSkill {
             attribute :>> id = "_archived/old-skill";
@@ -1002,6 +1051,22 @@ package OpenClawInstance {
             attribute :>> ask = "off";
             attribute :>> elevated = true;
             attribute :>> elevatedChannelsCount = 1;
+        }
+        part memory : AgentMemory {
+            attribute :>> searchEnabled = true;
+            attribute :>> searchProvider = "local";
+            attribute :>> searchFallback = "none";
+            attribute :>> searchSources = "[\"memory\"]";
+            attribute :>> extraPathCount = 0;
+            attribute :>> multimodal = false;
+            attribute :>> curatedSha256 = "c531ab42932f6eb6d328dfe37087a5a61511f55b5167eac15923eec50402310b";
+            attribute :>> curatedBytes = 97;
+            attribute :>> dailyCount = 2;
+            attribute :>> dailyFirstDate = "2026-06-01";
+            attribute :>> dailyLastDate = "2026-06-02";
+            attribute :>> dailyBytes = 32;
+            attribute :>> dailySha256 = "fff8b2bf3669aa98b4fccab9de17d486d49f3bf68bc51fedce99802e66e7d9d5";
+            attribute :>> otherCount = 2;
         }
         part 'skill__archived/old-skill' : APESkills::InitialSkill {
             attribute :>> id = "_archived/old-skill";
@@ -1498,6 +1563,19 @@ package OpenClawInstance {
             attribute :>> ask = "off";
             attribute :>> elevated = true;
             attribute :>> elevatedChannelsCount = 1;
+        }
+        part memory : AgentMemory {
+            attribute :>> searchEnabled = true;
+            attribute :>> searchProvider = "local";
+            attribute :>> searchFallback = "none";
+            attribute :>> searchSources = "[\"memory\"]";
+            attribute :>> extraPathCount = 0;
+            attribute :>> multimodal = false;
+            attribute :>> curatedSha256 = "585844ea5a330d9f8af28757b385fb20976b9ab28411fcd04498fe1fc82cc219";
+            attribute :>> curatedBytes = 96;
+            attribute :>> dailyCount = 0;
+            attribute :>> dailyBytes = 0;
+            attribute :>> otherCount = 0;
         }
         part skill_escalation : APESkills::InitialSkill {
             attribute :>> id = "escalation";
@@ -2064,6 +2142,14 @@ package OpenClawInstance {
         attribute :>> enabled = false;
         attribute :>> tools = "[\"board_claim\",\"board_list\"]";
         attribute :>> optionalTools = "[\"board_claim\",\"board_list\"]";
+    }
+    part memoryBackend : MemoryBackend {
+        attribute :>> dreamingEnabled = true;
+        attribute :>> dreamingFrequency = "0 3 * * *";
+        attribute :>> activeMemoryEnabled = true;
+        attribute :>> activeMemoryAgents = "[\"lead\"]";
+        attribute :>> activeMemoryChatTypes = "[\"direct\"]";
+        attribute :>> persistTranscripts = false;
     }
     part messaging : MessagingPolicy {
         attribute :>> enabled = true;

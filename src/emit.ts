@@ -94,6 +94,34 @@ export function emit(snapshot: Snapshot): Map<string, string> {
       attrs(a.execution, "            "),
       "        }",
     );
+    // docs/concepts/memory.md: root MEMORY.md is the curated layer; its
+    // existing instruction reference supplies metadata without duplicating prose.
+    const curated = a.workspace.instructions.find((f) =>
+      f.path === "MEMORY.md"
+    );
+    const { search, daily, otherCount } = a.memory;
+    lines.push(
+      "        part memory : AgentMemory {",
+      attrs({
+        searchEnabled: search.enabled,
+        searchProvider: search.provider,
+        searchModel: search.model,
+        searchFallback: search.fallback,
+        searchSources: search.sources,
+        rememberAcrossConversations: search.rememberAcrossConversations,
+        extraPathCount: search.extraPathCount,
+        multimodal: search.multimodal,
+        curatedSha256: curated?.sha256 ?? null,
+        curatedBytes: curated?.bytes ?? null,
+        dailyCount: daily.count,
+        dailyFirstDate: daily.firstDate,
+        dailyLastDate: daily.lastDate,
+        dailyBytes: daily.bytes,
+        dailySha256: daily.sha256,
+        otherCount,
+      }, "            "),
+      "        }",
+    );
     for (const s of a.workspace.skills) {
       lines.push(
         `        part ${name("skill", s.id)} : APESkills::InitialSkill {`,
@@ -233,7 +261,20 @@ export function emit(snapshot: Snapshot): Map<string, string> {
       "    }",
     );
   }
+  const { slot, dreaming, activeMemory } = snapshot.memoryBackend;
   lines.push(
+    "    part memoryBackend : MemoryBackend {",
+    attrs({
+      slot,
+      dreamingEnabled: dreaming.enabled,
+      dreamingFrequency: dreaming.frequency,
+      dreamingTimezone: dreaming.timezone,
+      activeMemoryEnabled: activeMemory?.enabled ?? null,
+      activeMemoryAgents: activeMemory?.agents ?? null,
+      activeMemoryChatTypes: activeMemory?.allowedChatTypes ?? null,
+      persistTranscripts: activeMemory?.persistTranscripts ?? null,
+    }),
+    "    }",
     "    part messaging : MessagingPolicy {",
     attrs(snapshot.messaging),
     "    }",
