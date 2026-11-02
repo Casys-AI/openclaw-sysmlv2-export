@@ -16,12 +16,14 @@ Deno.test("diff reports structural mutations and additions/removals deterministi
     agent.model.primary = "test/model";
     agent.grants.push({ id: "test-grant", tool: "test-tool", layer: "host" });
     agent.sandbox.network = "none";
+    agent.memory.search.enabled = !agent.memory.search.enabled;
     agent.workspace.skills[0].sha256 = "a".repeat(64);
     agent.workspace.instructions[0].sha256 = "b".repeat(64);
     const removedSkill = agent.workspace.skills.pop()!;
     agent.workspace.skills.push({ ...removedSkill, id: "new-skill" });
     after.bindings[0].peerKind = "group";
     after.plugins![0].enabled = false;
+    after.memoryBackend.slot = "none";
     after.cron[0].schedule.expression = "0 0 * * *";
     after.cron[0].enabled = !after.cron[0].enabled;
     const removed = after.agents.pop()!;
@@ -35,8 +37,10 @@ Deno.test("diff reports structural mutations and additions/removals deterministi
         "agent.model",
         "agent.grants",
         "agent.sandbox",
+        "agent.memory",
         "binding.changed",
         "plugin.changed",
+        "memory.backend",
         "skill.digest",
         "instruction.digest",
         "cron.schedule",

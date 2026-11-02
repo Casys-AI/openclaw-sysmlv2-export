@@ -45,6 +45,7 @@ export function diff(a: Snapshot, b: Snapshot): Change[] {
         "grants",
         "sandbox",
         "execution",
+        "memory",
         "delegation",
         "heartbeat",
       ] as const
@@ -66,6 +67,7 @@ export function diff(a: Snapshot, b: Snapshot): Change[] {
   });
   entities("binding", a.bindings, b.bindings);
   entities("plugin", a.plugins ?? [], b.plugins ?? []);
+  compare("memory.backend", "instance", a.memoryBackend, b.memoryBackend);
   entities("cron", a.cron, b.cron, (old, next) => {
     compare("cron.schedule", old.id, old.schedule, next.schedule);
     const { schedule: _a, ...left } = old, { schedule: _b, ...right } = next;
