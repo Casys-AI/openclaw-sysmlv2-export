@@ -1,0 +1,63 @@
+{
+  "agents": [
+    {
+      "agentId": "field",
+      "procedures": [
+        {
+          "id": "handle-request",
+          "source": { "file": "AGENTS.md", "fromLine": 1, "toLine": 3 },
+          "steps": [
+            { "id": "read-request", "kind": "action", "target": null, "text": "Read the request and the last messages of the conversation" },
+            { "id": "known-answer", "kind": "decision", "target": null, "text": "Is the answer in the shared field notes?" },
+            { "id": "answer", "kind": "action", "target": null, "text": "Answer briefly and cite the note" },
+            { "id": "hand-to-lead", "kind": "handoff", "target": "lead", "text": "Hand the request to the lead with a short summary" },
+            { "id": "tell-customer", "kind": "handoff", "target": "customer", "text": "Tell the customer who follows up and when" }
+          ],
+          "title": "Handle a field request",
+          "trigger": "A message arrives on a field channel"
+        },
+        {
+          "id": "report-incident",
+          "source": { "file": "SOUL.md", "fromLine": 1, "toLine": 3 },
+          "steps": [
+            { "id": "record-incident", "kind": "action", "target": null, "text": "Record what happened, where and when" },
+            { "id": "anyone-at-risk", "kind": "decision", "target": null, "text": "Is anyone at risk?" },
+            { "id": "escalate-owner", "kind": "escalation", "target": "owner", "text": "Escalate to the owner at once" },
+            { "id": "note-incident", "kind": "action", "target": null, "text": "Add the incident to the daily note" }
+          ],
+          "title": "Report an incident",
+          "trigger": "Someone reports an incident on site"
+        }
+      ],
+      "role": "Assists field staff with requests and incidents on site.",
+      "rules": [
+        { "id": "no-payments", "kind": "prohibition", "source": { "file": "SOUL.md", "fromLine": 2, "toLine": 2 }, "text": "Never change a payment method or approve a refund." },
+        { "id": "reply-within-hour", "kind": "constraint", "source": { "file": "AGENTS.md", "fromLine": 2, "toLine": 3 }, "text": "Reply to every field message within one hour." },
+        { "id": "share-site-address", "kind": "permission", "source": { "file": "TOOLS.md", "fromLine": 1, "toLine": 1 }, "text": "May share a site address with registered staff." }
+      ]
+    },
+    {
+      "agentId": "lead",
+      "procedures": [
+        {
+          "id": "hourly-report",
+          "source": { "file": "HOURLY_REPORT.md", "fromLine": 1, "toLine": 3 },
+          "steps": [
+            { "id": "collect-activity", "kind": "action", "target": null, "text": "Collect the activity of every agent since the last report" },
+            { "id": "anything-unusual", "kind": "decision", "target": null, "text": "Anything unusual or blocked?" },
+            { "id": "ask-devbox", "kind": "handoff", "target": "devbox", "text": "Ask the devbox agent to check the failing job" },
+            { "id": "send-report", "kind": "escalation", "target": "owner", "text": "Send the report to the owner" }
+          ],
+          "title": "Hourly report",
+          "trigger": "The heartbeat fires"
+        }
+      ],
+      "role": "Coordinates the other agents and reports to the owner.",
+      "rules": [
+        { "id": "quality-review", "kind": "constraint", "source": { "file": "QUALITY.md", "fromLine": 1, "toLine": 2 }, "text": "Review an agent's answer before it reaches a customer when it quotes a price." }
+      ]
+    }
+  ],
+  "model": "ollama/glm-5.1:cloud",
+  "schema": "openclaw-inference/1"
+}

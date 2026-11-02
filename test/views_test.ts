@@ -1,0 +1,136 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import { emit } from "../src/emit.ts";
+import { emitInferred, type Inference } from "../src/infer.ts";
+import { parseSnapshot, type Snapshot } from "../src/snapshot.ts";
+import { declarations, type DiagramView, diagramViews } from "../src/views.ts";
+
+const read = (path: string) =>
+  readFile(new URL(path, import.meta.url), "utf8").then(JSON.parse);
+const snapshot: Snapshot = parseSnapshot(await read("./golden/snapshot.json"));
+const inference: Inference = await read("./fixtures/inference.json");
+
+const view = (views: DiagramView[], id: string) =>
+  views.find((v) => v.id === id)!;
+const ids = (v: DiagramView, prefix: string) =>
+  v.nodes.filter((n) => n.id.startsWith(prefix)).map((n) => n.id);
+const edges = (v: DiagramView, kind: string) =>
+  v.edges.filter((e) => e.kind === kind).map((e) => `${e.source} ${e.target}`);
+
+Deno.test("the fixture's views hold its agents, tools, schedules and procedures", () => {
+  const views = diagramViews(snapshot, inference);
+  assert.deepEqual(views.map((v) => v.id), [
+    "system",
+    "tools",
+    "schedules",
+    "behaviour:field",
+    "behaviour:lead",
+  ]);
+
+  const system = view(views, "system");
+  assert.equal(ids(system, "agent:").length, 6);
+  assert.deepEqual(ids(system, "channel:"), [
+    "channel:discord",
+    "channel:telegram",
+    "channel:whatsapp",
+  ]);
+  assert.equal(ids(system, "account:").length, 10);
+  assert.equal(system.edges.length, 8);
+  assert.ok(
+    edges(system, "connection").includes("agent:lead account:telegram:lead"),
+  );
+  const field = system.nodes.find((n) => n.id === "agent:field")!;
+  assert.deepEqual(field.compartments.map((c) => c.title), [
+    "attributes",
+    "context",
+    "tools · sandbox",
+  ]);
+  assert.match(
+    field.compartments[2].rows.join("\n"),
+    /^plugin \(1\): browser$/m,
+  );
+
+  // One strip slot per agent, in id order: client coach devbox field lead secretary.
+  const tools = view(views, "tools");
+  const slots = (id: string) => tools.nodes.find((n) => n.id === id)!.slots;
+  assert.equal(slots("tool:cli:git"), "----h-");
+  assert.equal(slots("tool:browser"), "sssshs");
+  assert.equal(slots("agent:lead"), "----x-");
+  assert.equal(
+    tools.nodes.find((n) => n.id === "tool:docs__*")!.parent,
+    "mcp:docs",
+  );
+  // Declared but granted to no agent: drawn on its provider, not in the catalog.
+  const ghost = tools.nodes.find((n) =>
+    n.id === "plugin:workboard:board_list"
+  )!;
+  assert.ok(ghost.muted && ghost.dashed && ghost.slots === null);
+
+  const schedules = view(views, "schedules");
+  assert.equal(ids(schedules, "cron:").length, 10);
+  assert.deepEqual(
+    edges(schedules, "owner").filter((e) => e.startsWith("heartbeat")),
+    [
+      "heartbeat:lead agent:lead",
+    ],
+  );
+  assert.equal(edges(schedules, "owner").length, 5);
+  assert.equal(edges(schedules, "target").length, 6);
+  assert.ok(schedules.nodes.find((n) => n.id === "agent:main")!.dashed);
+
+  const behaviour = view(views, "behaviour:field");
+  assert.deepEqual(
+    behaviour.nodes.filter((n) => n.parent === "procedure:report-incident")
+      .map((n) => n.shape),
+    ["initial", "action", "decision", "send", "action", "final"],
+  );
+  assert.deepEqual(
+    behaviour.edges.filter((e) => e.kind !== "succession").map((e) =>
+      `${e.kind} ${e.source} ${e.target}`
+    ),
+    [
+      "handoff step:hand-to-lead party:lead",
+      "handoff step:tell-customer party:customer",
+      "escalation step:escalate-owner party:owner",
+    ],
+  );
+  assert.equal(
+    behaviour.nodes.find((n) => n.id === "party:owner")!.shape,
+    "actor",
+  );
+  assert.equal(ids(behaviour, "rule:").length, 3);
+});
+
+Deno.test("behaviour views exist only with inference", () => {
+  assert.ok(
+    !diagramViews(snapshot, null).some((v) => v.group === "Behaviour"),
+  );
+  const silent = {
+    ...inference,
+    agents: [{ ...inference.agents[0], procedures: [], rules: [] }],
+  };
+  assert.ok(
+    !diagramViews(snapshot, silent).some((v) => v.group === "Behaviour"),
+  );
+});
+
+Deno.test("every element names a declaration of the emitted files", () => {
+  const files = new Map([
+    ...emit(snapshot),
+    ...emitInferred(snapshot, inference),
+  ]);
+  const index = new Map(
+    [...files].map(([name, text]) => [name, declarations(text)]),
+  );
+  for (const v of diagramViews(snapshot, inference)) {
+    for (const ref of [...v.nodes, ...v.edges].flatMap((e) => e.sysml)) {
+      assert.ok(index.get(ref.file)?.has(ref.qname), `${v.id}: ${ref.qname}`);
+    }
+  }
+  const [from, to] = index.get("OpenClawInstance.sysml")!.get(
+    "OpenClawInstance::Tools::toolCatalog::'tool_cli:git'",
+  )!;
+  const lines = files.get("OpenClawInstance.sysml")!.split("\n");
+  assert.match(lines[from - 1], /part 'tool_cli:git' :> tools \{$/);
+  assert.equal(lines[to - 1].trim(), "}");
+});
