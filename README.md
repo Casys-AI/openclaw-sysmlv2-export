@@ -11,6 +11,8 @@ SysML v2 is the OMG's standard language for describing systems. The export is
 the entry point to Assembly, Casys' workbench for building, running and evolving
 agentic systems from SysML v2; you do not need either to read what it produces.
 
+![Behaviour view: an agent's inferred procedures as action flows, beside its rules](docs/screenshots/behaviour.png)
+
 **Status:** 0.1.0, preview. Built for OpenClaw 2026.10.x; the collector also
 reads 2026.6 configurations. The OpenClaw plugin API is still marked
 experimental.
@@ -85,6 +87,14 @@ Click an element to see its attributes and its exact SysML text. Elements added
 or changed since the previous version are highlighted, and removed ones are
 listed. Files and Changes show each file and its diff since the previous
 version.
+
+| System                                      | Scheduled tasks                                               |
+| ------------------------------------------- | ------------------------------------------------------------- |
+| ![System view](docs/screenshots/system.png) | ![Scheduled tasks view](docs/screenshots/scheduled-tasks.png) |
+
+![Tools view](docs/screenshots/tools.png)
+
+The screenshots show the anonymized test fixture, two versions apart.
 
 ## What it exports
 
