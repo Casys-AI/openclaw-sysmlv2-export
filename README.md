@@ -18,6 +18,7 @@ evolving agentic systems from SysML v2.
 | Agents, models, identities              | `part def … :> OpenClawAgent` (a `SoftwareOperator`)         |
 | Tool policy                             | Effective, positive `ToolGrant`s per agent (host or sandbox) |
 | Plugins that declare tools              | `OpenClawPlugin` parts; their tools join the grants          |
+| Memory policy, notes and backend        | `AgentMemory` per agent; one `MemoryBackend`                 |
 | Sandboxes                               | `Sandbox` parts: image, network, mounts, environment _names_ |
 | Channel accounts and bindings           | `ChannelAccount` parts and agent ↔ account connections       |
 | Cron jobs and heartbeats                | Scheduled case types with cron or interval schedules         |
@@ -50,8 +51,10 @@ a separate `OpenClawInferred` package and are never admitted automatically.
 
 - Never exported: secret values, tokens, API keys, provider URLs, peer, guild
   and user ids, allowlists of people, bind source paths, plugin paths and plugin
-  config, prompts and file bodies. Files are referenced by digest. Environment
-  variables keep their names only.
+  config outside the memory allowlist, prompts and file bodies. Files are
+  referenced by digest. Environment variables keep their names only.
+- Memory notes keep only counts, dates, byte totals and digests; note names,
+  extra search paths and Active Memory prompts or chat ids are excluded.
 - Two layers: an allowlist projection, then
   [`@logtape/redaction`](https://jsr.io/@logtape/redaction).
 - Inference sends only behavior files to the agent's own model, never

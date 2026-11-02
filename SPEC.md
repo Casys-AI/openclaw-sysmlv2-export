@@ -41,8 +41,8 @@ next.
 | diff | `diff(a, b) → Change[]` | Structural, from two snapshots. |
 
 **collect** reads `openclaw.json`, each agent workspace (top-level Markdown
-files by name, size and SHA-256, and presence of `.git`; no other file name is
-collected), skills as OpenClaw discovers them (`SKILL.md` anywhere under
+files by name, size and SHA-256, presence of `.git`, and a memory-note inventory
+with no note names), skills as OpenClaw discovers them (`SKILL.md` anywhere under
 `skills/`; inner symlinks followed once, outer ones skipped with a finding,
 broken ones reported; only the frontmatter `name` is read), sibling backups
 `openclaw.json.*` (count only) and cron jobs from `state/openclaw.sqlite`,
@@ -66,10 +66,10 @@ fields above runs on the raw config before projection, and the output tests
 scan with its `EMAIL_ADDRESS_PATTERN` and `JWT_PATTERN` besides the canaries.
 Do not write a third redaction mechanism.
 
-**Snapshot** is JSON with `schema: "openclaw-snapshot/2"`, sorted keys, arrays
+**Snapshot** is JSON with `schema: "openclaw-snapshot/3"`, sorted keys, arrays
 sorted by id, no clock reads. Same instance → same bytes. Version 2 added
-`plugins` and made `cron[].agentId` nullable; a `/1` snapshot is rejected, so
-collect again.
+`plugins` and made `cron[].agentId` nullable; version 3 adds agent `memory` and
+instance `memoryBackend`. Older shapes are rejected, so collect again.
 
 ## Mapping
 
@@ -78,6 +78,7 @@ collect again.
 | agent (`agents.list`, implicit `main`) | `part def … :> OpenClawAgent`, with `OpenClawAgent :> AssemblyCore::SoftwareOperator`; id, display name, emoji, primary and fallback models |
 | effective tools | `ToolGrant` items (tool, layer, owning plugin) referenced by the agent |
 | plugin declaring tools | `OpenClawPlugin` part (id, enabled, tools, optional tools) |
+| memory policy, notes and backend | `AgentMemory` per agent and one `MemoryBackend` part |
 | sandbox | `Sandbox` part: mode, scope, workspace access, image, read-only root, network, memory, cpus, bind count and modes, environment names |
 | channel account | `ChannelAccount` part (channel, account id, DM and group policies) |
 | binding | connection agent ↔ account, with the peer kind only |
@@ -129,7 +130,7 @@ Each change names its subject and before/after values (never secrets).
 
 ## Families — 2 November 2026
 
-Four families extend the export, kept light. Family 1 is implemented; 2 to 4
+Four families extend the export, kept light. Families 1 and 2 are implemented; 3 and 4
 are designed here and not implemented yet. Doc paths are relative to the
 `docs/` folder of the OpenClaw 2026.10.9 package; `dist/` paths name its
 compiled sources.
@@ -193,9 +194,10 @@ tools has no regular `openclaw.plugin.json`).
 
 **Privacy.** Only ids, the enabled flag and tool names are kept. `rootDir`,
 `source`, `trust.*`, `workspaceDir`, package names, versions and plugin
-config never enter the snapshot.
+config never enter the plugin inventory. The separate memory backend projection
+below retains only its named configuration fields.
 
-### 2. Memory (designed)
+### 2. Memory (implemented)
 
 **Where OpenClaw keeps it.**
 
@@ -220,6 +222,24 @@ config never enter the snapshot.
 - The index, `<state>/agents/<id>/agent/openclaw-agent.sqlite`, also holds
   sessions and transcripts. It is never read.
 
+**Policy and inventory.** Global search uses `memory.search` when present,
+otherwise `agents.defaults.memorySearch`, then top-level `memorySearch`.
+Each agent uses its `memory.search` when present, otherwise its `memorySearch`;
+defined agent fields override the selected global fields. Empty modern objects
+still take precedence over legacy settings. Values come from redacted config.
+Search defaults are `enabled: true`, `provider: "openai"`, `sources: ["memory"]`
+and `multimodal: false` (`reference/memory-config.md`). Unset `model`, `fallback`
+and `rememberAcrossConversations` stay null. This is a configuration projection:
+it does not infer contextual transcript recall or runtime source additions.
+`extraPathCount` counts the selected `extraPaths` field; this brief's field
+override deliberately does not model OpenClaw's additive runtime extra paths.
+
+Resolve `memory/` inside the real workspace root; an outside target is ignored.
+Within it, skip symlinks and dot-directories. Only direct dated regular files
+are daily notes. Each passes the 32 MiB input limit before hashing. The aggregate
+hash covers sorted `${date} ${fileSha256} ${bytes}\n` lines, never names or slugs.
+Other regular Markdown files count recursively, including nested dated files.
+
 **Snapshot.**
 
 - Per agent, `memory` holds:
@@ -232,6 +252,16 @@ config never enter the snapshot.
 - At instance level, `memoryBackend` holds `slot`, `dreaming` (`enabled`,
   `frequency`, `timezone`) and `activeMemory` (`enabled`, `agents`,
   `allowedChatTypes`, `persistTranscripts`).
+- Empty daily inventories have zero count/bytes and null dates/digest.
+- An unset slot stays null (OpenClaw defaults to `memory-core`); unset dreaming
+  fields stay null. Active Memory is null when its entry is absent. Otherwise
+  enablement requires the plugin entry to be enabled (default false) and
+  `config.enabled` not false (default true). The fields are documented in
+  `concepts/active-memory/configuration.md`; the defaults are confirmed by
+  `dist/config-state-Ba1MVBAI.mjs` and `dist/config-CpTCuMPy.mjs`, because that
+  page does not state them. This does not infer runtime auto-activation.
+  Agent/chat-type arrays are sorted and deduplicated; unset transcript
+  persistence stays null.
 
 **SysML.**
 
@@ -247,12 +277,16 @@ config never enter the snapshot.
 
 **Doctor.**
 
-- `MEMORY_SESSIONS_INDEXED` (warning): `sources` includes `sessions` or
-  `rememberAcrossConversations` is true. Transcripts then become searchable
+- `MEMORY_SESSIONS_INDEXED` (warning): search is enabled and either `sources`
+  includes `sessions` or `rememberAcrossConversations` is true. Transcripts then become searchable
   across conversations, and `reference/memory-config.md` puts both in the same
   trust boundary.
-- `MEMORY_REMOTE_EMBEDDINGS` (info): `provider` is neither `local` nor `none`,
-  so memory text is sent to an embedding provider.
+- `MEMORY_REMOTE_EMBEDDINGS` (info): search is enabled and `provider` is neither
+  null, `local` nor `none`. The configuration selects an embedding provider;
+  actual runtime transmission is not verified.
+
+**Diff.** Agent search policy or note inventory changes produce `agent.memory`;
+backend changes produce `memory.backend` with subject `instance`.
 
 **Privacy.**
 
@@ -260,7 +294,7 @@ config never enter the snapshot.
   beyond the date, `extraPaths` (count only), `local.modelPath`, `remote.*`,
   `store.vector.extensionPath`.
 - Never kept from Active Memory: `promptOverride`, `promptAppend`,
-  `allowedChatIds`, `deniedChatIds`, `transcriptDir`.
+  `allowedChatIds`, `deniedChatIds`, `transcriptDir`, `model`.
 - Inference keeps excluding `MEMORY.md` and never reads `memory/`.
 
 ### 3. MCP servers (designed)
