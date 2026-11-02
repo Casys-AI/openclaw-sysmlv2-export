@@ -130,9 +130,9 @@ Each change names its subject and before/after values (never secrets).
 ## Families — 2 November 2026
 
 Four families extend the export, kept light. Family 1 is implemented; 2 to 4
-are designed here and briefed for implementation in
-[`briefs/`](briefs/). Doc paths are relative to the `docs/` folder of the
-OpenClaw 2026.10.9 package; `dist/` paths name its compiled sources.
+are designed here and not implemented yet. Doc paths are relative to the
+`docs/` folder of the OpenClaw 2026.10.9 package; `dist/` paths name its
+compiled sources.
 
 ### 1. Plugins and their tools (implemented)
 
@@ -195,7 +195,7 @@ tools has no regular `openclaw.plugin.json`).
 `source`, `trust.*`, `workspaceDir`, package names, versions and plugin
 config never enter the snapshot.
 
-### 2. Memory (designed: [`briefs/astra-memory.md`](briefs/astra-memory.md))
+### 2. Memory (designed)
 
 **Where OpenClaw keeps it.**
 
@@ -263,7 +263,7 @@ config never enter the snapshot.
   `allowedChatIds`, `deniedChatIds`, `transcriptDir`.
 - Inference keeps excluding `MEMORY.md` and never reads `memory/`.
 
-### 3. MCP servers (designed: [`briefs/astra-mcp-cli.md`](briefs/astra-mcp-cli.md))
+### 3. MCP servers (designed)
 
 **Where OpenClaw keeps it.**
 
@@ -309,7 +309,7 @@ config never enter the snapshot.
 and `headers` values (names only), `oauth.*` except `identity`, `clientCert`,
 `clientKey`, and the OAuth tables.
 
-### 4. CLI and exec allowlists (designed: [`briefs/astra-mcp-cli.md`](briefs/astra-mcp-cli.md))
+### 4. CLI and exec allowlists (designed)
 
 **Where OpenClaw keeps it.**
 
