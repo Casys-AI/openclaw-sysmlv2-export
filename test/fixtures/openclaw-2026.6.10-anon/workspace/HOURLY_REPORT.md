@@ -1,3 +1,3 @@
 # HOURLY_REPORT.md
 
-Fixture placeholder. The original file (732 bytes) is private and was not copied.
+Fixture placeholder. The original file is private and was not copied.

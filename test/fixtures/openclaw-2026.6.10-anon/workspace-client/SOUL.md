@@ -1,3 +1,3 @@
 # SOUL.md
 
-Fixture placeholder. The original file (2510 bytes) is private and was not copied.
+Fixture placeholder. The original file is private and was not copied.

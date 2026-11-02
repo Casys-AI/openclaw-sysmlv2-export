@@ -99,33 +99,33 @@ package OpenClawInstance {
             part :>> context {
                 part 'file_AGENTS.md' :> instructions {
                     attribute :>> path = "AGENTS.md";
-                    attribute :>> sha256 = "a9eb41db762e921fbae329785db20130f2c17ad1d3709bf7bd77331d69bc6a2f";
-                    attribute :>> bytes = 95;
+                    attribute :>> sha256 = "b950438849e5142c35fa7ebc87aa7e9b154aa0a0c84712d947359af840112b29";
+                    attribute :>> bytes = 83;
                 }
                 part 'file_HEARTBEAT.md' :> instructions {
                     attribute :>> path = "HEARTBEAT.md";
-                    attribute :>> sha256 = "c887582b41120f6814d7c5c5d7bea26489b7b373166288613edb5de6d0dfb9a0";
-                    attribute :>> bytes = 98;
+                    attribute :>> sha256 = "83975abb7223dec0054d67f8d598cfe88daf98c6dc231f03c213bb8090da7453";
+                    attribute :>> bytes = 86;
                 }
                 part 'file_IDENTITY.md' :> instructions {
                     attribute :>> path = "IDENTITY.md";
-                    attribute :>> sha256 = "4e60b96124733f530f8669654c49836bb3834b7fd3acbd6b93d38a963c9dde75";
-                    attribute :>> bytes = 97;
+                    attribute :>> sha256 = "80b668ffd828e5b38866bc71b054cf86b71516fbb443a29ec0e0ea5147333999";
+                    attribute :>> bytes = 85;
                 }
                 part 'file_SOUL.md' :> instructions {
                     attribute :>> path = "SOUL.md";
-                    attribute :>> sha256 = "b27692b63ae23debfbff3bce11caa4224063ca96428a3661b79ea2ca9d130466";
-                    attribute :>> bytes = 94;
+                    attribute :>> sha256 = "eec7dd6bb4b9514528af8afe47695e76451a4385900eb969404fd3e0fa310add";
+                    attribute :>> bytes = 81;
                 }
                 part 'file_TOOLS.md' :> instructions {
                     attribute :>> path = "TOOLS.md";
-                    attribute :>> sha256 = "6bad8dc7af9ae1856be0e34382f044692b9e9f44540abbf2eca2ff1ccc501213";
-                    attribute :>> bytes = 95;
+                    attribute :>> sha256 = "c2f6e3ec23572457356b96fb1391dccab8332dacc75520712d370f8e18bf61ea";
+                    attribute :>> bytes = 82;
                 }
                 part 'file_USER.md' :> instructions {
                     attribute :>> path = "USER.md";
-                    attribute :>> sha256 = "322df650d7970068667edfcba7d9f406c0fc54fcfdbb6ed01d03db743743b670";
-                    attribute :>> bytes = 93;
+                    attribute :>> sha256 = "4095ca5c455b82bfc396032f8ac37eb187d395c6d87a83ccca0a32361e688d92";
+                    attribute :>> bytes = 81;
                 }
                 part 'skill_skill-ab' :> skills {
                     attribute :>> id = "skill-ab";
@@ -285,33 +285,33 @@ package OpenClawInstance {
             part :>> context {
                 part 'file_AGENTS.md' :> instructions {
                     attribute :>> path = "AGENTS.md";
-                    attribute :>> sha256 = "9a42f8451c6ea3d10ba04f685e2ade657683a0a6030dbca5eceaad02d42445a1";
-                    attribute :>> bytes = 95;
+                    attribute :>> sha256 = "b950438849e5142c35fa7ebc87aa7e9b154aa0a0c84712d947359af840112b29";
+                    attribute :>> bytes = 83;
                 }
                 part 'file_HEARTBEAT.md' :> instructions {
                     attribute :>> path = "HEARTBEAT.md";
-                    attribute :>> sha256 = "c887582b41120f6814d7c5c5d7bea26489b7b373166288613edb5de6d0dfb9a0";
-                    attribute :>> bytes = 98;
+                    attribute :>> sha256 = "83975abb7223dec0054d67f8d598cfe88daf98c6dc231f03c213bb8090da7453";
+                    attribute :>> bytes = 86;
                 }
                 part 'file_IDENTITY.md' :> instructions {
                     attribute :>> path = "IDENTITY.md";
-                    attribute :>> sha256 = "4e60b96124733f530f8669654c49836bb3834b7fd3acbd6b93d38a963c9dde75";
-                    attribute :>> bytes = 97;
+                    attribute :>> sha256 = "80b668ffd828e5b38866bc71b054cf86b71516fbb443a29ec0e0ea5147333999";
+                    attribute :>> bytes = 85;
                 }
                 part 'file_SOUL.md' :> instructions {
                     attribute :>> path = "SOUL.md";
-                    attribute :>> sha256 = "e2e3de489d34c1af2b99d0a7886adc93f6f2d8dfd897be28ff5394c39c38d8d5";
-                    attribute :>> bytes = 94;
+                    attribute :>> sha256 = "eec7dd6bb4b9514528af8afe47695e76451a4385900eb969404fd3e0fa310add";
+                    attribute :>> bytes = 81;
                 }
                 part 'file_TOOLS.md' :> instructions {
                     attribute :>> path = "TOOLS.md";
-                    attribute :>> sha256 = "8ccd6fb51d8ec213dbd309733df1b1ac576c529301fc7aaac7fce68f9fce178b";
-                    attribute :>> bytes = 95;
+                    attribute :>> sha256 = "c2f6e3ec23572457356b96fb1391dccab8332dacc75520712d370f8e18bf61ea";
+                    attribute :>> bytes = 82;
                 }
                 part 'file_USER.md' :> instructions {
                     attribute :>> path = "USER.md";
-                    attribute :>> sha256 = "39ab53f3b30cf946da08fc7b29802ca133c8ef1e52fc4a7473a3ebd29a4fcedd";
-                    attribute :>> bytes = 93;
+                    attribute :>> sha256 = "4095ca5c455b82bfc396032f8ac37eb187d395c6d87a83ccca0a32361e688d92";
+                    attribute :>> bytes = 81;
                 }
                 part 'skill_skill-f' :> skills {
                     attribute :>> id = "skill-f";
@@ -465,33 +465,33 @@ package OpenClawInstance {
             part :>> context {
                 part 'file_AGENTS.md' :> instructions {
                     attribute :>> path = "AGENTS.md";
-                    attribute :>> sha256 = "bf4517641e85238a20026a60ea1059807c6a105028847f7d44c76a45f87f6e57";
-                    attribute :>> bytes = 95;
+                    attribute :>> sha256 = "b950438849e5142c35fa7ebc87aa7e9b154aa0a0c84712d947359af840112b29";
+                    attribute :>> bytes = 83;
                 }
                 part 'file_HEARTBEAT.md' :> instructions {
                     attribute :>> path = "HEARTBEAT.md";
-                    attribute :>> sha256 = "c887582b41120f6814d7c5c5d7bea26489b7b373166288613edb5de6d0dfb9a0";
-                    attribute :>> bytes = 98;
+                    attribute :>> sha256 = "83975abb7223dec0054d67f8d598cfe88daf98c6dc231f03c213bb8090da7453";
+                    attribute :>> bytes = 86;
                 }
                 part 'file_IDENTITY.md' :> instructions {
                     attribute :>> path = "IDENTITY.md";
-                    attribute :>> sha256 = "4e60b96124733f530f8669654c49836bb3834b7fd3acbd6b93d38a963c9dde75";
-                    attribute :>> bytes = 97;
+                    attribute :>> sha256 = "80b668ffd828e5b38866bc71b054cf86b71516fbb443a29ec0e0ea5147333999";
+                    attribute :>> bytes = 85;
                 }
                 part 'file_SOUL.md' :> instructions {
                     attribute :>> path = "SOUL.md";
-                    attribute :>> sha256 = "0f1876693709eef8411a28be1c3a7d9b384579f70e2acb29aafdcd1dc963f2de";
-                    attribute :>> bytes = 95;
+                    attribute :>> sha256 = "eec7dd6bb4b9514528af8afe47695e76451a4385900eb969404fd3e0fa310add";
+                    attribute :>> bytes = 81;
                 }
                 part 'file_TOOLS.md' :> instructions {
                     attribute :>> path = "TOOLS.md";
-                    attribute :>> sha256 = "f0935683663313f251af346f87bd7a91c2740f93f548178f9e23fb0ca7298b6e";
-                    attribute :>> bytes = 95;
+                    attribute :>> sha256 = "c2f6e3ec23572457356b96fb1391dccab8332dacc75520712d370f8e18bf61ea";
+                    attribute :>> bytes = 82;
                 }
                 part 'file_USER.md' :> instructions {
                     attribute :>> path = "USER.md";
-                    attribute :>> sha256 = "2073cb4d6d9f48eb64299cd67e96bc89e897b9643cd515279894e774fa19640c";
-                    attribute :>> bytes = 93;
+                    attribute :>> sha256 = "4095ca5c455b82bfc396032f8ac37eb187d395c6d87a83ccca0a32361e688d92";
+                    attribute :>> bytes = 81;
                 }
                 part 'skill__archived/old-skill' :> skills {
                     attribute :>> id = "_archived/old-skill";
@@ -644,38 +644,38 @@ package OpenClawInstance {
             part :>> context {
                 part 'file_AGENTS.md' :> instructions {
                     attribute :>> path = "AGENTS.md";
-                    attribute :>> sha256 = "d91d06bf177f3ede9fecba6cc565218bb74f7a0e287eb37ee80d0a967c8fa877";
-                    attribute :>> bytes = 96;
+                    attribute :>> sha256 = "b950438849e5142c35fa7ebc87aa7e9b154aa0a0c84712d947359af840112b29";
+                    attribute :>> bytes = 83;
                 }
                 part 'file_HEARTBEAT.md' :> instructions {
                     attribute :>> path = "HEARTBEAT.md";
-                    attribute :>> sha256 = "2240b35c8859c4f1c9b1a180cb9fd69c0d7472dd912c4534baabd00ecab53d30";
-                    attribute :>> bytes = 99;
+                    attribute :>> sha256 = "83975abb7223dec0054d67f8d598cfe88daf98c6dc231f03c213bb8090da7453";
+                    attribute :>> bytes = 86;
                 }
                 part 'file_IDENTITY.md' :> instructions {
                     attribute :>> path = "IDENTITY.md";
-                    attribute :>> sha256 = "3b01b858fbc055bff440461191baf9b796dfb809afabeafae506acd491e00117";
-                    attribute :>> bytes = 97;
+                    attribute :>> sha256 = "80b668ffd828e5b38866bc71b054cf86b71516fbb443a29ec0e0ea5147333999";
+                    attribute :>> bytes = 85;
                 }
                 part 'file_MEMORY.md' :> instructions {
                     attribute :>> path = "MEMORY.md";
-                    attribute :>> sha256 = "ddfeb3c332f684f758dda35ed067aac03c68b2934e6c44880934d825dd77f51f";
-                    attribute :>> bytes = 96;
+                    attribute :>> sha256 = "b5f5a6329599f58b01306d855af8b198f425af2f7bf2e6cb0c57caaa9784eb23";
+                    attribute :>> bytes = 83;
                 }
                 part 'file_SOUL.md' :> instructions {
                     attribute :>> path = "SOUL.md";
-                    attribute :>> sha256 = "af51faa07c4690f7ae03a659ac8ae5f10af6fc76697d156b1c4b3c8b587260a0";
-                    attribute :>> bytes = 94;
+                    attribute :>> sha256 = "eec7dd6bb4b9514528af8afe47695e76451a4385900eb969404fd3e0fa310add";
+                    attribute :>> bytes = 81;
                 }
                 part 'file_TOOLS.md' :> instructions {
                     attribute :>> path = "TOOLS.md";
-                    attribute :>> sha256 = "cd08008f5e1034a8a01334a7729364a47be1fc1fdc0a1ca64ad38af0f34db80a";
-                    attribute :>> bytes = 96;
+                    attribute :>> sha256 = "c2f6e3ec23572457356b96fb1391dccab8332dacc75520712d370f8e18bf61ea";
+                    attribute :>> bytes = 82;
                 }
                 part 'file_USER.md' :> instructions {
                     attribute :>> path = "USER.md";
-                    attribute :>> sha256 = "87c9640cf1b1bd687325e211fe031e1bd1ac67b0c1daccc9ba967292cd079851";
-                    attribute :>> bytes = 93;
+                    attribute :>> sha256 = "4095ca5c455b82bfc396032f8ac37eb187d395c6d87a83ccca0a32361e688d92";
+                    attribute :>> bytes = 81;
                 }
                 part 'skill__archived/old-skill' :> skills {
                     attribute :>> id = "_archived/old-skill";
@@ -719,8 +719,8 @@ package OpenClawInstance {
                     attribute :>> searchSources = "[\"memory\"]";
                     attribute :>> extraPathCount = 0;
                     attribute :>> multimodal = false;
-                    attribute :>> curatedSha256 = "ddfeb3c332f684f758dda35ed067aac03c68b2934e6c44880934d825dd77f51f";
-                    attribute :>> curatedBytes = 96;
+                    attribute :>> curatedSha256 = "b5f5a6329599f58b01306d855af8b198f425af2f7bf2e6cb0c57caaa9784eb23";
+                    attribute :>> curatedBytes = 83;
                     attribute :>> dailyCount = 1;
                     attribute :>> dailyFirstDate = "2026-05-30";
                     attribute :>> dailyLastDate = "2026-05-30";
@@ -844,48 +844,48 @@ package OpenClawInstance {
             part :>> context {
                 part 'file_AGENTS.md' :> instructions {
                     attribute :>> path = "AGENTS.md";
-                    attribute :>> sha256 = "d91d06bf177f3ede9fecba6cc565218bb74f7a0e287eb37ee80d0a967c8fa877";
-                    attribute :>> bytes = 96;
+                    attribute :>> sha256 = "b950438849e5142c35fa7ebc87aa7e9b154aa0a0c84712d947359af840112b29";
+                    attribute :>> bytes = 83;
                 }
                 part 'file_HEARTBEAT.md' :> instructions {
                     attribute :>> path = "HEARTBEAT.md";
-                    attribute :>> sha256 = "4c880c91872557b161e81253cc3e0ec057003d915cbbdf28718df8eaaea896b0";
-                    attribute :>> bytes = 98;
+                    attribute :>> sha256 = "83975abb7223dec0054d67f8d598cfe88daf98c6dc231f03c213bb8090da7453";
+                    attribute :>> bytes = 86;
                 }
                 part 'file_HOURLY_REPORT.md' :> instructions {
                     attribute :>> path = "HOURLY_REPORT.md";
-                    attribute :>> sha256 = "9f229d4620559f9420d06817243e43f17b0d7197cda430f3219fe053ea6dc4dd";
-                    attribute :>> bytes = 102;
+                    attribute :>> sha256 = "312d65fa4bb6f46be04edafc751090aa6a434d4413437d0d12c06bf3d25bf40c";
+                    attribute :>> bytes = 90;
                 }
                 part 'file_IDENTITY.md' :> instructions {
                     attribute :>> path = "IDENTITY.md";
-                    attribute :>> sha256 = "9df1377d19bdb846c4427ed40c82832b2a56f47179edb9b2f912fbc786b51acd";
-                    attribute :>> bytes = 97;
+                    attribute :>> sha256 = "80b668ffd828e5b38866bc71b054cf86b71516fbb443a29ec0e0ea5147333999";
+                    attribute :>> bytes = 85;
                 }
                 part 'file_MEMORY.md' :> instructions {
                     attribute :>> path = "MEMORY.md";
-                    attribute :>> sha256 = "c531ab42932f6eb6d328dfe37087a5a61511f55b5167eac15923eec50402310b";
-                    attribute :>> bytes = 97;
+                    attribute :>> sha256 = "b5f5a6329599f58b01306d855af8b198f425af2f7bf2e6cb0c57caaa9784eb23";
+                    attribute :>> bytes = 83;
                 }
                 part 'file_QUALITY.md' :> instructions {
                     attribute :>> path = "QUALITY.md";
-                    attribute :>> sha256 = "4f7ff65a0f3688247f4361d350a221d89d925097461fd67b4debbaa2074ad599";
-                    attribute :>> bytes = 97;
+                    attribute :>> sha256 = "9ae70aeb35ae86094d059e6b1c3d1048803658185cf6d427da314c90a612fcd7";
+                    attribute :>> bytes = 84;
                 }
                 part 'file_SOUL.md' :> instructions {
                     attribute :>> path = "SOUL.md";
-                    attribute :>> sha256 = "510c25d377ffd2852f0e5822afb03722bf1d67de968e8dcbfc3c4dc2ccdc7248";
-                    attribute :>> bytes = 95;
+                    attribute :>> sha256 = "eec7dd6bb4b9514528af8afe47695e76451a4385900eb969404fd3e0fa310add";
+                    attribute :>> bytes = 81;
                 }
                 part 'file_TOOLS.md' :> instructions {
                     attribute :>> path = "TOOLS.md";
-                    attribute :>> sha256 = "1e8761e52b8308de9bdc41083a6092c216d541d3633c9cee9ccf9d98a9c2eaf0";
-                    attribute :>> bytes = 96;
+                    attribute :>> sha256 = "c2f6e3ec23572457356b96fb1391dccab8332dacc75520712d370f8e18bf61ea";
+                    attribute :>> bytes = 82;
                 }
                 part 'file_USER.md' :> instructions {
                     attribute :>> path = "USER.md";
-                    attribute :>> sha256 = "d3490b50efe29fac8516d4c9de332c9fee11b0f237657111e093d4ef36cd20b7";
-                    attribute :>> bytes = 94;
+                    attribute :>> sha256 = "4095ca5c455b82bfc396032f8ac37eb187d395c6d87a83ccca0a32361e688d92";
+                    attribute :>> bytes = 81;
                 }
                 part 'skill__archived/old-skill' :> skills {
                     attribute :>> id = "_archived/old-skill";
@@ -1054,8 +1054,8 @@ package OpenClawInstance {
                     attribute :>> searchSources = "[\"memory\"]";
                     attribute :>> extraPathCount = 0;
                     attribute :>> multimodal = false;
-                    attribute :>> curatedSha256 = "c531ab42932f6eb6d328dfe37087a5a61511f55b5167eac15923eec50402310b";
-                    attribute :>> curatedBytes = 97;
+                    attribute :>> curatedSha256 = "b5f5a6329599f58b01306d855af8b198f425af2f7bf2e6cb0c57caaa9784eb23";
+                    attribute :>> curatedBytes = 83;
                     attribute :>> dailyCount = 2;
                     attribute :>> dailyFirstDate = "2026-06-01";
                     attribute :>> dailyLastDate = "2026-06-02";
@@ -1184,43 +1184,43 @@ package OpenClawInstance {
             part :>> context {
                 part 'file_AGENTS.md' :> instructions {
                     attribute :>> path = "AGENTS.md";
-                    attribute :>> sha256 = "ff14a1059aa60f5a5599eed3b3648955448a682868345bd8bd28b83613406139";
-                    attribute :>> bytes = 95;
+                    attribute :>> sha256 = "b950438849e5142c35fa7ebc87aa7e9b154aa0a0c84712d947359af840112b29";
+                    attribute :>> bytes = 83;
                 }
                 part 'file_BOOTSTRAP.md' :> instructions {
                     attribute :>> path = "BOOTSTRAP.md";
-                    attribute :>> sha256 = "e180683f4d5a0f79d90af1f959dd6b5903b3f84ad8b8df5a31c43b65544ad73d";
-                    attribute :>> bytes = 98;
+                    attribute :>> sha256 = "c3e3b31f76d82daf06e19e85dcc8953892c4c2aaa27fb8f7c21095dd42f98298";
+                    attribute :>> bytes = 86;
                 }
                 part 'file_HEARTBEAT.md' :> instructions {
                     attribute :>> path = "HEARTBEAT.md";
-                    attribute :>> sha256 = "c887582b41120f6814d7c5c5d7bea26489b7b373166288613edb5de6d0dfb9a0";
-                    attribute :>> bytes = 98;
+                    attribute :>> sha256 = "83975abb7223dec0054d67f8d598cfe88daf98c6dc231f03c213bb8090da7453";
+                    attribute :>> bytes = 86;
                 }
                 part 'file_IDENTITY.md' :> instructions {
                     attribute :>> path = "IDENTITY.md";
-                    attribute :>> sha256 = "971215e97ec880ddabca6468baccbfee8a3378d74b5ca000ab0d1a0f697e4475";
-                    attribute :>> bytes = 97;
+                    attribute :>> sha256 = "80b668ffd828e5b38866bc71b054cf86b71516fbb443a29ec0e0ea5147333999";
+                    attribute :>> bytes = 85;
                 }
                 part 'file_MEMORY.md' :> instructions {
                     attribute :>> path = "MEMORY.md";
-                    attribute :>> sha256 = "585844ea5a330d9f8af28757b385fb20976b9ab28411fcd04498fe1fc82cc219";
-                    attribute :>> bytes = 96;
+                    attribute :>> sha256 = "b5f5a6329599f58b01306d855af8b198f425af2f7bf2e6cb0c57caaa9784eb23";
+                    attribute :>> bytes = 83;
                 }
                 part 'file_SOUL.md' :> instructions {
                     attribute :>> path = "SOUL.md";
-                    attribute :>> sha256 = "d2be594f4acd9aa704f47eec0066d8a84d02bee2e236b856869e280f562549d8";
-                    attribute :>> bytes = 94;
+                    attribute :>> sha256 = "eec7dd6bb4b9514528af8afe47695e76451a4385900eb969404fd3e0fa310add";
+                    attribute :>> bytes = 81;
                 }
                 part 'file_TOOLS.md' :> instructions {
                     attribute :>> path = "TOOLS.md";
-                    attribute :>> sha256 = "77f4cfe08e7ff807c0eaf215947769853cf451ea5b3bcf0882b21ce3863b6b9b";
-                    attribute :>> bytes = 95;
+                    attribute :>> sha256 = "c2f6e3ec23572457356b96fb1391dccab8332dacc75520712d370f8e18bf61ea";
+                    attribute :>> bytes = 82;
                 }
                 part 'file_USER.md' :> instructions {
                     attribute :>> path = "USER.md";
-                    attribute :>> sha256 = "fcece882ae38e92204752feefe5c6e8b5d57101ad86712b59a03590705e07e81";
-                    attribute :>> bytes = 93;
+                    attribute :>> sha256 = "4095ca5c455b82bfc396032f8ac37eb187d395c6d87a83ccca0a32361e688d92";
+                    attribute :>> bytes = 81;
                 }
                 part skill_escalation :> skills {
                     attribute :>> id = "escalation";
@@ -1254,8 +1254,8 @@ package OpenClawInstance {
                     attribute :>> searchSources = "[\"memory\"]";
                     attribute :>> extraPathCount = 0;
                     attribute :>> multimodal = false;
-                    attribute :>> curatedSha256 = "585844ea5a330d9f8af28757b385fb20976b9ab28411fcd04498fe1fc82cc219";
-                    attribute :>> curatedBytes = 96;
+                    attribute :>> curatedSha256 = "b5f5a6329599f58b01306d855af8b198f425af2f7bf2e6cb0c57caaa9784eb23";
+                    attribute :>> curatedBytes = 83;
                     attribute :>> dailyCount = 0;
                     attribute :>> dailyBytes = 0;
                     attribute :>> otherCount = 0;
