@@ -70,6 +70,39 @@ Beside the run folders, `versions.json` lists the runs, newest first, and
 `index.html` is the viewer. To write elsewhere by default, set
 `plugins.entries.sysmlv2-export.config.outDir`.
 
+## SysML validation
+
+No Assembly checkout is needed to compile an export. Install the pinned Toolkit
+explicitly; exporting never downloads it silently:
+
+```sh
+openclaw sysmlv2-toolkit install
+openclaw sysmlv2-toolkit install --from <archive.tgz>
+openclaw sysmlv2-toolkit status
+```
+
+`install` downloads the public
+[sysml-wasm 0.10.10 release](https://github.com/Open-MBEE/sysml-toolkit/releases/download/v0.10.10/sysml-wasm-0.10.10.tgz),
+or reads the archive passed with `--from`. It checks SHA-256
+`93d6ef0a2140fceabc3115cd95d629146bc004c3959bfa23d715cce8b06cc13c` and the
+installed files, then installs atomically into
+`<state dir>/sysmlv2-export-toolkit/0.10.10/`, including the license files.
+`status` returns JSON `{installed, version, path, verified}`; `install` adds
+`changed`. Installing an already verified copy is a no-op (`changed: false`).
+
+Each OpenClaw export validates the written SysML files, including inferred
+behaviour and its local `core.sysml`, `cases.sysml` and `skills.sysml`, against
+the Toolkit's standard library. Validation runs in a Node worker with a
+60-second timeout. `validation.json` holds diagnostics; the run's optional
+`versions.json` validation summary reports `status` (`passed`, `failed` or
+`skipped`), an `errors` count and, when applicable, `code` and `recovery`. Older
+version entries remain readable. Chat and tool replies give one short validation
+line.
+
+Without the Toolkit, validation is skipped with `TOOLKIT_NOT_INSTALLED` and
+recovery `openclaw sysmlv2-toolkit install`. Compilation errors, modified
+Toolkit files and timeouts report failed validation; the export is retained.
+
 ## Viewer
 
 `index.html` is a single static page: it needs no network, opens from `file://`,
@@ -177,11 +210,11 @@ so collect again after upgrading.
 
 The test fixture is an anonymized, generic OpenClaw instance in which every
 secret is a `CANARY-*` marker that no output may contain. CI runs the checks,
-the tests and the plugin build. The Toolkit test compiles an export with
-Assembly's pinned build of
-[sysml-toolkit](https://github.com/Open-MBEE/sysml-toolkit), so it needs an
-Assembly checkout and is not part of CI: set `ASSEMBLY_DIR` to the checkout and
-`SYSML_TOOLKIT_DIR` to its Toolkit package, then run `deno task test:toolkit`.
+tests, plugin build and Toolkit compilation test with the pinned public archive.
+For a local compilation test, set `SYSML_TOOLKIT_WASM_ARCHIVE` to its absolute
+archive path and run `deno task test:toolkit`. The optional archive-dependent
+development test is skipped when that variable is absent. No Assembly checkout
+is required.
 
 [SPEC.md](SPEC.md) specifies the behaviour, the mapping and the limits;
 [CHANGELOG.md](CHANGELOG.md) lists the changes.
@@ -193,3 +226,7 @@ bundle includes [elkjs](https://github.com/kieler/elkjs) 0.9.3, under the
 Eclipse Public License 2.0, to lay the diagrams out;
 [plugin/THIRD_PARTY_NOTICES.md](plugin/THIRD_PARTY_NOTICES.md) holds the notices
 of every bundled package.
+
+The separately installed Toolkit is Apache-2.0; its SysML v2 standard library is
+EPL-2.0. Its `LICENSE`, `LICENSE-EPL-2.0` and `THIRD-PARTY-NOTICES.md` are
+copied into the installation.

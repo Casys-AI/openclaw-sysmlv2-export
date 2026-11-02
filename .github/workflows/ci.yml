@@ -20,7 +20,13 @@ jobs:
       - run: deno task check
       - run: deno lint
       - run: deno fmt --check
-      # The Toolkit test (deno task test:toolkit) needs an Assembly checkout
-      # and is run locally; deno task test leaves it out.
       - run: deno task test
       - run: deno task plugin:build
+      - name: Download and verify pinned Toolkit
+        shell: bash
+        run: |
+          archive="$RUNNER_TEMP/sysml-wasm-0.10.10.tgz"
+          curl --fail --location --output "$archive" https://github.com/Open-MBEE/sysml-toolkit/releases/download/v0.10.10/sysml-wasm-0.10.10.tgz
+          echo "93d6ef0a2140fceabc3115cd95d629146bc004c3959bfa23d715cce8b06cc13c  $archive" | sha256sum -c -
+          echo "SYSML_TOOLKIT_WASM_ARCHIVE=$archive" >> "$GITHUB_ENV"
+      - run: deno task test:toolkit

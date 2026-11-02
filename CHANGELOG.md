@@ -2,8 +2,17 @@
 
 ## Unreleased
 
-Viewer only: the emitted SysML, the snapshot schema and the inference contract
-are unchanged.
+The snapshot schema and inference contract are unchanged.
+
+- **Toolkit validation.** Explicit `openclaw sysmlv2-toolkit install` (or
+  `--from <archive.tgz>`) installs verified sysml-wasm 0.10.10 atomically, with
+  its licenses; `status` reports the installation. A verified existing install
+  is unchanged. No Assembly checkout or silent download is needed. Exports
+  compile in a worker with a 60-second timeout and retain their files on
+  validation failure. Diagnostics are saved in `validation.json`, with an
+  optional backwards-compatible validation summary in `versions.json`.
+- **CI compilation.** CI downloads and verifies the pinned public archive before
+  `deno task test:toolkit`; local tests accept `SYSML_TOOLKIT_WASM_ARCHIVE`.
 
 - **Overview.** The viewer opens on a table of the agents: model, host or
   sandbox, tools by origin, channel accounts, scheduled tasks, context and, with

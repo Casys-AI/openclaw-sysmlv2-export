@@ -46,7 +46,7 @@ calls the next.
 | emit     | `emit(snapshot) → Map<path, text>`     | Deterministic SysML text: `OpenClawImport.sysml`, `OpenClawInstance.sysml`.   |
 | doctor   | `doctor(snapshot) → Finding[]`         | Experimental: collector findings plus the doctor rules (§7.2). Deno CLI only. |
 | diff     | `diff(a, b) → Change[]`                | Structural changes between two snapshots (§8).                                |
-| validate | `validate(files) → Diagnostics`        | Compiles files with Assembly's pinned Toolkit. Used by tests only.            |
+| validate | `validate(files) → Diagnostics`        | Compiles written files with the explicitly installed pinned WASM Toolkit.     |
 | views    | `diagramViews(snapshot, inference)`    | The viewer's model: nodes and edges per view, each with its SysML; its table. |
 | layout   | `layoutView(view) → Scene`             | Positions a view's drawn elements with elkjs, at export time. Asynchronous.   |
 | tables   | `drawing(view)`, `tableData(view)`     | Splits a view into what is drawn and its table, shaped for the page (§10.5).  |
@@ -54,9 +54,9 @@ calls the next.
 | infer    | `parseAgentInference`, `emitInferred`  | Validates a model's answer and emits `OpenClawInferred.sysml` (§9).           |
 
 A plugin run is: list plugins (`openclaw plugins list --json`) → collect → emit
-→ optionally infer → write a new version directory → update `versions.json` →
-regenerate `index.html`. The Deno CLI exposes collect, export (emit plus
-library), doctor and diff separately (§10.6).
+→ optionally infer → write a new version directory → validate → update
+`versions.json` → regenerate `index.html`. The Deno CLI exposes collect, export
+(emit plus library), doctor and diff separately (§10.7).
 
 The collector uses only `node:` APIs (`fs`, `path`, `crypto`, `sqlite`), so the
 same code runs under Deno and, bundled, inside OpenClaw's Node runtime.
@@ -501,7 +501,7 @@ export cannot settle, instead of guessing.
 `doctor(snapshot)` returns the collector findings plus the rules below. It is an
 experimental diagnostic: the plugin neither runs it nor writes `findings.json`
 in 0.1.0, and its rules may change once they can be read against Assembly's
-theory. It runs through `deno task doctor` (§10.6).
+theory. It runs through `deno task doctor` (§10.7).
 
 | Code                              | Severity | Subject           | Condition                                                                                                                                                                                |
 | --------------------------------- | -------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -650,12 +650,13 @@ Each run writes a new directory `<outDir>/<UTC time>/`, named to the second
 
 ```text
 snapshot.json  OpenClawImport.sysml  OpenClawInstance.sysml
-core.sysml  cases.sysml  skills.sysml
+core.sysml  cases.sysml  skills.sysml  validation.json
 inference.json  OpenClawInferred.sysml      (with inference)
 ```
 
 `<outDir>/versions.json` lists the runs, newest first: id, creation time, agent
-count, and inference counts (or null). `<outDir>/index.html` is regenerated
+count, inference counts (or null), and an optional validation summary. Older
+entries without validation remain valid. `<outDir>/index.html` is regenerated
 after each run: one self-contained page (no network, opens from `file://`) that
 shows each version as SysML v2 views (diagrams and tables), shows each file, and
 shows the unified diff of each file since the previous version.
@@ -707,7 +708,49 @@ shows the unified diff of each file since the previous version.
   payloads shared by several versions are stored once, and the embedded data
   cannot close its script element.
 
-### 10.6 Deno CLI
+### 10.6 Toolkit installation and validation
+
+```text
+openclaw sysmlv2-toolkit install [--from <archive.tgz>]
+openclaw sysmlv2-toolkit status
+```
+
+Installation is explicit. Without `--from`, it downloads
+`https://github.com/Open-MBEE/sysml-toolkit/releases/download/v0.10.10/sysml-wasm-0.10.10.tgz`.
+The pinned archive SHA-256 is
+`93d6ef0a2140fceabc3115cd95d629146bc004c3959bfa23d715cce8b06cc13c`. The
+installer verifies the archive and files, then atomically installs into
+`<state dir>/sysmlv2-export-toolkit/0.10.10/`. A verified existing installation
+is an idempotent no-op. Status JSON is `{installed, version, path, verified}`;
+installation JSON adds the boolean `changed`.
+
+The Toolkit's `LICENSE` (Apache-2.0), `LICENSE-EPL-2.0` (its SysML v2 standard
+library), and `THIRD-PARTY-NOTICES.md` are copied into the installation. Neither
+an Assembly checkout nor a silent download is needed for compilation.
+
+After writing the export, `runExport` validates every written SysML file,
+including inferred SysML and the local `core.sysml`, `cases.sysml` and
+`skills.sysml`, using the Toolkit's standard library. The standalone Deno export
+remains the separate emitter; tests call validation on its exact output files.
+It checks installed file hashes and uses `initSync` inside
+`node:worker_threads`, with a 60-second timeout.
+
+The validation summary is `{status, errors, code?, recovery?}`, where `status`
+is `passed`, `failed` or `skipped` and `errors` is a number. `validation.json`
+is `{validation: summary, errors: [...], warnings: [...]}`. Each diagnostic has
+`code`, `message`, `file`, `line` and `column`; source positions are 1-based,
+and runtime errors use null for the file and position. Skipped validation still
+writes the file, with empty diagnostic arrays. Unresolved references in the
+exported sources count as errors even when the Toolkit marks them advisory;
+other non-error findings are kept in `warnings`. Chat and tool output include
+one short validation line.
+
+Missing Toolkit skips validation with `TOOLKIT_NOT_INSTALLED` and recovery
+exactly `openclaw sysmlv2-toolkit install`. Compilation errors, tampering and
+timeouts fail validation without discarding the export. These diagnostics are
+informational to the export result.
+
+### 10.7 Deno CLI
 
 ```text
 deno task collect --home <dir> [--plugins <file>] --out <file>
@@ -725,19 +768,23 @@ directory.
 
 Failures are `{ code, context, recovery }` errors, never findings.
 
-| Code                                               | Raised by | When                                                                                    |
-| -------------------------------------------------- | --------- | --------------------------------------------------------------------------------------- |
-| `INVALID_INPUT`                                    | all       | A known field has the wrong shape or an unsupported value; a snapshot fails validation. |
-| `UNSAFE_INPUT_FILE`, `INPUT_LIMIT`                 | collect   | An input file is a symlink or not a regular file; it exceeds 32 MiB.                    |
-| `UNRESOLVED_WORKSPACE`                             | collect   | A workspace path starts with `~`.                                                       |
-| `STATE_READ_FAILED`                                | collect   | The SQLite state cannot be read.                                                        |
-| `PLUGIN_MANIFEST_READ_FAILED`                      | collect   | A plugin listed with tools has no readable `openclaw.plugin.json`.                      |
-| `COLLECT_READ_FAILED`                              | collect   | Any other read failure.                                                                 |
-| `PLUGIN_LIST_FAILED`                               | plugin    | `openclaw plugins list --json` exited non-zero.                                         |
-| `INSTRUCTION_CHANGED`, `INFERENCE_NOT_JSON`        | plugin    | Per agent during inference (§9).                                                        |
-| `EXPORT_VERSION_EXISTS`, `EXPORT_VERSION_MISSING`  | plugin    | Two runs in the same second; `versions.json` lists a missing directory.                 |
-| `CLI_USAGE`, `CLI_IO_ERROR`                        | Deno CLI  | Invalid arguments; files cannot be read or created.                                     |
-| `TOOLKIT_UNAVAILABLE`, `TOOLKIT_VALIDATION_FAILED` | validate  | No Toolkit or Assembly checkout; the sources do not compile.                            |
+| Code                                              | Raised by | When                                                                                    |
+| ------------------------------------------------- | --------- | --------------------------------------------------------------------------------------- |
+| `INVALID_INPUT`                                   | all       | A known field has the wrong shape or an unsupported value; a snapshot fails validation. |
+| `UNSAFE_INPUT_FILE`, `INPUT_LIMIT`                | collect   | An input file is a symlink or not a regular file; it exceeds 32 MiB.                    |
+| `UNRESOLVED_WORKSPACE`                            | collect   | A workspace path starts with `~`.                                                       |
+| `STATE_READ_FAILED`                               | collect   | The SQLite state cannot be read.                                                        |
+| `PLUGIN_MANIFEST_READ_FAILED`                     | collect   | A plugin listed with tools has no readable `openclaw.plugin.json`.                      |
+| `COLLECT_READ_FAILED`                             | collect   | Any other read failure.                                                                 |
+| `PLUGIN_LIST_FAILED`                              | plugin    | `openclaw plugins list --json` exited non-zero.                                         |
+| `INSTRUCTION_CHANGED`, `INFERENCE_NOT_JSON`       | plugin    | Per agent during inference (§9).                                                        |
+| `EXPORT_VERSION_EXISTS`, `EXPORT_VERSION_MISSING` | plugin    | Two runs in the same second; `versions.json` lists a missing directory.                 |
+| `CLI_USAGE`, `CLI_IO_ERROR`                       | Deno CLI  | Invalid arguments; files cannot be read or created.                                     |
+| `TOOLKIT_NOT_INSTALLED`                           | validate  | Toolkit missing; validation skipped. Recovery: `openclaw sysmlv2-toolkit install`.      |
+| `TOOLKIT_INTEGRITY`                               | toolkit   | Archive or installed file hash verification failed.                                     |
+| `TOOLKIT_TIMEOUT`                                 | validate  | The worker exceeded 60 seconds.                                                         |
+| `TOOLKIT_DOWNLOAD_FAILED`                         | toolkit   | Reading or downloading the installation archive failed.                                 |
+| `TOOLKIT_VALIDATION_FAILED`                       | validate  | The worker or compiler could not complete validation.                                   |
 
 ## 12. Limits and known unknowns
 
@@ -834,9 +881,10 @@ Failures are `{ code, context, recovery }` errors, never findings.
   bytes, equal to the reviewed goldens in `test/golden/`.
 - **Doctor.** Each experimental rule has a positive and a negative case.
 - **Toolkit.** An export directory of the fixture, with an inferred package,
-  compiles alone with Assembly's pinned Toolkit with zero errors
-  (`deno task test:toolkit`, which needs `ASSEMBLY_DIR` and
-  `SYSML_TOOLKIT_DIR`).
+  compiles alone with the pinned public sysml-wasm 0.10.10 archive, without an
+  Assembly checkout. CI downloads it and checks its SHA-256 before running
+  `deno task test:toolkit`. Locally, set `SYSML_TOOLKIT_WASM_ARCHIVE` to an
+  absolute archive path; optional archive-dependent tests skip when absent.
 - **Viewer.** The fixture's views hold the expected nodes and edges, the Tools
   matrix one cell per grant, a Behaviour view its rules as a table and the
   Overview each agent's figures and links; cron expressions are placed in the

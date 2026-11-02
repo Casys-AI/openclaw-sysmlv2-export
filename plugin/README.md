@@ -37,6 +37,30 @@ openclaw sysmlv2-export --infer --open  # also infer behaviour, then open the vi
 Each run writes `<state dir>/sysmlv2-export/<UTC time>/` with the snapshot and
 the SysML files, and updates `versions.json` and the viewer, `index.html`.
 
+## SysML validation
+
+No Assembly checkout is needed. Install the pinned Toolkit explicitly:
+
+```sh
+openclaw sysmlv2-toolkit install [--from <archive.tgz>]
+openclaw sysmlv2-toolkit status
+```
+
+The default install downloads the public sysml-wasm 0.10.10 release, verifies
+the archive and installed files, and installs atomically under
+`<state dir>/sysmlv2-export-toolkit/0.10.10/`. Exporting never downloads it.
+`status` returns JSON `{installed, version, path, verified}`; `install` adds
+`changed`, false for an already verified installation.
+
+Every export writes `validation.json` with compilation diagnostics and reports
+`passed`, `failed` or `skipped`. Missing Toolkit means `TOOLKIT_NOT_INSTALLED`;
+run `openclaw sysmlv2-toolkit install`. Compilation errors, modified Toolkit
+files and a 60-second worker timeout leave the export available. Chat and tool
+replies include one short validation line.
+
+The installed Toolkit is Apache-2.0 and its SysML v2 standard library EPL-2.0;
+its license files and third-party notices are copied with it.
+
 ## Privacy
 
 - The export only reads the instance and never changes it.
