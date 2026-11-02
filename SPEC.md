@@ -29,7 +29,7 @@ comes from a real instance.
 
 ## Pipeline
 
-Each step is a pure function with a thin CLI. Steps composeAssembly's , found through ; none calls the
+Each step is a pure function with a thin CLI. Steps compose; none calls the
 next.
 
 | Step | Signature | Notes |
@@ -41,10 +41,10 @@ next.
 | diff | `diff(a, b) → Change[]` | Structural, from two snapshots. |
 
 **collect** reads `openclaw.json`, each agent workspace (top-level Markdown
-files by name, size and SHA-256, and presence of `.git`Assembly's , found through ; no other file name is
+files by name, size and SHA-256, and presence of `.git`; no other file name is
 collected), skills as OpenClaw discovers them (`SKILL.md` anywhere under
-`skills/`Assembly's , found through ; inner symlinks followed once, outer ones skipped with a finding,
-broken ones reportedAssembly's , found through ; only the frontmatter `name` is read), sibling backups
+`skills/`; inner symlinks followed once, outer ones skipped with a finding,
+broken ones reported; only the frontmatter `name` is read), sibling backups
 `openclaw.json.*` (count only) and cron jobs from `state/openclaw.sqlite`,
 table `cron_jobs`, opened with a read-only URI and the columns listed in the
 fixture's `state/cron_jobs.json`. Relative workspace paths resolve against the
@@ -71,12 +71,12 @@ sorted by id, no clock reads. Same instance → same bytes.
 
 | OpenClaw | SysML (`OpenClawImport` + instance package) |
 | --- | --- |
-| agent (`agents.list`, implicit `main`) | `part def … :> OpenClawAgent`, with `OpenClawAgent :> AssemblyCore::SoftwareOperator`Assembly's , found through ; id, display name, emoji, primary and fallback models |
+| agent (`agents.list`, implicit `main`) | `part def … :> OpenClawAgent`, with `OpenClawAgent :> AssemblyCore::SoftwareOperator`; id, display name, emoji, primary and fallback models |
 | effective tools | `ToolGrant` items (tool, layer) referenced by the agent |
 | sandbox | `Sandbox` part: mode, scope, workspace access, image, read-only root, network, memory, cpus, bind count and modes, environment names |
 | channel account | `ChannelAccount` part (channel, account id, DM and group policies) |
 | binding | connection agent ↔ account, with the peer kind only |
-| cron job | case type with `AssemblyCases::EnvelopeKind::deterministic` and a `CronSchedule :> AssemblyCases::Schedule` (expression, time zone)Assembly's , found through ; `every` maps to `AssemblyCases::Every` |
+| cron job | case type with `AssemblyCases::EnvelopeKind::deterministic` and a `CronSchedule :> AssemblyCases::Schedule` (expression, time zone); `every` maps to `AssemblyCases::Every` |
 | heartbeat | case type with `reassessment` envelope and `Every` |
 | hook mapping | `ExternalTrigger` (name, target agent, delivery channel) |
 | workspace skill | `APESkills::InitialSkill` (id, source path, digest) |
@@ -88,7 +88,7 @@ sorted by id, no clock reads. Same instance → same bytes.
 | `tools.exec`, `tools.elevated` | `ExecutionPosture` (security, ask, elevated, elevated channels count) |
 
 Runtime state (last run, errors, tokens) stays in the snapshot for the doctor
-and the diff. It is not model content. Identifiers become valid SysML namesAssembly's , found through ;
+and the diff. It is not model content. Identifiers become valid SysML names;
 names that cannot be made valid use quoted names.
 
 Resolve OpenClaw semantics from its 2026.6.10 sources or docs, and cite the
@@ -160,7 +160,7 @@ instruction files. Cron prompts are not read yet.
 
 Implemented on 2 November 2026 in `plugin/` (see the README). Contract:
 `src/infer.ts` (`openclaw-inference/1`). On a local 2026.10.9 instance with
-three synthetic agents, Sonnet 5.5 returned 8 procedures and 18 rulesAssembly's , found through ; the
+three synthetic agents, Sonnet 5.5 returned 8 procedures and 18 rules; the
 proposals matched the prose (refund limit, escalation to the dispatcher) and
 the whole SysML compiled with the Toolkit with zero errors.
 
