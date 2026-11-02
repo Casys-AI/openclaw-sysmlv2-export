@@ -69,7 +69,7 @@ const PAGE = String.raw`<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Assembly export versions</title>
+<title>OpenClaw SysML v2 export versions</title>
 <style>
 :root { color-scheme: light; --fg: #1f2328; --muted: #656d76; --line: #d8dee4; --soft: #f6f8fa; }
 * { box-sizing: border-box; }
@@ -102,7 +102,7 @@ table.findings td { white-space: normal; vertical-align: top; }
 </style>
 </head>
 <body>
-<header><h1>Assembly export versions</h1><span class="muted" id="count"></span></header>
+<header><h1>OpenClaw SysML v2 export versions</h1><span class="muted" id="count"></span></header>
 <main>
 <section id="list"><table>
 <thead><tr><th>Date (UTC)</th><th class="num">Agents</th><th title="errors / warnings / info">Findings</th><th class="num" title="procedures / rules">Inferred</th><th class="num" title="files changed since the previous version">Changed</th></tr></thead>

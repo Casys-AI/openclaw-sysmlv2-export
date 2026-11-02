@@ -77,7 +77,7 @@ function summarize(s) {
   const findings = Object.entries(s.findings).map(([k, v]) => `${v} ${k}`)
     .join(", ") || "none";
   const lines = [
-    `Assembly export: ${s.agents} agents → ${s.outDir}`,
+    `SysML v2 export: ${s.agents} agents → ${s.outDir}`,
     `Viewer: ${s.viewer}`,
     `Doctor: ${findings}`,
   ];
@@ -133,7 +133,7 @@ export default definePluginEntry({
       (ctx) =>
         ctx.senderIsOwner !== true || ctx.sandboxed ? null : ({
           name: "sysmlv2_export",
-          label: "Assembly export",
+          label: "SysML v2 export",
           description:
             "Export this OpenClaw instance (agents, tool grants, plugins, sandboxes, channels, cron, skills) to SysML v2 for Assembly and run its configuration doctor. Returns where the files and the version viewer are and the findings count. Does not call a model.",
           parameters: {
