@@ -37,6 +37,9 @@ function every(ms: number): string {
   }\n        }`;
 }
 export function emit(snapshot: Snapshot): Map<string, string> {
+  const owner = (tool: string) =>
+    snapshot.plugins?.find((p) => p.enabled && p.tools.includes(tool))?.id ??
+      null;
   const lines = [
     "package OpenClawInstance {",
     "    private import OpenClawImport::*;",
@@ -103,7 +106,7 @@ export function emit(snapshot: Snapshot): Map<string, string> {
     for (const g of a.grants) {
       lines.push(
         `    item ${name("tool", `${a.id}:${g.id}`)} : ToolGrant {`,
-        attrs({ tool: g.tool, layer: g.layer }),
+        attrs({ tool: g.tool, layer: g.layer, pluginId: owner(g.tool) }),
         "    }",
       );
     }
@@ -214,6 +217,18 @@ export function emit(snapshot: Snapshot): Map<string, string> {
     lines.push(
       `    part ${name("provider", p.id)} : ModelProvider {`,
       attrs({ name: p.id, apiKind: p.api, modelIds: p.models }),
+      "    }",
+    );
+  }
+  for (const p of snapshot.plugins ?? []) {
+    lines.push(
+      `    part ${name("plugin", p.id)} : OpenClawPlugin {`,
+      attrs({
+        pluginId: p.id,
+        enabled: p.enabled,
+        tools: p.tools,
+        optionalTools: p.optionalTools,
+      }),
       "    }",
     );
   }

@@ -161,6 +161,7 @@ package OpenClawInstance {
     item 'tool_client:sandbox:browser' : ToolGrant {
         attribute :>> tool = "browser";
         attribute :>> layer = "sandbox";
+        attribute :>> pluginId = "browser";
     }
     item 'tool_client:sandbox:edit' : ToolGrant {
         attribute :>> tool = "edit";
@@ -374,6 +375,7 @@ package OpenClawInstance {
     item 'tool_coach:sandbox:browser' : ToolGrant {
         attribute :>> tool = "browser";
         attribute :>> layer = "sandbox";
+        attribute :>> pluginId = "browser";
     }
     item 'tool_coach:sandbox:edit' : ToolGrant {
         attribute :>> tool = "edit";
@@ -598,6 +600,7 @@ package OpenClawInstance {
     item 'tool_devbox:sandbox:browser' : ToolGrant {
         attribute :>> tool = "browser";
         attribute :>> layer = "sandbox";
+        attribute :>> pluginId = "browser";
     }
     item 'tool_devbox:sandbox:edit' : ToolGrant {
         attribute :>> tool = "edit";
@@ -845,6 +848,7 @@ package OpenClawInstance {
     item 'tool_field:sandbox:browser' : ToolGrant {
         attribute :>> tool = "browser";
         attribute :>> layer = "sandbox";
+        attribute :>> pluginId = "browser";
     }
     item 'tool_field:sandbox:edit' : ToolGrant {
         attribute :>> tool = "edit";
@@ -1212,6 +1216,7 @@ package OpenClawInstance {
     item 'tool_lead:host:browser' : ToolGrant {
         attribute :>> tool = "browser";
         attribute :>> layer = "host";
+        attribute :>> pluginId = "browser";
     }
     item 'tool_lead:host:canvas' : ToolGrant {
         attribute :>> tool = "canvas";
@@ -1252,10 +1257,12 @@ package OpenClawInstance {
     item 'tool_lead:host:memory_get' : ToolGrant {
         attribute :>> tool = "memory_get";
         attribute :>> layer = "host";
+        attribute :>> pluginId = "memory-core";
     }
     item 'tool_lead:host:memory_search' : ToolGrant {
         attribute :>> tool = "memory_search";
         attribute :>> layer = "host";
+        attribute :>> pluginId = "memory-core";
     }
     item 'tool_lead:host:message' : ToolGrant {
         attribute :>> tool = "message";
@@ -1312,6 +1319,7 @@ package OpenClawInstance {
     item 'tool_lead:host:stock_quote' : ToolGrant {
         attribute :>> tool = "stock_quote";
         attribute :>> layer = "host";
+        attribute :>> pluginId = "stock-quotes";
     }
     item 'tool_lead:host:subagents' : ToolGrant {
         attribute :>> tool = "subagents";
@@ -1340,6 +1348,7 @@ package OpenClawInstance {
     item 'tool_lead:host:whatsapp_login' : ToolGrant {
         attribute :>> tool = "whatsapp_login";
         attribute :>> layer = "host";
+        attribute :>> pluginId = "whatsapp";
     }
     item 'tool_lead:host:write' : ToolGrant {
         attribute :>> tool = "write";
@@ -1559,6 +1568,7 @@ package OpenClawInstance {
     item 'tool_secretary:sandbox:browser' : ToolGrant {
         attribute :>> tool = "browser";
         attribute :>> layer = "sandbox";
+        attribute :>> pluginId = "browser";
     }
     item 'tool_secretary:sandbox:edit' : ToolGrant {
         attribute :>> tool = "edit";
@@ -2024,6 +2034,36 @@ package OpenClawInstance {
         attribute :>> name = "ollama";
         attribute :>> apiKind = "ollama";
         attribute :>> modelIds = "[\"glm-5.1:cloud\",\"nemotron-3-super:cloud\"]";
+    }
+    part plugin_browser : OpenClawPlugin {
+        attribute :>> pluginId = "browser";
+        attribute :>> enabled = true;
+        attribute :>> tools = "[\"browser\"]";
+        attribute :>> optionalTools = "[]";
+    }
+    part 'plugin_memory-core' : OpenClawPlugin {
+        attribute :>> pluginId = "memory-core";
+        attribute :>> enabled = true;
+        attribute :>> tools = "[\"memory_get\",\"memory_search\"]";
+        attribute :>> optionalTools = "[]";
+    }
+    part 'plugin_stock-quotes' : OpenClawPlugin {
+        attribute :>> pluginId = "stock-quotes";
+        attribute :>> enabled = true;
+        attribute :>> tools = "[\"stock_quote\"]";
+        attribute :>> optionalTools = "[]";
+    }
+    part plugin_whatsapp : OpenClawPlugin {
+        attribute :>> pluginId = "whatsapp";
+        attribute :>> enabled = true;
+        attribute :>> tools = "[\"whatsapp_login\"]";
+        attribute :>> optionalTools = "[\"whatsapp_login\"]";
+    }
+    part plugin_workboard : OpenClawPlugin {
+        attribute :>> pluginId = "workboard";
+        attribute :>> enabled = false;
+        attribute :>> tools = "[\"board_claim\",\"board_list\"]";
+        attribute :>> optionalTools = "[\"board_claim\",\"board_list\"]";
     }
     part messaging : MessagingPolicy {
         attribute :>> enabled = true;

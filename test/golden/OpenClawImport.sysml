@@ -7,7 +7,7 @@ package OpenClawImport {
         attribute primaryModel : String;
         attribute fallbackModels : String;
     }
-    item def ToolGrant { attribute tool : String; attribute layer : String; }
+    item def ToolGrant { attribute tool : String; attribute layer : String; attribute pluginId : String; }
     part def Sandbox {
         attribute mode : String; attribute scope : String;
         attribute workspaceAccess : String; attribute image : String;
@@ -44,5 +44,6 @@ package OpenClawImport {
     part def DelegationRule { attribute fromAgent : String; attribute toAgent : String; }
     part def MessagingPolicy { attribute enabled : Boolean; attribute allowedTargets : String; }
     part def ModelProvider { attribute name : String; attribute apiKind : String; attribute modelIds : String; }
+    part def OpenClawPlugin { attribute pluginId : String; attribute enabled : Boolean; attribute tools : String; attribute optionalTools : String; }
     part def ExecutionPosture { attribute host : String; attribute security : String; attribute ask : String; attribute elevated : Boolean; attribute elevatedChannelsCount : Integer; }
 }
