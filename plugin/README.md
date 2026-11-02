@@ -48,4 +48,5 @@ the SysML files, and updates `versions.json` and the viewer, `index.html`.
 
 Source, documentation and specification:
 <https://github.com/Casys-AI/openclaw-sysmlv2-export>. MIT license; the bundle
-includes elkjs 0.9.3 (Eclipse Public License 2.0) for diagram layout.
+includes elkjs 0.9.3 (Eclipse Public License 2.0) for diagram layout, and the
+notices in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

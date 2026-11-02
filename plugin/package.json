@@ -26,7 +26,8 @@
     "core.mjs",
     "openclaw.plugin.json",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
   ],
   "peerDependencies": { "openclaw": ">=2026.10.9" },
   "openclaw": {

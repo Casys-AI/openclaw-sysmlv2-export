@@ -18,7 +18,8 @@
     "exclude": [
       "test/fixtures",
       "test/golden",
-      "plugin/core.mjs"
+      "plugin/core.mjs",
+      "plugin/THIRD_PARTY_NOTICES.md"
     ]
   },
   "lint": {

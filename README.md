@@ -168,4 +168,6 @@ are listed in [CHANGELOG.md](CHANGELOG.md).
 
 MIT. The copied Assembly SysML library keeps Assembly's MIT license. The plugin
 bundle includes [elkjs](https://github.com/kieler/elkjs) 0.9.3, under the
-Eclipse Public License 2.0, to lay the diagrams out.
+Eclipse Public License 2.0, to lay the diagrams out;
+[plugin/THIRD_PARTY_NOTICES.md](plugin/THIRD_PARTY_NOTICES.md) holds the notices
+of every bundled package.
