@@ -11,7 +11,7 @@ SysML v2 is the OMG's standard language for describing systems. The export is
 the entry point to Assembly, Casys' workbench for building, running and evolving
 agentic systems from SysML v2; you do not need either to read what it produces.
 
-![Behaviour view: an agent's inferred procedures as action flows, beside its rules](docs/screenshots/behaviour.png)
+![Behaviour view: an agent's inferred procedures as action flows, above its rules](docs/screenshots/behaviour.png)
 
 **Status:** 0.1.0, preview. Built for OpenClaw 2026.10.x; the collector also
 reads 2026.6 configurations. The OpenClaw plugin API is still marked
@@ -68,31 +68,39 @@ default.
 
 ## Viewer
 
-`index.html` draws each version as SysML v2 diagrams. It is one static page: no
-network, it opens from `file://`, and the diagrams are laid out when the export
-runs. Pick a version, then a view:
+`index.html` shows each version as SysML v2 views, diagrams and tables. It is
+one static page: no network, it opens from `file://`, and the views are laid out
+when the export runs. Pick a version, then a view:
 
+- **Overview**, the first view: one row per agent with its model, where it runs
+  (host or sandbox), its tools by origin, channel accounts, scheduled tasks,
+  context and, with inference, its procedures and rules, under the instance's
+  totals. Each row links to the agent in the other views.
 - **System**: each agent as a part with its context (instructions, skills,
   memory) and its granted tools by origin, connected to its channel accounts
   through its bindings.
-- **Tools**: the tool catalog by origin and provider. Each tool shows which
-  agents hold it, on the host or in the sandbox.
+- **Tools**: a SysML allocation matrix, the tool catalog by origin and provider
+  against the agents. Each cell is an agent's grant, on the host, in the sandbox
+  or both. Groups fold and count each agent's tools, and a filter keeps the
+  matching tools.
 - **Scheduled tasks**: cron jobs and heartbeats with their schedules, linked to
-  the agent they wake.
+  the agent they wake, over a week strip of the hours each one fires in.
 - **Behaviour** (with inference): each agent's proposed procedures as action
-  flows, with decisions, hand-offs and escalations, and its rules with the lines
-  they come from.
+  flows, with decisions, hand-offs and escalations, and its rules in a
+  requirements table with the lines they come from.
 
-Click an element to see its attributes and its exact SysML text. Elements added
-or changed since the previous version are highlighted, and removed ones are
-listed. Files and Changes show each file and its diff since the previous
-version.
+Click an element, row or cell to see its attributes and its exact SysML text.
+Elements added or changed since the previous version are highlighted, and
+removed ones are listed. Files and Changes show each file and its diff since the
+previous version.
 
-| System                                      | Scheduled tasks                                               |
-| ------------------------------------------- | ------------------------------------------------------------- |
-| ![System view](docs/screenshots/system.png) | ![Scheduled tasks view](docs/screenshots/scheduled-tasks.png) |
+![Overview: one row per agent under the instance's totals](docs/screenshots/overview.png)
 
-![Tools view](docs/screenshots/tools.png)
+| System                                      | Tools                                                  |
+| ------------------------------------------- | ------------------------------------------------------ |
+| ![System view](docs/screenshots/system.png) | ![Tools allocation matrix](docs/screenshots/tools.png) |
+
+![Scheduled tasks view, with the week in which each task fires](docs/screenshots/scheduled-tasks.png)
 
 The screenshots show the anonymized test fixture, two versions apart.
 

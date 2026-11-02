@@ -6,9 +6,10 @@ one is allowed to use, their instructions, skills and memory, cron jobs and
 heartbeats, channels, sandboxes and exec settings. On request, each agent's own
 model proposes the procedures and rules written in its instruction files.
 
-Every run is kept as a version, with an offline page that draws it as SysML v2
-diagrams (system, tools, scheduled tasks, inferred behaviour), shows each
-element's SysML text and highlights what changed since the previous run.
+Every run is kept as a version, with an offline page that shows it as SysML v2
+views (an overview, the system, a tools allocation matrix, scheduled tasks and
+their week, inferred behaviour), shows each element's SysML text and highlights
+what changed since the previous run.
 
 Status: 0.1.0, preview. Requires OpenClaw 2026.10.9 or later.
 
