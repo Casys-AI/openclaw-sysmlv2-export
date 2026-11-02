@@ -342,7 +342,8 @@ and `headers` values (names only), `oauth.*` except `identity`, `clientCert`,
 **SysML.**
 
 - `CommandGrant` items (`command`, `kind`, `argsRestricted`), referenced by the
-  agent like `ToolGrant` and emitted only for agents that hold an `exec` grant.
+  agent like `ToolGrant`. They are emitted only for agents that hold an `exec`
+  grant under security `allowlist`, the only mode where they apply.
 - `ExecutionPosture` gains `safeBins`, `trustedDirCount` and
   `strictInlineEval`.
 
