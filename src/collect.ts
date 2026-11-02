@@ -32,8 +32,8 @@ import { info, is202610, model, resolvePolicy } from "./policy.ts";
 import {
   type Agent,
   byId,
-  type CommandGrant,
   type Cron,
+  type ExecCommand,
   type FileRef,
   type Finding,
   type McpServer,
@@ -119,8 +119,8 @@ function mcpServers(raw: Obj): McpServer[] {
 /** docs/tools/exec-approvals.md, Allowlist (per agent) / argPattern: keep
  * executable names and the presence of an argv restriction, never its text.
  * Distinct paths with the same basename collapse conservatively. */
-function allowlist(raw: unknown): CommandGrant[] {
-  const commands = new Map<string, CommandGrant>();
+function allowlist(raw: unknown): ExecCommand[] {
+  const commands = new Map<string, ExecCommand>();
   for (const value of arr(raw)) {
     const entry = obj(value), pattern = required(entry.pattern);
     const kind = pattern.includes("/") || pattern.startsWith("~")
@@ -141,7 +141,7 @@ function allowlist(raw: unknown): CommandGrant[] {
 
 function execApprovals(db: DatabaseSync): {
   execApprovals: Snapshot["execApprovals"];
-  commandsByAgent: Map<string, CommandGrant[]>;
+  commandsByAgent: Map<string, ExecCommand[]>;
   approvalsByAgent: Map<string, ApprovalPolicy>;
   approvalDefaults: ApprovalPolicy;
 } {
@@ -155,7 +155,7 @@ function execApprovals(db: DatabaseSync): {
       "SELECT raw_json FROM exec_approvals_config WHERE config_key = 'current'",
     ).get()
     : undefined;
-  const commandsByAgent = new Map<string, CommandGrant[]>();
+  const commandsByAgent = new Map<string, ExecCommand[]>();
   const approvalsByAgent = new Map<string, ApprovalPolicy>();
   if (!row) {
     return {
@@ -798,7 +798,7 @@ export async function collect(
       const safeBins = ex.safeBins === undefined ? null : strings(ex.safeBins);
       // docs/tools/exec-approvals-advanced.md: argv policy restricts safe bins;
       // awk, sed and jq are always denied, even when explicitly configured.
-      const safeCommands: CommandGrant[] = unique(safeBins ?? [])
+      const safeCommands: ExecCommand[] = unique(safeBins ?? [])
         .filter((command) => !["awk", "sed", "jq"].includes(command))
         .map((command) => ({
           id: `safe-bin:${command}`,

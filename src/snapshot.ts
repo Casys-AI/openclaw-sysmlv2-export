@@ -67,7 +67,7 @@ export interface Agent {
     trustedDirCount: number;
     pathPrependCount: number;
     strictInlineEval: boolean;
-    commands: CommandGrant[];
+    commands: ExecCommand[];
   };
   memory: {
     search: {
@@ -133,7 +133,11 @@ export interface Plugin {
   /** docs/plugins/manifest/capabilities.md: profile allowlist contributions. */
   toolProfiles: { id: string; profiles: string[] }[];
 }
-export interface CommandGrant {
+/** A command that exec's allowlists name: an effective safe bin or a host
+ * approval allowlist entry, with `id` `<kind>:<command>`. Under effective
+ * `allowlist` security the export emits it as a CLI tool, granted on the layer
+ * of each `exec` grant. */
+export interface ExecCommand {
   id: string;
   command: string;
   kind: "safe-bin" | "name" | "path";
@@ -199,7 +203,7 @@ export interface Snapshot {
       askFallback: string | null;
       autoAllowSkills: boolean | null;
     };
-    wildcardCommands: CommandGrant[];
+    wildcardCommands: ExecCommand[];
   } | null;
   memoryBackend: {
     slot: string | null;
