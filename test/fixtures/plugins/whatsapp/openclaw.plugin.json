@@ -1,0 +1,7 @@
+{
+  "id": "whatsapp",
+  "channels": ["whatsapp"],
+  "contracts": { "tools": ["whatsapp_login"] },
+  "toolMetadata": { "whatsapp_login": { "optional": true } },
+  "configSchema": { "type": "object" }
+}

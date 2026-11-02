@@ -1,0 +1,84 @@
+{
+  "workspaceDir": "CANARY-PATH-1",
+  "workspaceScope": "selected",
+  "registry": { "source": "persisted", "diagnostics": [] },
+  "plugins": [
+    {
+      "id": "anthropic",
+      "name": "Anthropic",
+      "format": "openclaw",
+      "source": "CANARY-PATH-2",
+      "rootDir": "anthropic",
+      "origin": "bundled",
+      "enabled": true,
+      "status": "loaded",
+      "toolNames": [],
+      "providerIds": ["anthropic"]
+    },
+    {
+      "id": "browser",
+      "name": "Browser",
+      "format": "openclaw",
+      "source": "CANARY-PATH-3",
+      "rootDir": "browser",
+      "origin": "bundled",
+      "trust": { "reason": "bundled", "registryPath": "CANARY-PATH-4" },
+      "enabled": true,
+      "status": "loaded",
+      "toolNames": ["browser"],
+      "contracts": { "tools": ["browser"] }
+    },
+    {
+      "id": "memory-core",
+      "name": "Memory Core",
+      "format": "openclaw",
+      "kind": "memory",
+      "source": "CANARY-PATH-5",
+      "rootDir": "memory-core",
+      "origin": "bundled",
+      "enabled": true,
+      "status": "loaded",
+      "toolNames": ["memory_get", "memory_search"],
+      "contracts": { "tools": ["memory_search", "memory_get"] }
+    },
+    {
+      "id": "stock-quotes",
+      "name": "Stock Quotes",
+      "format": "openclaw",
+      "source": "CANARY-PATH-6",
+      "rootDir": "stock-quotes",
+      "origin": "config",
+      "trust": { "reason": "origin-path", "installSource": "path" },
+      "enabled": true,
+      "status": "loaded",
+      "toolNames": ["stock_quote"],
+      "contracts": { "tools": ["stock_quote"] }
+    },
+    {
+      "id": "whatsapp",
+      "name": "WhatsApp",
+      "format": "openclaw",
+      "source": "CANARY-PATH-7",
+      "rootDir": "whatsapp",
+      "origin": "bundled",
+      "enabled": true,
+      "status": "loaded",
+      "toolNames": ["whatsapp_login"],
+      "channelIds": ["whatsapp"],
+      "contracts": { "tools": ["whatsapp_login"] }
+    },
+    {
+      "id": "workboard",
+      "name": "Workboard",
+      "format": "openclaw",
+      "source": "CANARY-PATH-8",
+      "rootDir": "workboard",
+      "origin": "bundled",
+      "enabled": false,
+      "status": "disabled",
+      "toolNames": ["board_claim", "board_list"],
+      "contracts": { "tools": ["board_list", "board_claim"] }
+    }
+  ],
+  "diagnostics": []
+}

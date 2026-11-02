@@ -122,14 +122,16 @@ async function versionFiles(dir: string): Promise<Record<string, string>> {
 
 /** Writes one run into its own `<outDir>/<UTC time>/` directory, named after
  * `now`, lists it in `<outDir>/versions.json` and regenerates the viewer,
- * `<outDir>/index.html`. */
+ * `<outDir>/index.html`. `pluginList` is the output of `openclaw plugins list
+ * --json`, or null to export without plugin tools. */
 export async function runExport(
   stateDir: string,
+  pluginList: unknown,
   outDir: string,
   complete: Complete | null,
   now: Date,
 ): Promise<ExportSummary> {
-  const snapshot = await collect(stateDir);
+  const snapshot = await collect(stateDir, pluginList);
   const findings = doctor(snapshot);
   const files = new Map([
     ["snapshot.json", canonical(snapshot)],

@@ -1,0 +1,7 @@
+{
+  "id": "memory-core",
+  "kind": "memory",
+  "contracts": { "tools": ["memory_search", "memory_get"] },
+  "toolMetadata": { "memory_get": { "replaySafe": true } },
+  "configSchema": { "type": "object" }
+}

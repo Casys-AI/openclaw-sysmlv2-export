@@ -1289,6 +1289,11 @@
           "tool": "skill_workshop"
         },
         {
+          "id": "host:stock_quote",
+          "layer": "host",
+          "tool": "stock_quote"
+        },
+        {
           "id": "host:subagents",
           "layer": "host",
           "tool": "subagents"
@@ -1317,6 +1322,11 @@
           "id": "host:web_search",
           "layer": "host",
           "tool": "web_search"
+        },
+        {
+          "id": "host:whatsapp_login",
+          "layer": "host",
+          "tool": "whatsapp_login"
         },
         {
           "id": "host:write",
@@ -2044,43 +2054,43 @@
     },
     {
       "code": "STATIC_TOOL_AVAILABILITY",
-      "context": "Grants resolve documented built-in policy. Credentials, plugins, model-native tools and session approvals are not runtime-verified.",
+      "context": "Grants resolve documented built-in policy and declared plugin tools. Credentials, plugin loading, model-native tools and session approvals are not runtime-verified.",
       "recovery": "Check runtime tool registration and host approvals before treating policy reachability as execution evidence; docs/gateway/config-tools.md and docs/tools/exec.md.",
       "severity": "info",
       "subject": "instance"
     },
     {
       "code": "TOOL_CATALOG_INCOMPLETE",
-      "context": "Policy mentions tools outside the documented built-in catalog; they receive no grants.",
-      "recovery": "Inspect plugin registrations separately; docs/gateway/config-tools.md.",
+      "context": "Policy mentions tools that neither the documented built-in catalog nor any plugin of the inventory declares; they receive no grants.",
+      "recovery": "Supply the plugin inventory or remove stale names; docs/gateway/config-tools/tool-policy.md.",
       "severity": "info",
       "subject": "client"
     },
     {
       "code": "TOOL_CATALOG_INCOMPLETE",
-      "context": "Policy mentions tools outside the documented built-in catalog; they receive no grants.",
-      "recovery": "Inspect plugin registrations separately; docs/gateway/config-tools.md.",
+      "context": "Policy mentions tools that neither the documented built-in catalog nor any plugin of the inventory declares; they receive no grants.",
+      "recovery": "Supply the plugin inventory or remove stale names; docs/gateway/config-tools/tool-policy.md.",
       "severity": "info",
       "subject": "coach"
     },
     {
       "code": "TOOL_CATALOG_INCOMPLETE",
-      "context": "Policy mentions tools outside the documented built-in catalog; they receive no grants.",
-      "recovery": "Inspect plugin registrations separately; docs/gateway/config-tools.md.",
+      "context": "Policy mentions tools that neither the documented built-in catalog nor any plugin of the inventory declares; they receive no grants.",
+      "recovery": "Supply the plugin inventory or remove stale names; docs/gateway/config-tools/tool-policy.md.",
       "severity": "info",
       "subject": "devbox"
     },
     {
       "code": "TOOL_CATALOG_INCOMPLETE",
-      "context": "Policy mentions tools outside the documented built-in catalog; they receive no grants.",
-      "recovery": "Inspect plugin registrations separately; docs/gateway/config-tools.md.",
+      "context": "Policy mentions tools that neither the documented built-in catalog nor any plugin of the inventory declares; they receive no grants.",
+      "recovery": "Supply the plugin inventory or remove stale names; docs/gateway/config-tools/tool-policy.md.",
       "severity": "info",
       "subject": "field"
     },
     {
       "code": "TOOL_CATALOG_INCOMPLETE",
-      "context": "Policy mentions tools outside the documented built-in catalog; they receive no grants.",
-      "recovery": "Inspect plugin registrations separately; docs/gateway/config-tools.md.",
+      "context": "Policy mentions tools that neither the documented built-in catalog nor any plugin of the inventory declares; they receive no grants.",
+      "recovery": "Supply the plugin inventory or remove stale names; docs/gateway/config-tools/tool-policy.md.",
       "severity": "info",
       "subject": "secretary"
     },
@@ -2683,6 +2693,55 @@
   },
   "openclawVersion": "2026.6.10",
   "plaintextSecretCount": 35,
+  "plugins": [
+    {
+      "enabled": true,
+      "id": "browser",
+      "optionalTools": [],
+      "tools": [
+        "browser"
+      ]
+    },
+    {
+      "enabled": true,
+      "id": "memory-core",
+      "optionalTools": [],
+      "tools": [
+        "memory_get",
+        "memory_search"
+      ]
+    },
+    {
+      "enabled": true,
+      "id": "stock-quotes",
+      "optionalTools": [],
+      "tools": [
+        "stock_quote"
+      ]
+    },
+    {
+      "enabled": true,
+      "id": "whatsapp",
+      "optionalTools": [
+        "whatsapp_login"
+      ],
+      "tools": [
+        "whatsapp_login"
+      ]
+    },
+    {
+      "enabled": false,
+      "id": "workboard",
+      "optionalTools": [
+        "board_claim",
+        "board_list"
+      ],
+      "tools": [
+        "board_claim",
+        "board_list"
+      ]
+    }
+  ],
   "providers": [
     {
       "api": null,
@@ -2700,5 +2759,5 @@
       ]
     }
   ],
-  "schema": "openclaw-snapshot/1"
+  "schema": "openclaw-snapshot/2"
 }

@@ -29,6 +29,7 @@ import {
   type FileRef,
   type Finding,
   parseSnapshot,
+  type Plugin,
   type Sandbox,
   type Snapshot,
   unique,
@@ -364,10 +365,52 @@ function cron(home: string, findings: Finding[]): Cron[] {
     db?.close();
   }
 }
+/** OpenClaw's plugin inventory, the output of `openclaw plugins list --json`
+ * (docs/cli/plugins/list.md). Tool ownership comes from each entry's
+ * `contracts.tools`; optionality from `toolMetadata.<tool>.optional` in the
+ * manifest at its `rootDir`, which the inventory omits
+ * (docs/plugins/building-plugins.md, Registering tools). Only plugins that
+ * declare tools are kept, with their id, enablement and tool names. */
+async function plugins(list: unknown): Promise<Plugin[]> {
+  const result: Plugin[] = [];
+  for (const value of arr(obj(list).plugins)) {
+    const entry = obj(value),
+      tools = unique(strings(obj(entry.contracts).tools));
+    if (!tools.length) continue;
+    if (typeof entry.enabled !== "boolean") {
+      invalid("Plugin inventory entry without an enabled flag");
+    }
+    const root = required(entry.rootDir);
+    if (!isAbsolute(root)) invalid("Plugin inventory rootDir must be absolute");
+    const path = join(root, "openclaw.plugin.json");
+    let manifest: Obj;
+    try {
+      await regular(path);
+      manifest = obj(json(await readFile(path, "utf8")));
+    } catch (e) {
+      if (e instanceof ExportError) throw e;
+      throw ioError(
+        "PLUGIN_MANIFEST_READ_FAILED",
+        "A plugin listed with tools has no readable openclaw.plugin.json",
+      );
+    }
+    const meta = obj(manifest.toolMetadata);
+    result.push({
+      id: required(entry.id),
+      enabled: entry.enabled,
+      tools,
+      optionalTools: tools.filter((t) => boolean(obj(meta[t]).optional, false)),
+    });
+  }
+  return byId(result);
+}
 
 /** The sole instance reader. All exceptions exposed to callers are coded and
  * never include parser input, absolute input paths or native error messages. */
-export async function collect(inputHome: string): Promise<Snapshot> {
+export async function collect(
+  inputHome: string,
+  pluginList: unknown = null,
+): Promise<Snapshot> {
   try {
     const home = await realpath(inputHome), path = join(home, "openclaw.json");
     await regular(path);
@@ -389,7 +432,8 @@ export async function collect(inputHome: string): Promise<Snapshot> {
     );
     const findings: Finding[] = [],
       global = obj(config.tools),
-      rawGlobal = obj(raw.tools);
+      rawGlobal = obj(raw.tools),
+      inventory = pluginList === null ? null : await plugins(pluginList);
     if (version !== "2026.6.10") {
       findings.push(
         info(
@@ -406,10 +450,20 @@ export async function collect(inputHome: string): Promise<Snapshot> {
       info(
         "STATIC_TOOL_AVAILABILITY",
         "instance",
-        "Grants resolve documented built-in policy. Credentials, plugins, model-native tools and session approvals are not runtime-verified.",
+        "Grants resolve documented built-in policy and declared plugin tools. Credentials, plugin loading, model-native tools and session approvals are not runtime-verified.",
         "Check runtime tool registration and host approvals before treating policy reachability as execution evidence; docs/gateway/config-tools.md and docs/tools/exec.md.",
       ),
     );
+    if (inventory === null) {
+      findings.push(
+        info(
+          "PLUGIN_INVENTORY_ABSENT",
+          "instance",
+          "No plugin inventory was supplied: tools that plugins declare outside the documented built-in catalog receive no grants.",
+          "Supply the output of openclaw plugins list --json; docs/cli/plugins/list.md.",
+        ),
+      );
+    }
     const agents: Agent[] = [];
     const selectedHeartbeats = list.some((a) => a.heartbeat !== undefined);
     for (const { config: a, raw: original } of pairs) {
@@ -425,6 +479,7 @@ export async function collect(inputHome: string): Promise<Snapshot> {
         tools,
         sb,
         m.primary,
+        inventory,
         findings,
       );
       // docs/tools/browser.md: both plugin and browser configuration can disable
@@ -662,7 +717,7 @@ export async function collect(inputHome: string): Promise<Snapshot> {
     );
     const messaging = obj(global.agentToAgent);
     const result: Snapshot = {
-      schema: "openclaw-snapshot/1",
+      schema: "openclaw-snapshot/2",
       openclawVersion: text(obj(config.meta).lastTouchedVersion, "2026.6.10")!,
       plaintextSecretCount: plaintextSecretCount(raw),
       backupCount: (await readdir(home, { withFileTypes: true })).filter((e) =>
@@ -676,6 +731,7 @@ export async function collect(inputHome: string): Promise<Snapshot> {
       hooks: byId(hooks),
       bundledSkills: byId(bundledSkills),
       providers: byId(providers),
+      plugins: inventory,
       messaging: {
         enabled: boolean(messaging.enabled, false),
         allowedTargets: unique(strings(messaging.allow)),

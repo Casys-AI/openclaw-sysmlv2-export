@@ -30,6 +30,7 @@ Deno.test("plugin runs are kept as versions", async (t) => {
   try {
     const first = await runExport(
       fixture.home,
+      fixture.plugins,
       out,
       null,
       new Date("2026-11-02T10:15:00.250Z"),
@@ -41,6 +42,7 @@ Deno.test("plugin runs are kept as versions", async (t) => {
     );
     const second = await runExport(
       fixture.home,
+      fixture.plugins,
       out,
       complete,
       new Date("2026-11-02T10:20:00Z"),

@@ -104,6 +104,7 @@ export default definePluginEntry({
         }
         const summary = await runExport(
           stateDir,
+          null,
           outDir,
           infer ? completeWith(llm) : null,
           new Date(),
@@ -129,7 +130,7 @@ export default definePluginEntry({
           async execute() {
             const { stateDir, outDir } = paths(api);
             const summary = shown(
-              await runExport(stateDir, outDir, null, new Date()),
+              await runExport(stateDir, null, outDir, null, new Date()),
               stateDir,
             );
             return {
@@ -158,6 +159,7 @@ export default definePluginEntry({
           const { stateDir, outDir } = paths(api);
           const summary = await runExport(
             stateDir,
+            null,
             options.out ?? outDir,
             options.infer
               ? completeWith(api.runtime.llm, options.model, true)

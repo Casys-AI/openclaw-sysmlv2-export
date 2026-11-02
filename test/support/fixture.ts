@@ -1,4 +1,4 @@
-import { cp, mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -15,24 +15,44 @@ interface CronFixture {
 const source = fileURLToPath(
   new URL("../fixtures/openclaw-2026.6.10-anon/", import.meta.url),
 );
+const pluginSource = fileURLToPath(
+  new URL("../fixtures/plugins/", import.meta.url),
+);
 
 function identifier(value: string): string {
   return `"${value.replaceAll('"', '""')}"`;
 }
 
-/** Copy the text fixture and materialize its SQLite state in an owned temp dir. */
+/** Copy the text fixture and materialize its SQLite state in an owned temp dir.
+ * Beside `home`, the synthetic plugin inventory gets absolute `rootDir`s, as
+ * `openclaw plugins list --json` prints them: `plugins` is the parsed value,
+ * `pluginsFile` the same JSON on disk. */
 export async function createFixture(
   options: { git?: boolean; backups?: number } = {},
-): Promise<{ home: string; cleanup: () => Promise<void> }> {
+): Promise<{
+  home: string;
+  plugins: unknown;
+  pluginsFile: string;
+  cleanup: () => Promise<void>;
+}> {
   const backups = options.backups ?? 0;
   if (!Number.isSafeInteger(backups) || backups < 0) {
     throw new RangeError("backups must be a non-negative safe integer");
   }
 
-  const home = await mkdtemp(join(tmpdir(), "openclaw-export-fixture-"));
-  const cleanup = () => rm(home, { recursive: true, force: true });
+  const root = await mkdtemp(join(tmpdir(), "openclaw-export-fixture-"));
+  const home = join(root, "home"), pluginsFile = join(root, "plugins.json");
+  const cleanup = () => rm(root, { recursive: true, force: true });
   try {
     await cp(source, home, { recursive: true });
+    await cp(pluginSource, join(root, "plugins"), { recursive: true });
+    const plugins = JSON.parse(
+      await readFile(join(root, "plugins", "list.json"), "utf8"),
+    );
+    for (const plugin of plugins.plugins) {
+      plugin.rootDir = join(root, "plugins", plugin.rootDir);
+    }
+    await writeFile(pluginsFile, JSON.stringify(plugins));
     const fixture: CronFixture = JSON.parse(
       await readFile(join(home, "state", "cron_jobs.json"), "utf8"),
     );
@@ -75,7 +95,7 @@ export async function createFixture(
         join(home, `openclaw.json.backup-${index}`),
       );
     }
-    return { home, cleanup };
+    return { home, plugins, pluginsFile, cleanup };
   } catch (error) {
     await cleanup();
     throw error;

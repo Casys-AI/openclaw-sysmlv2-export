@@ -8,7 +8,7 @@ import { createFixture } from "./support/fixture.ts";
 
 const fixture = await createFixture({ git: true, backups: 2 });
 try {
-  const snapshot = await collect(fixture.home);
+  const snapshot = await collect(fixture.home, fixture.plugins);
   const outputs = new Map([
     ["snapshot.json", canonical(snapshot)],
     ...emit(snapshot),

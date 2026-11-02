@@ -91,6 +91,15 @@ export interface Cron {
     createdAtMs: number | null;
   };
 }
+/** A plugin that declares agent tools (`contracts.tools`), as OpenClaw's
+ * plugin inventory lists it. Paths and other manifest fields are not kept. */
+export interface Plugin {
+  id: string;
+  enabled: boolean;
+  tools: string[];
+  /** `toolMetadata.<tool>.optional`: exposed only on explicit opt-in. */
+  optionalTools: string[];
+}
 export interface Finding {
   code: string;
   severity: "error" | "warning" | "info";
@@ -99,7 +108,7 @@ export interface Finding {
   recovery: string;
 }
 export interface Snapshot {
-  schema: "openclaw-snapshot/1";
+  schema: "openclaw-snapshot/2";
   openclawVersion: string;
   plaintextSecretCount: number;
   backupCount: number;
@@ -129,6 +138,8 @@ export interface Snapshot {
   }[];
   bundledSkills: { id: string; enabled: boolean }[];
   providers: { id: string; api: string | null; models: string[] }[];
+  /** Null when no plugin inventory was supplied to the collector. */
+  plugins: Plugin[] | null;
   messaging: { enabled: boolean; allowedTargets: string[] };
   ambiguities: Finding[];
 }
@@ -180,7 +191,7 @@ const finding: Shape = {
   recovery: str,
 };
 const shape: Shape = {
-  schema: { enum: ["openclaw-snapshot/1"] },
+  schema: { enum: ["openclaw-snapshot/2"] },
   openclawVersion: str,
   plaintextSecretCount: num,
   backupCount: num,
@@ -273,6 +284,12 @@ const shape: Shape = {
   }],
   bundledSkills: [{ id: str, enabled: bool }],
   providers: [{ id: str, api: ns, models: strings }],
+  plugins: nullable([{
+    id: str,
+    enabled: bool,
+    tools: strings,
+    optionalTools: strings,
+  }]),
   messaging: { enabled: bool, allowedTargets: strings },
   ambiguities: [finding],
 };

@@ -10,9 +10,9 @@ import { createFixture } from "./support/fixture.ts";
 Deno.test("fixture output is deterministic, sanitized, and matches reviewed goldens", async () => {
   const fixture = await createFixture({ git: true, backups: 2 });
   try {
-    const snapshot = await collect(fixture.home);
+    const snapshot = await collect(fixture.home, fixture.plugins);
     const files = emit(snapshot);
-    const repeated = await collect(fixture.home);
+    const repeated = await collect(fixture.home, fixture.plugins);
     assert.equal(canonical(snapshot), canonical(repeated));
     assert.deepEqual([...files], [...emit(repeated)]);
 

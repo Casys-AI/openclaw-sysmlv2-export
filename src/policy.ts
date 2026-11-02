@@ -1,5 +1,5 @@
 import { enumeration, type Obj, obj, strings, text } from "./input.ts";
-import type { Agent, Finding, Policy, Sandbox } from "./snapshot.ts";
+import type { Agent, Finding, Plugin, Policy, Sandbox } from "./snapshot.ts";
 import { byId, unique } from "./snapshot.ts";
 
 // OpenClaw 2026.6.10 docs/gateway/config-tools.md, Tool profiles / Tool groups.
@@ -80,10 +80,12 @@ export function info(
 ): Finding {
   return { code, severity: "info", subject, context, recovery };
 }
-function matches(tool: string, patterns: string[]): boolean {
+type Groups = ReadonlyMap<string, string[]>;
+function matches(tool: string, patterns: string[], groups: Groups): boolean {
   return patterns.some((raw) => {
     const p = raw.toLowerCase() === "bash" ? "exec" : raw.toLowerCase();
-    if (GROUPS[p]) return GROUPS[p].includes(tool);
+    const group = groups.get(p);
+    if (group) return group.includes(tool);
     return new RegExp(
       "^" + p.split("*").map((s) =>
         s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
@@ -91,13 +93,18 @@ function matches(tool: string, patterns: string[]): boolean {
     ).test(tool);
   });
 }
-function filter(tools: string[], p: Policy, applyProfile = false): string[] {
+function filter(
+  tools: string[],
+  p: Policy,
+  groups: Groups,
+  applyProfile = false,
+): string[] {
   const base = applyProfile ? profiles[p.profile ?? "full"] : p.allow;
   const allow = base === null ? null : unique([...base, ...p.alsoAllow]);
   return tools.filter((t) =>
-    !matches(t, p.deny) &&
-    (allow === null || matches(t, allow) ||
-      t === "apply_patch" && matches("write", allow))
+    !matches(t, p.deny, groups) &&
+    (allow === null || matches(t, allow, groups) ||
+      t === "apply_patch" && matches("write", allow, groups))
   );
 }
 function providerPolicy(raw: Obj, model: string | null): Policy {
@@ -116,8 +123,21 @@ export function resolvePolicy(
   agent: Obj,
   sandbox: Sandbox,
   model: string | null,
+  plugins: Plugin[] | null,
   findings: Finding[],
 ): Pick<Agent, "grants" | "policy"> {
+  // docs/gateway/config-tools/tool-policy.md (2026.10): plugin tools join the
+  // catalog; group:plugins and each plugin id expand to them. A name that a
+  // plugin declares is that plugin's tool, available only while it is enabled.
+  const declared = new Set(plugins?.flatMap((x) => x.tools));
+  const enabled = plugins?.filter((x) => x.enabled) ?? [];
+  const groups = new Map(Object.entries(GROUPS));
+  groups.set("group:plugins", enabled.flatMap((x) => x.tools));
+  for (const x of plugins ?? []) groups.set(x.id.toLowerCase(), x.tools);
+  const catalog = unique([
+    ...BUILTINS.filter((t) => !declared.has(t)),
+    ...enabled.flatMap((x) => x.tools),
+  ]);
   const g = policy(global),
     a = policy(agent),
     p = providerPolicy(global, model),
@@ -130,19 +150,29 @@ export function resolvePolicy(
   // default catalog. Keep provenance unset and withhold unresolved sandbox grants.
   const sandboxDefaultsUnresolved = sb.allow === undefined ||
     sb.deny === undefined;
-  let allowed = filter(BUILTINS, {
-    ...a,
-    profile: a.profile ?? g.profile,
-    alsoAllow: unique([...g.alsoAllow, ...a.alsoAllow]),
-    deny: [],
-  }, true);
-  allowed = filter(allowed, {
-    ...ap,
-    profile: ap.profile ?? p.profile,
-    alsoAllow: unique([...p.alsoAllow, ...ap.alsoAllow]),
-    deny: [],
-  }, true);
-  for (const stage of [g, p, a, ap]) allowed = filter(allowed, stage);
+  let allowed = filter(
+    catalog,
+    {
+      ...a,
+      profile: a.profile ?? g.profile,
+      alsoAllow: unique([...g.alsoAllow, ...a.alsoAllow]),
+      deny: [],
+    },
+    groups,
+    true,
+  );
+  allowed = filter(
+    allowed,
+    {
+      ...ap,
+      profile: ap.profile ?? p.profile,
+      alsoAllow: unique([...p.alsoAllow, ...ap.alsoAllow]),
+      deny: [],
+    },
+    groups,
+    true,
+  );
+  for (const stage of [g, p, a, ap]) allowed = filter(allowed, stage, groups);
   // docs/tools/exec.md, apply_patch: available only for OpenAI/OpenAI Codex
   // models; fallback turns need their own provider-policy resolution.
   if (!model?.startsWith("openai/") && !model?.startsWith("openai-codex/")) {
@@ -159,6 +189,22 @@ export function resolvePolicy(
   if (obj(web.fetch).enabled === false) {
     allowed = allowed.filter((t) => t !== "web_fetch");
   }
+  // docs/plugins/building-plugins.md, Registering tools; tool-policy.md, Tool
+  // profiles: an optional tool needs an explicit allow entry (its name, its
+  // plugin id, group:plugins or *) or an explicit full profile in a policy of
+  // that session, the sandbox one included (catalogPolicies in OpenClaw's
+  // dist/tool-resolution).
+  const optional = new Set(enabled.flatMap((x) => x.optionalTools));
+  const optedIn = (tool: string, stages: Policy[]) =>
+    !optional.has(tool) || matches(
+      tool,
+      stages.flatMap((x) => [
+        ...x.profile === "full" ? ["*"] : [],
+        ...x.allow ?? [],
+        ...x.alsoAllow,
+      ]),
+      groups,
+    );
   const grants: Agent["grants"] = [];
   for (
     const layer of sandbox.mode === "off"
@@ -168,8 +214,10 @@ export function resolvePolicy(
       : ["host", "sandbox"]
   ) {
     const tools = layer === "sandbox"
-      ? sandboxDefaultsUnresolved ? [] : filter(allowed, s)
-      : allowed;
+      ? sandboxDefaultsUnresolved
+        ? []
+        : filter(allowed, s, groups).filter((t) => optedIn(t, [g, p, a, ap, s]))
+      : allowed.filter((t) => optedIn(t, [g, p, a, ap]));
     for (const tool of tools) {
       grants.push({
         id: `${layer}:${tool}`,
@@ -213,15 +261,16 @@ export function resolvePolicy(
   }
   if (
     entries.some((x) =>
-      x !== "*" && !GROUPS[x] && !BUILTINS.includes(x) && x !== "bash"
+      x !== "*" && x !== "bash" && !groups.has(x) && !BUILTINS.includes(x) &&
+      !declared.has(x)
     )
   ) {
     findings.push(
       info(
         "TOOL_CATALOG_INCOMPLETE",
         id,
-        "Policy mentions tools outside the documented built-in catalog; they receive no grants.",
-        "Inspect plugin registrations separately; docs/gateway/config-tools.md.",
+        "Policy mentions tools that neither the documented built-in catalog nor any plugin of the inventory declares; they receive no grants.",
+        "Supply the plugin inventory or remove stale names; docs/gateway/config-tools/tool-policy.md.",
       ),
     );
   }

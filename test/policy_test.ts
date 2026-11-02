@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { resolvePolicy } from "../src/policy.ts";
-import type { Finding, Sandbox } from "../src/snapshot.ts";
+import type { Finding, Plugin, Sandbox } from "../src/snapshot.ts";
 const sandbox: Sandbox = {
   mode: "off",
   scope: "agent",
@@ -19,14 +19,16 @@ function tools(
   global: Record<string, unknown>,
   agent: Record<string, unknown>,
   mode: Sandbox["mode"] = "off",
+  plugins: Plugin[] | null = null,
+  findings: Finding[] = [],
 ) {
-  const findings: Finding[] = [];
   return resolvePolicy(
     "test",
     global,
     agent,
     { ...sandbox, mode },
     "openai/model",
+    plugins,
     findings,
   );
 }
@@ -93,7 +95,70 @@ Deno.test("unresolved sandbox defaults grant nothing; model restrictions remove 
     {},
     sandbox,
     "ollama/model",
+    null,
     findings,
   );
   assert.deepEqual(result.grants.map((g) => g.tool), ["write"]);
+});
+
+const plugins: Plugin[] = [
+  { id: "quotes", enabled: true, tools: ["quote"], optionalTools: [] },
+  {
+    id: "flows",
+    enabled: true,
+    tools: ["flow_list", "flow_run"],
+    optionalTools: ["flow_run"],
+  },
+  {
+    id: "board",
+    enabled: false,
+    tools: ["board_list", "browser"],
+    optionalTools: [],
+  },
+];
+const granted = (r: ReturnType<typeof tools>) => r.grants.map((g) => g.tool);
+
+Deno.test("enabled plugin tools are granted; a disabled plugin's are not, built-in names included", () => {
+  const result = granted(tools({}, {}, "off", plugins));
+  assert(result.includes("quote") && result.includes("flow_list"));
+  assert(!result.includes("board_list") && !result.includes("browser"));
+  assert(granted(tools({}, {})).includes("browser"));
+});
+
+Deno.test("optional plugin tools need an explicit opt-in", () => {
+  const has = (global: Record<string, unknown>, agent = {}) =>
+    granted(tools(global, agent, "off", plugins)).includes("flow_run");
+  assert.equal(has({}), false);
+  assert.equal(has({ profile: "coding" }), false);
+  assert.equal(has({ alsoAllow: ["flow_run"] }), true);
+  assert.equal(has({}, { alsoAllow: ["flows"] }), true);
+  assert.equal(has({ alsoAllow: ["group:plugins"] }), true);
+  assert.equal(has({ profile: "full" }), true);
+});
+
+Deno.test("plugin ids and group:plugins expand in deny and sandbox policies", () => {
+  assert(
+    !granted(tools({ deny: ["quotes"] }, {}, "off", plugins)).includes(
+      "quote",
+    ),
+  );
+  const sandboxed = tools(
+    {},
+    {
+      sandbox: { tools: { allow: ["group:plugins"], deny: [] } },
+    },
+    "all",
+    plugins,
+  );
+  assert.deepEqual(granted(sandboxed), ["flow_list", "flow_run", "quote"]);
+});
+
+Deno.test("TOOL_CATALOG_INCOMPLETE fires only for names no plugin declares", () => {
+  const incomplete = (deny: string[]) => {
+    const findings: Finding[] = [];
+    tools({ deny }, {}, "off", plugins, findings);
+    return findings.some((f) => f.code === "TOOL_CATALOG_INCOMPLETE");
+  };
+  assert.equal(incomplete(["board_list", "flows", "quote"]), false);
+  assert.equal(incomplete(["telegram"]), true);
 });

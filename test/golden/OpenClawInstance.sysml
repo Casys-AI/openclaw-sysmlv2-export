@@ -970,12 +970,14 @@ package OpenClawInstance {
         ref item 'grant_host:sessions_spawn' : ToolGrant = 'tool_lead:host:sessions_spawn';
         ref item 'grant_host:sessions_yield' : ToolGrant = 'tool_lead:host:sessions_yield';
         ref item 'grant_host:skill_workshop' : ToolGrant = 'tool_lead:host:skill_workshop';
+        ref item 'grant_host:stock_quote' : ToolGrant = 'tool_lead:host:stock_quote';
         ref item 'grant_host:subagents' : ToolGrant = 'tool_lead:host:subagents';
         ref item 'grant_host:tts' : ToolGrant = 'tool_lead:host:tts';
         ref item 'grant_host:update_plan' : ToolGrant = 'tool_lead:host:update_plan';
         ref item 'grant_host:video_generate' : ToolGrant = 'tool_lead:host:video_generate';
         ref item 'grant_host:web_fetch' : ToolGrant = 'tool_lead:host:web_fetch';
         ref item 'grant_host:web_search' : ToolGrant = 'tool_lead:host:web_search';
+        ref item 'grant_host:whatsapp_login' : ToolGrant = 'tool_lead:host:whatsapp_login';
         ref item 'grant_host:write' : ToolGrant = 'tool_lead:host:write';
         ref item 'grant_host:x_search' : ToolGrant = 'tool_lead:host:x_search';
     }
@@ -1307,6 +1309,10 @@ package OpenClawInstance {
         attribute :>> tool = "skill_workshop";
         attribute :>> layer = "host";
     }
+    item 'tool_lead:host:stock_quote' : ToolGrant {
+        attribute :>> tool = "stock_quote";
+        attribute :>> layer = "host";
+    }
     item 'tool_lead:host:subagents' : ToolGrant {
         attribute :>> tool = "subagents";
         attribute :>> layer = "host";
@@ -1329,6 +1335,10 @@ package OpenClawInstance {
     }
     item 'tool_lead:host:web_search' : ToolGrant {
         attribute :>> tool = "web_search";
+        attribute :>> layer = "host";
+    }
+    item 'tool_lead:host:whatsapp_login' : ToolGrant {
+        attribute :>> tool = "whatsapp_login";
         attribute :>> layer = "host";
     }
     item 'tool_lead:host:write' : ToolGrant {

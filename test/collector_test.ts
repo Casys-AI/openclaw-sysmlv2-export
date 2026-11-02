@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdir, readdir, readFile, symlink, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  readdir,
+  readFile,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import { join } from "node:path";
 import { EMAIL_ADDRESS_PATTERN, JWT_PATTERN } from "@logtape/redaction";
 import { collect } from "../src/collect.ts";
@@ -208,4 +215,64 @@ Deno.test("2026.10 exec modes keep the no-approval posture visible", async () =>
   );
   assert.equal(await posture("2026.10.9", undefined), "full/off");
   assert.equal(await posture("2026.6.10", undefined), "unknown/unknown");
+});
+
+Deno.test("plugin inventory keeps tool-declaring plugins and manifest optional flags, never paths", async () => {
+  const fixture = await createFixture();
+  try {
+    const without = await collect(fixture.home);
+    assert.equal(without.plugins, null);
+    assert.ok(
+      without.ambiguities.some((f) => f.code === "PLUGIN_INVENTORY_ABSENT"),
+    );
+    const snapshot = await collect(fixture.home, fixture.plugins);
+    const plugin = (
+      id: string,
+      enabled: boolean,
+      tools: string[],
+      optional = false,
+    ) => ({
+      id,
+      enabled,
+      tools,
+      optionalTools: optional ? tools : [],
+    });
+    assert.deepEqual(snapshot.plugins, [
+      plugin("browser", true, ["browser"]),
+      plugin("memory-core", true, ["memory_get", "memory_search"]),
+      plugin("stock-quotes", true, ["stock_quote"]),
+      plugin("whatsapp", true, ["whatsapp_login"], true),
+      plugin("workboard", false, ["board_claim", "board_list"], true),
+    ]);
+    assert.ok(
+      !snapshot.ambiguities.some((f) => f.code === "PLUGIN_INVENTORY_ABSENT"),
+    );
+    const lead = snapshot.agents.find((a) => a.id === "lead")!;
+    assert.ok(lead.grants.some((g) => g.id === "host:stock_quote"));
+    assert.doesNotMatch(
+      canonical(snapshot),
+      /CANARY-|openclaw-export-fixture-/,
+    );
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+Deno.test("a plugin listed with tools but no readable manifest fails with a coded error", async () => {
+  const fixture = await createFixture();
+  try {
+    const { plugins } = fixture.plugins as {
+      plugins: { id: string; rootDir: string }[];
+    };
+    const root = plugins.find((p) => p.id === "stock-quotes")!.rootDir;
+    await rm(join(root, "openclaw.plugin.json"));
+    await assert.rejects(
+      () => collect(fixture.home, fixture.plugins),
+      (error: unknown) =>
+        error instanceof ExportError &&
+        error.code === "PLUGIN_MANIFEST_READ_FAILED",
+    );
+  } finally {
+    await fixture.cleanup();
+  }
 });

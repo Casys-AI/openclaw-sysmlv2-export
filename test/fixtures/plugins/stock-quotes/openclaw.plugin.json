@@ -1,0 +1,9 @@
+{
+  "id": "stock-quotes",
+  "name": "Stock Quotes",
+  "contracts": { "tools": ["stock_quote"] },
+  "configSchema": {
+    "type": "object",
+    "properties": { "apiKey": { "type": "string", "default": "CANARY-SECRET-PLUGIN-1" } }
+  }
+}

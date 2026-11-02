@@ -1,0 +1,10 @@
+{
+  "id": "workboard",
+  "enabledByDefault": false,
+  "contracts": { "tools": ["board_list", "board_claim"] },
+  "toolMetadata": {
+    "board_list": { "optional": true },
+    "board_claim": { "optional": true }
+  },
+  "configSchema": { "type": "object" }
+}
