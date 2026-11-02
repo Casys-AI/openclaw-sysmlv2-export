@@ -17,7 +17,6 @@
     "exclude": [
       "test/fixtures",
       "test/golden",
-      "SPEC.md",
       "plugin/core.mjs"
     ]
   },
