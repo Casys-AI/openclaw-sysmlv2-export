@@ -49,8 +49,8 @@ function every(ms: number): string[] {
   ]);
 }
 
-const ORIGINS = ["builtin", "plugin", "mcp", "cli"] as const;
-interface Tool {
+export const ORIGINS = ["builtin", "plugin", "mcp", "cli"] as const;
+export interface Tool {
   /** Catalog key: the tool name, or `cli:<command>` for a CLI tool. */
   key: string;
   toolId: string;
@@ -58,7 +58,7 @@ interface Tool {
   provider: string | null;
   optional: boolean;
 }
-interface Grant {
+export interface Grant {
   id: string;
   tool: Tool;
   layer: string;
@@ -67,8 +67,9 @@ interface Grant {
 }
 
 /** The agent's effective grants, each with the catalog tool it references:
- * policy grants, then the CLI commands reachable through each exec grant. */
-function grants(snapshot: Snapshot, a: Agent): Grant[] {
+ * policy grants, then the CLI commands reachable through each exec grant.
+ * The SysML catalog and the viewer's diagrams both read them from here. */
+export function grants(snapshot: Snapshot, a: Agent): Grant[] {
   const tool = (toolId: string): Tool => {
     // docs/gateway/config-tools/tool-policy.md: configured MCP tools belong to
     // bundle-mcp, named after their server; a plugin's declared name is its tool.
