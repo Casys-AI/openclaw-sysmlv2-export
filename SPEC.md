@@ -15,12 +15,16 @@ The export reads an OpenClaw instance without changing it and turns it into:
 - a sanitized, deterministic **snapshot** (`snapshot.json`);
 - a **SysML v2 model** built on Assembly's library, grouped by Assembly
   category;
-- coded **doctor findings** about the configuration;
 - on request, **inferred procedures and rules** proposed by a model from each
   agent's behaviour files, kept apart from extracted facts.
 
 Each plugin run is kept as a version, browsable and comparable in an offline
 viewer.
+
+An experimental **doctor** (§7.2) reads the same snapshot and reports coded
+findings about the configuration. The plugin does not expose it in 0.1.0: its
+rules need Assembly's theory to be interpreted, and are available only through
+the Deno CLI.
 
 **Targets.** OpenClaw 2026.10.x, following the 2026.10.9 documentation. The
 collector also reads 2026.6.10 configurations (`agents.list`, legacy memory
@@ -35,20 +39,20 @@ change to Assembly's library.
 Each step is a pure function with a thin CLI around it. Steps compose; none
 calls the next.
 
-| Step     | Signature                              | Role                                                                        |
-| -------- | -------------------------------------- | --------------------------------------------------------------------------- |
-| collect  | `collect(home, pluginList) → Snapshot` | The only step that reads the instance. Read-only.                           |
-| emit     | `emit(snapshot) → Map<path, text>`     | Deterministic SysML text: `OpenClawImport.sysml`, `OpenClawInstance.sysml`. |
-| doctor   | `doctor(snapshot) → Finding[]`         | Collector findings plus the doctor rules (§7).                              |
-| diff     | `diff(a, b) → Change[]`                | Structural changes between two snapshots (§8).                              |
-| validate | `validate(files) → Diagnostics`        | Compiles files with Assembly's pinned Toolkit. Used by tests only.          |
-| viewer   | `viewerPage(versions) → html`          | Static page over the kept versions (§10.5).                                 |
-| infer    | `parseAgentInference`, `emitInferred`  | Validates a model's answer and emits `OpenClawInferred.sysml` (§9).         |
+| Step     | Signature                              | Role                                                                          |
+| -------- | -------------------------------------- | ----------------------------------------------------------------------------- |
+| collect  | `collect(home, pluginList) → Snapshot` | The only step that reads the instance. Read-only.                             |
+| emit     | `emit(snapshot) → Map<path, text>`     | Deterministic SysML text: `OpenClawImport.sysml`, `OpenClawInstance.sysml`.   |
+| doctor   | `doctor(snapshot) → Finding[]`         | Experimental: collector findings plus the doctor rules (§7.2). Deno CLI only. |
+| diff     | `diff(a, b) → Change[]`                | Structural changes between two snapshots (§8).                                |
+| validate | `validate(files) → Diagnostics`        | Compiles files with Assembly's pinned Toolkit. Used by tests only.            |
+| viewer   | `viewerPage(versions) → html`          | Static page over the kept versions (§10.5).                                   |
+| infer    | `parseAgentInference`, `emitInferred`  | Validates a model's answer and emits `OpenClawInferred.sysml` (§9).           |
 
-A plugin run is: list plugins (`openclaw plugins list --json`) → collect →
-doctor → emit → optionally infer → write a new version directory → update
-`versions.json` → regenerate `index.html`. The Deno CLI exposes collect, export
-(emit plus library), doctor and diff separately (§10.6).
+A plugin run is: list plugins (`openclaw plugins list --json`) → collect → emit
+→ optionally infer → write a new version directory → update `versions.json` →
+regenerate `index.html`. The Deno CLI exposes collect, export (emit plus
+library), doctor and diff separately (§10.6).
 
 The collector uses only `node:` APIs (`fs`, `path`, `crypto`, `sqlite`), so the
 same code runs under Deno and, bundled, inside OpenClaw's Node runtime.
@@ -169,7 +173,7 @@ plugin code.
 | `execApprovals` or `null`             | Host approval defaults and the `*` allowlist; null when no approval row is stored.                                      |
 | `memoryBackend`                       | Slot, dreaming, Active Memory (§3.4).                                                                                   |
 | `messaging`                           | `tools.agentToAgent` enablement and allowed targets.                                                                    |
-| `ambiguities[]`                       | Informational findings raised while collecting (§7.2).                                                                  |
+| `ambiguities[]`                       | Informational findings raised while collecting (§7.1).                                                                  |
 
 Inline prose (heartbeat prompts, hook templates, cron prompts) becomes a file
 reference whose path is a JSON pointer, such as
@@ -441,40 +445,17 @@ subagent tool policies are not resolved (`CONTEXT_DEPENDENT_TOOLS`).
 This is a static host baseline: session overrides, elevated-full exceptions and
 runtime sandbox routing are not inferred.
 
-## 7. Doctor
+## 7. Findings
 
 A finding has a `code`, a `severity` (`error`, `warning` or `info`), a
-`subject`, a `context` and a `recovery`. `doctor(snapshot)` returns the
-collector's findings plus its own rules, sorted by `code` then `subject`. The
-subject is an agent id, `instance`, a cron job id or a binding id.
+`subject`, a `context` and a `recovery`. The subject is an agent id, `instance`,
+a cron job id or a binding id. Findings are sorted by `code` then `subject`.
 
-### 7.1 Doctor rules
+### 7.1 Collector findings
 
-| Code                              | Severity | Subject           | Condition                                                                                                                                                                                |
-| --------------------------------- | -------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `EXEC_WITHOUT_APPROVAL`           | error    | agent             | The agent holds `exec` and its effective security is `full` with ask `off`.                                                                                                              |
-| `PLAINTEXT_SECRET_IN_CONFIG`      | error    | instance          | `plaintextSecretCount > 0`.                                                                                                                                                              |
-| `AGENT_WITHOUT_SANDBOX`           | warning  | agent             | The agent holds `exec` and its sandbox mode is not `all`: some session runs it without a sandbox.                                                                                        |
-| `EXTERNAL_BIND_SOURCES`           | warning  | agent             | The sandbox sets `dangerouslyAllowExternalBindSources: true`.                                                                                                                            |
-| `AGENT_TO_AGENT_WILDCARD`         | warning  | instance          | `tools.agentToAgent.allow` contains `*`.                                                                                                                                                 |
-| `SAFE_BIN_INTERPRETER_UNPROFILED` | warning  | agent             | `safeBins` holds an interpreter or runtime (shells, `node`, `python3`, `perl`…, versioned names included) without a `safeBinProfiles` entry (`dist/exec-safe-bin-runtime-policy-*.mjs`). |
-| `EXEC_ALLOWLIST_WILDCARD`         | warning  | agent or instance | An agent's commands or the `*` allowlist contain the command `*`.                                                                                                                        |
-| `MEMORY_SESSIONS_INDEXED`         | warning  | agent             | Memory search is enabled and either `sources` includes `sessions` or `rememberAcrossConversations` is true (`docs/reference/memory-config.md`).                                          |
-| `CRON_FAILING`                    | warning  | cron job          | At least 3 consecutive errors.                                                                                                                                                           |
-| `WORKSPACE_UNVERSIONED`           | warning  | agent             | The workspace has no `.git` entry.                                                                                                                                                       |
-| `MALFORMED_SKILLS_DIR`            | warning  | agent             | `skills/SKILL.md` at the root of `skills/`, or a broken skill link.                                                                                                                      |
-| `MCP_SANDBOX_GATE`                | info     | agent             | Sandbox mode is not `off`, an MCP server is enabled, and the agent has no MCP grant on its sandbox layer (`docs/gateway/config-tools/tool-policy.md`).                                   |
-| `MEMORY_REMOTE_EMBEDDINGS`        | info     | agent             | Memory search is enabled with a provider set to anything but `local` or `none`. Actual transmission is not verified.                                                                     |
-| `MANUAL_CONFIG_BACKUPS`           | info     | instance          | At least one `openclaw.json.*` file; `openclaw doctor` creates some itself.                                                                                                              |
-
-The exec, sandbox and wildcard rules mirror OpenClaw's own security audit
-(`docs/gateway/security/audit-checks.md`).
-
-### 7.2 Collector findings
-
-Raised while collecting and resolving grants, kept in `snapshot.ambiguities`.
-All are `info`: each names a point the static export cannot settle, instead of
-guessing.
+Raised while collecting and resolving grants and kept in the snapshot as
+`ambiguities`, in every export. All are `info`: each names a point the static
+export cannot settle, instead of guessing.
 
 | Code                               | Subject  | Condition                                                                                                                  |
 | ---------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------- |
@@ -505,23 +486,32 @@ guessing.
 | `UNRESOLVED_AGENT_REFERENCE`       | cron job | The job names an agent that is not configured.                                                                             |
 | `UNRESOLVED_BINDING_REFERENCE`     | binding  | The binding names an absent agent or channel account; no connection is emitted.                                            |
 
-### 7.3 Coded errors
+### 7.2 Doctor rules (experimental)
 
-Failures are `{ code, context, recovery }` errors, never findings.
+`doctor(snapshot)` returns the collector findings plus the rules below. It is an
+experimental diagnostic: the plugin neither runs it nor writes `findings.json`
+in 0.1.0, and its rules may change once they can be read against Assembly's
+theory. It runs through `deno task doctor` (§10.6).
 
-| Code                                               | Raised by | When                                                                                    |
-| -------------------------------------------------- | --------- | --------------------------------------------------------------------------------------- |
-| `INVALID_INPUT`                                    | all       | A known field has the wrong shape or an unsupported value; a snapshot fails validation. |
-| `UNSAFE_INPUT_FILE`, `INPUT_LIMIT`                 | collect   | An input file is a symlink or not a regular file; it exceeds 32 MiB.                    |
-| `UNRESOLVED_WORKSPACE`                             | collect   | A workspace path starts with `~`.                                                       |
-| `STATE_READ_FAILED`                                | collect   | The SQLite state cannot be read.                                                        |
-| `PLUGIN_MANIFEST_READ_FAILED`                      | collect   | A plugin listed with tools has no readable `openclaw.plugin.json`.                      |
-| `COLLECT_READ_FAILED`                              | collect   | Any other read failure.                                                                 |
-| `PLUGIN_LIST_FAILED`                               | plugin    | `openclaw plugins list --json` exited non-zero.                                         |
-| `INSTRUCTION_CHANGED`, `INFERENCE_NOT_JSON`        | plugin    | Per agent during inference (§9).                                                        |
-| `EXPORT_VERSION_EXISTS`, `EXPORT_VERSION_MISSING`  | plugin    | Two runs in the same second; `versions.json` lists a missing directory.                 |
-| `CLI_USAGE`, `CLI_IO_ERROR`                        | Deno CLI  | Invalid arguments; files cannot be read or created.                                     |
-| `TOOLKIT_UNAVAILABLE`, `TOOLKIT_VALIDATION_FAILED` | validate  | No Toolkit or Assembly checkout; the sources do not compile.                            |
+| Code                              | Severity | Subject           | Condition                                                                                                                                                                                |
+| --------------------------------- | -------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `EXEC_WITHOUT_APPROVAL`           | error    | agent             | The agent holds `exec` and its effective security is `full` with ask `off`.                                                                                                              |
+| `PLAINTEXT_SECRET_IN_CONFIG`      | error    | instance          | `plaintextSecretCount > 0`.                                                                                                                                                              |
+| `AGENT_WITHOUT_SANDBOX`           | warning  | agent             | The agent holds `exec` and its sandbox mode is not `all`: some session runs it without a sandbox.                                                                                        |
+| `EXTERNAL_BIND_SOURCES`           | warning  | agent             | The sandbox sets `dangerouslyAllowExternalBindSources: true`.                                                                                                                            |
+| `AGENT_TO_AGENT_WILDCARD`         | warning  | instance          | `tools.agentToAgent.allow` contains `*`.                                                                                                                                                 |
+| `SAFE_BIN_INTERPRETER_UNPROFILED` | warning  | agent             | `safeBins` holds an interpreter or runtime (shells, `node`, `python3`, `perl`…, versioned names included) without a `safeBinProfiles` entry (`dist/exec-safe-bin-runtime-policy-*.mjs`). |
+| `EXEC_ALLOWLIST_WILDCARD`         | warning  | agent or instance | An agent's commands or the `*` allowlist contain the command `*`.                                                                                                                        |
+| `MEMORY_SESSIONS_INDEXED`         | warning  | agent             | Memory search is enabled and either `sources` includes `sessions` or `rememberAcrossConversations` is true (`docs/reference/memory-config.md`).                                          |
+| `CRON_FAILING`                    | warning  | cron job          | At least 3 consecutive errors.                                                                                                                                                           |
+| `WORKSPACE_UNVERSIONED`           | warning  | agent             | The workspace has no `.git` entry.                                                                                                                                                       |
+| `MALFORMED_SKILLS_DIR`            | warning  | agent             | `skills/SKILL.md` at the root of `skills/`, or a broken skill link.                                                                                                                      |
+| `MCP_SANDBOX_GATE`                | info     | agent             | Sandbox mode is not `off`, an MCP server is enabled, and the agent has no MCP grant on its sandbox layer (`docs/gateway/config-tools/tool-policy.md`).                                   |
+| `MEMORY_REMOTE_EMBEDDINGS`        | info     | agent             | Memory search is enabled with a provider set to anything but `local` or `none`. Actual transmission is not verified.                                                                     |
+| `MANUAL_CONFIG_BACKUPS`           | info     | instance          | At least one `openclaw.json.*` file; `openclaw doctor` creates some itself.                                                                                                              |
+
+The exec, sandbox and wildcard rules mirror OpenClaw's own security audit
+(`docs/gateway/security/audit-checks.md`).
 
 ## 8. Diff
 
@@ -591,9 +581,9 @@ openclaw sysmlv2-export [--infer] [--model <provider/model>] [--out <dir>] [--op
 ```
 
 Runs an export and prints a JSON summary: version directory, version id, viewer
-path, agent count, findings by severity, and inference counts with the agents
-that failed. `--out` replaces the output directory; `--open` opens the viewer
-with `open` (macOS) or `xdg-open` (Linux) and otherwise prints its path.
+path, agent count, and inference counts with the agents that failed. `--out`
+replaces the output directory; `--open` opens the viewer with `open` (macOS) or
+`xdg-open` (Linux) and otherwise prints its path.
 
 ### 10.2 Chat command
 
@@ -604,9 +594,9 @@ relative to `<state dir>` and never absolute host paths.
 
 ### 10.3 Agent tool
 
-`sysmlv2_export` takes no parameters, exports and runs the doctor, and never
-calls a model. It is optional (an operator must allow it, for instance with
-`tools.alsoAllow`) and is offered only to the owner's unsandboxed sessions.
+`sysmlv2_export` takes no parameters, exports, and never calls a model. It is
+optional (an operator must allow it, for instance with `tools.alsoAllow`) and is
+offered only to the owner's unsandboxed sessions.
 
 ### 10.4 Settings
 
@@ -629,25 +619,25 @@ Each run writes a new directory `<outDir>/<UTC time>/`, named to the second
 (`2026-11-02T10-15-00Z`):
 
 ```text
-snapshot.json  findings.json  OpenClawImport.sysml  OpenClawInstance.sysml
+snapshot.json  OpenClawImport.sysml  OpenClawInstance.sysml
 core.sysml  cases.sysml  skills.sysml
 inference.json  OpenClawInferred.sysml      (with inference)
 ```
 
 `<outDir>/versions.json` lists the runs, newest first: id, creation time, agent
-count, findings by severity, and inference counts (or null).
-`<outDir>/index.html` is regenerated after each run: one self-contained page (no
-network, opens from `file://`) that lists the versions, shows each file, and
-shows the unified diff of each file since the previous version, computed at
-export time. File texts shared by several versions are stored once, and the
-embedded data cannot close its script element.
+count, and inference counts (or null). `<outDir>/index.html` is regenerated
+after each run: one self-contained page (no network, opens from `file://`) that
+lists the versions, shows each file, and shows the unified diff of each file
+since the previous version, computed at export time. File texts shared by
+several versions are stored once, and the embedded data cannot close its script
+element.
 
 ### 10.6 Deno CLI
 
 ```text
 deno task collect --home <dir> [--plugins <file>] --out <file>
 deno task export  --snapshot <file> --out <dir>
-deno task doctor  --snapshot <file>
+deno task doctor  --snapshot <file>     # experimental (§7.2)
 deno task diff    <a> <b>
 ```
 
@@ -656,7 +646,25 @@ code 1. Written files never overwrite existing ones and are created with mode
 `0600`; `export` writes the two instance files and the library into a new
 directory.
 
-## 11. Limits and known unknowns
+## 11. Coded errors
+
+Failures are `{ code, context, recovery }` errors, never findings.
+
+| Code                                               | Raised by | When                                                                                    |
+| -------------------------------------------------- | --------- | --------------------------------------------------------------------------------------- |
+| `INVALID_INPUT`                                    | all       | A known field has the wrong shape or an unsupported value; a snapshot fails validation. |
+| `UNSAFE_INPUT_FILE`, `INPUT_LIMIT`                 | collect   | An input file is a symlink or not a regular file; it exceeds 32 MiB.                    |
+| `UNRESOLVED_WORKSPACE`                             | collect   | A workspace path starts with `~`.                                                       |
+| `STATE_READ_FAILED`                                | collect   | The SQLite state cannot be read.                                                        |
+| `PLUGIN_MANIFEST_READ_FAILED`                      | collect   | A plugin listed with tools has no readable `openclaw.plugin.json`.                      |
+| `COLLECT_READ_FAILED`                              | collect   | Any other read failure.                                                                 |
+| `PLUGIN_LIST_FAILED`                               | plugin    | `openclaw plugins list --json` exited non-zero.                                         |
+| `INSTRUCTION_CHANGED`, `INFERENCE_NOT_JSON`        | plugin    | Per agent during inference (§9).                                                        |
+| `EXPORT_VERSION_EXISTS`, `EXPORT_VERSION_MISSING`  | plugin    | Two runs in the same second; `versions.json` lists a missing directory.                 |
+| `CLI_USAGE`, `CLI_IO_ERROR`                        | Deno CLI  | Invalid arguments; files cannot be read or created.                                     |
+| `TOOLKIT_UNAVAILABLE`, `TOOLKIT_VALIDATION_FAILED` | validate  | No Toolkit or Assembly checkout; the sources do not compile.                            |
+
+## 12. Limits and known unknowns
 
 - **Static view.** Grants and exec posture follow the configuration. Runtime
   tool registration, credentials, model-native tools, session approvals and
@@ -679,10 +687,12 @@ directory.
   catalog. Empty allowlists are treated as granting nothing.
 - **Inference** reads behaviour files only, not cron prompts, and depends on the
   model; its output is a proposal.
+- **Diagnostics.** The plugin reports no doctor findings in 0.1.0; collector
+  findings stay in the snapshot.
 - **Diff** does not compare agent names, raw policies, channel accounts, hooks,
   providers, bundled skills, the messaging policy or secret counts.
 
-## 12. Design decisions
+## 13. Design decisions
 
 1. **Positive, effective grants.** The model holds what an agent can actually
    use, per layer, never negative grants. The raw policy is provenance. Why:
@@ -709,8 +719,8 @@ directory.
    `openclaw plugins list --json` is the authority on what is loaded and
    enabled.
 8. **Three exec postures.** Configured, approvals and effective are kept
-   separately. Why: doctor needs the effective result, and a reviewer needs to
-   see which side changed.
+   separately. Why: CLI grants and diagnostics depend on the effective result,
+   and a reviewer needs to see which side changed.
 9. **Two privacy layers.** An allowlist projection, then a maintained redaction
    library; the output tests scan for canaries, e-mail addresses and JWTs. Why:
    projection blocks unknown fields; redaction catches known secrets in fields
@@ -726,14 +736,18 @@ directory.
 12. **Immutable schema versions.** A snapshot schema is never extended in place,
     and older ones are rejected. Why: a snapshot's meaning must not depend on
     the code that reads it.
+13. **Export first, diagnostics later.** The plugin ships the export, inference
+    and versions; the doctor stays experimental and out of the plugin. Why: a
+    diagnostic is only meaningful when read against Assembly's theory of the
+    system, which the export does not carry yet.
 
-## 13. Verification
+## 14. Verification
 
 - **Canaries.** Every secret, peer id, URL, path and prompt in the fixtures is a
   `CANARY-*` marker; no snapshot, SysML, finding or change may contain one.
 - **Determinism and goldens.** Collecting and emitting twice gives identical
   bytes, equal to the reviewed goldens in `test/golden/`.
-- **Doctor.** Each rule has a positive and a negative case.
+- **Doctor.** Each experimental rule has a positive and a negative case.
 - **Toolkit.** An export directory of the fixture, with an inferred package,
   compiles alone with Assembly's pinned Toolkit with zero errors
   (`deno task test:toolkit`, which needs `ASSEMBLY_DIR` and
