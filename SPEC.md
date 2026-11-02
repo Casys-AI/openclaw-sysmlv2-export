@@ -34,7 +34,7 @@ next.
 
 | Step | Signature | Notes |
 | --- | --- | --- |
-| collect | `collect(home) → Snapshot` | Only step that reads the instance. Read-only. |
+| collect | `collect(home, pluginList) → Snapshot` | Only step that reads the instance. Read-only. |
 | emit | `emit(snapshot) → Map<path, text>` | Deterministic SysML text. |
 | validate | `validate(files) → Diagnostics` | Compiles with the pinned Toolkit. |
 | doctor | `doctor(snapshot) → Finding[]` | Coded findings. |
@@ -48,8 +48,10 @@ broken ones reported; only the frontmatter `name` is read), sibling backups
 `openclaw.json.*` (count only) and cron jobs from `state/openclaw.sqlite`,
 table `cron_jobs`, opened with a read-only URI and the columns listed in the
 fixture's `state/cron_jobs.json`. Relative workspace paths resolve against the
-OpenClaw home. It uses only `node:` APIs (`fs`, `path`, `crypto`, `sqlite`) so
-the same file runs under Deno 2.9 and Node 22.
+OpenClaw home. With a plugin inventory (the output of `openclaw plugins list
+--json`), it also reads `openclaw.plugin.json` in the `rootDir` of each plugin
+that declares tools (see Families). It uses only `node:` APIs (`fs`, `path`,
+`crypto`, `sqlite`) so the same file runs under Deno 2.9 and Node 22.
 
 **Never in a snapshot or any output:** environment values, tokens, API keys,
 provider base URLs, peer/guild/user ids, `allowFrom` lists, bind source paths,
@@ -64,15 +66,18 @@ fields above runs on the raw config before projection, and the output tests
 scan with its `EMAIL_ADDRESS_PATTERN` and `JWT_PATTERN` besides the canaries.
 Do not write a third redaction mechanism.
 
-**Snapshot** is JSON with `schema: "openclaw-snapshot/1"`, sorted keys, arrays
-sorted by id, no clock reads. Same instance → same bytes.
+**Snapshot** is JSON with `schema: "openclaw-snapshot/2"`, sorted keys, arrays
+sorted by id, no clock reads. Same instance → same bytes. Version 2 added
+`plugins` and made `cron[].agentId` nullable; a `/1` snapshot is rejected, so
+collect again.
 
 ## Mapping
 
 | OpenClaw | SysML (`OpenClawImport` + instance package) |
 | --- | --- |
 | agent (`agents.list`, implicit `main`) | `part def … :> OpenClawAgent`, with `OpenClawAgent :> AssemblyCore::SoftwareOperator`; id, display name, emoji, primary and fallback models |
-| effective tools | `ToolGrant` items (tool, layer) referenced by the agent |
+| effective tools | `ToolGrant` items (tool, layer, owning plugin) referenced by the agent |
+| plugin declaring tools | `OpenClawPlugin` part (id, enabled, tools, optional tools) |
 | sandbox | `Sandbox` part: mode, scope, workspace access, image, read-only root, network, memory, cpus, bind count and modes, environment names |
 | channel account | `ChannelAccount` part (channel, account id, DM and group policies) |
 | binding | connection agent ↔ account, with the peer kind only |
@@ -118,8 +123,239 @@ are not reported.
 ## Diff
 
 Changes between two snapshots: agent added/removed, model, grants, sandbox,
-binding, skill added/removed/digest, instruction digest, cron job and schedule.
+binding, plugin added/removed/changed, skill added/removed/digest, instruction
+digest, cron job and schedule.
 Each change names its subject and before/after values (never secrets).
+
+## Families — 2 November 2026
+
+Four families extend the export, kept light. Family 1 is implemented; 2 to 4
+are designed here and briefed for implementation in
+[`briefs/`](briefs/). Doc paths are relative to the `docs/` folder of the
+OpenClaw 2026.10.9 package; `dist/` paths name its compiled sources.
+
+### 1. Plugins and their tools (implemented)
+
+**Where OpenClaw keeps it.** Each native plugin's `openclaw.plugin.json`
+declares its tools in `contracts.tools`, and optional ones in
+`toolMetadata.<tool>.optional` (`plugins/building-plugins.md`, Registering
+tools). Manifests live in several places: bundled ones in
+`<openclaw package>/dist/extensions/<id>/`, npm installs under
+`<state>/npm/projects/<encoded-package>/` (`plugins/dependency-resolution.md`),
+linked paths from `plugins.load.paths`, plus global and workspace roots.
+Install records sit in SQLite (`config_machine_state`, key
+`plugins.installedIndex`; `cli/plugins/list.md`). The collector never guesses
+these paths.
+
+**Input.** The narrow input is OpenClaw's own inventory,
+`openclaw plugins list --json`: per plugin `id`, `enabled`, `rootDir` and
+`contracts.tools` (registry view, read cold; `cli/plugins/list.md`). The
+inventory omits `toolMetadata`, so the collector reads the manifest at
+`rootDir` for plugins that declare tools, and takes only the optional flags.
+`api.runtime` exposes no plugin registry to a plugin (`plugins/sdk-runtime.md`),
+and `api.runtime.gateway.request` (which could call `plugins.list` or
+`tools.catalog`) rejects external plugins
+(`plugins/sdk-runtime/gateway-and-nodes.md`). The plugin therefore runs the
+current CLI through `api.runtime.system.runCommandWithTimeout`, as
+`process.execPath` plus the entry in `argv[1]`. OpenClaw re-invokes itself the
+same way (`dist/openclaw-cli-invocation-*.mjs`), and `dist/index.js` and
+`dist/entry.js`, the Gateway service entries, both answer it. The Deno CLI
+takes the same JSON with `collect --plugins <file>`. Without an inventory,
+`plugins` is `null` and `PLUGIN_INVENTORY_ABSENT` (info) says so.
+
+**Snapshot.** `plugins: { id, enabled, tools[], optionalTools[] }[] | null`,
+only for plugins that declare at least one tool, sorted by id.
+
+**Policy** (`gateway/config-tools/tool-policy.md`):
+
+- Enabled plugins' tools join the catalog.
+- A name that a plugin declares is that plugin's tool: it gets no grant while
+  the plugin is disabled, even if the 2026.6 built-in catalog lists it
+  (`browser`, `memory_search`…).
+- `group:plugins` and each plugin id expand to the plugin's tools in every
+  allow and deny list, sandbox included.
+- An optional tool needs an explicit opt-in in one of the session's policies:
+  its name or a glob, its plugin id, `group:plugins`, `*`, or an explicit
+  `full` profile. An unset profile does not opt in. The sandbox policy counts
+  for the sandbox layer (`catalogPolicies` in `dist/tool-resolution-*.mjs`).
+- `TOOL_CATALOG_INCOMPLETE` fires only for names that neither the built-in
+  catalog nor any listed plugin declares.
+- Not modelled: `toolMetadata.<tool>.profiles`, which adds a plugin tool to a
+  restricted profile. Under such a profile the tool gets no grant, the
+  conservative direction.
+
+**SysML.** `OpenClawPlugin` part (`pluginId`, `enabled`, `tools`,
+`optionalTools`) and `ToolGrant.pluginId` for grants of plugin-owned tools.
+
+**Doctor.** No new rule. Coded errors: `PLUGIN_LIST_FAILED` (the command failed
+or printed no JSON) and `PLUGIN_MANIFEST_READ_FAILED` (a listed plugin with
+tools has no regular `openclaw.plugin.json`).
+
+**Privacy.** Only ids, the enabled flag and tool names are kept. `rootDir`,
+`source`, `trust.*`, `workspaceDir`, package names, versions and plugin
+config never enter the snapshot.
+
+### 2. Memory (designed: [`briefs/astra-memory.md`](briefs/astra-memory.md))
+
+**Where OpenClaw keeps it.**
+
+- Search policy: `memory.search.*`, overridden per agent by
+  `agents.entries.<id>.memory.search.*` (`reference/memory-config.md`). Legacy
+  `memorySearch`, `agents.defaults.memorySearch` and
+  `agents.list[].memorySearch` are what doctor migrates
+  (`gateway/doctor/config-migrations.md`); the 2026.6 fixture uses them.
+- Backend: the `plugins.slots.memory` slot, `memory-core` by default and
+  `"none"` to disable (`tools/plugin.md`, `gateway/config-extensions.md`).
+- Dreaming: `plugins.entries.memory-core.config.dreaming`
+  (`concepts/dreaming.md`).
+- Active Memory: `plugins.entries.active-memory` and its `config`
+  (`concepts/active-memory/configuration.md`).
+- Layers in each workspace (`concepts/memory.md`):
+  - `MEMORY.md` at the root, exact case and regular file; the curated layer.
+  - Daily notes `memory/YYYY-MM-DD.md` or `memory/YYYY-MM-DD-<slug>.md`,
+    matched by `/^(\d{4}-\d{2}-\d{2})(?:-[^/]+)?\.md$/i` on direct children of
+    `memory/`.
+  - Other Markdown under `memory/` (imports, dreaming reports) is indexed but
+    is not daily notes. Symlinks are skipped.
+- The index, `<state>/agents/<id>/agent/openclaw-agent.sqlite`, also holds
+  sessions and transcripts. It is never read.
+
+**Snapshot.**
+
+- Per agent, `memory` holds:
+  - the effective `search` policy: `enabled`, `provider`, `model`, `fallback`,
+    `sources`, `rememberAcrossConversations`, `extraPathCount`, `multimodal`;
+  - `daily`: `count`, `firstDate`, `lastDate`, `bytes`, and `sha256` over the
+    sorted `date sha256 bytes` lines;
+  - `otherCount`.
+- `MEMORY.md` stays the existing instruction `FileRef`, never duplicated.
+- At instance level, `memoryBackend` holds `slot`, `dreaming` (`enabled`,
+  `frequency`, `timezone`) and `activeMemory` (`enabled`, `agents`,
+  `allowedChatTypes`, `persistTranscripts`).
+
+**SysML.**
+
+- `OpenClawImport` gains an `AgentMemory` part per agent, with flat attributes:
+  the search fields, `curatedSha256`/`curatedBytes` from `MEMORY.md`, and the
+  daily inventory.
+- It also gains one `MemoryBackend` part.
+- Assembly's `APEMemory::GovernedMemoryPolicy` is not reused and
+  `memory.sysml` is not copied. It describes admission-governed memory: exact
+  revision and digest decisions, scopes, and a required `maxValidityMs`.
+  OpenClaw memory is agent-written Markdown with no admission and no expiry, so
+  instantiating it would assert governance OpenClaw does not have.
+
+**Doctor.**
+
+- `MEMORY_SESSIONS_INDEXED` (warning): `sources` includes `sessions` or
+  `rememberAcrossConversations` is true. Transcripts then become searchable
+  across conversations, and `reference/memory-config.md` puts both in the same
+  trust boundary.
+- `MEMORY_REMOTE_EMBEDDINGS` (info): `provider` is neither `local` nor `none`,
+  so memory text is sent to an embedding provider.
+
+**Privacy.**
+
+- Never kept: note bodies, file names (slugs can carry conversation topics)
+  beyond the date, `extraPaths` (count only), `local.modelPath`, `remote.*`,
+  `store.vector.extensionPath`.
+- Never kept from Active Memory: `promptOverride`, `promptAppend`,
+  `allowedChatIds`, `deniedChatIds`, `transcriptDir`.
+- Inference keeps excluding `MEMORY.md` and never reads `memory/`.
+
+### 3. MCP servers (designed: [`briefs/astra-mcp-cli.md`](briefs/astra-mcp-cli.md))
+
+**Where OpenClaw keeps it.**
+
+- `mcp.servers` is a map keyed by server name (`tools/mcp.md`,
+  `cli/mcp/registry.md`).
+- Transport is `stdio` (from `command`), `sse` (a `url` without `transport`),
+  or `streamable-http`; `type: "http"` is an alias of `streamable-http`.
+- `toolFilter.include`/`exclude` hold tool names and `*` globs.
+- `auth: "oauth"` and `oauth.identity` describe OAuth; its tokens live in
+  `state/openclaw.sqlite`, table `mcp_oauth_stores`, and are never read.
+- Plugin manifests can declare `mcpServers` (`plugins/manifest/surfaces.md`),
+  and bundles ship `.mcp.json`. Both are out of v1.
+- Tools surface as plugin `bundle-mcp` tools named `<prefix>__<tool>`. The
+  prefix is the server name made provider-safe (`sanitizeServerName` in
+  `dist/agent-bundle-mcp-names-*.mjs`), and policy matching is
+  case-insensitive.
+
+**Snapshot.** `mcpServers` at instance level: `id`, `toolPrefix`, `enabled`,
+`transport`, `oauth`, `oauthIdentity`, `toolFilter` (`include`, `exclude`),
+`envNames`, `headerNames`, `argCount`.
+
+**Policy.**
+
+- Tool names are discovered at runtime, so each server becomes one pseudo tool
+  `<prefix>__*` of a synthetic `bundle-mcp` plugin, enabled with no optional
+  tools, and the family 1 policy resolves it.
+- The `coding` and `messaging` profiles implicitly allow `bundle-mcp`
+  (`tool-policy.md`).
+- The grant `ToolGrant { tool: "<prefix>__*", pluginId: "bundle-mcp" }` means
+  "any tool of this server".
+- An allow list that names single server tools gives no grant;
+  `MCP_TOOL_SUBSET_UNRESOLVED` (info) reports it.
+
+**SysML.** `McpServer` part with the snapshot fields.
+
+**Doctor.**
+
+- `MCP_SANDBOX_GATE` (warning): the agent has a host grant for a server but
+  none on its sandbox layer. `openclaw doctor` checks the same shape.
+- Header values join `plaintextSecretCount` and so `PLAINTEXT_SECRET_IN_CONFIG`.
+
+**Privacy.** Never kept: `url`, `command`, `args` (count only), `cwd`, `env`
+and `headers` values (names only), `oauth.*` except `identity`, `clientCert`,
+`clientKey`, and the OAuth tables.
+
+### 4. CLI and exec allowlists (designed: [`briefs/astra-mcp-cli.md`](briefs/astra-mcp-cli.md))
+
+**Where OpenClaw keeps it.**
+
+- Config, global and per agent: `tools.exec.safeBins` and its per-agent twin
+  (bare names; `tools/exec-approvals-advanced.md`, Safe bins), plus
+  `safeBinProfiles` keyed by binary, `safeBinTrustedDirs` and `pathPrepend`
+  (host paths), and `strictInlineEval` (`tools/exec.md`).
+- Host approvals: `state/openclaw.sqlite`, table `exec_approvals_config`, the
+  row with `config_key = 'current'` (`tools/exec-approvals.md`, Settings and
+  storage; `dist/exec-approvals-sqlite-*.mjs`).
+  - Its `raw_json` holds `defaults` and `agents.<id>.allowlist[]` entries:
+    `pattern` (a bare command-name glob, or a resolved-path glob),
+    `argPattern`, and `lastUsed*`.
+  - Approvals can only tighten the config posture.
+  - Allowlists and safe bins apply only when security is `allowlist` (modes
+    `allowlist`, `ask` and `auto`).
+- Legacy `exec-approvals.json` is import-only and not read.
+
+**Snapshot.**
+
+- Per agent, `execution` gains:
+  - `safeBins` (`null` when unset; the docs disagree on the default list);
+  - `safeBinProfiles` (names only), `trustedDirCount`, `pathPrependCount`,
+    `strictInlineEval`;
+  - `commands`: `{ command, kind: "safe-bin" | "name" | "path", argsRestricted }`.
+    A path pattern keeps only its last segment.
+- At instance level, `execApprovals` holds the approval `defaults` and the
+  `*` allowlist, or `null` when the table or row is absent.
+
+**SysML.**
+
+- `CommandGrant` items (`command`, `kind`, `argsRestricted`), referenced by the
+  agent like `ToolGrant` and emitted only for agents that hold an `exec` grant.
+- `ExecutionPosture` gains `safeBins`, `trustedDirCount` and
+  `strictInlineEval`.
+
+**Doctor** (mirrors `gateway/security/audit-checks.md`):
+
+- `SAFE_BIN_INTERPRETER_UNPROFILED` (warning): an interpreter in `safeBins`
+  without a `safeBinProfiles` entry.
+- `EXEC_ALLOWLIST_WILDCARD` (warning): a pattern whose command is `*`. The
+  audit has no check on allowlist content.
+
+**Privacy.** Never kept: directories of path patterns, `argPattern` (presence
+only), `lastUsedCommand`, `lastResolvedPath`, timestamps, entry ids,
+`socket.*`, `safeBinTrustedDirs` and `pathPrepend` values.
 
 ## Invariants and tests
 
@@ -137,7 +373,7 @@ Each change names its subject and before/after values (never secrets).
 
 ## Interfaces
 
-`deno task` entries: `collect --home <dir> --out <file>`,
+`deno task` entries: `collect --home <dir> [--plugins <file>] --out <file>`,
 `export --snapshot <file> --out <dir>`, `doctor --snapshot <file>`,
 `diff <a> <b>`. Output is JSON on stdout. Errors are
 `{ code, context, recovery }` with a non-zero exit.

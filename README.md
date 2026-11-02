@@ -17,12 +17,19 @@ evolving agentic systems from SysML v2.
 | --------------------------------------- | ------------------------------------------------------------ |
 | Agents, models, identities              | `part def … :> OpenClawAgent` (a `SoftwareOperator`)         |
 | Tool policy                             | Effective, positive `ToolGrant`s per agent (host or sandbox) |
+| Plugins that declare tools              | `OpenClawPlugin` parts; their tools join the grants          |
 | Sandboxes                               | `Sandbox` parts: image, network, mounts, environment _names_ |
 | Channel accounts and bindings           | `ChannelAccount` parts and agent ↔ account connections       |
 | Cron jobs and heartbeats                | Scheduled case types with cron or interval schedules         |
 | Hooks                                   | `ExternalTrigger` parts                                      |
 | Skills and instruction files            | References with path, SHA-256 and size                       |
 | Delegation and agent-to-agent messaging | Delegation rules and a messaging policy                      |
+
+Plugin tools come from OpenClaw's own inventory: the plugin runs
+`openclaw plugins list --json` and reads each listed manifest only to learn
+which tools are optional. A disabled plugin's tools get no grant, and an
+optional tool needs an explicit allow entry (its name, its plugin id,
+`group:plugins`) or the `full` profile.
 
 The library it builds on (`core.sysml`, `cases.sysml`, `skills.sysml`, copied
 from Assembly) is written next to the export, so each export folder compiles on
@@ -42,9 +49,9 @@ a separate `OpenClawInferred` package and are never admitted automatically.
 ## Privacy
 
 - Never exported: secret values, tokens, API keys, provider URLs, peer, guild
-  and user ids, allowlists of people, bind source paths, prompts and file
-  bodies. Files are referenced by digest. Environment variables keep their names
-  only.
+  and user ids, allowlists of people, bind source paths, plugin paths and plugin
+  config, prompts and file bodies. Files are referenced by digest. Environment
+  variables keep their names only.
 - Two layers: an allowlist projection, then
   [`@logtape/redaction`](https://jsr.io/@logtape/redaction).
 - Inference sends only behavior files to the agent's own model, never
@@ -94,7 +101,8 @@ file since the previous version.
 
 ```sh
 deno task check && deno lint && deno fmt --check && deno task test
-deno task collect --home ~/.openclaw --out snapshot.json   # offline pipeline
+openclaw plugins list --json > plugins.json               # optional inventory
+deno task collect --home ~/.openclaw --plugins plugins.json --out snapshot.json
 deno task export --snapshot snapshot.json --out exported
 deno task doctor --snapshot snapshot.json
 deno task diff before.json after.json
