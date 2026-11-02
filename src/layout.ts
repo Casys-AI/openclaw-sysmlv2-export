@@ -971,7 +971,7 @@ function toolsScene(view: DiagramView): Scene {
 
 /** Places a view. System and Scheduled tasks are layered graphs; Tools is
  * packed on shelves; a Behaviour view lays its procedures out as flows above
- * the parties they hand work to, with its rules in a column beside them. */
+ * the parties they hand work to, with its rules beside or under them. */
 export async function layoutView(view: DiagramView): Promise<Scene> {
   const margin = (s: Scene) => {
     const m = moved(s, 24, 24);
@@ -1004,13 +1004,29 @@ export async function layoutView(view: DiagramView): Promise<Scene> {
         }],
       };
     });
-    const column = flow(boxes, s.max, 14);
-    parts.push({
-      w: column.w,
-      h: column.h,
-      nodes: column.place(0, 0),
-      edges: [],
-    });
+    const block = (width: number): Scene => {
+      const grid = flow(boxes, width, 14);
+      return { w: grid.w, h: grid.h, nodes: grid.place(0, 0), edges: [] };
+    };
+    // Rules beside the flows in one to n columns, or under them as wide as
+    // they are: the arrangement that shows largest on a screen wins.
+    const [laid] = parts;
+    const arrangements = [
+      ...rules.map((_, i) =>
+        stack([...parts, block((i + 1) * s.max + i * 14)], 56, "right")
+      ),
+      ...(laid
+        ? [stack([laid, block(Math.max(laid.w, s.max))], 56, "down")]
+        : []),
+    ];
+    return margin(
+      arrangements.reduce((best, a) => shown(a) > shown(best) ? a : best),
+    );
   }
   return margin(stack(parts, 56, "right"));
 }
+
+/** The aspect ratio a view is fitted into: a common screen. */
+const SCREEN = 16 / 9;
+/** The scale at which a scene fits a SCREEN-shaped viewport of height 1. */
+const shown = (s: Scene) => Math.min(SCREEN / s.w, 1 / s.h);
