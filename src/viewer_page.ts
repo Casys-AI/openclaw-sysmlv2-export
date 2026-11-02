@@ -49,7 +49,10 @@ main > section[hidden] { display: none; }
 .md { position: relative; height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr); }
 .md-main { min-height: 0; display: flex; flex-direction: column; }
 .md-stage { position: relative; flex: 1 1 0; min-height: 0; }
-.md-stage[hidden], .md-sheet[hidden] { display: none; }
+.md-stage[hidden], .md-sheet[hidden], .md-split[hidden] { display: none; }
+.md-split { flex: none; height: 9px; margin: 0 12px; cursor: row-resize; touch-action: none; position: relative; }
+.md-split::after { content: ""; position: absolute; left: 50%; top: 3px; width: 40px; height: 3px; border-radius: 2px; background: var(--line-strong); transform: translateX(-50%); }
+.md-split:hover::after { background: var(--md-soft); }
 .md-toolbar { position: relative; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 10px 16px 0; pointer-events: none; }
 .md-toolbar > * { pointer-events: auto; }
 .md-title { display: flex; align-items: baseline; gap: 8px; min-width: 0; max-width: 420px; }
@@ -156,7 +159,7 @@ svg.md-focus .md-edge.lit .md-line { stroke-width: 1.8; }
 .md-canvas:focus-visible, button:focus-visible, select:focus-visible, [role="button"]:focus-visible { outline: 2px solid #797369; outline-offset: 2px; }
 
 /* Tables: a view's elements in rows, under its diagram or alone. */
-.md-sheet { flex: 0 0 auto; max-height: 44%; overflow: auto; margin: 0 12px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+.md-sheet { flex: 0 0 auto; max-height: 42%; overflow: auto; margin: 0 12px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
 .md-sheet.alone { flex: 1 1 0; max-height: none; margin-top: 8px; }
 .tb-bar { position: sticky; left: 0; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--card); font-size: 12px; color: var(--muted); }
 .tb-bar input { width: 220px; padding: 4px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); font: inherit; color: var(--ink); }
@@ -221,6 +224,21 @@ svg.md-focus .md-edge.lit .md-line { stroke-width: 1.8; }
 .hl .et-sum.changed div { border-color: var(--warn); } .et-sum.selected div { border-color: var(--ink); }
 .et-src button { all: unset; display: block; cursor: pointer; font: 11px var(--mono); text-decoration: underline; text-decoration-color: var(--line-strong); }
 .et-src button:hover { text-decoration-color: var(--ink); }
+.wk { border-collapse: separate; border-spacing: 0; font-size: 12px; }
+.wk th, .wk td { padding: 2px 14px; text-align: left; font-weight: 400; white-space: nowrap; vertical-align: middle; }
+.wk thead th { position: sticky; top: 0; z-index: 1; background: var(--card); border-bottom: 1px solid var(--line-strong); color: var(--muted); font-weight: 500; }
+.wk tbody th[data-id] { cursor: pointer; padding-left: 28px; }
+.wk tbody th small { margin-left: 8px; color: var(--muted); }
+.wk-agent th { padding-top: 8px; font-weight: 600 !important; font: 600 11.5px var(--mono); }
+.wk tr.muted th { color: var(--muted); }
+.wk tr th.selected { box-shadow: inset 3px 0 var(--ink); }
+.wk-strip { display: block; overflow: visible; }
+.wk-strip text { font-size: 10px; fill: var(--muted); }
+.wk-strip line { stroke: var(--line-strong); }
+.wk-day { fill: var(--paper); }
+.wk-fire { fill: var(--md-stroke); }
+.wk-band { fill: var(--md-stroke); opacity: .3; }
+.wk tr.muted .wk-fire, .wk tr.muted .wk-band { fill: var(--md-soft); opacity: .45; }
 .g { display: inline-block; position: relative; width: 11px; height: 11px; border: 1.2px solid var(--md-stroke); border-radius: 2px; vertical-align: middle; }
 .g.h, .g.b { background: var(--md-stroke); }
 .g.s { background: linear-gradient(to bottom right, transparent 50%, var(--md-stroke) 50%); }
@@ -267,6 +285,7 @@ pre { padding: 8px 10px; }
 <div class="md-legend" id="legend"></div>
 <span class="md-hint">Drag or scroll to pan · ⌘/Ctrl + scroll to zoom · click an element</span>
 </div>
+<div class="md-split" id="split" role="separator" aria-orientation="horizontal" aria-label="Resize the table" title="Drag to resize" hidden></div>
 <div class="md-sheet" id="sheet" hidden></div>
 </div>
 <div class="md-pop" id="removed" hidden></div>
@@ -298,8 +317,9 @@ const LEGENDS = {
 const state = { version: 0, tab: "diagrams", view: "overview", file: "OpenClawInstance.sysml", range: null,
   // An element to select once its view is shown.
   selected: null, focus: null, hover: null, viewport: null, highlight: true, drawn: null,
-  // Tables: the text filter, folded groups, the facet value shown, the sort.
-  filter: "", folded: new Set(), facet: null, sort: null };
+  // Tables: the text filter, folded groups, the facet value shown, the sort,
+  // and the height a table under a diagram was dragged to.
+  filter: "", folded: new Set(), facet: null, sort: null, sheetH: null };
 
 function el(tag, cls, text) {
   const e = document.createElement(tag);
@@ -620,7 +640,7 @@ function subtitle(view) {
   }
   return [
     ...view.scene ? [view.scene.nodes.filter((n) => !["frame", "group", "initial", "final"].includes(n.shape)).length + " elements"] : [],
-    ...t ? [t.rows.length + " " + t.title.toLowerCase()] : [],
+    ...t && t.kind === "elements" ? [t.rows.length + " " + t.title.toLowerCase()] : [],
   ].join(" · ");
 }
 
@@ -654,6 +674,9 @@ function renderDiagram(keepViewport) {
   stage.hidden = !view.scene;
   sheet.hidden = !view.table;
   sheet.classList.toggle("alone", !view.scene);
+  document.getElementById("split").hidden = !(view.scene && view.table);
+  sheet.style.height = view.scene && state.sheetH ? state.sheetH + "px" : "";
+  sheet.style.maxHeight = view.scene && state.sheetH ? "none" : "";
   state.drawn = { view: view.id, svg: null, world: null, scene: view.scene, payload: view };
   // The table first: the diagram fits in the room it leaves.
   if (view.table) {
@@ -839,8 +862,10 @@ function showLines(vi, file, from, to) {
 
 // ---- Tables
 function renderTable(box, view, delta) {
-  if (view.table.kind === "matrix") renderMatrix(box, view.table, marker(delta));
-  else renderElements(box, view, view.table, marker(delta));
+  const t = view.table, mark = marker(delta);
+  if (t.kind === "matrix") renderMatrix(box, t, mark);
+  else if (t.kind === "week") renderWeek(box, view, t, mark);
+  else renderElements(box, view, t, mark);
 }
 function search(label) {
   const input = el("input");
@@ -1014,6 +1039,67 @@ function renderElements(box, view, t, mark) {
   rows();
   box.replaceChildren(...t.summary ? [summary(view, t.summary, mark)] : [], bar, table);
 }
+// When each scheduled task fires in a week, hour by hour, under the agent it
+// wakes. Hours are in each task's own time zone; an interval fires all week.
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], HOUR = 5, DAY = 24 * HOUR + 4;
+function strip(row) {
+  const g = sv("svg", { class: "wk-strip", width: 7 * DAY - 4, height: 16, "aria-hidden": "true" });
+  DAYS.forEach((_, d) => g.append(sv("rect", { class: "wk-day", x: d * DAY, y: 0, width: 24 * HOUR, height: 16 })));
+  if (row.everyMs) {
+    const band = sv("rect", { class: "wk-band", x: 0, y: 5, width: 7 * DAY - 4, height: 6 });
+    band.append(sv("title", {}, row.when + ", all week"));
+    g.append(band);
+  }
+  for (const [hour, times] of row.fires || []) {
+    const d = Math.floor(hour / 24), h = hour % 24;
+    const r = sv("rect", { class: "wk-fire", x: d * DAY + h * HOUR, y: 2, width: HOUR - 1, height: 12, rx: 1 });
+    r.append(sv("title", {}, DAYS[d] + " " + String(h).padStart(2, "0") + ":00 · " + times + (times === 1 ? " time" : " times")));
+    g.append(r);
+  }
+  return g;
+}
+function renderWeek(box, view, t, mark) {
+  const bar = el("div", "tb-bar");
+  const key = (cls, text) => {
+    const k = el("span", "tb-key");
+    const g = sv("svg", { width: 14, height: 12, "aria-hidden": "true" });
+    g.append(sv("rect", cls === "wk-band" ? { class: cls, x: 0, y: 3, width: 14, height: 6 } : { class: cls, x: 5, y: 0, width: 4, height: 12, rx: 1 }));
+    k.append(g, text);
+    return k;
+  };
+  bar.append(el("strong", "tb-title", "Week"), key("wk-fire", "fires in that hour"), key("wk-band", "interval, all week"),
+    el("span", "tb-note", "Hours in each task's own time zone"));
+  const table = el("table", "wk"), head = el("tr"), axis = sv("svg", { class: "wk-strip", width: 7 * DAY - 4, height: 16, "aria-hidden": "true" });
+  DAYS.forEach((name, d) => {
+    axis.append(sv("text", { x: d * DAY + 12 * HOUR, y: 11, "text-anchor": "middle" }, name));
+    for (const h of [6, 12, 18]) axis.append(sv("line", { x1: d * DAY + h * HOUR, x2: d * DAY + h * HOUR, y1: 13, y2: 16 }));
+  });
+  const th = el("th");
+  th.append(axis);
+  head.append(el("th", "", "task"), th);
+  const thead = el("thead"), tbody = el("tbody");
+  thead.append(head);
+  const agents = [...new Set(t.rows.map((r) => r.agent))].sort((a, b) => a === null ? 1 : b === null ? -1 : a < b ? -1 : 1);
+  for (const agent of agents) {
+    const group = el("tr", "wk-agent"), cell = el("th", "", agent === null ? "no agent" : agent);
+    cell.colSpan = 2;
+    group.append(cell);
+    tbody.append(group);
+    for (const r of t.rows.filter((x) => x.agent === agent)) {
+      const tr = el("tr", (r.enabled ? "" : "muted") + mark(r.node));
+      const name = el("th");
+      name.dataset.id = r.node;
+      name.tabIndex = 0;
+      name.append(el("span", "", r.label), el("small", "", r.when + (r.fires ? " · " + (r.zone || "gateway time") : r.everyMs ? "" : " · not weekly")));
+      const td = el("td");
+      td.append(strip(r));
+      tr.append(name, td);
+      tbody.append(tr);
+    }
+  }
+  table.append(thead, tbody);
+  box.replaceChildren(bar, table);
+}
 function summary(view, head, mark) {
   const box = el("div", "et-sum" + mark(head.id));
   box.dataset.id = head.id;
@@ -1138,15 +1224,28 @@ canvas.addEventListener("keydown", (e) => {
   e.preventDefault();
 });
 const sheet = document.getElementById("sheet");
+// A table row of a drawn element (a scheduled task's week) centers it.
+const drawn = (id) => Boolean(state.drawn && state.drawn.scene && state.drawn.scene.nodes.some((n) => n.id === id));
 sheet.addEventListener("click", (e) => {
   const x = e.target.closest("[data-id]");
-  if (x) select(x.dataset.id, false);
+  if (x) select(x.dataset.id, drawn(x.dataset.id));
 });
 sheet.addEventListener("keydown", (e) => {
   const x = e.target.closest("[data-id]");
-  if (x && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); select(x.dataset.id, false); }
+  if (x && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); select(x.dataset.id, drawn(x.dataset.id)); }
   else if (e.key === "Escape") select(null);
 });
+// Dragging the splitter sets the table's height; the diagram fits again.
+const split = document.getElementById("split");
+split.addEventListener("pointerdown", (e) => { split.setPointerCapture(e.pointerId); split.dataset.drag = "1"; });
+split.addEventListener("pointermove", (e) => {
+  if (!split.dataset.drag) return;
+  const bottom = sheet.getBoundingClientRect().bottom, room = document.getElementById("md").getBoundingClientRect().height;
+  state.sheetH = Math.round(Math.max(80, Math.min(room - 180, bottom - e.clientY - 4)));
+  sheet.style.height = state.sheetH + "px";
+  sheet.style.maxHeight = "none";
+});
+split.addEventListener("pointerup", () => { delete split.dataset.drag; fit(); });
 window.addEventListener("resize", () => { if (state.tab === "diagrams") fit(); });
 window.addEventListener("hashchange", () => { readHash(); render(); });
 readHash();

@@ -76,7 +76,25 @@ export interface DiagramEdge {
   attributes: [string, string][];
   sysml: SysmlRef[];
 }
-/** The elements a view shows as a table instead of drawing them, by id. */
+/** When a scheduled case fires in a week, in its schedule's own time zone. */
+export interface WeekRow {
+  /** The scheduled case's node. */
+  node: string;
+  /** The agent it wakes, or null. */
+  agent: string | null;
+  label: string;
+  when: string;
+  enabled: boolean;
+  /** A cron schedule's time zone; null for the gateway host's. */
+  zone: string | null;
+  /** [hour of the week from Monday 00:00, times it fires in that hour], or
+   * null unless it repeats weekly (see `cronWeek`). */
+  fires: [number, number][] | null;
+  /** An interval's period: it fires all week, from an unknown start. */
+  everyMs: number | null;
+}
+/** The elements a view shows as a table instead of drawing them, by id, or
+ * the week in which its drawn scheduled cases fire. */
 export type ViewTable =
   /** A SysML allocation matrix: rows (origin groups, providers, tools) by
    * columns (agents); each cell is a `grant` edge from a column to a row. */
@@ -93,7 +111,8 @@ export type ViewTable =
     views: Record<string, string[]> | null;
     /** An element whose attributes sum the rows up, or null. */
     summary: string | null;
-  };
+  }
+  | { kind: "week"; rows: WeekRow[] };
 export interface DiagramView {
   id: string;
   title: string;
@@ -241,6 +260,54 @@ function toolCount(granted: Grant[]): string {
       origins.map(([origin, ids]) => `${origin} ${ids.length}`).join(", ")
     }`
     : "none";
+}
+
+const WEEKDAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+/** The values of a cron field made of numbers, ranges, steps and lists, or
+ * null for anything else or a value above `max`. */
+function cronField(field: string, max: number): number[] | null {
+  const values = new Set<number>();
+  for (const part of field.split(",")) {
+    const m = part.match(/^(?:\*|(\d+)(?:-(\d+))?)(?:\/(\d+))?$/);
+    if (!m) return null;
+    const from = m[1] === undefined ? 0 : +m[1];
+    const to = m[2] !== undefined
+      ? +m[2]
+      : m[1] === undefined || m[3] !== undefined
+      ? max
+      : from;
+    const step = m[3] === undefined ? 1 : +m[3];
+    if (to > max || from > to || step < 1) return null;
+    for (let v = from; v <= to; v += step) values.add(v);
+  }
+  return [...values].sort((a, b) => a - b);
+}
+/** When a cron expression fires in a week: [hour of the week from Monday
+ * 00:00, times in that hour], in the expression's own time zone. Null unless
+ * it repeats weekly: five fields (or six, seconds first), day of month and
+ * month `*` or `?`, the others numbers, ranges, steps, lists or day names. */
+export function cronWeek(expression: string): [number, number][] | null {
+  const f = expression.trim().toUpperCase().split(/\s+/);
+  if (f.length === 5) f.unshift("0");
+  if (f.length !== 6 || ![f[3], f[4]].every((x) => x === "*" || x === "?")) {
+    return null;
+  }
+  const days = f[5] === "?"
+    ? "*"
+    : f[5].replace(/[A-Z]+/g, (d) => String(WEEKDAYS.indexOf(d)));
+  const [seconds, minutes, hours, weekdays] = [
+    cronField(f[0], 59),
+    cronField(f[1], 59),
+    cronField(f[2], 23),
+    cronField(days, 7),
+  ];
+  if (!seconds || !minutes || !hours || !weekdays) return null;
+  const times = seconds.length * minutes.length;
+  // Sunday is 0 or 7; the week starts on Monday.
+  return [...new Set(weekdays.map((d) => (d + 6) % 7))].sort((a, b) => a - b)
+    .flatMap((day) =>
+      hours.map((h): [number, number] => [day * 24 + h, times])
+    );
 }
 
 function agentBlock(a: Agent, granted: Grant[]): DiagramNode {
@@ -702,6 +769,7 @@ function schedulesView(s: Snapshot): DiagramView | null {
   const agents = byId(s.agents);
   const known = new Set(agents.map((a) => a.id));
   const nodes: DiagramNode[] = [], edges: DiagramEdge[] = [];
+  const week: WeekRow[] = [];
   const targets = new Set<string>();
   const wake = (id: string, agentId: string | null) => {
     if (agentId === null) return;
@@ -742,6 +810,16 @@ function schedulesView(s: Snapshot): DiagramView | null {
       sysml: [inst("Cases", name("heartbeat", a.id))],
       muted: a.heartbeat.everyMs <= 0,
     }));
+    week.push({
+      node: id,
+      agent: a.id,
+      label: "heartbeat",
+      when: scheduleText("every", null, a.heartbeat.everyMs) ?? "never",
+      enabled: a.heartbeat.everyMs > 0,
+      zone: null,
+      fires: null,
+      everyMs: a.heartbeat.everyMs > 0 ? a.heartbeat.everyMs : null,
+    });
     wake(id, a.id);
   }
   for (const j of s.cron) {
@@ -780,6 +858,16 @@ function schedulesView(s: Snapshot): DiagramView | null {
       sysml: [inst("Cases", name("cron", j.id))],
       muted: !j.enabled,
     }));
+    week.push({
+      node: id,
+      agent: j.agentId,
+      label: j.name,
+      when: words ?? raw,
+      enabled: j.enabled,
+      zone: sc.kind === "cron" ? sc.timezone : null,
+      fires: sc.kind === "cron" ? cronWeek(sc.expression ?? "") : null,
+      everyMs: sc.kind === "every" ? sc.everyMs : null,
+    });
     wake(id, j.agentId);
   }
   if (!nodes.length) return null;
@@ -821,7 +909,7 @@ function schedulesView(s: Snapshot): DiagramView | null {
     group: "Cases",
     nodes,
     edges,
-    table: null,
+    table: { kind: "week", rows: week },
   };
 }
 

@@ -1,5 +1,11 @@
 import { flags, keyword } from "./layout.ts";
-import type { DiagramNode, DiagramView, Shape, ViewTable } from "./views.ts";
+import type {
+  DiagramNode,
+  DiagramView,
+  Shape,
+  ViewTable,
+  WeekRow,
+} from "./views.ts";
 
 /** The table of a view, shaped at export time as layout.ts shapes its
  * diagram, so the page only renders it: rows in order with their SysML
@@ -33,7 +39,8 @@ export type TableData =
      * its display name, and the other views that show it. */
     rows: (Head & { values: string[]; title?: string; views?: string[] })[];
     summary: Head | null;
-  };
+  }
+  | { kind: "week"; rows: WeekRow[] };
 
 function head(n: DiagramNode): Head {
   const kw = keyword(n);
@@ -47,7 +54,8 @@ function head(n: DiagramNode): Head {
   };
 }
 
-/** The elements a table shows instead of the diagram. */
+/** The elements a table shows instead of the diagram; a week's rows are
+ * drawn cases. */
 function tabled(table: ViewTable | null): Set<string> {
   switch (table?.kind) {
     case "matrix":
@@ -80,6 +88,7 @@ const GLYPH: Record<string, string> = {
 export function tableData(view: DiagramView): TableData | null {
   const t = view.table;
   if (!t) return null;
+  if (t.kind === "week") return t;
   const nodes = new Map(view.nodes.map((n) => [n.id, n]));
   if (t.kind === "elements") {
     return {

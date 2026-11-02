@@ -4,7 +4,12 @@ import { emit } from "../src/emit.ts";
 import { emitInferred, type Inference } from "../src/infer.ts";
 import { parseSnapshot, type Snapshot } from "../src/snapshot.ts";
 import { drawing, tableData } from "../src/tables.ts";
-import { declarations, type DiagramView, diagramViews } from "../src/views.ts";
+import {
+  cronWeek,
+  declarations,
+  type DiagramView,
+  diagramViews,
+} from "../src/views.ts";
 
 const read = (path: string) =>
   readFile(new URL(path, import.meta.url), "utf8").then(JSON.parse);
@@ -173,6 +178,40 @@ Deno.test("a Behaviour view lists its rules in a table, not in its drawing", () 
       "TOOLS.md:1",
     ],
   ]);
+});
+
+Deno.test("the week shows when each scheduled task fires", () => {
+  const { table } = view(diagramViews(snapshot, inference), "schedules");
+  assert.ok(table?.kind === "week");
+  const row = (node: string) => table.rows.find((r) => r.node === node)!;
+  // Thursdays at 12:00, in the gateway's time zone; an interval all week.
+  assert.deepEqual(row("cron:job-10").fires, [[3 * 24 + 12, 1]]);
+  assert.equal(row("cron:job-10").zone, null);
+  assert.deepEqual(
+    [row("heartbeat:lead").fires, row("heartbeat:lead").everyMs],
+    [null, 1800000],
+  );
+  assert.deepEqual(row("cron:job-5"), {
+    node: "cron:job-5",
+    agent: "main",
+    label: "Weekly scouting A",
+    when: "Tue, Fri at 01:00",
+    enabled: false,
+    zone: "UTC",
+    fires: [[25, 1], [4 * 24 + 1, 1]],
+    everyMs: null,
+  });
+});
+
+Deno.test("cron expressions repeat weekly only with any day of month and month", () => {
+  assert.deepEqual(cronWeek("*/15 9 * * MON-FRI")?.[0], [9, 4]);
+  assert.deepEqual(cronWeek("0 0 * * 0,7"), [[6 * 24, 1]]);
+  assert.deepEqual(cronWeek("30 0 9 * * ?")?.length, 7);
+  for (
+    const e of ["0 0 1 * *", "0 0 * 1 *", "0 24 * * *", "0 9 * * L", "@daily"]
+  ) {
+    assert.equal(cronWeek(e), null, e);
+  }
 });
 
 Deno.test("behaviour views exist only with inference", () => {
