@@ -677,12 +677,14 @@ shows the unified diff of each file since the previous version.
   opens them under Files.
 - **Layout at export time.** `elkjs` 0.9.3 (pinned, layered algorithm,
   deterministic options) places System, Scheduled tasks and Behaviour's
-  procedures. Text is measured with Helvetica's metrics, the font the diagrams
-  use (or its metric twins Arial and Liberation Sans); rows that do not fit end
-  with an ellipsis, and the page squeezes any text that still overflows. Tables
-  are shaped at export time too: rows in order with their headers, matrix cells
-  by row and column. The page draws SVG and renders HTML tables, with sorting, a
-  filter and folding but no layout.
+  procedures; many procedures go into as many even rows (ELK partitions, the
+  parties below) as make the view show largest on a 16:9 screen. Text is
+  measured with Helvetica's metrics, the font the diagrams use (or its metric
+  twins Arial and Liberation Sans); rows that do not fit end with an ellipsis,
+  and the page squeezes any text that still overflows. Tables are shaped at
+  export time too: rows in order with their headers, matrix cells by row and
+  column. The page draws SVG and renders HTML tables, with sorting, a filter and
+  folding but no layout.
 - **Tables.** A view lists the elements it shows as a table instead of drawing
   them (a matrix's columns, rows and cells; an element table's rows with some
   attributes as columns, filtered by a facet such as a rule's kind or where an
@@ -695,9 +697,10 @@ shows the unified diff of each file since the previous version.
   and longer schedules are listed as not weekly.
 - **Changes.** Against the previous version, an element is added when its id is
   new, changed when its attributes or SysML text differ (frames by their
-  attributes), removed when it is gone; table rows, columns and cells count as
-  elements, so a new grant is a new cell and marks its tool's row as changed. A
-  view the previous version lacked is new.
+  attributes; an Overview row, which sums declarations up, by their SysML only,
+  so a new inference does not mark it), removed when it is gone; table rows,
+  columns and cells count as elements, so a new grant is a new cell and marks
+  its tool's row as changed. A view the previous version lacked is new.
 - **Unreadable snapshots.** A version whose snapshot fails this viewer's schema
   check keeps its files and diffs, without diagrams.
 - **Determinism and size.** Same versions, same bytes. File texts and view

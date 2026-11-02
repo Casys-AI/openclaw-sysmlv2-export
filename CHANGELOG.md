@@ -17,7 +17,8 @@ are unchanged.
   SysML.
 - **Rules as a requirements table.** A Behaviour view keeps its procedures as
   action flows and lists its rules under them: name, kind, text and source,
-  sortable and filtered by kind, each linked to its SysML lines.
+  sortable and filtered by kind, each linked to its SysML lines. Many procedures
+  wrap into rows instead of one wide row.
 - **A week of scheduled tasks.** Under the Scheduled tasks diagram, a 7 × 24
   hour strip per task shows when each cron schedule fires, in its own time zone,
   and the intervals that run all week; one-shot and date-bound schedules are
