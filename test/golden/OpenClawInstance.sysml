@@ -2,7 +2,7 @@ package OpenClawInstance {
     private import OpenClawImport::*;
     private import ScalarValues::*;
     package Operators {
-        doc /* OpenClaw agents as software operators, with their sandbox, exec posture, memory, skills and instruction files, and the model providers they use. */
+        doc /* OpenClaw agents as software operators, each with its context, sandbox and exec posture, and the model providers they use. */
         part def Agent_client :> OpenClawAgent {
             attribute :>> id = "client";
             attribute :>> displayName = "Client";
@@ -96,6 +96,64 @@ package OpenClawInstance {
             ref item 'grant_sandbox:cli:safe-bin:wc' : ToolGrant = Authority::'grant_client:sandbox:cli:safe-bin:wc';
         }
         part agent_client : Agent_client {
+            part :>> context {
+                part 'file_AGENTS.md' :> instructions {
+                    attribute :>> path = "AGENTS.md";
+                    attribute :>> sha256 = "a9eb41db762e921fbae329785db20130f2c17ad1d3709bf7bd77331d69bc6a2f";
+                    attribute :>> bytes = 95;
+                }
+                part 'file_HEARTBEAT.md' :> instructions {
+                    attribute :>> path = "HEARTBEAT.md";
+                    attribute :>> sha256 = "c887582b41120f6814d7c5c5d7bea26489b7b373166288613edb5de6d0dfb9a0";
+                    attribute :>> bytes = 98;
+                }
+                part 'file_IDENTITY.md' :> instructions {
+                    attribute :>> path = "IDENTITY.md";
+                    attribute :>> sha256 = "4e60b96124733f530f8669654c49836bb3834b7fd3acbd6b93d38a963c9dde75";
+                    attribute :>> bytes = 97;
+                }
+                part 'file_SOUL.md' :> instructions {
+                    attribute :>> path = "SOUL.md";
+                    attribute :>> sha256 = "b27692b63ae23debfbff3bce11caa4224063ca96428a3661b79ea2ca9d130466";
+                    attribute :>> bytes = 94;
+                }
+                part 'file_TOOLS.md' :> instructions {
+                    attribute :>> path = "TOOLS.md";
+                    attribute :>> sha256 = "6bad8dc7af9ae1856be0e34382f044692b9e9f44540abbf2eca2ff1ccc501213";
+                    attribute :>> bytes = 95;
+                }
+                part 'file_USER.md' :> instructions {
+                    attribute :>> path = "USER.md";
+                    attribute :>> sha256 = "322df650d7970068667edfcba7d9f406c0fc54fcfdbb6ed01d03db743743b670";
+                    attribute :>> bytes = 93;
+                }
+                part 'skill_skill-ab' :> skills {
+                    attribute :>> id = "skill-ab";
+                    attribute :>> source = "skills/skill-ab/SKILL.md";
+                    attribute :>> digest = "7e609512e7994fb792b23cb6da1bae7946c23fab711aab0a12be96db59656849";
+                }
+                part 'skill_skill-x' :> skills {
+                    attribute :>> id = "skill-x";
+                    attribute :>> source = "skills/skill-x/SKILL.md";
+                    attribute :>> digest = "45e563f9d5529c8b8444dbc985ec6b71960d9e22d5ce7b61b2bf325f6ba28317";
+                }
+                part 'skill_skill-z' :> skills {
+                    attribute :>> id = "skill-z";
+                    attribute :>> source = "skills/skill-z/SKILL.md";
+                    attribute :>> digest = "1cded481d858c1e173bac2c78278afc2557348b88b78895cc50950420f70e3be";
+                }
+                part :>> memory {
+                    attribute :>> searchEnabled = true;
+                    attribute :>> searchProvider = "local";
+                    attribute :>> searchFallback = "none";
+                    attribute :>> searchSources = "[\"memory\"]";
+                    attribute :>> extraPathCount = 0;
+                    attribute :>> multimodal = false;
+                    attribute :>> dailyCount = 0;
+                    attribute :>> dailyBytes = 0;
+                    attribute :>> otherCount = 0;
+                }
+            }
             part sandbox : Sandbox {
                 attribute :>> mode = "all";
                 attribute :>> scope = "agent";
@@ -124,62 +182,6 @@ package OpenClawInstance {
                 attribute :>> approvalAsk = "on-miss";
                 attribute :>> effectiveSecurity = "allowlist";
                 attribute :>> effectiveAsk = "on-miss";
-            }
-            part memory : AgentMemory {
-                attribute :>> searchEnabled = true;
-                attribute :>> searchProvider = "local";
-                attribute :>> searchFallback = "none";
-                attribute :>> searchSources = "[\"memory\"]";
-                attribute :>> extraPathCount = 0;
-                attribute :>> multimodal = false;
-                attribute :>> dailyCount = 0;
-                attribute :>> dailyBytes = 0;
-                attribute :>> otherCount = 0;
-            }
-            part 'skill_skill-ab' : APESkills::InitialSkill {
-                attribute :>> id = "skill-ab";
-                attribute :>> source = "skills/skill-ab/SKILL.md";
-                attribute :>> digest = "7e609512e7994fb792b23cb6da1bae7946c23fab711aab0a12be96db59656849";
-            }
-            part 'skill_skill-x' : APESkills::InitialSkill {
-                attribute :>> id = "skill-x";
-                attribute :>> source = "skills/skill-x/SKILL.md";
-                attribute :>> digest = "45e563f9d5529c8b8444dbc985ec6b71960d9e22d5ce7b61b2bf325f6ba28317";
-            }
-            part 'skill_skill-z' : APESkills::InitialSkill {
-                attribute :>> id = "skill-z";
-                attribute :>> source = "skills/skill-z/SKILL.md";
-                attribute :>> digest = "1cded481d858c1e173bac2c78278afc2557348b88b78895cc50950420f70e3be";
-            }
-            part 'file_AGENTS.md' : InstructionFile {
-                attribute :>> path = "AGENTS.md";
-                attribute :>> sha256 = "a9eb41db762e921fbae329785db20130f2c17ad1d3709bf7bd77331d69bc6a2f";
-                attribute :>> bytes = 95;
-            }
-            part 'file_HEARTBEAT.md' : InstructionFile {
-                attribute :>> path = "HEARTBEAT.md";
-                attribute :>> sha256 = "c887582b41120f6814d7c5c5d7bea26489b7b373166288613edb5de6d0dfb9a0";
-                attribute :>> bytes = 98;
-            }
-            part 'file_IDENTITY.md' : InstructionFile {
-                attribute :>> path = "IDENTITY.md";
-                attribute :>> sha256 = "4e60b96124733f530f8669654c49836bb3834b7fd3acbd6b93d38a963c9dde75";
-                attribute :>> bytes = 97;
-            }
-            part 'file_SOUL.md' : InstructionFile {
-                attribute :>> path = "SOUL.md";
-                attribute :>> sha256 = "b27692b63ae23debfbff3bce11caa4224063ca96428a3661b79ea2ca9d130466";
-                attribute :>> bytes = 94;
-            }
-            part 'file_TOOLS.md' : InstructionFile {
-                attribute :>> path = "TOOLS.md";
-                attribute :>> sha256 = "6bad8dc7af9ae1856be0e34382f044692b9e9f44540abbf2eca2ff1ccc501213";
-                attribute :>> bytes = 95;
-            }
-            part 'file_USER.md' : InstructionFile {
-                attribute :>> path = "USER.md";
-                attribute :>> sha256 = "322df650d7970068667edfcba7d9f406c0fc54fcfdbb6ed01d03db743743b670";
-                attribute :>> bytes = 93;
             }
         }
         part def Agent_coach :> OpenClawAgent {
@@ -280,6 +282,59 @@ package OpenClawInstance {
             ref item 'grant_sandbox:cli:safe-bin:wc' : ToolGrant = Authority::'grant_coach:sandbox:cli:safe-bin:wc';
         }
         part agent_coach : Agent_coach {
+            part :>> context {
+                part 'file_AGENTS.md' :> instructions {
+                    attribute :>> path = "AGENTS.md";
+                    attribute :>> sha256 = "9a42f8451c6ea3d10ba04f685e2ade657683a0a6030dbca5eceaad02d42445a1";
+                    attribute :>> bytes = 95;
+                }
+                part 'file_HEARTBEAT.md' :> instructions {
+                    attribute :>> path = "HEARTBEAT.md";
+                    attribute :>> sha256 = "c887582b41120f6814d7c5c5d7bea26489b7b373166288613edb5de6d0dfb9a0";
+                    attribute :>> bytes = 98;
+                }
+                part 'file_IDENTITY.md' :> instructions {
+                    attribute :>> path = "IDENTITY.md";
+                    attribute :>> sha256 = "4e60b96124733f530f8669654c49836bb3834b7fd3acbd6b93d38a963c9dde75";
+                    attribute :>> bytes = 97;
+                }
+                part 'file_SOUL.md' :> instructions {
+                    attribute :>> path = "SOUL.md";
+                    attribute :>> sha256 = "e2e3de489d34c1af2b99d0a7886adc93f6f2d8dfd897be28ff5394c39c38d8d5";
+                    attribute :>> bytes = 94;
+                }
+                part 'file_TOOLS.md' :> instructions {
+                    attribute :>> path = "TOOLS.md";
+                    attribute :>> sha256 = "8ccd6fb51d8ec213dbd309733df1b1ac576c529301fc7aaac7fce68f9fce178b";
+                    attribute :>> bytes = 95;
+                }
+                part 'file_USER.md' :> instructions {
+                    attribute :>> path = "USER.md";
+                    attribute :>> sha256 = "39ab53f3b30cf946da08fc7b29802ca133c8ef1e52fc4a7473a3ebd29a4fcedd";
+                    attribute :>> bytes = 93;
+                }
+                part 'skill_skill-f' :> skills {
+                    attribute :>> id = "skill-f";
+                    attribute :>> source = "skills/skill-f/SKILL.md";
+                    attribute :>> digest = "97854d51b5123604b5a18ea662d1de99522dcf8a1dabff839e69b9d7af276b55";
+                }
+                part 'skill_skill-y' :> skills {
+                    attribute :>> id = "skill-y";
+                    attribute :>> source = "skills/skill-y/SKILL.md";
+                    attribute :>> digest = "bebb44f2e2e9ab703cd57d6fe10f5eb31bb079d299ff39f3b9d24b88060a1bee";
+                }
+                part :>> memory {
+                    attribute :>> searchEnabled = true;
+                    attribute :>> searchProvider = "local";
+                    attribute :>> searchFallback = "none";
+                    attribute :>> searchSources = "[\"memory\"]";
+                    attribute :>> extraPathCount = 0;
+                    attribute :>> multimodal = false;
+                    attribute :>> dailyCount = 0;
+                    attribute :>> dailyBytes = 0;
+                    attribute :>> otherCount = 0;
+                }
+            }
             part sandbox : Sandbox {
                 attribute :>> mode = "all";
                 attribute :>> scope = "agent";
@@ -308,57 +363,6 @@ package OpenClawInstance {
                 attribute :>> approvalAsk = "on-miss";
                 attribute :>> effectiveSecurity = "allowlist";
                 attribute :>> effectiveAsk = "on-miss";
-            }
-            part memory : AgentMemory {
-                attribute :>> searchEnabled = true;
-                attribute :>> searchProvider = "local";
-                attribute :>> searchFallback = "none";
-                attribute :>> searchSources = "[\"memory\"]";
-                attribute :>> extraPathCount = 0;
-                attribute :>> multimodal = false;
-                attribute :>> dailyCount = 0;
-                attribute :>> dailyBytes = 0;
-                attribute :>> otherCount = 0;
-            }
-            part 'skill_skill-f' : APESkills::InitialSkill {
-                attribute :>> id = "skill-f";
-                attribute :>> source = "skills/skill-f/SKILL.md";
-                attribute :>> digest = "97854d51b5123604b5a18ea662d1de99522dcf8a1dabff839e69b9d7af276b55";
-            }
-            part 'skill_skill-y' : APESkills::InitialSkill {
-                attribute :>> id = "skill-y";
-                attribute :>> source = "skills/skill-y/SKILL.md";
-                attribute :>> digest = "bebb44f2e2e9ab703cd57d6fe10f5eb31bb079d299ff39f3b9d24b88060a1bee";
-            }
-            part 'file_AGENTS.md' : InstructionFile {
-                attribute :>> path = "AGENTS.md";
-                attribute :>> sha256 = "9a42f8451c6ea3d10ba04f685e2ade657683a0a6030dbca5eceaad02d42445a1";
-                attribute :>> bytes = 95;
-            }
-            part 'file_HEARTBEAT.md' : InstructionFile {
-                attribute :>> path = "HEARTBEAT.md";
-                attribute :>> sha256 = "c887582b41120f6814d7c5c5d7bea26489b7b373166288613edb5de6d0dfb9a0";
-                attribute :>> bytes = 98;
-            }
-            part 'file_IDENTITY.md' : InstructionFile {
-                attribute :>> path = "IDENTITY.md";
-                attribute :>> sha256 = "4e60b96124733f530f8669654c49836bb3834b7fd3acbd6b93d38a963c9dde75";
-                attribute :>> bytes = 97;
-            }
-            part 'file_SOUL.md' : InstructionFile {
-                attribute :>> path = "SOUL.md";
-                attribute :>> sha256 = "e2e3de489d34c1af2b99d0a7886adc93f6f2d8dfd897be28ff5394c39c38d8d5";
-                attribute :>> bytes = 94;
-            }
-            part 'file_TOOLS.md' : InstructionFile {
-                attribute :>> path = "TOOLS.md";
-                attribute :>> sha256 = "8ccd6fb51d8ec213dbd309733df1b1ac576c529301fc7aaac7fce68f9fce178b";
-                attribute :>> bytes = 95;
-            }
-            part 'file_USER.md' : InstructionFile {
-                attribute :>> path = "USER.md";
-                attribute :>> sha256 = "39ab53f3b30cf946da08fc7b29802ca133c8ef1e52fc4a7473a3ebd29a4fcedd";
-                attribute :>> bytes = 93;
             }
         }
         part def Agent_devbox :> OpenClawAgent {
@@ -458,6 +462,59 @@ package OpenClawInstance {
             ref item 'grant_sandbox:cli:safe-bin:wc' : ToolGrant = Authority::'grant_devbox:sandbox:cli:safe-bin:wc';
         }
         part agent_devbox : Agent_devbox {
+            part :>> context {
+                part 'file_AGENTS.md' :> instructions {
+                    attribute :>> path = "AGENTS.md";
+                    attribute :>> sha256 = "bf4517641e85238a20026a60ea1059807c6a105028847f7d44c76a45f87f6e57";
+                    attribute :>> bytes = 95;
+                }
+                part 'file_HEARTBEAT.md' :> instructions {
+                    attribute :>> path = "HEARTBEAT.md";
+                    attribute :>> sha256 = "c887582b41120f6814d7c5c5d7bea26489b7b373166288613edb5de6d0dfb9a0";
+                    attribute :>> bytes = 98;
+                }
+                part 'file_IDENTITY.md' :> instructions {
+                    attribute :>> path = "IDENTITY.md";
+                    attribute :>> sha256 = "4e60b96124733f530f8669654c49836bb3834b7fd3acbd6b93d38a963c9dde75";
+                    attribute :>> bytes = 97;
+                }
+                part 'file_SOUL.md' :> instructions {
+                    attribute :>> path = "SOUL.md";
+                    attribute :>> sha256 = "0f1876693709eef8411a28be1c3a7d9b384579f70e2acb29aafdcd1dc963f2de";
+                    attribute :>> bytes = 95;
+                }
+                part 'file_TOOLS.md' :> instructions {
+                    attribute :>> path = "TOOLS.md";
+                    attribute :>> sha256 = "f0935683663313f251af346f87bd7a91c2740f93f548178f9e23fb0ca7298b6e";
+                    attribute :>> bytes = 95;
+                }
+                part 'file_USER.md' :> instructions {
+                    attribute :>> path = "USER.md";
+                    attribute :>> sha256 = "2073cb4d6d9f48eb64299cd67e96bc89e897b9643cd515279894e774fa19640c";
+                    attribute :>> bytes = 93;
+                }
+                part 'skill__archived/old-skill' :> skills {
+                    attribute :>> id = "_archived/old-skill";
+                    attribute :>> source = "skills/_archived/old-skill/SKILL.md";
+                    attribute :>> digest = "014d5e0dac73fcebf0fda0968a2a9f804e2a843d1f336b7c2584cb599d6743ff";
+                }
+                part skill_escalation :> skills {
+                    attribute :>> id = "escalation";
+                    attribute :>> source = "skills/escalation/SKILL.md";
+                    attribute :>> digest = "9016653f64a19a21a650b2e4f3a595367ffb58e08c62b7c16fcb4380e73a5237";
+                }
+                part :>> memory {
+                    attribute :>> searchEnabled = true;
+                    attribute :>> searchProvider = "local";
+                    attribute :>> searchFallback = "none";
+                    attribute :>> searchSources = "[\"memory\"]";
+                    attribute :>> extraPathCount = 0;
+                    attribute :>> multimodal = false;
+                    attribute :>> dailyCount = 0;
+                    attribute :>> dailyBytes = 0;
+                    attribute :>> otherCount = 0;
+                }
+            }
             part sandbox : Sandbox {
                 attribute :>> mode = "all";
                 attribute :>> scope = "agent";
@@ -486,57 +543,6 @@ package OpenClawInstance {
                 attribute :>> approvalAsk = "on-miss";
                 attribute :>> effectiveSecurity = "allowlist";
                 attribute :>> effectiveAsk = "on-miss";
-            }
-            part memory : AgentMemory {
-                attribute :>> searchEnabled = true;
-                attribute :>> searchProvider = "local";
-                attribute :>> searchFallback = "none";
-                attribute :>> searchSources = "[\"memory\"]";
-                attribute :>> extraPathCount = 0;
-                attribute :>> multimodal = false;
-                attribute :>> dailyCount = 0;
-                attribute :>> dailyBytes = 0;
-                attribute :>> otherCount = 0;
-            }
-            part 'skill__archived/old-skill' : APESkills::InitialSkill {
-                attribute :>> id = "_archived/old-skill";
-                attribute :>> source = "skills/_archived/old-skill/SKILL.md";
-                attribute :>> digest = "014d5e0dac73fcebf0fda0968a2a9f804e2a843d1f336b7c2584cb599d6743ff";
-            }
-            part skill_escalation : APESkills::InitialSkill {
-                attribute :>> id = "escalation";
-                attribute :>> source = "skills/escalation/SKILL.md";
-                attribute :>> digest = "9016653f64a19a21a650b2e4f3a595367ffb58e08c62b7c16fcb4380e73a5237";
-            }
-            part 'file_AGENTS.md' : InstructionFile {
-                attribute :>> path = "AGENTS.md";
-                attribute :>> sha256 = "bf4517641e85238a20026a60ea1059807c6a105028847f7d44c76a45f87f6e57";
-                attribute :>> bytes = 95;
-            }
-            part 'file_HEARTBEAT.md' : InstructionFile {
-                attribute :>> path = "HEARTBEAT.md";
-                attribute :>> sha256 = "c887582b41120f6814d7c5c5d7bea26489b7b373166288613edb5de6d0dfb9a0";
-                attribute :>> bytes = 98;
-            }
-            part 'file_IDENTITY.md' : InstructionFile {
-                attribute :>> path = "IDENTITY.md";
-                attribute :>> sha256 = "4e60b96124733f530f8669654c49836bb3834b7fd3acbd6b93d38a963c9dde75";
-                attribute :>> bytes = 97;
-            }
-            part 'file_SOUL.md' : InstructionFile {
-                attribute :>> path = "SOUL.md";
-                attribute :>> sha256 = "0f1876693709eef8411a28be1c3a7d9b384579f70e2acb29aafdcd1dc963f2de";
-                attribute :>> bytes = 95;
-            }
-            part 'file_TOOLS.md' : InstructionFile {
-                attribute :>> path = "TOOLS.md";
-                attribute :>> sha256 = "f0935683663313f251af346f87bd7a91c2740f93f548178f9e23fb0ca7298b6e";
-                attribute :>> bytes = 95;
-            }
-            part 'file_USER.md' : InstructionFile {
-                attribute :>> path = "USER.md";
-                attribute :>> sha256 = "2073cb4d6d9f48eb64299cd67e96bc89e897b9643cd515279894e774fa19640c";
-                attribute :>> bytes = 93;
             }
         }
         part def Agent_field :> OpenClawAgent {
@@ -635,6 +641,94 @@ package OpenClawInstance {
             ref item 'grant_sandbox:cli:safe-bin:wc' : ToolGrant = Authority::'grant_field:sandbox:cli:safe-bin:wc';
         }
         part agent_field : Agent_field {
+            part :>> context {
+                part 'file_AGENTS.md' :> instructions {
+                    attribute :>> path = "AGENTS.md";
+                    attribute :>> sha256 = "d91d06bf177f3ede9fecba6cc565218bb74f7a0e287eb37ee80d0a967c8fa877";
+                    attribute :>> bytes = 96;
+                }
+                part 'file_HEARTBEAT.md' :> instructions {
+                    attribute :>> path = "HEARTBEAT.md";
+                    attribute :>> sha256 = "2240b35c8859c4f1c9b1a180cb9fd69c0d7472dd912c4534baabd00ecab53d30";
+                    attribute :>> bytes = 99;
+                }
+                part 'file_IDENTITY.md' :> instructions {
+                    attribute :>> path = "IDENTITY.md";
+                    attribute :>> sha256 = "3b01b858fbc055bff440461191baf9b796dfb809afabeafae506acd491e00117";
+                    attribute :>> bytes = 97;
+                }
+                part 'file_MEMORY.md' :> instructions {
+                    attribute :>> path = "MEMORY.md";
+                    attribute :>> sha256 = "ddfeb3c332f684f758dda35ed067aac03c68b2934e6c44880934d825dd77f51f";
+                    attribute :>> bytes = 96;
+                }
+                part 'file_SOUL.md' :> instructions {
+                    attribute :>> path = "SOUL.md";
+                    attribute :>> sha256 = "af51faa07c4690f7ae03a659ac8ae5f10af6fc76697d156b1c4b3c8b587260a0";
+                    attribute :>> bytes = 94;
+                }
+                part 'file_TOOLS.md' :> instructions {
+                    attribute :>> path = "TOOLS.md";
+                    attribute :>> sha256 = "cd08008f5e1034a8a01334a7729364a47be1fc1fdc0a1ca64ad38af0f34db80a";
+                    attribute :>> bytes = 96;
+                }
+                part 'file_USER.md' :> instructions {
+                    attribute :>> path = "USER.md";
+                    attribute :>> sha256 = "87c9640cf1b1bd687325e211fe031e1bd1ac67b0c1daccc9ba967292cd079851";
+                    attribute :>> bytes = 93;
+                }
+                part 'skill__archived/old-skill' :> skills {
+                    attribute :>> id = "_archived/old-skill";
+                    attribute :>> source = "skills/_archived/old-skill/SKILL.md";
+                    attribute :>> digest = "014d5e0dac73fcebf0fda0968a2a9f804e2a843d1f336b7c2584cb599d6743ff";
+                }
+                part skill_escalation :> skills {
+                    attribute :>> id = "escalation";
+                    attribute :>> source = "skills/escalation/SKILL.md";
+                    attribute :>> digest = "9016653f64a19a21a650b2e4f3a595367ffb58e08c62b7c16fcb4380e73a5237";
+                }
+                part 'skill_skill-1' :> skills {
+                    attribute :>> id = "skill-1";
+                    attribute :>> source = "skills/skill-1/SKILL.md";
+                    attribute :>> digest = "5a606705b32ee492a189839360f5f82c3513a49f93a6e932b70225c012295688";
+                }
+                part 'skill_skill-aa' :> skills {
+                    attribute :>> id = "skill-aa";
+                    attribute :>> source = "skills/skill-aa/SKILL.md";
+                    attribute :>> digest = "9558fb7feb3129b48fc78e76ca037a97ec0b5a0ab8ae851ca4ee74b59aa6fa7b";
+                }
+                part 'skill_skill-ad' :> skills {
+                    attribute :>> id = "skill-ad";
+                    attribute :>> source = "skills/skill-ad/SKILL.md";
+                    attribute :>> digest = "56cd36b7200af5e52b4ad5f576076f0969af856e65e24ab2262347b60600fa2a";
+                }
+                part 'skill_skill-af' :> skills {
+                    attribute :>> id = "skill-af";
+                    attribute :>> source = "skills/skill-af/SKILL.md";
+                    attribute :>> digest = "ac6f6b333cb367edf8ff0fd0539b42937d0017b46853df851bcdbc8bbde90e85";
+                }
+                part 'skill_skill-w' :> skills {
+                    attribute :>> id = "skill-w";
+                    attribute :>> source = "skills/skill-w/SKILL.md";
+                    attribute :>> digest = "13039487b0c3a43c9fddf066738b54522c3cca19d3d4931e7ef8dcd467b4637f";
+                }
+                part :>> memory {
+                    attribute :>> searchEnabled = true;
+                    attribute :>> searchProvider = "local";
+                    attribute :>> searchFallback = "none";
+                    attribute :>> searchSources = "[\"memory\"]";
+                    attribute :>> extraPathCount = 0;
+                    attribute :>> multimodal = false;
+                    attribute :>> curatedSha256 = "ddfeb3c332f684f758dda35ed067aac03c68b2934e6c44880934d825dd77f51f";
+                    attribute :>> curatedBytes = 96;
+                    attribute :>> dailyCount = 1;
+                    attribute :>> dailyFirstDate = "2026-05-30";
+                    attribute :>> dailyLastDate = "2026-05-30";
+                    attribute :>> dailyBytes = 16;
+                    attribute :>> dailySha256 = "371942c13809f135478a482a31bd56195e4c58dfdc1994e5ba661ce959e940c9";
+                    attribute :>> otherCount = 0;
+                }
+            }
             part sandbox : Sandbox {
                 attribute :>> mode = "all";
                 attribute :>> scope = "agent";
@@ -663,92 +757,6 @@ package OpenClawInstance {
                 attribute :>> approvalAsk = "on-miss";
                 attribute :>> effectiveSecurity = "allowlist";
                 attribute :>> effectiveAsk = "on-miss";
-            }
-            part memory : AgentMemory {
-                attribute :>> searchEnabled = true;
-                attribute :>> searchProvider = "local";
-                attribute :>> searchFallback = "none";
-                attribute :>> searchSources = "[\"memory\"]";
-                attribute :>> extraPathCount = 0;
-                attribute :>> multimodal = false;
-                attribute :>> curatedSha256 = "ddfeb3c332f684f758dda35ed067aac03c68b2934e6c44880934d825dd77f51f";
-                attribute :>> curatedBytes = 96;
-                attribute :>> dailyCount = 1;
-                attribute :>> dailyFirstDate = "2026-05-30";
-                attribute :>> dailyLastDate = "2026-05-30";
-                attribute :>> dailyBytes = 16;
-                attribute :>> dailySha256 = "371942c13809f135478a482a31bd56195e4c58dfdc1994e5ba661ce959e940c9";
-                attribute :>> otherCount = 0;
-            }
-            part 'skill__archived/old-skill' : APESkills::InitialSkill {
-                attribute :>> id = "_archived/old-skill";
-                attribute :>> source = "skills/_archived/old-skill/SKILL.md";
-                attribute :>> digest = "014d5e0dac73fcebf0fda0968a2a9f804e2a843d1f336b7c2584cb599d6743ff";
-            }
-            part skill_escalation : APESkills::InitialSkill {
-                attribute :>> id = "escalation";
-                attribute :>> source = "skills/escalation/SKILL.md";
-                attribute :>> digest = "9016653f64a19a21a650b2e4f3a595367ffb58e08c62b7c16fcb4380e73a5237";
-            }
-            part 'skill_skill-1' : APESkills::InitialSkill {
-                attribute :>> id = "skill-1";
-                attribute :>> source = "skills/skill-1/SKILL.md";
-                attribute :>> digest = "5a606705b32ee492a189839360f5f82c3513a49f93a6e932b70225c012295688";
-            }
-            part 'skill_skill-aa' : APESkills::InitialSkill {
-                attribute :>> id = "skill-aa";
-                attribute :>> source = "skills/skill-aa/SKILL.md";
-                attribute :>> digest = "9558fb7feb3129b48fc78e76ca037a97ec0b5a0ab8ae851ca4ee74b59aa6fa7b";
-            }
-            part 'skill_skill-ad' : APESkills::InitialSkill {
-                attribute :>> id = "skill-ad";
-                attribute :>> source = "skills/skill-ad/SKILL.md";
-                attribute :>> digest = "56cd36b7200af5e52b4ad5f576076f0969af856e65e24ab2262347b60600fa2a";
-            }
-            part 'skill_skill-af' : APESkills::InitialSkill {
-                attribute :>> id = "skill-af";
-                attribute :>> source = "skills/skill-af/SKILL.md";
-                attribute :>> digest = "ac6f6b333cb367edf8ff0fd0539b42937d0017b46853df851bcdbc8bbde90e85";
-            }
-            part 'skill_skill-w' : APESkills::InitialSkill {
-                attribute :>> id = "skill-w";
-                attribute :>> source = "skills/skill-w/SKILL.md";
-                attribute :>> digest = "13039487b0c3a43c9fddf066738b54522c3cca19d3d4931e7ef8dcd467b4637f";
-            }
-            part 'file_AGENTS.md' : InstructionFile {
-                attribute :>> path = "AGENTS.md";
-                attribute :>> sha256 = "d91d06bf177f3ede9fecba6cc565218bb74f7a0e287eb37ee80d0a967c8fa877";
-                attribute :>> bytes = 96;
-            }
-            part 'file_HEARTBEAT.md' : InstructionFile {
-                attribute :>> path = "HEARTBEAT.md";
-                attribute :>> sha256 = "2240b35c8859c4f1c9b1a180cb9fd69c0d7472dd912c4534baabd00ecab53d30";
-                attribute :>> bytes = 99;
-            }
-            part 'file_IDENTITY.md' : InstructionFile {
-                attribute :>> path = "IDENTITY.md";
-                attribute :>> sha256 = "3b01b858fbc055bff440461191baf9b796dfb809afabeafae506acd491e00117";
-                attribute :>> bytes = 97;
-            }
-            part 'file_MEMORY.md' : InstructionFile {
-                attribute :>> path = "MEMORY.md";
-                attribute :>> sha256 = "ddfeb3c332f684f758dda35ed067aac03c68b2934e6c44880934d825dd77f51f";
-                attribute :>> bytes = 96;
-            }
-            part 'file_SOUL.md' : InstructionFile {
-                attribute :>> path = "SOUL.md";
-                attribute :>> sha256 = "af51faa07c4690f7ae03a659ac8ae5f10af6fc76697d156b1c4b3c8b587260a0";
-                attribute :>> bytes = 94;
-            }
-            part 'file_TOOLS.md' : InstructionFile {
-                attribute :>> path = "TOOLS.md";
-                attribute :>> sha256 = "cd08008f5e1034a8a01334a7729364a47be1fc1fdc0a1ca64ad38af0f34db80a";
-                attribute :>> bytes = 96;
-            }
-            part 'file_USER.md' : InstructionFile {
-                attribute :>> path = "USER.md";
-                attribute :>> sha256 = "87c9640cf1b1bd687325e211fe031e1bd1ac67b0c1daccc9ba967292cd079851";
-                attribute :>> bytes = 93;
             }
         }
         part def Agent_lead :> OpenClawAgent {
@@ -833,6 +841,229 @@ package OpenClawInstance {
             ref item 'grant_host:cli:safe-bin:wc' : ToolGrant = Authority::'grant_lead:host:cli:safe-bin:wc';
         }
         part agent_lead : Agent_lead {
+            part :>> context {
+                part 'file_AGENTS.md' :> instructions {
+                    attribute :>> path = "AGENTS.md";
+                    attribute :>> sha256 = "d91d06bf177f3ede9fecba6cc565218bb74f7a0e287eb37ee80d0a967c8fa877";
+                    attribute :>> bytes = 96;
+                }
+                part 'file_HEARTBEAT.md' :> instructions {
+                    attribute :>> path = "HEARTBEAT.md";
+                    attribute :>> sha256 = "4c880c91872557b161e81253cc3e0ec057003d915cbbdf28718df8eaaea896b0";
+                    attribute :>> bytes = 98;
+                }
+                part 'file_HOURLY_REPORT.md' :> instructions {
+                    attribute :>> path = "HOURLY_REPORT.md";
+                    attribute :>> sha256 = "9f229d4620559f9420d06817243e43f17b0d7197cda430f3219fe053ea6dc4dd";
+                    attribute :>> bytes = 102;
+                }
+                part 'file_IDENTITY.md' :> instructions {
+                    attribute :>> path = "IDENTITY.md";
+                    attribute :>> sha256 = "9df1377d19bdb846c4427ed40c82832b2a56f47179edb9b2f912fbc786b51acd";
+                    attribute :>> bytes = 97;
+                }
+                part 'file_MEMORY.md' :> instructions {
+                    attribute :>> path = "MEMORY.md";
+                    attribute :>> sha256 = "c531ab42932f6eb6d328dfe37087a5a61511f55b5167eac15923eec50402310b";
+                    attribute :>> bytes = 97;
+                }
+                part 'file_QUALITY.md' :> instructions {
+                    attribute :>> path = "QUALITY.md";
+                    attribute :>> sha256 = "4f7ff65a0f3688247f4361d350a221d89d925097461fd67b4debbaa2074ad599";
+                    attribute :>> bytes = 97;
+                }
+                part 'file_SOUL.md' :> instructions {
+                    attribute :>> path = "SOUL.md";
+                    attribute :>> sha256 = "510c25d377ffd2852f0e5822afb03722bf1d67de968e8dcbfc3c4dc2ccdc7248";
+                    attribute :>> bytes = 95;
+                }
+                part 'file_TOOLS.md' :> instructions {
+                    attribute :>> path = "TOOLS.md";
+                    attribute :>> sha256 = "1e8761e52b8308de9bdc41083a6092c216d541d3633c9cee9ccf9d98a9c2eaf0";
+                    attribute :>> bytes = 96;
+                }
+                part 'file_USER.md' :> instructions {
+                    attribute :>> path = "USER.md";
+                    attribute :>> sha256 = "d3490b50efe29fac8516d4c9de332c9fee11b0f237657111e093d4ef36cd20b7";
+                    attribute :>> bytes = 94;
+                }
+                part 'skill__archived/old-skill' :> skills {
+                    attribute :>> id = "_archived/old-skill";
+                    attribute :>> source = "skills/_archived/old-skill/SKILL.md";
+                    attribute :>> digest = "014d5e0dac73fcebf0fda0968a2a9f804e2a843d1f336b7c2584cb599d6743ff";
+                }
+                part skill_escalation :> skills {
+                    attribute :>> id = "escalation";
+                    attribute :>> source = "skills/escalation/SKILL.md";
+                    attribute :>> digest = "9016653f64a19a21a650b2e4f3a595367ffb58e08c62b7c16fcb4380e73a5237";
+                }
+                part 'skill_skill-a' :> skills {
+                    attribute :>> id = "skill-a";
+                    attribute :>> source = "skills/skill-a/SKILL.md";
+                    attribute :>> digest = "9ca693e57ada940ff0f2330331a99c89795813abe606f5c34ac0534c5d5092b4";
+                }
+                part 'skill_skill-aa' :> skills {
+                    attribute :>> id = "skill-aa";
+                    attribute :>> source = "skills/skill-aa/SKILL.md";
+                    attribute :>> digest = "9558fb7feb3129b48fc78e76ca037a97ec0b5a0ab8ae851ca4ee74b59aa6fa7b";
+                }
+                part 'skill_skill-ac' :> skills {
+                    attribute :>> id = "skill-ac";
+                    attribute :>> source = "skills/skill-ac/SKILL.md";
+                    attribute :>> digest = "99184c50cc246dccdab6bbe7764195b788bec87858366000c903a0474fc1d366";
+                }
+                part 'skill_skill-ad' :> skills {
+                    attribute :>> id = "skill-ad";
+                    attribute :>> source = "skills/skill-ad/SKILL.md";
+                    attribute :>> digest = "56cd36b7200af5e52b4ad5f576076f0969af856e65e24ab2262347b60600fa2a";
+                }
+                part 'skill_skill-ae' :> skills {
+                    attribute :>> id = "skill-ae";
+                    attribute :>> source = "skills/skill-ae/SKILL.md";
+                    attribute :>> digest = "444c9a1de2cd27c0ce912e2ac5963cc62f113712bd04dec49e5ba977bda67e85";
+                }
+                part 'skill_skill-af' :> skills {
+                    attribute :>> id = "skill-af";
+                    attribute :>> source = "skills/skill-af/SKILL.md";
+                    attribute :>> digest = "ac6f6b333cb367edf8ff0fd0539b42937d0017b46853df851bcdbc8bbde90e85";
+                }
+                part 'skill_skill-ag' :> skills {
+                    attribute :>> id = "skill-ag";
+                    attribute :>> source = "skills/skill-ag/SKILL.md";
+                    attribute :>> digest = "7e9c5bce57935d2f04817937aacc358547bcfbb9f2b3c20d22f1c6aae16feed6";
+                }
+                part 'skill_skill-ah' :> skills {
+                    attribute :>> id = "skill-ah";
+                    attribute :>> source = "skills/skill-ah/SKILL.md";
+                    attribute :>> digest = "136bfddd214a7ba3aa371c42b9157bc156e36ca080bedeacdf5ccd591cc5f7c1";
+                }
+                part 'skill_skill-ai' :> skills {
+                    attribute :>> id = "skill-ai";
+                    attribute :>> source = "skills/skill-ai/SKILL.md";
+                    attribute :>> digest = "889f1a3ed0d84e4d70a8f68620b40d2307a5673d8c8abc7ca206fe51105d82a1";
+                }
+                part 'skill_skill-b' :> skills {
+                    attribute :>> id = "skill-b";
+                    attribute :>> source = "skills/skill-b/SKILL.md";
+                    attribute :>> digest = "4ba04c614857ae97cb8cbfd8df099854159b3be0781b8a2a332db2bf890ee0ca";
+                }
+                part 'skill_skill-c' :> skills {
+                    attribute :>> id = "skill-c";
+                    attribute :>> source = "skills/skill-c/SKILL.md";
+                    attribute :>> digest = "266d62b94a1573b46c035139e68863395b49585bc5401a26ccd22e616a55c0d6";
+                }
+                part 'skill_skill-d' :> skills {
+                    attribute :>> id = "skill-d";
+                    attribute :>> source = "skills/skill-d/SKILL.md";
+                    attribute :>> digest = "b07a1de09c706da4bef569d18998ec720a3fb10f7bdea1e5780eaa67087b5fec";
+                }
+                part 'skill_skill-e' :> skills {
+                    attribute :>> id = "skill-e";
+                    attribute :>> source = "skills/skill-e/SKILL.md";
+                    attribute :>> digest = "4b1c2ed9c2a55afb87e2908a782dff18613b132740b61e15b0146ff51319efe3";
+                }
+                part 'skill_skill-g' :> skills {
+                    attribute :>> id = "skill-g";
+                    attribute :>> source = "skills/skill-g/SKILL.md";
+                    attribute :>> digest = "69da147fe174898130411b72d1548fc4995423fbae5d8c0a09196a88cc51cccf";
+                }
+                part 'skill_skill-h' :> skills {
+                    attribute :>> id = "skill-h";
+                    attribute :>> source = "skills/skill-h/SKILL.md";
+                    attribute :>> digest = "e579a18b2ff2c9abbf3f7eb985a9ff3d59874ec40c17005e863ce2c9b342d8ac";
+                }
+                part 'skill_skill-i' :> skills {
+                    attribute :>> id = "skill-i";
+                    attribute :>> source = "skills/skill-i/SKILL.md";
+                    attribute :>> digest = "d2757c119ce2c3ad26b931afd4446010077fe0c7de24dafbf1a5656fd7f6a95c";
+                }
+                part 'skill_skill-j' :> skills {
+                    attribute :>> id = "skill-j";
+                    attribute :>> source = "skills/skill-j/SKILL.md";
+                    attribute :>> digest = "dae38a8f9ed3e9b1e37b14f494fef4a277de66f4da503d4887cbf7bd1a50377d";
+                }
+                part 'skill_skill-k' :> skills {
+                    attribute :>> id = "skill-k";
+                    attribute :>> source = "skills/skill-k/SKILL.md";
+                    attribute :>> digest = "b0dc29f43cc461359d37924ed4f9c95ebd7dec3cecfe4de409b4f1c6ce025b5c";
+                }
+                part 'skill_skill-l' :> skills {
+                    attribute :>> id = "skill-l";
+                    attribute :>> source = "skills/skill-l/SKILL.md";
+                    attribute :>> digest = "104d8e0c94e383e3de6d2aa3358ea71032563ff729ffb16e3fb63d1615e57832";
+                }
+                part 'skill_skill-m' :> skills {
+                    attribute :>> id = "skill-m";
+                    attribute :>> source = "skills/skill-m/SKILL.md";
+                    attribute :>> digest = "b1a0627a57cab6fbb823b4a9053b4d3204c91e36d9d367853cadc6c32e74f153";
+                }
+                part 'skill_skill-n' :> skills {
+                    attribute :>> id = "skill-n";
+                    attribute :>> source = "skills/skill-n/SKILL.md";
+                    attribute :>> digest = "d44935251e7f132ee5753b8cb6ab7e52e3967b84e5c480e330509c84ba2ee470";
+                }
+                part 'skill_skill-o' :> skills {
+                    attribute :>> id = "skill-o";
+                    attribute :>> source = "skills/skill-o/SKILL.md";
+                    attribute :>> digest = "2efedf9402b6a469005ead7eb54a7e8cae9225d5bd8156b13b922d8cf0390697";
+                }
+                part 'skill_skill-p' :> skills {
+                    attribute :>> id = "skill-p";
+                    attribute :>> source = "skills/skill-p/SKILL.md";
+                    attribute :>> digest = "0fa975fc95416d9e9f8597fe600902af63fe61f2cbacbdbfd91110cf87349ffb";
+                }
+                part 'skill_skill-q' :> skills {
+                    attribute :>> id = "skill-q";
+                    attribute :>> source = "skills/skill-q/SKILL.md";
+                    attribute :>> digest = "bb6961f39ac7bc96f6125193469a6f492e6fde2ae75c9c501cd23da35f78ea5a";
+                }
+                part 'skill_skill-r' :> skills {
+                    attribute :>> id = "skill-r";
+                    attribute :>> source = "skills/skill-r/SKILL.md";
+                    attribute :>> digest = "7392a241c07a1903027a0b4eb0ee777dd33b1929874547e15af65abc1930276f";
+                }
+                part 'skill_skill-s' :> skills {
+                    attribute :>> id = "skill-s";
+                    attribute :>> source = "skills/skill-s/SKILL.md";
+                    attribute :>> digest = "13132b65ca431a04a02e833b6dcadef60201b518dd2f2bf519c5b79fad2388d2";
+                }
+                part 'skill_skill-t' :> skills {
+                    attribute :>> id = "skill-t";
+                    attribute :>> source = "skills/skill-t/SKILL.md";
+                    attribute :>> digest = "4dc4d3872a53d8881c487e88324e3c250e6b3b5fea4d9687a69cb4d048568efe";
+                }
+                part 'skill_skill-u' :> skills {
+                    attribute :>> id = "skill-u";
+                    attribute :>> source = "skills/skill-u/SKILL.md";
+                    attribute :>> digest = "7ed3e153fc5cd1aac6dabf4b044922641c673dd7a393f20745002f94d66e8ec7";
+                }
+                part 'skill_skill-v' :> skills {
+                    attribute :>> id = "skill-v";
+                    attribute :>> source = "skills/skill-v/SKILL.md";
+                    attribute :>> digest = "26641101dedf0c403b585c08105e051bf1e2eaa3ead627d03d18b9ad01abd4e7";
+                }
+                part 'skill_skill-w' :> skills {
+                    attribute :>> id = "skill-w";
+                    attribute :>> source = "skills/skill-w/SKILL.md";
+                    attribute :>> digest = "13039487b0c3a43c9fddf066738b54522c3cca19d3d4931e7ef8dcd467b4637f";
+                }
+                part :>> memory {
+                    attribute :>> searchEnabled = true;
+                    attribute :>> searchProvider = "local";
+                    attribute :>> searchFallback = "none";
+                    attribute :>> searchSources = "[\"memory\"]";
+                    attribute :>> extraPathCount = 0;
+                    attribute :>> multimodal = false;
+                    attribute :>> curatedSha256 = "c531ab42932f6eb6d328dfe37087a5a61511f55b5167eac15923eec50402310b";
+                    attribute :>> curatedBytes = 97;
+                    attribute :>> dailyCount = 2;
+                    attribute :>> dailyFirstDate = "2026-06-01";
+                    attribute :>> dailyLastDate = "2026-06-02";
+                    attribute :>> dailyBytes = 32;
+                    attribute :>> dailySha256 = "fff8b2bf3669aa98b4fccab9de17d486d49f3bf68bc51fedce99802e66e7d9d5";
+                    attribute :>> otherCount = 2;
+                }
+            }
             part sandbox : Sandbox {
                 attribute :>> mode = "off";
                 attribute :>> workspaceAccess = "none";
@@ -858,227 +1089,6 @@ package OpenClawInstance {
                 attribute :>> approvalAsk = "on-miss";
                 attribute :>> effectiveSecurity = "allowlist";
                 attribute :>> effectiveAsk = "on-miss";
-            }
-            part memory : AgentMemory {
-                attribute :>> searchEnabled = true;
-                attribute :>> searchProvider = "local";
-                attribute :>> searchFallback = "none";
-                attribute :>> searchSources = "[\"memory\"]";
-                attribute :>> extraPathCount = 0;
-                attribute :>> multimodal = false;
-                attribute :>> curatedSha256 = "c531ab42932f6eb6d328dfe37087a5a61511f55b5167eac15923eec50402310b";
-                attribute :>> curatedBytes = 97;
-                attribute :>> dailyCount = 2;
-                attribute :>> dailyFirstDate = "2026-06-01";
-                attribute :>> dailyLastDate = "2026-06-02";
-                attribute :>> dailyBytes = 32;
-                attribute :>> dailySha256 = "fff8b2bf3669aa98b4fccab9de17d486d49f3bf68bc51fedce99802e66e7d9d5";
-                attribute :>> otherCount = 2;
-            }
-            part 'skill__archived/old-skill' : APESkills::InitialSkill {
-                attribute :>> id = "_archived/old-skill";
-                attribute :>> source = "skills/_archived/old-skill/SKILL.md";
-                attribute :>> digest = "014d5e0dac73fcebf0fda0968a2a9f804e2a843d1f336b7c2584cb599d6743ff";
-            }
-            part skill_escalation : APESkills::InitialSkill {
-                attribute :>> id = "escalation";
-                attribute :>> source = "skills/escalation/SKILL.md";
-                attribute :>> digest = "9016653f64a19a21a650b2e4f3a595367ffb58e08c62b7c16fcb4380e73a5237";
-            }
-            part 'skill_skill-a' : APESkills::InitialSkill {
-                attribute :>> id = "skill-a";
-                attribute :>> source = "skills/skill-a/SKILL.md";
-                attribute :>> digest = "9ca693e57ada940ff0f2330331a99c89795813abe606f5c34ac0534c5d5092b4";
-            }
-            part 'skill_skill-aa' : APESkills::InitialSkill {
-                attribute :>> id = "skill-aa";
-                attribute :>> source = "skills/skill-aa/SKILL.md";
-                attribute :>> digest = "9558fb7feb3129b48fc78e76ca037a97ec0b5a0ab8ae851ca4ee74b59aa6fa7b";
-            }
-            part 'skill_skill-ac' : APESkills::InitialSkill {
-                attribute :>> id = "skill-ac";
-                attribute :>> source = "skills/skill-ac/SKILL.md";
-                attribute :>> digest = "99184c50cc246dccdab6bbe7764195b788bec87858366000c903a0474fc1d366";
-            }
-            part 'skill_skill-ad' : APESkills::InitialSkill {
-                attribute :>> id = "skill-ad";
-                attribute :>> source = "skills/skill-ad/SKILL.md";
-                attribute :>> digest = "56cd36b7200af5e52b4ad5f576076f0969af856e65e24ab2262347b60600fa2a";
-            }
-            part 'skill_skill-ae' : APESkills::InitialSkill {
-                attribute :>> id = "skill-ae";
-                attribute :>> source = "skills/skill-ae/SKILL.md";
-                attribute :>> digest = "444c9a1de2cd27c0ce912e2ac5963cc62f113712bd04dec49e5ba977bda67e85";
-            }
-            part 'skill_skill-af' : APESkills::InitialSkill {
-                attribute :>> id = "skill-af";
-                attribute :>> source = "skills/skill-af/SKILL.md";
-                attribute :>> digest = "ac6f6b333cb367edf8ff0fd0539b42937d0017b46853df851bcdbc8bbde90e85";
-            }
-            part 'skill_skill-ag' : APESkills::InitialSkill {
-                attribute :>> id = "skill-ag";
-                attribute :>> source = "skills/skill-ag/SKILL.md";
-                attribute :>> digest = "7e9c5bce57935d2f04817937aacc358547bcfbb9f2b3c20d22f1c6aae16feed6";
-            }
-            part 'skill_skill-ah' : APESkills::InitialSkill {
-                attribute :>> id = "skill-ah";
-                attribute :>> source = "skills/skill-ah/SKILL.md";
-                attribute :>> digest = "136bfddd214a7ba3aa371c42b9157bc156e36ca080bedeacdf5ccd591cc5f7c1";
-            }
-            part 'skill_skill-ai' : APESkills::InitialSkill {
-                attribute :>> id = "skill-ai";
-                attribute :>> source = "skills/skill-ai/SKILL.md";
-                attribute :>> digest = "889f1a3ed0d84e4d70a8f68620b40d2307a5673d8c8abc7ca206fe51105d82a1";
-            }
-            part 'skill_skill-b' : APESkills::InitialSkill {
-                attribute :>> id = "skill-b";
-                attribute :>> source = "skills/skill-b/SKILL.md";
-                attribute :>> digest = "4ba04c614857ae97cb8cbfd8df099854159b3be0781b8a2a332db2bf890ee0ca";
-            }
-            part 'skill_skill-c' : APESkills::InitialSkill {
-                attribute :>> id = "skill-c";
-                attribute :>> source = "skills/skill-c/SKILL.md";
-                attribute :>> digest = "266d62b94a1573b46c035139e68863395b49585bc5401a26ccd22e616a55c0d6";
-            }
-            part 'skill_skill-d' : APESkills::InitialSkill {
-                attribute :>> id = "skill-d";
-                attribute :>> source = "skills/skill-d/SKILL.md";
-                attribute :>> digest = "b07a1de09c706da4bef569d18998ec720a3fb10f7bdea1e5780eaa67087b5fec";
-            }
-            part 'skill_skill-e' : APESkills::InitialSkill {
-                attribute :>> id = "skill-e";
-                attribute :>> source = "skills/skill-e/SKILL.md";
-                attribute :>> digest = "4b1c2ed9c2a55afb87e2908a782dff18613b132740b61e15b0146ff51319efe3";
-            }
-            part 'skill_skill-g' : APESkills::InitialSkill {
-                attribute :>> id = "skill-g";
-                attribute :>> source = "skills/skill-g/SKILL.md";
-                attribute :>> digest = "69da147fe174898130411b72d1548fc4995423fbae5d8c0a09196a88cc51cccf";
-            }
-            part 'skill_skill-h' : APESkills::InitialSkill {
-                attribute :>> id = "skill-h";
-                attribute :>> source = "skills/skill-h/SKILL.md";
-                attribute :>> digest = "e579a18b2ff2c9abbf3f7eb985a9ff3d59874ec40c17005e863ce2c9b342d8ac";
-            }
-            part 'skill_skill-i' : APESkills::InitialSkill {
-                attribute :>> id = "skill-i";
-                attribute :>> source = "skills/skill-i/SKILL.md";
-                attribute :>> digest = "d2757c119ce2c3ad26b931afd4446010077fe0c7de24dafbf1a5656fd7f6a95c";
-            }
-            part 'skill_skill-j' : APESkills::InitialSkill {
-                attribute :>> id = "skill-j";
-                attribute :>> source = "skills/skill-j/SKILL.md";
-                attribute :>> digest = "dae38a8f9ed3e9b1e37b14f494fef4a277de66f4da503d4887cbf7bd1a50377d";
-            }
-            part 'skill_skill-k' : APESkills::InitialSkill {
-                attribute :>> id = "skill-k";
-                attribute :>> source = "skills/skill-k/SKILL.md";
-                attribute :>> digest = "b0dc29f43cc461359d37924ed4f9c95ebd7dec3cecfe4de409b4f1c6ce025b5c";
-            }
-            part 'skill_skill-l' : APESkills::InitialSkill {
-                attribute :>> id = "skill-l";
-                attribute :>> source = "skills/skill-l/SKILL.md";
-                attribute :>> digest = "104d8e0c94e383e3de6d2aa3358ea71032563ff729ffb16e3fb63d1615e57832";
-            }
-            part 'skill_skill-m' : APESkills::InitialSkill {
-                attribute :>> id = "skill-m";
-                attribute :>> source = "skills/skill-m/SKILL.md";
-                attribute :>> digest = "b1a0627a57cab6fbb823b4a9053b4d3204c91e36d9d367853cadc6c32e74f153";
-            }
-            part 'skill_skill-n' : APESkills::InitialSkill {
-                attribute :>> id = "skill-n";
-                attribute :>> source = "skills/skill-n/SKILL.md";
-                attribute :>> digest = "d44935251e7f132ee5753b8cb6ab7e52e3967b84e5c480e330509c84ba2ee470";
-            }
-            part 'skill_skill-o' : APESkills::InitialSkill {
-                attribute :>> id = "skill-o";
-                attribute :>> source = "skills/skill-o/SKILL.md";
-                attribute :>> digest = "2efedf9402b6a469005ead7eb54a7e8cae9225d5bd8156b13b922d8cf0390697";
-            }
-            part 'skill_skill-p' : APESkills::InitialSkill {
-                attribute :>> id = "skill-p";
-                attribute :>> source = "skills/skill-p/SKILL.md";
-                attribute :>> digest = "0fa975fc95416d9e9f8597fe600902af63fe61f2cbacbdbfd91110cf87349ffb";
-            }
-            part 'skill_skill-q' : APESkills::InitialSkill {
-                attribute :>> id = "skill-q";
-                attribute :>> source = "skills/skill-q/SKILL.md";
-                attribute :>> digest = "bb6961f39ac7bc96f6125193469a6f492e6fde2ae75c9c501cd23da35f78ea5a";
-            }
-            part 'skill_skill-r' : APESkills::InitialSkill {
-                attribute :>> id = "skill-r";
-                attribute :>> source = "skills/skill-r/SKILL.md";
-                attribute :>> digest = "7392a241c07a1903027a0b4eb0ee777dd33b1929874547e15af65abc1930276f";
-            }
-            part 'skill_skill-s' : APESkills::InitialSkill {
-                attribute :>> id = "skill-s";
-                attribute :>> source = "skills/skill-s/SKILL.md";
-                attribute :>> digest = "13132b65ca431a04a02e833b6dcadef60201b518dd2f2bf519c5b79fad2388d2";
-            }
-            part 'skill_skill-t' : APESkills::InitialSkill {
-                attribute :>> id = "skill-t";
-                attribute :>> source = "skills/skill-t/SKILL.md";
-                attribute :>> digest = "4dc4d3872a53d8881c487e88324e3c250e6b3b5fea4d9687a69cb4d048568efe";
-            }
-            part 'skill_skill-u' : APESkills::InitialSkill {
-                attribute :>> id = "skill-u";
-                attribute :>> source = "skills/skill-u/SKILL.md";
-                attribute :>> digest = "7ed3e153fc5cd1aac6dabf4b044922641c673dd7a393f20745002f94d66e8ec7";
-            }
-            part 'skill_skill-v' : APESkills::InitialSkill {
-                attribute :>> id = "skill-v";
-                attribute :>> source = "skills/skill-v/SKILL.md";
-                attribute :>> digest = "26641101dedf0c403b585c08105e051bf1e2eaa3ead627d03d18b9ad01abd4e7";
-            }
-            part 'skill_skill-w' : APESkills::InitialSkill {
-                attribute :>> id = "skill-w";
-                attribute :>> source = "skills/skill-w/SKILL.md";
-                attribute :>> digest = "13039487b0c3a43c9fddf066738b54522c3cca19d3d4931e7ef8dcd467b4637f";
-            }
-            part 'file_AGENTS.md' : InstructionFile {
-                attribute :>> path = "AGENTS.md";
-                attribute :>> sha256 = "d91d06bf177f3ede9fecba6cc565218bb74f7a0e287eb37ee80d0a967c8fa877";
-                attribute :>> bytes = 96;
-            }
-            part 'file_HEARTBEAT.md' : InstructionFile {
-                attribute :>> path = "HEARTBEAT.md";
-                attribute :>> sha256 = "4c880c91872557b161e81253cc3e0ec057003d915cbbdf28718df8eaaea896b0";
-                attribute :>> bytes = 98;
-            }
-            part 'file_HOURLY_REPORT.md' : InstructionFile {
-                attribute :>> path = "HOURLY_REPORT.md";
-                attribute :>> sha256 = "9f229d4620559f9420d06817243e43f17b0d7197cda430f3219fe053ea6dc4dd";
-                attribute :>> bytes = 102;
-            }
-            part 'file_IDENTITY.md' : InstructionFile {
-                attribute :>> path = "IDENTITY.md";
-                attribute :>> sha256 = "9df1377d19bdb846c4427ed40c82832b2a56f47179edb9b2f912fbc786b51acd";
-                attribute :>> bytes = 97;
-            }
-            part 'file_MEMORY.md' : InstructionFile {
-                attribute :>> path = "MEMORY.md";
-                attribute :>> sha256 = "c531ab42932f6eb6d328dfe37087a5a61511f55b5167eac15923eec50402310b";
-                attribute :>> bytes = 97;
-            }
-            part 'file_QUALITY.md' : InstructionFile {
-                attribute :>> path = "QUALITY.md";
-                attribute :>> sha256 = "4f7ff65a0f3688247f4361d350a221d89d925097461fd67b4debbaa2074ad599";
-                attribute :>> bytes = 97;
-            }
-            part 'file_SOUL.md' : InstructionFile {
-                attribute :>> path = "SOUL.md";
-                attribute :>> sha256 = "510c25d377ffd2852f0e5822afb03722bf1d67de968e8dcbfc3c4dc2ccdc7248";
-                attribute :>> bytes = 95;
-            }
-            part 'file_TOOLS.md' : InstructionFile {
-                attribute :>> path = "TOOLS.md";
-                attribute :>> sha256 = "1e8761e52b8308de9bdc41083a6092c216d541d3633c9cee9ccf9d98a9c2eaf0";
-                attribute :>> bytes = 96;
-            }
-            part 'file_USER.md' : InstructionFile {
-                attribute :>> path = "USER.md";
-                attribute :>> sha256 = "d3490b50efe29fac8516d4c9de332c9fee11b0f237657111e093d4ef36cd20b7";
-                attribute :>> bytes = 94;
             }
         }
         part def Agent_secretary :> OpenClawAgent {
@@ -1171,6 +1181,86 @@ package OpenClawInstance {
             ref item 'grant_sandbox:cli:safe-bin:wc' : ToolGrant = Authority::'grant_secretary:sandbox:cli:safe-bin:wc';
         }
         part agent_secretary : Agent_secretary {
+            part :>> context {
+                part 'file_AGENTS.md' :> instructions {
+                    attribute :>> path = "AGENTS.md";
+                    attribute :>> sha256 = "ff14a1059aa60f5a5599eed3b3648955448a682868345bd8bd28b83613406139";
+                    attribute :>> bytes = 95;
+                }
+                part 'file_BOOTSTRAP.md' :> instructions {
+                    attribute :>> path = "BOOTSTRAP.md";
+                    attribute :>> sha256 = "e180683f4d5a0f79d90af1f959dd6b5903b3f84ad8b8df5a31c43b65544ad73d";
+                    attribute :>> bytes = 98;
+                }
+                part 'file_HEARTBEAT.md' :> instructions {
+                    attribute :>> path = "HEARTBEAT.md";
+                    attribute :>> sha256 = "c887582b41120f6814d7c5c5d7bea26489b7b373166288613edb5de6d0dfb9a0";
+                    attribute :>> bytes = 98;
+                }
+                part 'file_IDENTITY.md' :> instructions {
+                    attribute :>> path = "IDENTITY.md";
+                    attribute :>> sha256 = "971215e97ec880ddabca6468baccbfee8a3378d74b5ca000ab0d1a0f697e4475";
+                    attribute :>> bytes = 97;
+                }
+                part 'file_MEMORY.md' :> instructions {
+                    attribute :>> path = "MEMORY.md";
+                    attribute :>> sha256 = "585844ea5a330d9f8af28757b385fb20976b9ab28411fcd04498fe1fc82cc219";
+                    attribute :>> bytes = 96;
+                }
+                part 'file_SOUL.md' :> instructions {
+                    attribute :>> path = "SOUL.md";
+                    attribute :>> sha256 = "d2be594f4acd9aa704f47eec0066d8a84d02bee2e236b856869e280f562549d8";
+                    attribute :>> bytes = 94;
+                }
+                part 'file_TOOLS.md' :> instructions {
+                    attribute :>> path = "TOOLS.md";
+                    attribute :>> sha256 = "77f4cfe08e7ff807c0eaf215947769853cf451ea5b3bcf0882b21ce3863b6b9b";
+                    attribute :>> bytes = 95;
+                }
+                part 'file_USER.md' :> instructions {
+                    attribute :>> path = "USER.md";
+                    attribute :>> sha256 = "fcece882ae38e92204752feefe5c6e8b5d57101ad86712b59a03590705e07e81";
+                    attribute :>> bytes = 93;
+                }
+                part skill_escalation :> skills {
+                    attribute :>> id = "escalation";
+                    attribute :>> source = "skills/escalation/SKILL.md";
+                    attribute :>> digest = "9016653f64a19a21a650b2e4f3a595367ffb58e08c62b7c16fcb4380e73a5237";
+                }
+                part 'skill_skill-aa' :> skills {
+                    attribute :>> id = "skill-aa";
+                    attribute :>> source = "skills/skill-aa/SKILL.md";
+                    attribute :>> digest = "9558fb7feb3129b48fc78e76ca037a97ec0b5a0ab8ae851ca4ee74b59aa6fa7b";
+                }
+                part 'skill_skill-af' :> skills {
+                    attribute :>> id = "skill-af";
+                    attribute :>> source = "skills/skill-af/SKILL.md";
+                    attribute :>> digest = "ac6f6b333cb367edf8ff0fd0539b42937d0017b46853df851bcdbc8bbde90e85";
+                }
+                part 'skill_skill-o' :> skills {
+                    attribute :>> id = "skill-o";
+                    attribute :>> source = "skills/skill-o/SKILL.md";
+                    attribute :>> digest = "2efedf9402b6a469005ead7eb54a7e8cae9225d5bd8156b13b922d8cf0390697";
+                }
+                part 'skill_skill-w' :> skills {
+                    attribute :>> id = "skill-w";
+                    attribute :>> source = "skills/skill-w/SKILL.md";
+                    attribute :>> digest = "13039487b0c3a43c9fddf066738b54522c3cca19d3d4931e7ef8dcd467b4637f";
+                }
+                part :>> memory {
+                    attribute :>> searchEnabled = true;
+                    attribute :>> searchProvider = "local";
+                    attribute :>> searchFallback = "none";
+                    attribute :>> searchSources = "[\"memory\"]";
+                    attribute :>> extraPathCount = 0;
+                    attribute :>> multimodal = false;
+                    attribute :>> curatedSha256 = "585844ea5a330d9f8af28757b385fb20976b9ab28411fcd04498fe1fc82cc219";
+                    attribute :>> curatedBytes = 96;
+                    attribute :>> dailyCount = 0;
+                    attribute :>> dailyBytes = 0;
+                    attribute :>> otherCount = 0;
+                }
+            }
             part sandbox : Sandbox {
                 attribute :>> mode = "all";
                 attribute :>> scope = "agent";
@@ -1199,84 +1289,6 @@ package OpenClawInstance {
                 attribute :>> approvalAsk = "on-miss";
                 attribute :>> effectiveSecurity = "allowlist";
                 attribute :>> effectiveAsk = "on-miss";
-            }
-            part memory : AgentMemory {
-                attribute :>> searchEnabled = true;
-                attribute :>> searchProvider = "local";
-                attribute :>> searchFallback = "none";
-                attribute :>> searchSources = "[\"memory\"]";
-                attribute :>> extraPathCount = 0;
-                attribute :>> multimodal = false;
-                attribute :>> curatedSha256 = "585844ea5a330d9f8af28757b385fb20976b9ab28411fcd04498fe1fc82cc219";
-                attribute :>> curatedBytes = 96;
-                attribute :>> dailyCount = 0;
-                attribute :>> dailyBytes = 0;
-                attribute :>> otherCount = 0;
-            }
-            part skill_escalation : APESkills::InitialSkill {
-                attribute :>> id = "escalation";
-                attribute :>> source = "skills/escalation/SKILL.md";
-                attribute :>> digest = "9016653f64a19a21a650b2e4f3a595367ffb58e08c62b7c16fcb4380e73a5237";
-            }
-            part 'skill_skill-aa' : APESkills::InitialSkill {
-                attribute :>> id = "skill-aa";
-                attribute :>> source = "skills/skill-aa/SKILL.md";
-                attribute :>> digest = "9558fb7feb3129b48fc78e76ca037a97ec0b5a0ab8ae851ca4ee74b59aa6fa7b";
-            }
-            part 'skill_skill-af' : APESkills::InitialSkill {
-                attribute :>> id = "skill-af";
-                attribute :>> source = "skills/skill-af/SKILL.md";
-                attribute :>> digest = "ac6f6b333cb367edf8ff0fd0539b42937d0017b46853df851bcdbc8bbde90e85";
-            }
-            part 'skill_skill-o' : APESkills::InitialSkill {
-                attribute :>> id = "skill-o";
-                attribute :>> source = "skills/skill-o/SKILL.md";
-                attribute :>> digest = "2efedf9402b6a469005ead7eb54a7e8cae9225d5bd8156b13b922d8cf0390697";
-            }
-            part 'skill_skill-w' : APESkills::InitialSkill {
-                attribute :>> id = "skill-w";
-                attribute :>> source = "skills/skill-w/SKILL.md";
-                attribute :>> digest = "13039487b0c3a43c9fddf066738b54522c3cca19d3d4931e7ef8dcd467b4637f";
-            }
-            part 'file_AGENTS.md' : InstructionFile {
-                attribute :>> path = "AGENTS.md";
-                attribute :>> sha256 = "ff14a1059aa60f5a5599eed3b3648955448a682868345bd8bd28b83613406139";
-                attribute :>> bytes = 95;
-            }
-            part 'file_BOOTSTRAP.md' : InstructionFile {
-                attribute :>> path = "BOOTSTRAP.md";
-                attribute :>> sha256 = "e180683f4d5a0f79d90af1f959dd6b5903b3f84ad8b8df5a31c43b65544ad73d";
-                attribute :>> bytes = 98;
-            }
-            part 'file_HEARTBEAT.md' : InstructionFile {
-                attribute :>> path = "HEARTBEAT.md";
-                attribute :>> sha256 = "c887582b41120f6814d7c5c5d7bea26489b7b373166288613edb5de6d0dfb9a0";
-                attribute :>> bytes = 98;
-            }
-            part 'file_IDENTITY.md' : InstructionFile {
-                attribute :>> path = "IDENTITY.md";
-                attribute :>> sha256 = "971215e97ec880ddabca6468baccbfee8a3378d74b5ca000ab0d1a0f697e4475";
-                attribute :>> bytes = 97;
-            }
-            part 'file_MEMORY.md' : InstructionFile {
-                attribute :>> path = "MEMORY.md";
-                attribute :>> sha256 = "585844ea5a330d9f8af28757b385fb20976b9ab28411fcd04498fe1fc82cc219";
-                attribute :>> bytes = 96;
-            }
-            part 'file_SOUL.md' : InstructionFile {
-                attribute :>> path = "SOUL.md";
-                attribute :>> sha256 = "d2be594f4acd9aa704f47eec0066d8a84d02bee2e236b856869e280f562549d8";
-                attribute :>> bytes = 94;
-            }
-            part 'file_TOOLS.md' : InstructionFile {
-                attribute :>> path = "TOOLS.md";
-                attribute :>> sha256 = "77f4cfe08e7ff807c0eaf215947769853cf451ea5b3bcf0882b21ce3863b6b9b";
-                attribute :>> bytes = 95;
-            }
-            part 'file_USER.md' : InstructionFile {
-                attribute :>> path = "USER.md";
-                attribute :>> sha256 = "fcece882ae38e92204752feefe5c6e8b5d57101ad86712b59a03590705e07e81";
-                attribute :>> bytes = 93;
             }
         }
         part provider_google : ModelProvider {
@@ -1588,7 +1600,7 @@ package OpenClawInstance {
         }
     }
     package Context {
-        doc /* Instance-wide context: bundled skill entries and the memory backend. */
+        doc /* Instance-wide context: bundled skill entries and the memory backend. Each agent's instructions, skills and memory are in its context. */
         part bundled_1password : BundledSkill {
             attribute :>> name = "1password";
             attribute :>> enabled = false;

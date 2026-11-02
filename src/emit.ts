@@ -157,6 +157,38 @@ export function emit(snapshot: Snapshot): Map<string, string> {
       a.execution;
     operators.push(
       ...block(`part ${name("agent", a.id)} : ${name("Agent", a.id)}`, [
+        ...block("part :>> context", [
+          ...a.workspace.instructions.flatMap((f) =>
+            file(f, `part ${name("file", f.id)} :> instructions`)
+          ),
+          ...a.workspace.skills.flatMap((s) =>
+            block(
+              `part ${name("skill", s.id)} :> skills`,
+              attrs({ id: s.id, source: s.path, digest: s.sha256 }),
+            )
+          ),
+          ...block(
+            "part :>> memory",
+            attrs({
+              searchEnabled: search.enabled,
+              searchProvider: search.provider,
+              searchModel: search.model,
+              searchFallback: search.fallback,
+              searchSources: search.sources,
+              rememberAcrossConversations: search.rememberAcrossConversations,
+              extraPathCount: search.extraPathCount,
+              multimodal: search.multimodal,
+              curatedSha256: curated?.sha256 ?? null,
+              curatedBytes: curated?.bytes ?? null,
+              dailyCount: daily.count,
+              dailyFirstDate: daily.firstDate,
+              dailyLastDate: daily.lastDate,
+              dailyBytes: daily.bytes,
+              dailySha256: daily.sha256,
+              otherCount,
+            }),
+          ),
+        ]),
         ...block(
           "part sandbox : Sandbox",
           attrs({
@@ -182,36 +214,6 @@ export function emit(snapshot: Snapshot): Map<string, string> {
             effectiveSecurity: effective.security,
             effectiveAsk: effective.ask,
           }),
-        ),
-        ...block(
-          "part memory : AgentMemory",
-          attrs({
-            searchEnabled: search.enabled,
-            searchProvider: search.provider,
-            searchModel: search.model,
-            searchFallback: search.fallback,
-            searchSources: search.sources,
-            rememberAcrossConversations: search.rememberAcrossConversations,
-            extraPathCount: search.extraPathCount,
-            multimodal: search.multimodal,
-            curatedSha256: curated?.sha256 ?? null,
-            curatedBytes: curated?.bytes ?? null,
-            dailyCount: daily.count,
-            dailyFirstDate: daily.firstDate,
-            dailyLastDate: daily.lastDate,
-            dailyBytes: daily.bytes,
-            dailySha256: daily.sha256,
-            otherCount,
-          }),
-        ),
-        ...a.workspace.skills.flatMap((s) =>
-          block(
-            `part ${name("skill", s.id)} : APESkills::InitialSkill`,
-            attrs({ id: s.id, source: s.path, digest: s.sha256 }),
-          )
-        ),
-        ...a.workspace.instructions.flatMap((f) =>
-          file(f, `part ${name("file", f.id)} : InstructionFile`)
         ),
       ]),
     );
@@ -424,7 +426,7 @@ export function emit(snapshot: Snapshot): Map<string, string> {
     "private import ScalarValues::*;",
     ...group(
       "Operators",
-      "OpenClaw agents as software operators, with their sandbox, exec posture, memory, skills and instruction files, and the model providers they use.",
+      "OpenClaw agents as software operators, each with its context, sandbox and exec posture, and the model providers they use.",
       operators,
     ),
     ...group(
@@ -434,7 +436,7 @@ export function emit(snapshot: Snapshot): Map<string, string> {
     ),
     ...group(
       "Context",
-      "Instance-wide context: bundled skill entries and the memory backend.",
+      "Instance-wide context: bundled skill entries and the memory backend. Each agent's instructions, skills and memory are in its context.",
       context,
     ),
     ...group("Cases", "Cron jobs and heartbeats as scheduled cases.", cases),

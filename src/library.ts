@@ -20,6 +20,7 @@ export const OPENCLAW_IMPORT = `package OpenClawImport {
         attribute emoji : String;
         attribute primaryModel : String;
         attribute fallbackModels : String;
+        part context : AgentContext;
     }
     enum def ToolOrigin {
         doc /* Where a tool comes from. MCP and CLI are origins of tools, not
@@ -49,6 +50,14 @@ export const OPENCLAW_IMPORT = `package OpenClawImport {
         attribute layer : String;
         attribute commandKind : String [0..1];
         attribute argsRestricted : Boolean [0..1];
+    }
+    part def AgentContext {
+        doc /* Corresponds to Assembly's context-and-memory category: the
+         * instruction files, skills and memory an agent works from. Files and
+         * skills are referenced by path and digest, never copied. */
+        part instructions : InstructionFile [0..*];
+        part skills : APESkills::InitialSkill [0..*];
+        part memory : AgentMemory;
     }
     part def Sandbox {
         attribute mode : String; attribute scope : String;
@@ -118,6 +127,9 @@ export const OPENCLAW_IMPORT = `package OpenClawImport {
         attribute wildcardCommands : String;
     }
     part def AgentMemory {
+        doc /* Inventory of OpenClaw's agent-written Markdown memory and its
+         * search policy. Not Assembly's governed memory (APEMemory): OpenClaw
+         * has no admission and no validity window. */
         attribute searchEnabled : Boolean; attribute searchProvider : String;
         attribute searchModel : String; attribute searchFallback : String;
         attribute searchSources : String; attribute rememberAcrossConversations : Boolean;

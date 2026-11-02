@@ -85,7 +85,7 @@ Deno.test("memory emission omits unset metadata while keeping empty inventory co
     };
     const instance = emit(snapshot).get("OpenClawInstance.sysml")!;
     assert.equal(
-      [...instance.matchAll(/part memory : AgentMemory/g)].length,
+      [...instance.matchAll(/part :>> memory \{/g)].length,
       snapshot.agents.length,
     );
     assert.match(instance, /attribute :>> dailyCount = 0;/);
