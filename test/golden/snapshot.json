@@ -164,6 +164,28 @@
       "heartbeat": null,
       "id": "client",
       "implicit": false,
+      "memory": {
+        "daily": {
+          "bytes": 0,
+          "count": 0,
+          "firstDate": null,
+          "lastDate": null,
+          "sha256": null
+        },
+        "otherCount": 0,
+        "search": {
+          "enabled": true,
+          "extraPathCount": 0,
+          "fallback": "none",
+          "model": null,
+          "multimodal": false,
+          "provider": "local",
+          "rememberAcrossConversations": null,
+          "sources": [
+            "memory"
+          ]
+        }
+      },
       "model": {
         "fallbacks": [
           "openai/gpt-5.5"
@@ -427,6 +449,28 @@
       "heartbeat": null,
       "id": "coach",
       "implicit": false,
+      "memory": {
+        "daily": {
+          "bytes": 0,
+          "count": 0,
+          "firstDate": null,
+          "lastDate": null,
+          "sha256": null
+        },
+        "otherCount": 0,
+        "search": {
+          "enabled": true,
+          "extraPathCount": 0,
+          "fallback": "none",
+          "model": null,
+          "multimodal": false,
+          "provider": "local",
+          "rememberAcrossConversations": null,
+          "sources": [
+            "memory"
+          ]
+        }
+      },
       "model": {
         "fallbacks": [
           "openai/gpt-5.5"
@@ -680,6 +724,28 @@
       "heartbeat": null,
       "id": "devbox",
       "implicit": false,
+      "memory": {
+        "daily": {
+          "bytes": 0,
+          "count": 0,
+          "firstDate": null,
+          "lastDate": null,
+          "sha256": null
+        },
+        "otherCount": 0,
+        "search": {
+          "enabled": true,
+          "extraPathCount": 0,
+          "fallback": "none",
+          "model": null,
+          "multimodal": false,
+          "provider": "local",
+          "rememberAcrossConversations": null,
+          "sources": [
+            "memory"
+          ]
+        }
+      },
       "model": {
         "fallbacks": [
           "openai/gpt-5.5"
@@ -932,6 +998,28 @@
       "heartbeat": null,
       "id": "field",
       "implicit": false,
+      "memory": {
+        "daily": {
+          "bytes": 16,
+          "count": 1,
+          "firstDate": "2026-05-30",
+          "lastDate": "2026-05-30",
+          "sha256": "371942c13809f135478a482a31bd56195e4c58dfdc1994e5ba661ce959e940c9"
+        },
+        "otherCount": 0,
+        "search": {
+          "enabled": true,
+          "extraPathCount": 0,
+          "fallback": "none",
+          "model": null,
+          "multimodal": false,
+          "provider": "local",
+          "rememberAcrossConversations": null,
+          "sources": [
+            "memory"
+          ]
+        }
+      },
       "model": {
         "fallbacks": [
           "openai/gpt-5.5"
@@ -1346,6 +1434,28 @@
       },
       "id": "lead",
       "implicit": false,
+      "memory": {
+        "daily": {
+          "bytes": 32,
+          "count": 2,
+          "firstDate": "2026-06-01",
+          "lastDate": "2026-06-02",
+          "sha256": "fff8b2bf3669aa98b4fccab9de17d486d49f3bf68bc51fedce99802e66e7d9d5"
+        },
+        "otherCount": 2,
+        "search": {
+          "enabled": true,
+          "extraPathCount": 0,
+          "fallback": "none",
+          "model": null,
+          "multimodal": false,
+          "provider": "local",
+          "rememberAcrossConversations": null,
+          "sources": [
+            "memory"
+          ]
+        }
+      },
       "model": {
         "fallbacks": [
           "openai/gpt-5.5"
@@ -1773,6 +1883,28 @@
       "heartbeat": null,
       "id": "secretary",
       "implicit": false,
+      "memory": {
+        "daily": {
+          "bytes": 0,
+          "count": 0,
+          "firstDate": null,
+          "lastDate": null,
+          "sha256": null
+        },
+        "otherCount": 0,
+        "search": {
+          "enabled": true,
+          "extraPathCount": 0,
+          "fallback": "none",
+          "model": null,
+          "multimodal": false,
+          "provider": "local",
+          "rememberAcrossConversations": null,
+          "sources": [
+            "memory"
+          ]
+        }
+      },
       "model": {
         "fallbacks": [
           "openai/gpt-5.5"
@@ -2685,6 +2817,24 @@
       }
     }
   ],
+  "memoryBackend": {
+    "activeMemory": {
+      "agents": [
+        "lead"
+      ],
+      "allowedChatTypes": [
+        "direct"
+      ],
+      "enabled": true,
+      "persistTranscripts": false
+    },
+    "dreaming": {
+      "enabled": true,
+      "frequency": "0 3 * * *",
+      "timezone": null
+    },
+    "slot": null
+  },
   "messaging": {
     "allowedTargets": [
       "*"
@@ -2759,5 +2909,5 @@
       ]
     }
   ],
-  "schema": "openclaw-snapshot/2"
+  "schema": "openclaw-snapshot/3"
 }

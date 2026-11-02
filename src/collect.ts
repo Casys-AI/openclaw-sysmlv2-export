@@ -77,14 +77,14 @@ const byName = (a: { name: string }, b: { name: string }) =>
 const inside = (root: string, path: string) =>
   path === root || path.startsWith(`${root}${sep}`);
 
-/** Reads top-level Markdown and discovered skills only; other workspace file
- * names are private and never collected. */
+/** Reads top-level Markdown and discovered skills. The resolved root stays
+ * internal so the memory inventory uses the same workspace boundary. */
 async function workspace(
   home: string,
   path: string,
   id: string,
   findings: Finding[],
-): Promise<Agent["workspace"]> {
+): Promise<{ workspace: Agent["workspace"]; root: string | null }> {
   if (path.startsWith("~")) {
     throw ioError(
       "UNRESOLVED_WORKSPACE",
@@ -109,7 +109,7 @@ async function workspace(
         "Create the workspace or fix agents.list[].workspace.",
       ),
     );
-    return result;
+    return { workspace: result, root };
   }
   const top = (await readdir(root, { withFileTypes: true })).sort(byName);
   result.versioned = top.some((e) => e.name === ".git");
@@ -188,7 +188,132 @@ async function workspace(
   }
   result.instructions = byId(result.instructions);
   result.skills = byId(result.skills);
+  return { workspace: result, root };
+}
+
+/** docs/reference/memory-config.md: shared search defaults, per-agent overrides,
+ * enabled=true, provider=openai, sources=[memory], multimodal.enabled=false.
+ * docs/gateway/doctor/config-migrations.md names the legacy search locations.
+ * This projection overrides fields (including extraPaths) and preserves unset
+ * rememberAcrossConversations instead of resolving contextual runtime defaults. */
+function memorySearch(
+  config: Obj,
+  defaults: Obj,
+  agent: Obj,
+): Agent["memory"]["search"] {
+  const base = obj([
+    obj(config.memory).search,
+    defaults.memorySearch,
+    config.memorySearch,
+  ].find((v) => v !== undefined));
+  const own = obj([
+    obj(agent.memory).search,
+    agent.memorySearch,
+  ].find((v) => v !== undefined));
+  const search = { ...base, ...own };
+  const multimodal = { ...obj(base.multimodal), ...obj(own.multimodal) };
+  return {
+    enabled: boolean(search.enabled, true),
+    provider: text(search.provider === undefined ? "openai" : search.provider),
+    model: text(search.model),
+    fallback: text(search.fallback),
+    sources: unique(
+      strings(search.sources === undefined ? ["memory"] : search.sources),
+    ),
+    rememberAcrossConversations:
+      search.rememberAcrossConversations === undefined
+        ? null
+        : boolean(search.rememberAcrossConversations, false),
+    extraPathCount: arr(search.extraPaths).length,
+    multimodal: boolean(multimodal.enabled, false),
+  };
+}
+
+/** docs/concepts/memory.md distinguishes curated, daily and other Markdown.
+ * docs/reference/memory-config.md: the builtin index skips symlinks. Only
+ * direct dated children are daily; nested Markdown contributes a count only. */
+async function memoryNotes(
+  root: string | null,
+): Promise<Omit<Agent["memory"], "search">> {
+  const result: Omit<Agent["memory"], "search"> = {
+    daily: {
+      count: 0,
+      firstDate: null,
+      lastDate: null,
+      bytes: 0,
+      sha256: null,
+    },
+    otherCount: 0,
+  };
+  if (root === null) return result;
+  const dir = await realpath(join(root, "memory")).catch((e) => {
+    if (e.code === "ENOENT") return null;
+    throw e;
+  });
+  // Like skills/, a resolved root is accepted only inside the workspace.
+  if (dir === null || !inside(root, dir) || !(await stat(dir)).isDirectory()) {
+    return result;
+  }
+  const lines: string[] = [];
+  const walk = async (dir: string, direct: boolean): Promise<void> => {
+    for (const name of await readdir(dir)) {
+      const path = join(dir, name), entry = await lstat(path);
+      if (entry.isSymbolicLink()) continue;
+      if (entry.isDirectory()) {
+        if (!name.startsWith(".")) await walk(path, false);
+      } else if (entry.isFile() && /\.md$/i.test(name)) {
+        const date = direct
+          ? name.match(/^(\d{4}-\d{2}-\d{2})(?:-[^/]+)?\.md$/i)?.[1]
+          : undefined;
+        if (date === undefined) result.otherCount++;
+        else {
+          await regular(path);
+          const bytes = await readFile(path);
+          lines.push(`${date} ${digest(bytes)} ${bytes.byteLength}\n`);
+          result.daily.bytes += bytes.byteLength;
+        }
+      }
+    }
+  };
+  await walk(dir, true);
+  lines.sort();
+  result.daily.count = lines.length;
+  if (lines.length) {
+    result.daily.firstDate = lines[0].slice(0, 10);
+    result.daily.lastDate = lines.at(-1)!.slice(0, 10);
+    result.daily.sha256 = digest(lines.join(""));
+  }
   return result;
+}
+
+/** docs/tools/plugin.md: memory slot; docs/concepts/dreaming.md: dreaming config.
+ * docs/concepts/active-memory/configuration.md defines the retained fields.
+ * Bundled disabled / config enabled defaults are confirmed by
+ * dist/config-state-Ba1MVBAI.mjs and dist/config-CpTCuMPy.mjs (2026.10.9).
+ * This describes explicit configuration, not runtime auto-activation. */
+function memoryBackend(config: Obj): Snapshot["memoryBackend"] {
+  const plugins = obj(config.plugins), entries = obj(plugins.entries);
+  const dreaming = obj(obj(obj(entries["memory-core"]).config).dreaming);
+  const active = obj(entries["active-memory"]), settings = obj(active.config);
+  return {
+    slot: text(obj(plugins.slots).memory),
+    dreaming: {
+      enabled: dreaming.enabled === undefined
+        ? null
+        : boolean(dreaming.enabled, false),
+      frequency: text(dreaming.frequency),
+      timezone: text(dreaming.timezone),
+    },
+    activeMemory: entries["active-memory"] === undefined ? null : {
+      enabled: boolean(active.enabled, false) &&
+        boolean(settings.enabled, true),
+      agents: unique(strings(settings.agents)),
+      allowedChatTypes: unique(strings(settings.allowedChatTypes)),
+      persistTranscripts: settings.persistTranscripts === undefined
+        ? null
+        : boolean(settings.persistTranscripts, false),
+    },
+  };
 }
 function duration(value: unknown): number {
   const match = required(value).match(/^(\d+(?:\.\d+)?)(ms|s|m|h|d)$/);
@@ -584,6 +709,15 @@ export async function collect(
             ),
           );}
       }
+      const collected = await workspace(
+        home,
+        text(
+          a.workspace ?? defaults.workspace,
+          id === defaultId ? "workspace" : `workspace-${id}`,
+        )!,
+        id,
+        findings,
+      );
       agents.push({
         id,
         name: text(identity.name ?? a.name, id)!,
@@ -593,15 +727,11 @@ export async function collect(
         ...resolved,
         sandbox: sb,
         execution,
-        workspace: await workspace(
-          home,
-          text(
-            a.workspace ?? defaults.workspace,
-            id === defaultId ? "workspace" : `workspace-${id}`,
-          )!,
-          id,
-          findings,
-        ),
+        workspace: collected.workspace,
+        memory: {
+          search: memorySearch(config, defaults, a),
+          ...await memoryNotes(collected.root),
+        },
         delegation: unique(
           // docs/gateway/config-tools.md: defaults.subagents.allowAgents is
           // inherited; absent at both levels means only the requesting agent.
@@ -729,7 +859,7 @@ export async function collect(
     );
     const messaging = obj(global.agentToAgent);
     const result: Snapshot = {
-      schema: "openclaw-snapshot/2",
+      schema: "openclaw-snapshot/3",
       openclawVersion: text(obj(config.meta).lastTouchedVersion, "2026.6.10")!,
       plaintextSecretCount: plaintextSecretCount(raw),
       backupCount: (await readdir(home, { withFileTypes: true })).filter((e) =>
@@ -744,6 +874,7 @@ export async function collect(
       bundledSkills: byId(bundledSkills),
       providers: byId(providers),
       plugins: inventory,
+      memoryBackend: memoryBackend(config),
       messaging: {
         enabled: boolean(messaging.enabled, false),
         allowedTargets: unique(strings(messaging.allow)),

@@ -9,6 +9,8 @@ plugins and cron jobs.
   No output of the export may contain `CANARY-`.
 - Instruction files and skills are placeholders; identifying skill names use
   stable neutral aliases. The original bodies were not copied.
+- `memory/` notes, Memory Core dreaming config and Active Memory's `promptAppend`
+  and `allowedChatIds` are synthetic additions for memory export tests.
 - `state/cron_jobs.json` holds rows of the `cron_jobs` table (subset of
   columns). Tests build `state/openclaw.sqlite` from it.
 - Workspace `.git` directories and `openclaw.json.*` backups are not included;

@@ -13,7 +13,7 @@ import { DatabaseSync } from "node:sqlite";
 import { EMAIL_ADDRESS_PATTERN, JWT_PATTERN } from "@logtape/redaction";
 import { collect } from "../src/collect.ts";
 import { ExportError } from "../src/error.ts";
-import { canonical } from "../src/snapshot.ts";
+import { canonical, type Snapshot } from "../src/snapshot.ts";
 import { createFixture } from "./support/fixture.ts";
 
 async function treeHashes(
@@ -301,6 +301,265 @@ Deno.test("a cron job without agentId is kept unassigned with a finding", async 
         f.code === "CRON_AGENT_UNRESOLVED" && f.subject === row.job_id
       ),
     );
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+Deno.test("memory search resolves legacy and current sources with per-agent field overrides", async () => {
+  const fixture = await createFixture();
+  try {
+    const path = join(fixture.home, "openclaw.json");
+    const config = JSON.parse(await readFile(path, "utf8"));
+    const search = (s: Snapshot, id = "lead") =>
+      s.agents.find((a) => a.id === id)!.memory.search;
+    const expected = {
+      enabled: true,
+      provider: "local",
+      model: null,
+      fallback: "none",
+      sources: ["memory"],
+      rememberAcrossConversations: null,
+      extraPathCount: 0,
+      multimodal: false,
+    };
+    assert.deepEqual(search(await collect(fixture.home)), expected);
+    const field = config.agents.list.find((a: { id: string }) =>
+      a.id === "field"
+    );
+    field.memorySearch = { enabled: false };
+    await writeFile(path, JSON.stringify(config));
+    assert.deepEqual(search(await collect(fixture.home), "field"), {
+      ...expected,
+      enabled: false,
+    });
+
+    config.memory = {
+      search: {
+        provider: "openai",
+        sources: ["memory", "sessions"],
+        extraPaths: ["CANARY-PATH-30"],
+      },
+    };
+    field.memorySearch = { enabled: true, provider: "none" };
+    field.memory = { search: { enabled: false } };
+    for (const keyed of [false, true]) {
+      if (keyed) {
+        config.agents.entries = Object.fromEntries(
+          config.agents.list.map((
+            { id, ...entry }: { id: string },
+          ) => [id, entry]),
+        );
+        delete config.agents.list;
+      }
+      await writeFile(path, JSON.stringify(config));
+      const snapshot = await collect(fixture.home);
+      const current = {
+        ...expected,
+        provider: "openai",
+        fallback: null,
+        sources: ["memory", "sessions"],
+        extraPathCount: 1,
+      };
+      assert.deepEqual(search(snapshot), current);
+      assert.deepEqual(search(snapshot, "field"), {
+        ...current,
+        enabled: false,
+      });
+      assert.doesNotMatch(canonical(snapshot), /CANARY-/);
+    }
+    // An explicitly empty current source suppresses the legacy default source.
+    config.memory.search = {};
+    await writeFile(path, JSON.stringify(config));
+    assert.deepEqual(search(await collect(fixture.home)), {
+      ...expected,
+      provider: "openai",
+      fallback: null,
+    });
+    delete config.memory;
+    delete config.agents.defaults.memorySearch;
+    config.memorySearch = {
+      provider: "none",
+      model: "fixture-embedding",
+      sources: ["sessions"],
+      rememberAcrossConversations: true,
+      extraPaths: ["CANARY-PATH-31"],
+      multimodal: { enabled: true },
+    };
+    config.agents.entries.field.memory.search = {
+      sources: [],
+      rememberAcrossConversations: false,
+      extraPaths: [],
+      multimodal: { enabled: false },
+    };
+    await writeFile(path, JSON.stringify(config));
+    const snapshot = await collect(fixture.home);
+    assert.deepEqual(search(snapshot), {
+      ...expected,
+      provider: "none",
+      model: "fixture-embedding",
+      fallback: null,
+      sources: ["sessions"],
+      rememberAcrossConversations: true,
+      extraPathCount: 1,
+      multimodal: true,
+    });
+    assert.deepEqual(search(snapshot, "field"), {
+      ...search(snapshot),
+      sources: [],
+      rememberAcrossConversations: false,
+      extraPathCount: 0,
+      multimodal: false,
+    });
+    assert.doesNotMatch(canonical(snapshot), /CANARY-/);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+Deno.test("memory inventory hashes direct daily notes and counts other Markdown without following links", async () => {
+  const fixture = await createFixture();
+  try {
+    const memory = join(fixture.home, "workspace", "memory");
+    const outside = join(fixture.home, "CANARY-MEMORY-DIR");
+    await mkdir(outside);
+    await writeFile(join(outside, "2026-06-09.md"), "CANARY-MEMORY-6");
+    await symlink(
+      join(outside, "2026-06-09.md"),
+      join(memory, "2026-06-09.md"),
+    );
+    await symlink(outside, join(memory, "CANARY-LINK"));
+    await mkdir(join(memory, ".CANARY-HIDDEN"));
+    await writeFile(
+      join(memory, ".CANARY-HIDDEN", "notes.md"),
+      "CANARY-MEMORY-7",
+    );
+    const first = await collect(fixture.home);
+    const lead = first.agents.find((a) => a.id === "lead")!;
+    const lines: string[] = [];
+    let bytes = 0;
+    for (
+      const [date, name] of [
+        ["2026-06-01", "2026-06-01.md"],
+        ["2026-06-02", "2026-06-02-CANARY-SLUG-1.md"],
+      ]
+    ) {
+      const body = await readFile(join(memory, name));
+      bytes += body.byteLength;
+      const hash = createHash("sha256").update(body).digest("hex");
+      lines.push(`${date} ${hash} ${body.byteLength}\n`);
+    }
+    assert.deepEqual(lead.memory.daily, {
+      count: 2,
+      firstDate: "2026-06-01",
+      lastDate: "2026-06-02",
+      bytes,
+      sha256: createHash("sha256").update(lines.sort().join("")).digest("hex"),
+    });
+    assert.equal(lead.memory.otherCount, 2);
+    assert.equal(
+      first.agents.find((a) => a.id === "field")!.memory.daily.count,
+      1,
+    );
+    const empty = first.agents.find((a) => a.id === "client")!.memory;
+    assert.deepEqual(empty.daily, {
+      count: 0,
+      firstDate: null,
+      lastDate: null,
+      bytes: 0,
+      sha256: null,
+    });
+    assert.equal(empty.otherCount, 0);
+    const repeated = await collect(fixture.home);
+    assert.equal(canonical(first), canonical(repeated));
+    assert.doesNotMatch(canonical(first), /CANARY-SLUG|CANARY-MEMORY|CANARY-/);
+
+    const fieldMemory = join(fixture.home, "workspace-field", "memory");
+    await rm(fieldMemory, { recursive: true });
+    await symlink(outside, fieldMemory);
+    const escaped = (await collect(fixture.home)).agents.find((a) =>
+      a.id === "field"
+    )!;
+    assert.deepEqual(escaped.memory.daily, empty.daily);
+    assert.equal(escaped.memory.otherCount, 0);
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
+Deno.test("memory backend projects only allowed settings and both Active Memory enablement gates", async () => {
+  const fixture = await createFixture();
+  try {
+    const path = join(fixture.home, "openclaw.json");
+    const config = JSON.parse(await readFile(path, "utf8"));
+    const snapshot = await collect(fixture.home);
+    assert.deepEqual(snapshot.memoryBackend, {
+      slot: null,
+      dreaming: { enabled: true, frequency: "0 3 * * *", timezone: null },
+      activeMemory: {
+        enabled: true,
+        agents: ["lead"],
+        allowedChatTypes: ["direct"],
+        persistTranscripts: false,
+      },
+    });
+    assert.doesNotMatch(
+      canonical(snapshot),
+      /CANARY-|promptAppend|allowedChatIds/,
+    );
+    config.plugins.slots = { memory: "memory-core" };
+    config.plugins.entries["memory-core"].config.dreaming.timezone = "UTC";
+    const active = config.plugins.entries["active-memory"];
+    Object.assign(active.config, {
+      agents: ["lead", "field", "lead"],
+      allowedChatTypes: ["group", "direct", "group"],
+      promptOverride: "CANARY-PROMPT-3",
+      deniedChatIds: ["CANARY-PEER-10"],
+      transcriptDir: "CANARY-PATH-32",
+      model: "CANARY-MODEL-1",
+    });
+    delete active.config.enabled;
+    delete active.config.persistTranscripts;
+    await writeFile(path, JSON.stringify(config));
+    const changed = await collect(fixture.home);
+    assert.deepEqual(changed.memoryBackend, {
+      slot: "memory-core",
+      dreaming: { enabled: true, frequency: "0 3 * * *", timezone: "UTC" },
+      activeMemory: {
+        enabled: true,
+        agents: ["field", "lead"],
+        allowedChatTypes: ["direct", "group"],
+        persistTranscripts: null,
+      },
+    });
+    assert.doesNotMatch(
+      canonical(changed),
+      /CANARY-|promptOverride|deniedChatIds|transcriptDir/,
+    );
+    for (
+      const [pluginEnabled, configEnabled] of [[false, true], [true, false], [
+        undefined,
+        true,
+      ]]
+    ) {
+      active.enabled = pluginEnabled;
+      active.config.enabled = configEnabled;
+      await writeFile(path, JSON.stringify(config));
+      assert.equal(
+        (await collect(fixture.home)).memoryBackend.activeMemory!.enabled,
+        false,
+      );
+    }
+    delete config.plugins.entries["active-memory"];
+    delete config.plugins.entries["memory-core"].config;
+    await writeFile(path, JSON.stringify(config));
+    const absent = (await collect(fixture.home)).memoryBackend;
+    assert.equal(absent.activeMemory, null);
+    assert.deepEqual(absent.dreaming, {
+      enabled: null,
+      frequency: null,
+      timezone: null,
+    });
   } finally {
     await fixture.cleanup();
   }

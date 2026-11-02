@@ -59,6 +59,26 @@ export interface Agent {
     elevated: boolean;
     elevatedChannelsCount: number;
   };
+  memory: {
+    search: {
+      enabled: boolean;
+      provider: string | null;
+      model: string | null;
+      fallback: string | null;
+      sources: string[];
+      rememberAcrossConversations: boolean | null;
+      extraPathCount: number;
+      multimodal: boolean;
+    };
+    daily: {
+      count: number;
+      firstDate: string | null;
+      lastDate: string | null;
+      bytes: number;
+      sha256: string | null;
+    };
+    otherCount: number;
+  };
   delegation: string[];
   heartbeat: { everyMs: number; target: string; prompt: FileRef | null } | null;
 }
@@ -109,7 +129,7 @@ export interface Finding {
   recovery: string;
 }
 export interface Snapshot {
-  schema: "openclaw-snapshot/2";
+  schema: "openclaw-snapshot/3";
   openclawVersion: string;
   plaintextSecretCount: number;
   backupCount: number;
@@ -141,6 +161,20 @@ export interface Snapshot {
   providers: { id: string; api: string | null; models: string[] }[];
   /** Null when no plugin inventory was supplied to the collector. */
   plugins: Plugin[] | null;
+  memoryBackend: {
+    slot: string | null;
+    dreaming: {
+      enabled: boolean | null;
+      frequency: string | null;
+      timezone: string | null;
+    };
+    activeMemory: {
+      enabled: boolean;
+      agents: string[];
+      allowedChatTypes: string[];
+      persistTranscripts: boolean | null;
+    } | null;
+  };
   messaging: { enabled: boolean; allowedTargets: string[] };
   ambiguities: Finding[];
 }
@@ -192,7 +226,7 @@ const finding: Shape = {
   recovery: str,
 };
 const shape: Shape = {
-  schema: { enum: ["openclaw-snapshot/2"] },
+  schema: { enum: ["openclaw-snapshot/3"] },
   openclawVersion: str,
   plaintextSecretCount: num,
   backupCount: num,
@@ -238,6 +272,26 @@ const shape: Shape = {
       ask: str,
       elevated: bool,
       elevatedChannelsCount: num,
+    },
+    memory: {
+      search: {
+        enabled: bool,
+        provider: ns,
+        model: ns,
+        fallback: ns,
+        sources: strings,
+        rememberAcrossConversations: nullable(bool),
+        extraPathCount: num,
+        multimodal: bool,
+      },
+      daily: {
+        count: num,
+        firstDate: ns,
+        lastDate: ns,
+        bytes: num,
+        sha256: ns,
+      },
+      otherCount: num,
     },
     delegation: strings,
     heartbeat: nullable({ everyMs: num, target: str, prompt: nullable(file) }),
@@ -291,6 +345,16 @@ const shape: Shape = {
     tools: strings,
     optionalTools: strings,
   }]),
+  memoryBackend: {
+    slot: ns,
+    dreaming: { enabled: nullable(bool), frequency: ns, timezone: ns },
+    activeMemory: nullable({
+      enabled: bool,
+      agents: strings,
+      allowedChatTypes: strings,
+      persistTranscripts: nullable(bool),
+    }),
+  },
   messaging: { enabled: bool, allowedTargets: strings },
   ambiguities: [finding],
 };

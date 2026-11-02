@@ -1174,7 +1174,13 @@
         "enabled": false
       },
       "memory-core": {
-        "enabled": true
+        "enabled": true,
+        "config": {
+          "dreaming": {
+            "enabled": true,
+            "frequency": "0 3 * * *"
+          }
+        }
       },
       "acpx": {
         "enabled": true,
@@ -1211,6 +1217,10 @@
           "timeoutMs": 15000,
           "maxSummaryChars": 220,
           "persistTranscripts": false,
+          "promptAppend": "CANARY-PROMPT-2",
+          "allowedChatIds": [
+            "CANARY-PEER-9"
+          ],
           "logging": true
         }
       },
