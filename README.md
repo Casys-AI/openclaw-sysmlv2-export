@@ -1,25 +1,28 @@
 # OpenClaw → SysML v2
 
 An [OpenClaw](https://openclaw.ai) plugin that exports your instance as a SysML
-v2 model: your agents, the tools each one is allowed to use, what they work
-from, when they run and where they are reachable. Optionally, each agent's own
-model reads its instruction files and proposes the procedures and rules they
-describe. Every run is kept as a version you can browse and compare in a small
-offline page.
+v2 model and shows it in an offline viewer.
 
-SysML v2 is the OMG's standard language for describing systems. The export is
-the entry point to Assembly, Casys' workbench for building, running and evolving
-agentic systems from SysML v2; you do not need either to read what it produces.
+The model describes your agents and their models, the tools each one may use,
+the context it works from (instructions, skills, memory), when it runs and where
+it can be reached. On request, each agent's own model also reads its instruction
+files and proposes the procedures and rules they describe. Every export is kept
+as a version, so you can see what changed between two runs.
 
 ![Behaviour view: an agent's inferred procedures as action flows, above its rules](docs/screenshots/behaviour.png)
 
-**Status:** 0.1.0, preview. Built for OpenClaw 2026.10.x; the collector also
-reads 2026.6 configurations. The OpenClaw plugin API is still marked
-experimental.
+SysML v2 is the OMG's standard language for describing systems. The export is
+the entry point to Assembly, Casys' workbench for building, running and evolving
+agentic systems from SysML v2, but reading it needs neither Assembly nor any
+SysML tool.
+
+**Status:** preview. Built for OpenClaw 2026.10.x; the collector also reads
+2026.6 configurations. The OpenClaw plugin API is still marked experimental.
 
 ## Install
 
-Requires OpenClaw 2026.10.9 or later (Node ≥ 24.22.1 or ≥ 26.12.1).
+Requires OpenClaw 2026.10.9 or later, on Node 24.22.1 or later (or 26.12.1 or
+later).
 
 From ClawHub:
 
@@ -27,7 +30,7 @@ From ClawHub:
 openclaw plugins install clawhub:@casys/openclaw-sysmlv2-export
 ```
 
-From source, with [Deno](https://deno.com) 2.9 or later to build the bundle:
+From source, with [Deno](https://deno.com) 2.9.7 or later to build the bundle:
 
 ```sh
 git clone https://github.com/Casys-AI/openclaw-sysmlv2-export.git
@@ -39,22 +42,23 @@ openclaw plugins install --link "$(pwd)/plugin" --force --accept-capabilities
 ## Use
 
 ```sh
-openclaw sysmlv2-export                  # export
-openclaw sysmlv2-export --infer --open   # with inference, then open the viewer
+openclaw sysmlv2-export                  # export the instance
+openclaw sysmlv2-export --infer --open   # also infer behaviour, then open the viewer
 openclaw sysmlv2-export --infer --model anthropic/claude-sonnet-5-5
-openclaw sysmlv2-export --out ./exports  # another output directory
+openclaw sysmlv2-export --out ./exports  # write to another directory
 ```
 
-- In a chat: `/sysmlv2_export`, or `/sysmlv2_export infer` to infer with the
-  conversation agent's model (OpenClaw binds a chat command to that agent). Only
-  the owner can run it.
-- The agent tool `sysmlv2_export` exports without calling a model. It is
-  optional: allow it explicitly, for instance with `tools.alsoAllow`.
-- From the command line, `--infer` analyses each agent with its own model. Allow
-  it with `plugins.entries.sysmlv2-export.llm.allowAgentIdOverride: true`, and
-  add `allowModelOverride: true` for `--model`.
+- **In a chat**, the owner can run `/sysmlv2_export`, or `/sysmlv2_export infer`
+  to infer with the model of the conversation's agent: OpenClaw binds a chat
+  command to that agent.
+- **As an agent tool**, `sysmlv2_export` exports without calling a model. The
+  tool is optional: allow it explicitly, for instance with `tools.alsoAllow`.
+- **From the command line**, `--infer` analyses each agent with its own model,
+  or with the one `--model` names. Allow it with
+  `plugins.entries.sysmlv2-export.llm.allowAgentIdOverride: true`, and add
+  `allowModelOverride: true` for `--model`.
 
-Each run writes `<state dir>/sysmlv2-export/<UTC time>/`:
+Each run writes a folder `<state dir>/sysmlv2-export/<UTC time>/`:
 
 ```text
 snapshot.json  OpenClawImport.sysml  OpenClawInstance.sysml
@@ -62,45 +66,42 @@ core.sysml  cases.sysml  skills.sysml
 inference.json  OpenClawInferred.sysml   (with --infer)
 ```
 
-`versions.json` lists the runs, newest first, and `index.html` is the viewer.
-Set `plugins.entries.sysmlv2-export.config.outDir` to write elsewhere by
-default.
+Beside the run folders, `versions.json` lists the runs, newest first, and
+`index.html` is the viewer. To write elsewhere by default, set
+`plugins.entries.sysmlv2-export.config.outDir`.
 
 ## Viewer
 
-`index.html` shows each version as SysML v2 views, diagrams and tables. It is
-one static page: no network, it opens from `file://`, and the views are laid out
-when the export runs. Pick a version, then a view:
+`index.html` is a single static page: it needs no network, opens from `file://`,
+and its diagrams are laid out when the export runs. Pick a version, then a view.
 
-- **Overview**, the first view: one row per agent with its model, where it runs
-  (host or sandbox), its tools by origin, channel accounts, scheduled tasks,
-  context and, with inference, its procedures and rules, under the instance's
-  totals. Each row links to the agent in the other views.
-- **System**: each agent as a part with its context (instructions, skills,
-  memory) and its granted tools by origin, connected to its channel accounts
-  through its bindings.
-- **Tools**: a SysML allocation matrix, the tool catalog by origin and provider
-  against the agents. Each cell is an agent's grant, on the host, in the sandbox
-  or both. Groups fold and count each agent's tools, and a filter keeps the
-  matching tools.
-- **Scheduled tasks**: cron jobs and heartbeats with their schedules, linked to
-  the agent they wake, over a week strip of the hours each one fires in.
-- **Behaviour** (with inference): each agent's proposed procedures as action
-  flows, with decisions, hand-offs and escalations, and its rules in a
-  requirements table with the lines they come from.
+- **Overview**, the landing view: one row per agent, with its model, where it
+  runs (host or sandbox), its tools by origin, channel accounts, scheduled
+  tasks, context and inferred behaviour, under the instance's totals. Each row
+  links to the agent in the other views.
+- **System**: each agent as a part with its context and granted tools, connected
+  to its channel accounts through its bindings.
+- **Tools**: a SysML allocation matrix of the tool catalog, by origin and
+  provider, against the agents. Each cell is a grant, on the host, in the
+  sandbox or both. Groups fold, and a filter narrows the tools.
+- **Scheduled tasks**: cron jobs and heartbeats linked to the agent they wake,
+  above a week strip of the hours each one fires in.
+- **Behaviour**, with inference: an agent's proposed procedures as action flows,
+  with decisions, hand-offs and escalations, and its rules in a requirements
+  table with the lines they come from.
 
-Click an element, row or cell to see its attributes and its exact SysML text.
-Elements added or changed since the previous version are highlighted, and
-removed ones are listed. Files and Changes show each file and its diff since the
-previous version.
+Click an element, a row or a cell to see its attributes and its exact SysML
+text. What was added or changed since the previous version is highlighted, and
+what was removed is listed. The Files and Changes tabs show each file and its
+diff against the previous version.
 
 ![Overview: one row per agent under the instance's totals](docs/screenshots/overview.png)
 
-| System                                      | Tools                                                  |
-| ------------------------------------------- | ------------------------------------------------------ |
-| ![System view](docs/screenshots/system.png) | ![Tools allocation matrix](docs/screenshots/tools.png) |
+| System                                      | Tools                                                                                        |
+| ------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| ![System view](docs/screenshots/system.png) | ![Tools allocation matrix, with one grant open in the inspector](docs/screenshots/tools.png) |
 
-![Scheduled tasks view, with the week in which each task fires](docs/screenshots/scheduled-tasks.png)
+![Scheduled tasks, with the week in which each task fires](docs/screenshots/scheduled-tasks.png)
 
 The screenshots show the anonymized test fixture, two versions apart.
 
@@ -117,44 +118,46 @@ The model groups the instance by Assembly's categories, one package each.
 | Entries   | Channel accounts, bindings, hooks                                                  | Accounts, agent ↔ account connections, external triggers                                                         |
 | Authority | Tool policy, exec allowlists and approvals, delegation, agent-to-agent messaging   | Effective tool grants per agent and layer (host or sandbox), host exec approvals, delegation and messaging rules |
 
-- **Grants are effective.** The export resolves each agent's tool policy
-  (profiles, allow and deny lists, provider and sandbox policies) into the tools
-  it can actually use, following the recorded OpenClaw version's catalog. What a
-  static configuration cannot settle is noted in the snapshot instead of
+- **Grants are effective.** Each agent's tool policy (profiles, allow and deny
+  lists, provider and sandbox policies) is resolved into the tools it can
+  actually use, following the catalog of the recorded OpenClaw version. What a
+  static configuration cannot settle is recorded in the snapshot rather than
   guessed.
-- **Plugin tools** come from OpenClaw's own inventory: the plugin runs
-  `openclaw plugins list --json`. A disabled plugin's tools get no grant, and
-  optional tools need an explicit opt-in.
-- **MCP servers** are granted as whole servers; their individual tools are only
-  known at runtime. **Exec commands** allowed by safe bins and approval
-  allowlists become command-line tools when exec runs in allowlist mode.
-- **Inference** proposals (ordered steps, hand-offs, escalations; permissions,
-  constraints, prohibitions) cite their file, lines and digest, and land in a
+- **Plugin tools** come from OpenClaw's own inventory, which the plugin reads
+  with `openclaw plugins list --json`. A disabled plugin's tools get no grant,
+  and optional tools need an explicit opt-in.
+- **MCP servers** are granted as whole servers, since their tools are only known
+  at runtime. **Exec commands** allowed by safe bins and approval allowlists
+  become command-line tools when exec runs in allowlist mode.
+- **Inferred proposals** (ordered steps, hand-offs and escalations; permissions,
+  constraints and prohibitions) cite their file, lines and digest, and go into a
   separate `OpenClawInferred` package. They are never admitted automatically.
 
-The SysML library it builds on (`core.sysml`, `cases.sysml`, `skills.sysml`,
-copied from Assembly) is written next to the export, so each export folder
-compiles on its own.
+The SysML library the model builds on (`core.sysml`, `cases.sysml`,
+`skills.sysml`, copied from Assembly) is written into each export folder, so
+every folder compiles on its own.
 
 ## Privacy
 
-- The export only reads the instance; nothing is written back to OpenClaw.
-- Never exported: secret values, tokens, API keys, provider URLs, peer, guild
-  and user ids, allowlists of people, bind source paths, plugin paths and plugin
-  configuration, prompts and file bodies. Files are referenced by digest.
-  Environment variables and headers keep their names only.
-- Memory notes keep only counts, dates, byte totals and digests; note names,
-  extra search paths and Active Memory prompts or chat ids are excluded.
-- MCP URLs, commands, arguments and environment values are excluded. Exec
-  approval paths keep only their final segment; argument patterns and usage
-  history are excluded.
-- Two layers: an allowlist projection, then
+The export reads your instance and writes nothing back. It keeps the structure
+of your system, never its secrets or the people it talks to.
+
+- **Never exported:** secret values, tokens and API keys; provider URLs; peer,
+  guild and user ids and allowlists of people; bind source paths, plugin paths
+  and plugin configuration; prompts and file bodies. Files are referenced by
+  digest, and environment variables and headers keep their names only.
+- **Memory** keeps only counts, dates, byte totals and digests. Note names,
+  extra search paths, Active Memory prompts and chat ids are left out.
+- **MCP and exec:** server URLs, commands, arguments and environment values are
+  left out. Exec approval paths keep only their last segment; argument patterns
+  and usage history are left out.
+- **Two layers** enforce this: an allowlist projection, then
   [`@logtape/redaction`](https://jsr.io/@logtape/redaction).
-- Inference sends behaviour files (`AGENTS.md`, `SOUL.md`, `TOOLS.md`…) and that
-  agent's cron/heartbeat prompts to the model of one of your agents, never
-  `MEMORY.md`, `USER.md` or other notes. Contact details and token-like strings
-  in the answer are masked.
-- Chat replies never show absolute host paths.
+- **Inference** sends an agent's behaviour files (`AGENTS.md`, `SOUL.md`,
+  `TOOLS.md`…) and its cron and heartbeat prompts to the model of one of your
+  agents, never `MEMORY.md`, `USER.md` or other notes. Contact details and
+  token-like strings are masked in the answer.
+- **Chat replies** never show absolute host paths.
 
 ## Develop
 
@@ -168,19 +171,20 @@ deno task diff before.json after.json
 deno task doctor --snapshot snapshot.json               # experimental
 ```
 
-`doctor` is an experimental configuration diagnostic; the plugin does not run
-it. Snapshots use the `openclaw-snapshot/5` schema; older schemas are rejected,
+`doctor` is an experimental configuration diagnostic that the plugin does not
+run. Snapshots use the `openclaw-snapshot/5` schema; older schemas are rejected,
 so collect again after upgrading.
 
-The test fixture is an anonymized, genericized OpenClaw instance in which every
+The test fixture is an anonymized, generic OpenClaw instance in which every
 secret is a `CANARY-*` marker that no output may contain. CI runs the checks,
-the tests and the plugin build. The Toolkit test, which compiles an export with
-Assembly's SysML Toolkit, needs an Assembly checkout and is not part of CI: set
-`ASSEMBLY_DIR` to the checkout and `SYSML_TOOLKIT_DIR` to its Toolkit package,
-then run `deno task test:toolkit`.
+the tests and the plugin build. The Toolkit test compiles an export with
+Assembly's pinned build of
+[sysml-toolkit](https://github.com/Open-MBEE/sysml-toolkit), so it needs an
+Assembly checkout and is not part of CI: set `ASSEMBLY_DIR` to the checkout and
+`SYSML_TOOLKIT_DIR` to its Toolkit package, then run `deno task test:toolkit`.
 
-The behaviour, mapping and limits are specified in [SPEC.md](SPEC.md); changes
-are listed in [CHANGELOG.md](CHANGELOG.md).
+[SPEC.md](SPEC.md) specifies the behaviour, the mapping and the limits;
+[CHANGELOG.md](CHANGELOG.md) lists the changes.
 
 ## License
 
