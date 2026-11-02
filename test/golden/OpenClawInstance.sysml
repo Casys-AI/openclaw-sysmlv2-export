@@ -1,13 +1,15 @@
 package OpenClawInstance {
     private import OpenClawImport::*;
     private import ScalarValues::*;
-    part def Agent_client :> OpenClawAgent {
-        attribute :>> id = "client";
-        attribute :>> displayName = "Client";
-        attribute :>> emoji = "💬";
-        attribute :>> primaryModel = "ollama/glm-5.1:cloud";
-        attribute :>> fallbackModels = "[\"openai/gpt-5.5\"]";
-        doc /* Sanitized OpenClaw tool policy provenance: {
+    package Operators {
+        doc /* OpenClaw agents as software operators, with their sandbox, exec posture, memory, skills and instruction files, and the model providers they use. */
+        part def Agent_client :> OpenClawAgent {
+            attribute :>> id = "client";
+            attribute :>> displayName = "Client";
+            attribute :>> emoji = "💬";
+            attribute :>> primaryModel = "ollama/glm-5.1:cloud";
+            attribute :>> fallbackModels = "[\"openai/gpt-5.5\"]";
+            doc /* Sanitized OpenClaw tool policy provenance: {
   "agent": {
     "allow": null,
     "alsoAllow": [
@@ -77,183 +79,116 @@ package OpenClawInstance {
     "profile": null
   }
 } */
-        ref item 'grant_sandbox:browser' : ToolGrant = 'tool_client:sandbox:browser';
-        ref item 'grant_sandbox:edit' : ToolGrant = 'tool_client:sandbox:edit';
-        ref item 'grant_sandbox:exec' : ToolGrant = 'tool_client:sandbox:exec';
-        ref item 'grant_sandbox:image' : ToolGrant = 'tool_client:sandbox:image';
-        ref item 'grant_sandbox:message' : ToolGrant = 'tool_client:sandbox:message';
-        ref item 'grant_sandbox:read' : ToolGrant = 'tool_client:sandbox:read';
-        ref item 'grant_sandbox:session_status' : ToolGrant = 'tool_client:sandbox:session_status';
-        ref item 'grant_sandbox:sessions_history' : ToolGrant = 'tool_client:sandbox:sessions_history';
-        ref item 'grant_sandbox:sessions_list' : ToolGrant = 'tool_client:sandbox:sessions_list';
-        ref item 'grant_sandbox:sessions_send' : ToolGrant = 'tool_client:sandbox:sessions_send';
-        ref item 'grant_sandbox:sessions_spawn' : ToolGrant = 'tool_client:sandbox:sessions_spawn';
-        ref item 'grant_sandbox:subagents' : ToolGrant = 'tool_client:sandbox:subagents';
-        ref item 'grant_sandbox:write' : ToolGrant = 'tool_client:sandbox:write';
-        ref item 'command_safe-bin:python3' : CommandGrant = 'cmd_client:safe-bin:python3';
-        ref item 'command_safe-bin:wc' : CommandGrant = 'cmd_client:safe-bin:wc';
-    }
-    part agent_client : Agent_client {
-        part sandbox : Sandbox {
-            attribute :>> mode = "all";
-            attribute :>> scope = "agent";
-            attribute :>> workspaceAccess = "rw";
-            attribute :>> image = "openclaw-sandbox:fixture";
-            attribute :>> readOnlyRoot = true;
-            attribute :>> network = "fixture-net";
-            attribute :>> memory = "1536m";
-            attribute :>> cpus = 2;
-            attribute :>> bindCount = 1;
-            attribute :>> bindModes = "[\"rw\"]";
-            attribute :>> environmentNames = "[\"DATABASE_URL\",\"OAUTH_BROKER_SECRET_KEY\",\"PAGES_BASE_URL\",\"READER_API_KEY\",\"SEARCH_API_KEY\"]";
+            ref item 'grant_sandbox:browser' : ToolGrant = Authority::'tool_client:sandbox:browser';
+            ref item 'grant_sandbox:edit' : ToolGrant = Authority::'tool_client:sandbox:edit';
+            ref item 'grant_sandbox:exec' : ToolGrant = Authority::'tool_client:sandbox:exec';
+            ref item 'grant_sandbox:image' : ToolGrant = Authority::'tool_client:sandbox:image';
+            ref item 'grant_sandbox:message' : ToolGrant = Authority::'tool_client:sandbox:message';
+            ref item 'grant_sandbox:read' : ToolGrant = Authority::'tool_client:sandbox:read';
+            ref item 'grant_sandbox:session_status' : ToolGrant = Authority::'tool_client:sandbox:session_status';
+            ref item 'grant_sandbox:sessions_history' : ToolGrant = Authority::'tool_client:sandbox:sessions_history';
+            ref item 'grant_sandbox:sessions_list' : ToolGrant = Authority::'tool_client:sandbox:sessions_list';
+            ref item 'grant_sandbox:sessions_send' : ToolGrant = Authority::'tool_client:sandbox:sessions_send';
+            ref item 'grant_sandbox:sessions_spawn' : ToolGrant = Authority::'tool_client:sandbox:sessions_spawn';
+            ref item 'grant_sandbox:subagents' : ToolGrant = Authority::'tool_client:sandbox:subagents';
+            ref item 'grant_sandbox:write' : ToolGrant = Authority::'tool_client:sandbox:write';
+            ref item 'command_safe-bin:python3' : CommandGrant = Authority::'cmd_client:safe-bin:python3';
+            ref item 'command_safe-bin:wc' : CommandGrant = Authority::'cmd_client:safe-bin:wc';
         }
-        part execution : ExecutionPosture {
-            attribute :>> host = "auto";
-            attribute :>> security = "full";
-            attribute :>> ask = "off";
-            attribute :>> elevated = true;
-            attribute :>> elevatedChannelsCount = 1;
-            attribute :>> safeBins = "[\"jq\",\"python3\",\"wc\"]";
-            attribute :>> safeBinProfiles = "[\"wc\"]";
-            attribute :>> trustedDirCount = 1;
-            attribute :>> pathPrependCount = 1;
-            attribute :>> strictInlineEval = false;
-            attribute :>> approvalSecurity = "allowlist";
-            attribute :>> approvalAsk = "on-miss";
-            attribute :>> effectiveSecurity = "allowlist";
-            attribute :>> effectiveAsk = "on-miss";
+        part agent_client : Agent_client {
+            part sandbox : Sandbox {
+                attribute :>> mode = "all";
+                attribute :>> scope = "agent";
+                attribute :>> workspaceAccess = "rw";
+                attribute :>> image = "openclaw-sandbox:fixture";
+                attribute :>> readOnlyRoot = true;
+                attribute :>> network = "fixture-net";
+                attribute :>> memory = "1536m";
+                attribute :>> cpus = 2;
+                attribute :>> bindCount = 1;
+                attribute :>> bindModes = "[\"rw\"]";
+                attribute :>> environmentNames = "[\"DATABASE_URL\",\"OAUTH_BROKER_SECRET_KEY\",\"PAGES_BASE_URL\",\"READER_API_KEY\",\"SEARCH_API_KEY\"]";
+            }
+            part execution : ExecutionPosture {
+                attribute :>> host = "auto";
+                attribute :>> security = "full";
+                attribute :>> ask = "off";
+                attribute :>> elevated = true;
+                attribute :>> elevatedChannelsCount = 1;
+                attribute :>> safeBins = "[\"jq\",\"python3\",\"wc\"]";
+                attribute :>> safeBinProfiles = "[\"wc\"]";
+                attribute :>> trustedDirCount = 1;
+                attribute :>> pathPrependCount = 1;
+                attribute :>> strictInlineEval = false;
+                attribute :>> approvalSecurity = "allowlist";
+                attribute :>> approvalAsk = "on-miss";
+                attribute :>> effectiveSecurity = "allowlist";
+                attribute :>> effectiveAsk = "on-miss";
+            }
+            part memory : AgentMemory {
+                attribute :>> searchEnabled = true;
+                attribute :>> searchProvider = "local";
+                attribute :>> searchFallback = "none";
+                attribute :>> searchSources = "[\"memory\"]";
+                attribute :>> extraPathCount = 0;
+                attribute :>> multimodal = false;
+                attribute :>> dailyCount = 0;
+                attribute :>> dailyBytes = 0;
+                attribute :>> otherCount = 0;
+            }
+            part 'skill_skill-ab' : APESkills::InitialSkill {
+                attribute :>> id = "skill-ab";
+                attribute :>> source = "skills/skill-ab/SKILL.md";
+                attribute :>> digest = "7e609512e7994fb792b23cb6da1bae7946c23fab711aab0a12be96db59656849";
+            }
+            part 'skill_skill-x' : APESkills::InitialSkill {
+                attribute :>> id = "skill-x";
+                attribute :>> source = "skills/skill-x/SKILL.md";
+                attribute :>> digest = "45e563f9d5529c8b8444dbc985ec6b71960d9e22d5ce7b61b2bf325f6ba28317";
+            }
+            part 'skill_skill-z' : APESkills::InitialSkill {
+                attribute :>> id = "skill-z";
+                attribute :>> source = "skills/skill-z/SKILL.md";
+                attribute :>> digest = "1cded481d858c1e173bac2c78278afc2557348b88b78895cc50950420f70e3be";
+            }
+            part 'file_AGENTS.md' : InstructionFile {
+                attribute :>> path = "AGENTS.md";
+                attribute :>> sha256 = "a9eb41db762e921fbae329785db20130f2c17ad1d3709bf7bd77331d69bc6a2f";
+                attribute :>> bytes = 95;
+            }
+            part 'file_HEARTBEAT.md' : InstructionFile {
+                attribute :>> path = "HEARTBEAT.md";
+                attribute :>> sha256 = "c887582b41120f6814d7c5c5d7bea26489b7b373166288613edb5de6d0dfb9a0";
+                attribute :>> bytes = 98;
+            }
+            part 'file_IDENTITY.md' : InstructionFile {
+                attribute :>> path = "IDENTITY.md";
+                attribute :>> sha256 = "4e60b96124733f530f8669654c49836bb3834b7fd3acbd6b93d38a963c9dde75";
+                attribute :>> bytes = 97;
+            }
+            part 'file_SOUL.md' : InstructionFile {
+                attribute :>> path = "SOUL.md";
+                attribute :>> sha256 = "b27692b63ae23debfbff3bce11caa4224063ca96428a3661b79ea2ca9d130466";
+                attribute :>> bytes = 94;
+            }
+            part 'file_TOOLS.md' : InstructionFile {
+                attribute :>> path = "TOOLS.md";
+                attribute :>> sha256 = "6bad8dc7af9ae1856be0e34382f044692b9e9f44540abbf2eca2ff1ccc501213";
+                attribute :>> bytes = 95;
+            }
+            part 'file_USER.md' : InstructionFile {
+                attribute :>> path = "USER.md";
+                attribute :>> sha256 = "322df650d7970068667edfcba7d9f406c0fc54fcfdbb6ed01d03db743743b670";
+                attribute :>> bytes = 93;
+            }
         }
-        part memory : AgentMemory {
-            attribute :>> searchEnabled = true;
-            attribute :>> searchProvider = "local";
-            attribute :>> searchFallback = "none";
-            attribute :>> searchSources = "[\"memory\"]";
-            attribute :>> extraPathCount = 0;
-            attribute :>> multimodal = false;
-            attribute :>> dailyCount = 0;
-            attribute :>> dailyBytes = 0;
-            attribute :>> otherCount = 0;
-        }
-        part 'skill_skill-ab' : APESkills::InitialSkill {
-            attribute :>> id = "skill-ab";
-            attribute :>> source = "skills/skill-ab/SKILL.md";
-            attribute :>> digest = "7e609512e7994fb792b23cb6da1bae7946c23fab711aab0a12be96db59656849";
-        }
-        part 'skill_skill-x' : APESkills::InitialSkill {
-            attribute :>> id = "skill-x";
-            attribute :>> source = "skills/skill-x/SKILL.md";
-            attribute :>> digest = "45e563f9d5529c8b8444dbc985ec6b71960d9e22d5ce7b61b2bf325f6ba28317";
-        }
-        part 'skill_skill-z' : APESkills::InitialSkill {
-            attribute :>> id = "skill-z";
-            attribute :>> source = "skills/skill-z/SKILL.md";
-            attribute :>> digest = "1cded481d858c1e173bac2c78278afc2557348b88b78895cc50950420f70e3be";
-        }
-    part 'file_AGENTS.md' : InstructionFile {
-        attribute :>> path = "AGENTS.md";
-        attribute :>> sha256 = "a9eb41db762e921fbae329785db20130f2c17ad1d3709bf7bd77331d69bc6a2f";
-        attribute :>> bytes = 95;
-    }
-    part 'file_HEARTBEAT.md' : InstructionFile {
-        attribute :>> path = "HEARTBEAT.md";
-        attribute :>> sha256 = "c887582b41120f6814d7c5c5d7bea26489b7b373166288613edb5de6d0dfb9a0";
-        attribute :>> bytes = 98;
-    }
-    part 'file_IDENTITY.md' : InstructionFile {
-        attribute :>> path = "IDENTITY.md";
-        attribute :>> sha256 = "4e60b96124733f530f8669654c49836bb3834b7fd3acbd6b93d38a963c9dde75";
-        attribute :>> bytes = 97;
-    }
-    part 'file_SOUL.md' : InstructionFile {
-        attribute :>> path = "SOUL.md";
-        attribute :>> sha256 = "b27692b63ae23debfbff3bce11caa4224063ca96428a3661b79ea2ca9d130466";
-        attribute :>> bytes = 94;
-    }
-    part 'file_TOOLS.md' : InstructionFile {
-        attribute :>> path = "TOOLS.md";
-        attribute :>> sha256 = "6bad8dc7af9ae1856be0e34382f044692b9e9f44540abbf2eca2ff1ccc501213";
-        attribute :>> bytes = 95;
-    }
-    part 'file_USER.md' : InstructionFile {
-        attribute :>> path = "USER.md";
-        attribute :>> sha256 = "322df650d7970068667edfcba7d9f406c0fc54fcfdbb6ed01d03db743743b670";
-        attribute :>> bytes = 93;
-    }
-    }
-    item 'tool_client:sandbox:browser' : ToolGrant {
-        attribute :>> tool = "browser";
-        attribute :>> layer = "sandbox";
-        attribute :>> pluginId = "browser";
-    }
-    item 'tool_client:sandbox:edit' : ToolGrant {
-        attribute :>> tool = "edit";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_client:sandbox:exec' : ToolGrant {
-        attribute :>> tool = "exec";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_client:sandbox:image' : ToolGrant {
-        attribute :>> tool = "image";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_client:sandbox:message' : ToolGrant {
-        attribute :>> tool = "message";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_client:sandbox:read' : ToolGrant {
-        attribute :>> tool = "read";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_client:sandbox:session_status' : ToolGrant {
-        attribute :>> tool = "session_status";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_client:sandbox:sessions_history' : ToolGrant {
-        attribute :>> tool = "sessions_history";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_client:sandbox:sessions_list' : ToolGrant {
-        attribute :>> tool = "sessions_list";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_client:sandbox:sessions_send' : ToolGrant {
-        attribute :>> tool = "sessions_send";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_client:sandbox:sessions_spawn' : ToolGrant {
-        attribute :>> tool = "sessions_spawn";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_client:sandbox:subagents' : ToolGrant {
-        attribute :>> tool = "subagents";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_client:sandbox:write' : ToolGrant {
-        attribute :>> tool = "write";
-        attribute :>> layer = "sandbox";
-    }
-    item 'cmd_client:safe-bin:python3' : CommandGrant {
-        attribute :>> command = "python3";
-        attribute :>> kind = "safe-bin";
-        attribute :>> argsRestricted = true;
-    }
-    item 'cmd_client:safe-bin:wc' : CommandGrant {
-        attribute :>> command = "wc";
-        attribute :>> kind = "safe-bin";
-        attribute :>> argsRestricted = true;
-    }
-    part 'delegation_client:coach' : DelegationRule {
-        attribute :>> fromAgent = "client";
-        attribute :>> toAgent = "coach";
-    }
-    part def Agent_coach :> OpenClawAgent {
-        attribute :>> id = "coach";
-        attribute :>> displayName = "Coach";
-        attribute :>> emoji = "🏋️";
-        attribute :>> primaryModel = "ollama/glm-5.1:cloud";
-        attribute :>> fallbackModels = "[\"openai/gpt-5.5\"]";
-        doc /* Sanitized OpenClaw tool policy provenance: {
+        part def Agent_coach :> OpenClawAgent {
+            attribute :>> id = "coach";
+            attribute :>> displayName = "Coach";
+            attribute :>> emoji = "🏋️";
+            attribute :>> primaryModel = "ollama/glm-5.1:cloud";
+            attribute :>> fallbackModels = "[\"openai/gpt-5.5\"]";
+            doc /* Sanitized OpenClaw tool policy provenance: {
   "agent": {
     "allow": null,
     "alsoAllow": [
@@ -325,193 +260,114 @@ package OpenClawInstance {
     "profile": null
   }
 } */
-        ref item 'grant_sandbox:browser' : ToolGrant = 'tool_coach:sandbox:browser';
-        ref item 'grant_sandbox:edit' : ToolGrant = 'tool_coach:sandbox:edit';
-        ref item 'grant_sandbox:exec' : ToolGrant = 'tool_coach:sandbox:exec';
-        ref item 'grant_sandbox:gateway' : ToolGrant = 'tool_coach:sandbox:gateway';
-        ref item 'grant_sandbox:image' : ToolGrant = 'tool_coach:sandbox:image';
-        ref item 'grant_sandbox:message' : ToolGrant = 'tool_coach:sandbox:message';
-        ref item 'grant_sandbox:read' : ToolGrant = 'tool_coach:sandbox:read';
-        ref item 'grant_sandbox:session_status' : ToolGrant = 'tool_coach:sandbox:session_status';
-        ref item 'grant_sandbox:sessions_history' : ToolGrant = 'tool_coach:sandbox:sessions_history';
-        ref item 'grant_sandbox:sessions_list' : ToolGrant = 'tool_coach:sandbox:sessions_list';
-        ref item 'grant_sandbox:sessions_send' : ToolGrant = 'tool_coach:sandbox:sessions_send';
-        ref item 'grant_sandbox:sessions_spawn' : ToolGrant = 'tool_coach:sandbox:sessions_spawn';
-        ref item 'grant_sandbox:subagents' : ToolGrant = 'tool_coach:sandbox:subagents';
-        ref item 'grant_sandbox:web_fetch' : ToolGrant = 'tool_coach:sandbox:web_fetch';
-        ref item 'grant_sandbox:web_search' : ToolGrant = 'tool_coach:sandbox:web_search';
-        ref item 'grant_sandbox:write' : ToolGrant = 'tool_coach:sandbox:write';
-        ref item 'command_safe-bin:python3' : CommandGrant = 'cmd_coach:safe-bin:python3';
-        ref item 'command_safe-bin:wc' : CommandGrant = 'cmd_coach:safe-bin:wc';
-    }
-    part agent_coach : Agent_coach {
-        part sandbox : Sandbox {
-            attribute :>> mode = "all";
-            attribute :>> scope = "agent";
-            attribute :>> workspaceAccess = "rw";
-            attribute :>> image = "openclaw-sandbox:fixture";
-            attribute :>> readOnlyRoot = true;
-            attribute :>> network = "fixture-net";
-            attribute :>> memory = "1536m";
-            attribute :>> cpus = 2;
-            attribute :>> bindCount = 1;
-            attribute :>> bindModes = "[\"rw\"]";
-            attribute :>> environmentNames = "[\"DATABASE_URL\",\"OAUTH_BROKER_SECRET_KEY\",\"PAGES_BASE_URL\",\"READER_API_KEY\",\"SEARCH_API_KEY\"]";
+            ref item 'grant_sandbox:browser' : ToolGrant = Authority::'tool_coach:sandbox:browser';
+            ref item 'grant_sandbox:edit' : ToolGrant = Authority::'tool_coach:sandbox:edit';
+            ref item 'grant_sandbox:exec' : ToolGrant = Authority::'tool_coach:sandbox:exec';
+            ref item 'grant_sandbox:gateway' : ToolGrant = Authority::'tool_coach:sandbox:gateway';
+            ref item 'grant_sandbox:image' : ToolGrant = Authority::'tool_coach:sandbox:image';
+            ref item 'grant_sandbox:message' : ToolGrant = Authority::'tool_coach:sandbox:message';
+            ref item 'grant_sandbox:read' : ToolGrant = Authority::'tool_coach:sandbox:read';
+            ref item 'grant_sandbox:session_status' : ToolGrant = Authority::'tool_coach:sandbox:session_status';
+            ref item 'grant_sandbox:sessions_history' : ToolGrant = Authority::'tool_coach:sandbox:sessions_history';
+            ref item 'grant_sandbox:sessions_list' : ToolGrant = Authority::'tool_coach:sandbox:sessions_list';
+            ref item 'grant_sandbox:sessions_send' : ToolGrant = Authority::'tool_coach:sandbox:sessions_send';
+            ref item 'grant_sandbox:sessions_spawn' : ToolGrant = Authority::'tool_coach:sandbox:sessions_spawn';
+            ref item 'grant_sandbox:subagents' : ToolGrant = Authority::'tool_coach:sandbox:subagents';
+            ref item 'grant_sandbox:web_fetch' : ToolGrant = Authority::'tool_coach:sandbox:web_fetch';
+            ref item 'grant_sandbox:web_search' : ToolGrant = Authority::'tool_coach:sandbox:web_search';
+            ref item 'grant_sandbox:write' : ToolGrant = Authority::'tool_coach:sandbox:write';
+            ref item 'command_safe-bin:python3' : CommandGrant = Authority::'cmd_coach:safe-bin:python3';
+            ref item 'command_safe-bin:wc' : CommandGrant = Authority::'cmd_coach:safe-bin:wc';
         }
-        part execution : ExecutionPosture {
-            attribute :>> host = "auto";
-            attribute :>> security = "full";
-            attribute :>> ask = "off";
-            attribute :>> elevated = true;
-            attribute :>> elevatedChannelsCount = 1;
-            attribute :>> safeBins = "[\"jq\",\"python3\",\"wc\"]";
-            attribute :>> safeBinProfiles = "[\"wc\"]";
-            attribute :>> trustedDirCount = 1;
-            attribute :>> pathPrependCount = 1;
-            attribute :>> strictInlineEval = false;
-            attribute :>> approvalSecurity = "allowlist";
-            attribute :>> approvalAsk = "on-miss";
-            attribute :>> effectiveSecurity = "allowlist";
-            attribute :>> effectiveAsk = "on-miss";
+        part agent_coach : Agent_coach {
+            part sandbox : Sandbox {
+                attribute :>> mode = "all";
+                attribute :>> scope = "agent";
+                attribute :>> workspaceAccess = "rw";
+                attribute :>> image = "openclaw-sandbox:fixture";
+                attribute :>> readOnlyRoot = true;
+                attribute :>> network = "fixture-net";
+                attribute :>> memory = "1536m";
+                attribute :>> cpus = 2;
+                attribute :>> bindCount = 1;
+                attribute :>> bindModes = "[\"rw\"]";
+                attribute :>> environmentNames = "[\"DATABASE_URL\",\"OAUTH_BROKER_SECRET_KEY\",\"PAGES_BASE_URL\",\"READER_API_KEY\",\"SEARCH_API_KEY\"]";
+            }
+            part execution : ExecutionPosture {
+                attribute :>> host = "auto";
+                attribute :>> security = "full";
+                attribute :>> ask = "off";
+                attribute :>> elevated = true;
+                attribute :>> elevatedChannelsCount = 1;
+                attribute :>> safeBins = "[\"jq\",\"python3\",\"wc\"]";
+                attribute :>> safeBinProfiles = "[\"wc\"]";
+                attribute :>> trustedDirCount = 1;
+                attribute :>> pathPrependCount = 1;
+                attribute :>> strictInlineEval = false;
+                attribute :>> approvalSecurity = "allowlist";
+                attribute :>> approvalAsk = "on-miss";
+                attribute :>> effectiveSecurity = "allowlist";
+                attribute :>> effectiveAsk = "on-miss";
+            }
+            part memory : AgentMemory {
+                attribute :>> searchEnabled = true;
+                attribute :>> searchProvider = "local";
+                attribute :>> searchFallback = "none";
+                attribute :>> searchSources = "[\"memory\"]";
+                attribute :>> extraPathCount = 0;
+                attribute :>> multimodal = false;
+                attribute :>> dailyCount = 0;
+                attribute :>> dailyBytes = 0;
+                attribute :>> otherCount = 0;
+            }
+            part 'skill_skill-f' : APESkills::InitialSkill {
+                attribute :>> id = "skill-f";
+                attribute :>> source = "skills/skill-f/SKILL.md";
+                attribute :>> digest = "97854d51b5123604b5a18ea662d1de99522dcf8a1dabff839e69b9d7af276b55";
+            }
+            part 'skill_skill-y' : APESkills::InitialSkill {
+                attribute :>> id = "skill-y";
+                attribute :>> source = "skills/skill-y/SKILL.md";
+                attribute :>> digest = "bebb44f2e2e9ab703cd57d6fe10f5eb31bb079d299ff39f3b9d24b88060a1bee";
+            }
+            part 'file_AGENTS.md' : InstructionFile {
+                attribute :>> path = "AGENTS.md";
+                attribute :>> sha256 = "9a42f8451c6ea3d10ba04f685e2ade657683a0a6030dbca5eceaad02d42445a1";
+                attribute :>> bytes = 95;
+            }
+            part 'file_HEARTBEAT.md' : InstructionFile {
+                attribute :>> path = "HEARTBEAT.md";
+                attribute :>> sha256 = "c887582b41120f6814d7c5c5d7bea26489b7b373166288613edb5de6d0dfb9a0";
+                attribute :>> bytes = 98;
+            }
+            part 'file_IDENTITY.md' : InstructionFile {
+                attribute :>> path = "IDENTITY.md";
+                attribute :>> sha256 = "4e60b96124733f530f8669654c49836bb3834b7fd3acbd6b93d38a963c9dde75";
+                attribute :>> bytes = 97;
+            }
+            part 'file_SOUL.md' : InstructionFile {
+                attribute :>> path = "SOUL.md";
+                attribute :>> sha256 = "e2e3de489d34c1af2b99d0a7886adc93f6f2d8dfd897be28ff5394c39c38d8d5";
+                attribute :>> bytes = 94;
+            }
+            part 'file_TOOLS.md' : InstructionFile {
+                attribute :>> path = "TOOLS.md";
+                attribute :>> sha256 = "8ccd6fb51d8ec213dbd309733df1b1ac576c529301fc7aaac7fce68f9fce178b";
+                attribute :>> bytes = 95;
+            }
+            part 'file_USER.md' : InstructionFile {
+                attribute :>> path = "USER.md";
+                attribute :>> sha256 = "39ab53f3b30cf946da08fc7b29802ca133c8ef1e52fc4a7473a3ebd29a4fcedd";
+                attribute :>> bytes = 93;
+            }
         }
-        part memory : AgentMemory {
-            attribute :>> searchEnabled = true;
-            attribute :>> searchProvider = "local";
-            attribute :>> searchFallback = "none";
-            attribute :>> searchSources = "[\"memory\"]";
-            attribute :>> extraPathCount = 0;
-            attribute :>> multimodal = false;
-            attribute :>> dailyCount = 0;
-            attribute :>> dailyBytes = 0;
-            attribute :>> otherCount = 0;
-        }
-        part 'skill_skill-f' : APESkills::InitialSkill {
-            attribute :>> id = "skill-f";
-            attribute :>> source = "skills/skill-f/SKILL.md";
-            attribute :>> digest = "97854d51b5123604b5a18ea662d1de99522dcf8a1dabff839e69b9d7af276b55";
-        }
-        part 'skill_skill-y' : APESkills::InitialSkill {
-            attribute :>> id = "skill-y";
-            attribute :>> source = "skills/skill-y/SKILL.md";
-            attribute :>> digest = "bebb44f2e2e9ab703cd57d6fe10f5eb31bb079d299ff39f3b9d24b88060a1bee";
-        }
-    part 'file_AGENTS.md' : InstructionFile {
-        attribute :>> path = "AGENTS.md";
-        attribute :>> sha256 = "9a42f8451c6ea3d10ba04f685e2ade657683a0a6030dbca5eceaad02d42445a1";
-        attribute :>> bytes = 95;
-    }
-    part 'file_HEARTBEAT.md' : InstructionFile {
-        attribute :>> path = "HEARTBEAT.md";
-        attribute :>> sha256 = "c887582b41120f6814d7c5c5d7bea26489b7b373166288613edb5de6d0dfb9a0";
-        attribute :>> bytes = 98;
-    }
-    part 'file_IDENTITY.md' : InstructionFile {
-        attribute :>> path = "IDENTITY.md";
-        attribute :>> sha256 = "4e60b96124733f530f8669654c49836bb3834b7fd3acbd6b93d38a963c9dde75";
-        attribute :>> bytes = 97;
-    }
-    part 'file_SOUL.md' : InstructionFile {
-        attribute :>> path = "SOUL.md";
-        attribute :>> sha256 = "e2e3de489d34c1af2b99d0a7886adc93f6f2d8dfd897be28ff5394c39c38d8d5";
-        attribute :>> bytes = 94;
-    }
-    part 'file_TOOLS.md' : InstructionFile {
-        attribute :>> path = "TOOLS.md";
-        attribute :>> sha256 = "8ccd6fb51d8ec213dbd309733df1b1ac576c529301fc7aaac7fce68f9fce178b";
-        attribute :>> bytes = 95;
-    }
-    part 'file_USER.md' : InstructionFile {
-        attribute :>> path = "USER.md";
-        attribute :>> sha256 = "39ab53f3b30cf946da08fc7b29802ca133c8ef1e52fc4a7473a3ebd29a4fcedd";
-        attribute :>> bytes = 93;
-    }
-    }
-    item 'tool_coach:sandbox:browser' : ToolGrant {
-        attribute :>> tool = "browser";
-        attribute :>> layer = "sandbox";
-        attribute :>> pluginId = "browser";
-    }
-    item 'tool_coach:sandbox:edit' : ToolGrant {
-        attribute :>> tool = "edit";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_coach:sandbox:exec' : ToolGrant {
-        attribute :>> tool = "exec";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_coach:sandbox:gateway' : ToolGrant {
-        attribute :>> tool = "gateway";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_coach:sandbox:image' : ToolGrant {
-        attribute :>> tool = "image";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_coach:sandbox:message' : ToolGrant {
-        attribute :>> tool = "message";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_coach:sandbox:read' : ToolGrant {
-        attribute :>> tool = "read";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_coach:sandbox:session_status' : ToolGrant {
-        attribute :>> tool = "session_status";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_coach:sandbox:sessions_history' : ToolGrant {
-        attribute :>> tool = "sessions_history";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_coach:sandbox:sessions_list' : ToolGrant {
-        attribute :>> tool = "sessions_list";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_coach:sandbox:sessions_send' : ToolGrant {
-        attribute :>> tool = "sessions_send";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_coach:sandbox:sessions_spawn' : ToolGrant {
-        attribute :>> tool = "sessions_spawn";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_coach:sandbox:subagents' : ToolGrant {
-        attribute :>> tool = "subagents";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_coach:sandbox:web_fetch' : ToolGrant {
-        attribute :>> tool = "web_fetch";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_coach:sandbox:web_search' : ToolGrant {
-        attribute :>> tool = "web_search";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_coach:sandbox:write' : ToolGrant {
-        attribute :>> tool = "write";
-        attribute :>> layer = "sandbox";
-    }
-    item 'cmd_coach:safe-bin:python3' : CommandGrant {
-        attribute :>> command = "python3";
-        attribute :>> kind = "safe-bin";
-        attribute :>> argsRestricted = true;
-    }
-    item 'cmd_coach:safe-bin:wc' : CommandGrant {
-        attribute :>> command = "wc";
-        attribute :>> kind = "safe-bin";
-        attribute :>> argsRestricted = true;
-    }
-    part 'delegation_coach:client' : DelegationRule {
-        attribute :>> fromAgent = "coach";
-        attribute :>> toAgent = "client";
-    }
-    part def Agent_devbox :> OpenClawAgent {
-        attribute :>> id = "devbox";
-        attribute :>> displayName = "Devbox";
-        attribute :>> emoji = "🖖";
-        attribute :>> primaryModel = "ollama/glm-5.1:cloud";
-        attribute :>> fallbackModels = "[\"openai/gpt-5.5\"]";
-        doc /* Sanitized OpenClaw tool policy provenance: {
+        part def Agent_devbox :> OpenClawAgent {
+            attribute :>> id = "devbox";
+            attribute :>> displayName = "Devbox";
+            attribute :>> emoji = "🖖";
+            attribute :>> primaryModel = "ollama/glm-5.1:cloud";
+            attribute :>> fallbackModels = "[\"openai/gpt-5.5\"]";
+            doc /* Sanitized OpenClaw tool policy provenance: {
   "agent": {
     "allow": null,
     "alsoAllow": [
@@ -583,187 +439,112 @@ package OpenClawInstance {
     "profile": null
   }
 } */
-        ref item 'grant_sandbox:browser' : ToolGrant = 'tool_devbox:sandbox:browser';
-        ref item 'grant_sandbox:edit' : ToolGrant = 'tool_devbox:sandbox:edit';
-        ref item 'grant_sandbox:exec' : ToolGrant = 'tool_devbox:sandbox:exec';
-        ref item 'grant_sandbox:image' : ToolGrant = 'tool_devbox:sandbox:image';
-        ref item 'grant_sandbox:message' : ToolGrant = 'tool_devbox:sandbox:message';
-        ref item 'grant_sandbox:read' : ToolGrant = 'tool_devbox:sandbox:read';
-        ref item 'grant_sandbox:session_status' : ToolGrant = 'tool_devbox:sandbox:session_status';
-        ref item 'grant_sandbox:sessions_history' : ToolGrant = 'tool_devbox:sandbox:sessions_history';
-        ref item 'grant_sandbox:sessions_list' : ToolGrant = 'tool_devbox:sandbox:sessions_list';
-        ref item 'grant_sandbox:sessions_send' : ToolGrant = 'tool_devbox:sandbox:sessions_send';
-        ref item 'grant_sandbox:sessions_spawn' : ToolGrant = 'tool_devbox:sandbox:sessions_spawn';
-        ref item 'grant_sandbox:subagents' : ToolGrant = 'tool_devbox:sandbox:subagents';
-        ref item 'grant_sandbox:web_fetch' : ToolGrant = 'tool_devbox:sandbox:web_fetch';
-        ref item 'grant_sandbox:web_search' : ToolGrant = 'tool_devbox:sandbox:web_search';
-        ref item 'grant_sandbox:write' : ToolGrant = 'tool_devbox:sandbox:write';
-        ref item 'command_safe-bin:python3' : CommandGrant = 'cmd_devbox:safe-bin:python3';
-        ref item 'command_safe-bin:wc' : CommandGrant = 'cmd_devbox:safe-bin:wc';
-    }
-    part agent_devbox : Agent_devbox {
-        part sandbox : Sandbox {
-            attribute :>> mode = "all";
-            attribute :>> scope = "agent";
-            attribute :>> workspaceAccess = "rw";
-            attribute :>> image = "openclaw-sandbox:bookworm-slim";
-            attribute :>> readOnlyRoot = true;
-            attribute :>> network = "bridge";
-            attribute :>> memory = "1536m";
-            attribute :>> cpus = 2;
-            attribute :>> bindCount = 0;
-            attribute :>> bindModes = "[]";
-            attribute :>> environmentNames = "[\"GATEWAY_HOST\",\"GATEWAY_PORT\",\"HOOKS_TOKEN\",\"OAUTH_BROKER_SECRET_KEY\",\"READER_API_KEY\",\"SEARCH_API_KEY\"]";
+            ref item 'grant_sandbox:browser' : ToolGrant = Authority::'tool_devbox:sandbox:browser';
+            ref item 'grant_sandbox:edit' : ToolGrant = Authority::'tool_devbox:sandbox:edit';
+            ref item 'grant_sandbox:exec' : ToolGrant = Authority::'tool_devbox:sandbox:exec';
+            ref item 'grant_sandbox:image' : ToolGrant = Authority::'tool_devbox:sandbox:image';
+            ref item 'grant_sandbox:message' : ToolGrant = Authority::'tool_devbox:sandbox:message';
+            ref item 'grant_sandbox:read' : ToolGrant = Authority::'tool_devbox:sandbox:read';
+            ref item 'grant_sandbox:session_status' : ToolGrant = Authority::'tool_devbox:sandbox:session_status';
+            ref item 'grant_sandbox:sessions_history' : ToolGrant = Authority::'tool_devbox:sandbox:sessions_history';
+            ref item 'grant_sandbox:sessions_list' : ToolGrant = Authority::'tool_devbox:sandbox:sessions_list';
+            ref item 'grant_sandbox:sessions_send' : ToolGrant = Authority::'tool_devbox:sandbox:sessions_send';
+            ref item 'grant_sandbox:sessions_spawn' : ToolGrant = Authority::'tool_devbox:sandbox:sessions_spawn';
+            ref item 'grant_sandbox:subagents' : ToolGrant = Authority::'tool_devbox:sandbox:subagents';
+            ref item 'grant_sandbox:web_fetch' : ToolGrant = Authority::'tool_devbox:sandbox:web_fetch';
+            ref item 'grant_sandbox:web_search' : ToolGrant = Authority::'tool_devbox:sandbox:web_search';
+            ref item 'grant_sandbox:write' : ToolGrant = Authority::'tool_devbox:sandbox:write';
+            ref item 'command_safe-bin:python3' : CommandGrant = Authority::'cmd_devbox:safe-bin:python3';
+            ref item 'command_safe-bin:wc' : CommandGrant = Authority::'cmd_devbox:safe-bin:wc';
         }
-        part execution : ExecutionPosture {
-            attribute :>> host = "auto";
-            attribute :>> security = "full";
-            attribute :>> ask = "off";
-            attribute :>> elevated = true;
-            attribute :>> elevatedChannelsCount = 1;
-            attribute :>> safeBins = "[\"jq\",\"python3\",\"wc\"]";
-            attribute :>> safeBinProfiles = "[\"wc\"]";
-            attribute :>> trustedDirCount = 1;
-            attribute :>> pathPrependCount = 1;
-            attribute :>> strictInlineEval = false;
-            attribute :>> approvalSecurity = "allowlist";
-            attribute :>> approvalAsk = "on-miss";
-            attribute :>> effectiveSecurity = "allowlist";
-            attribute :>> effectiveAsk = "on-miss";
+        part agent_devbox : Agent_devbox {
+            part sandbox : Sandbox {
+                attribute :>> mode = "all";
+                attribute :>> scope = "agent";
+                attribute :>> workspaceAccess = "rw";
+                attribute :>> image = "openclaw-sandbox:bookworm-slim";
+                attribute :>> readOnlyRoot = true;
+                attribute :>> network = "bridge";
+                attribute :>> memory = "1536m";
+                attribute :>> cpus = 2;
+                attribute :>> bindCount = 0;
+                attribute :>> bindModes = "[]";
+                attribute :>> environmentNames = "[\"GATEWAY_HOST\",\"GATEWAY_PORT\",\"HOOKS_TOKEN\",\"OAUTH_BROKER_SECRET_KEY\",\"READER_API_KEY\",\"SEARCH_API_KEY\"]";
+            }
+            part execution : ExecutionPosture {
+                attribute :>> host = "auto";
+                attribute :>> security = "full";
+                attribute :>> ask = "off";
+                attribute :>> elevated = true;
+                attribute :>> elevatedChannelsCount = 1;
+                attribute :>> safeBins = "[\"jq\",\"python3\",\"wc\"]";
+                attribute :>> safeBinProfiles = "[\"wc\"]";
+                attribute :>> trustedDirCount = 1;
+                attribute :>> pathPrependCount = 1;
+                attribute :>> strictInlineEval = false;
+                attribute :>> approvalSecurity = "allowlist";
+                attribute :>> approvalAsk = "on-miss";
+                attribute :>> effectiveSecurity = "allowlist";
+                attribute :>> effectiveAsk = "on-miss";
+            }
+            part memory : AgentMemory {
+                attribute :>> searchEnabled = true;
+                attribute :>> searchProvider = "local";
+                attribute :>> searchFallback = "none";
+                attribute :>> searchSources = "[\"memory\"]";
+                attribute :>> extraPathCount = 0;
+                attribute :>> multimodal = false;
+                attribute :>> dailyCount = 0;
+                attribute :>> dailyBytes = 0;
+                attribute :>> otherCount = 0;
+            }
+            part 'skill__archived/old-skill' : APESkills::InitialSkill {
+                attribute :>> id = "_archived/old-skill";
+                attribute :>> source = "skills/_archived/old-skill/SKILL.md";
+                attribute :>> digest = "014d5e0dac73fcebf0fda0968a2a9f804e2a843d1f336b7c2584cb599d6743ff";
+            }
+            part skill_escalation : APESkills::InitialSkill {
+                attribute :>> id = "escalation";
+                attribute :>> source = "skills/escalation/SKILL.md";
+                attribute :>> digest = "9016653f64a19a21a650b2e4f3a595367ffb58e08c62b7c16fcb4380e73a5237";
+            }
+            part 'file_AGENTS.md' : InstructionFile {
+                attribute :>> path = "AGENTS.md";
+                attribute :>> sha256 = "bf4517641e85238a20026a60ea1059807c6a105028847f7d44c76a45f87f6e57";
+                attribute :>> bytes = 95;
+            }
+            part 'file_HEARTBEAT.md' : InstructionFile {
+                attribute :>> path = "HEARTBEAT.md";
+                attribute :>> sha256 = "c887582b41120f6814d7c5c5d7bea26489b7b373166288613edb5de6d0dfb9a0";
+                attribute :>> bytes = 98;
+            }
+            part 'file_IDENTITY.md' : InstructionFile {
+                attribute :>> path = "IDENTITY.md";
+                attribute :>> sha256 = "4e60b96124733f530f8669654c49836bb3834b7fd3acbd6b93d38a963c9dde75";
+                attribute :>> bytes = 97;
+            }
+            part 'file_SOUL.md' : InstructionFile {
+                attribute :>> path = "SOUL.md";
+                attribute :>> sha256 = "0f1876693709eef8411a28be1c3a7d9b384579f70e2acb29aafdcd1dc963f2de";
+                attribute :>> bytes = 95;
+            }
+            part 'file_TOOLS.md' : InstructionFile {
+                attribute :>> path = "TOOLS.md";
+                attribute :>> sha256 = "f0935683663313f251af346f87bd7a91c2740f93f548178f9e23fb0ca7298b6e";
+                attribute :>> bytes = 95;
+            }
+            part 'file_USER.md' : InstructionFile {
+                attribute :>> path = "USER.md";
+                attribute :>> sha256 = "2073cb4d6d9f48eb64299cd67e96bc89e897b9643cd515279894e774fa19640c";
+                attribute :>> bytes = 93;
+            }
         }
-        part memory : AgentMemory {
-            attribute :>> searchEnabled = true;
-            attribute :>> searchProvider = "local";
-            attribute :>> searchFallback = "none";
-            attribute :>> searchSources = "[\"memory\"]";
-            attribute :>> extraPathCount = 0;
-            attribute :>> multimodal = false;
-            attribute :>> dailyCount = 0;
-            attribute :>> dailyBytes = 0;
-            attribute :>> otherCount = 0;
-        }
-        part 'skill__archived/old-skill' : APESkills::InitialSkill {
-            attribute :>> id = "_archived/old-skill";
-            attribute :>> source = "skills/_archived/old-skill/SKILL.md";
-            attribute :>> digest = "014d5e0dac73fcebf0fda0968a2a9f804e2a843d1f336b7c2584cb599d6743ff";
-        }
-        part skill_escalation : APESkills::InitialSkill {
-            attribute :>> id = "escalation";
-            attribute :>> source = "skills/escalation/SKILL.md";
-            attribute :>> digest = "9016653f64a19a21a650b2e4f3a595367ffb58e08c62b7c16fcb4380e73a5237";
-        }
-    part 'file_AGENTS.md' : InstructionFile {
-        attribute :>> path = "AGENTS.md";
-        attribute :>> sha256 = "bf4517641e85238a20026a60ea1059807c6a105028847f7d44c76a45f87f6e57";
-        attribute :>> bytes = 95;
-    }
-    part 'file_HEARTBEAT.md' : InstructionFile {
-        attribute :>> path = "HEARTBEAT.md";
-        attribute :>> sha256 = "c887582b41120f6814d7c5c5d7bea26489b7b373166288613edb5de6d0dfb9a0";
-        attribute :>> bytes = 98;
-    }
-    part 'file_IDENTITY.md' : InstructionFile {
-        attribute :>> path = "IDENTITY.md";
-        attribute :>> sha256 = "4e60b96124733f530f8669654c49836bb3834b7fd3acbd6b93d38a963c9dde75";
-        attribute :>> bytes = 97;
-    }
-    part 'file_SOUL.md' : InstructionFile {
-        attribute :>> path = "SOUL.md";
-        attribute :>> sha256 = "0f1876693709eef8411a28be1c3a7d9b384579f70e2acb29aafdcd1dc963f2de";
-        attribute :>> bytes = 95;
-    }
-    part 'file_TOOLS.md' : InstructionFile {
-        attribute :>> path = "TOOLS.md";
-        attribute :>> sha256 = "f0935683663313f251af346f87bd7a91c2740f93f548178f9e23fb0ca7298b6e";
-        attribute :>> bytes = 95;
-    }
-    part 'file_USER.md' : InstructionFile {
-        attribute :>> path = "USER.md";
-        attribute :>> sha256 = "2073cb4d6d9f48eb64299cd67e96bc89e897b9643cd515279894e774fa19640c";
-        attribute :>> bytes = 93;
-    }
-    }
-    item 'tool_devbox:sandbox:browser' : ToolGrant {
-        attribute :>> tool = "browser";
-        attribute :>> layer = "sandbox";
-        attribute :>> pluginId = "browser";
-    }
-    item 'tool_devbox:sandbox:edit' : ToolGrant {
-        attribute :>> tool = "edit";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_devbox:sandbox:exec' : ToolGrant {
-        attribute :>> tool = "exec";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_devbox:sandbox:image' : ToolGrant {
-        attribute :>> tool = "image";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_devbox:sandbox:message' : ToolGrant {
-        attribute :>> tool = "message";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_devbox:sandbox:read' : ToolGrant {
-        attribute :>> tool = "read";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_devbox:sandbox:session_status' : ToolGrant {
-        attribute :>> tool = "session_status";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_devbox:sandbox:sessions_history' : ToolGrant {
-        attribute :>> tool = "sessions_history";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_devbox:sandbox:sessions_list' : ToolGrant {
-        attribute :>> tool = "sessions_list";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_devbox:sandbox:sessions_send' : ToolGrant {
-        attribute :>> tool = "sessions_send";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_devbox:sandbox:sessions_spawn' : ToolGrant {
-        attribute :>> tool = "sessions_spawn";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_devbox:sandbox:subagents' : ToolGrant {
-        attribute :>> tool = "subagents";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_devbox:sandbox:web_fetch' : ToolGrant {
-        attribute :>> tool = "web_fetch";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_devbox:sandbox:web_search' : ToolGrant {
-        attribute :>> tool = "web_search";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_devbox:sandbox:write' : ToolGrant {
-        attribute :>> tool = "write";
-        attribute :>> layer = "sandbox";
-    }
-    item 'cmd_devbox:safe-bin:python3' : CommandGrant {
-        attribute :>> command = "python3";
-        attribute :>> kind = "safe-bin";
-        attribute :>> argsRestricted = true;
-    }
-    item 'cmd_devbox:safe-bin:wc' : CommandGrant {
-        attribute :>> command = "wc";
-        attribute :>> kind = "safe-bin";
-        attribute :>> argsRestricted = true;
-    }
-    part 'delegation_devbox:lead' : DelegationRule {
-        attribute :>> fromAgent = "devbox";
-        attribute :>> toAgent = "lead";
-    }
-    part def Agent_field :> OpenClawAgent {
-        attribute :>> id = "field";
-        attribute :>> displayName = "Field Assistant";
-        attribute :>> primaryModel = "ollama/glm-5.1:cloud";
-        attribute :>> fallbackModels = "[\"openai/gpt-5.5\"]";
-        doc /* Sanitized OpenClaw tool policy provenance: {
+        part def Agent_field :> OpenClawAgent {
+            attribute :>> id = "field";
+            attribute :>> displayName = "Field Assistant";
+            attribute :>> primaryModel = "ollama/glm-5.1:cloud";
+            attribute :>> fallbackModels = "[\"openai/gpt-5.5\"]";
+            doc /* Sanitized OpenClaw tool policy provenance: {
   "agent": {
     "allow": null,
     "alsoAllow": [
@@ -834,229 +615,149 @@ package OpenClawInstance {
     "profile": null
   }
 } */
-        ref item 'grant_sandbox:browser' : ToolGrant = 'tool_field:sandbox:browser';
-        ref item 'grant_sandbox:docs__*' : ToolGrant = 'tool_field:sandbox:docs__*';
-        ref item 'grant_sandbox:edit' : ToolGrant = 'tool_field:sandbox:edit';
-        ref item 'grant_sandbox:exec' : ToolGrant = 'tool_field:sandbox:exec';
-        ref item 'grant_sandbox:image' : ToolGrant = 'tool_field:sandbox:image';
-        ref item 'grant_sandbox:message' : ToolGrant = 'tool_field:sandbox:message';
-        ref item 'grant_sandbox:pdf' : ToolGrant = 'tool_field:sandbox:pdf';
-        ref item 'grant_sandbox:read' : ToolGrant = 'tool_field:sandbox:read';
-        ref item 'grant_sandbox:session_status' : ToolGrant = 'tool_field:sandbox:session_status';
-        ref item 'grant_sandbox:sessions_history' : ToolGrant = 'tool_field:sandbox:sessions_history';
-        ref item 'grant_sandbox:sessions_list' : ToolGrant = 'tool_field:sandbox:sessions_list';
-        ref item 'grant_sandbox:sessions_send' : ToolGrant = 'tool_field:sandbox:sessions_send';
-        ref item 'grant_sandbox:sessions_spawn' : ToolGrant = 'tool_field:sandbox:sessions_spawn';
-        ref item 'grant_sandbox:subagents' : ToolGrant = 'tool_field:sandbox:subagents';
-        ref item 'grant_sandbox:tts' : ToolGrant = 'tool_field:sandbox:tts';
-        ref item 'grant_sandbox:write' : ToolGrant = 'tool_field:sandbox:write';
-        ref item 'command_safe-bin:python3' : CommandGrant = 'cmd_field:safe-bin:python3';
-        ref item 'command_safe-bin:wc' : CommandGrant = 'cmd_field:safe-bin:wc';
-    }
-    part agent_field : Agent_field {
-        part sandbox : Sandbox {
-            attribute :>> mode = "all";
-            attribute :>> scope = "agent";
-            attribute :>> workspaceAccess = "rw";
-            attribute :>> image = "openclaw-sandbox:bookworm-slim";
-            attribute :>> readOnlyRoot = true;
-            attribute :>> network = "bridge";
-            attribute :>> memory = "1536m";
-            attribute :>> cpus = 2;
-            attribute :>> bindCount = 1;
-            attribute :>> bindModes = "[\"rw\"]";
-            attribute :>> environmentNames = "[\"GATEWAY_HOST\",\"GATEWAY_PORT\",\"HOOKS_TOKEN\",\"NAS_ACCOUNT\",\"NAS_BASE_PATH\",\"NAS_HOST\",\"NAS_PASSWORD\",\"OAUTH_BROKER_SECRET_KEY\",\"OPENAI_API_KEY\",\"READER_API_KEY\",\"SEARCH_API_KEY\",\"SEO_API_PASSWORD\",\"SEO_API_TOKEN\",\"SEO_API_USER\"]";
+            ref item 'grant_sandbox:browser' : ToolGrant = Authority::'tool_field:sandbox:browser';
+            ref item 'grant_sandbox:docs__*' : ToolGrant = Authority::'tool_field:sandbox:docs__*';
+            ref item 'grant_sandbox:edit' : ToolGrant = Authority::'tool_field:sandbox:edit';
+            ref item 'grant_sandbox:exec' : ToolGrant = Authority::'tool_field:sandbox:exec';
+            ref item 'grant_sandbox:image' : ToolGrant = Authority::'tool_field:sandbox:image';
+            ref item 'grant_sandbox:message' : ToolGrant = Authority::'tool_field:sandbox:message';
+            ref item 'grant_sandbox:pdf' : ToolGrant = Authority::'tool_field:sandbox:pdf';
+            ref item 'grant_sandbox:read' : ToolGrant = Authority::'tool_field:sandbox:read';
+            ref item 'grant_sandbox:session_status' : ToolGrant = Authority::'tool_field:sandbox:session_status';
+            ref item 'grant_sandbox:sessions_history' : ToolGrant = Authority::'tool_field:sandbox:sessions_history';
+            ref item 'grant_sandbox:sessions_list' : ToolGrant = Authority::'tool_field:sandbox:sessions_list';
+            ref item 'grant_sandbox:sessions_send' : ToolGrant = Authority::'tool_field:sandbox:sessions_send';
+            ref item 'grant_sandbox:sessions_spawn' : ToolGrant = Authority::'tool_field:sandbox:sessions_spawn';
+            ref item 'grant_sandbox:subagents' : ToolGrant = Authority::'tool_field:sandbox:subagents';
+            ref item 'grant_sandbox:tts' : ToolGrant = Authority::'tool_field:sandbox:tts';
+            ref item 'grant_sandbox:write' : ToolGrant = Authority::'tool_field:sandbox:write';
+            ref item 'command_safe-bin:python3' : CommandGrant = Authority::'cmd_field:safe-bin:python3';
+            ref item 'command_safe-bin:wc' : CommandGrant = Authority::'cmd_field:safe-bin:wc';
         }
-        part execution : ExecutionPosture {
-            attribute :>> host = "auto";
-            attribute :>> security = "full";
-            attribute :>> ask = "off";
-            attribute :>> elevated = true;
-            attribute :>> elevatedChannelsCount = 1;
-            attribute :>> safeBins = "[\"jq\",\"python3\",\"wc\"]";
-            attribute :>> safeBinProfiles = "[\"wc\"]";
-            attribute :>> trustedDirCount = 1;
-            attribute :>> pathPrependCount = 1;
-            attribute :>> strictInlineEval = false;
-            attribute :>> approvalSecurity = "allowlist";
-            attribute :>> approvalAsk = "on-miss";
-            attribute :>> effectiveSecurity = "allowlist";
-            attribute :>> effectiveAsk = "on-miss";
+        part agent_field : Agent_field {
+            part sandbox : Sandbox {
+                attribute :>> mode = "all";
+                attribute :>> scope = "agent";
+                attribute :>> workspaceAccess = "rw";
+                attribute :>> image = "openclaw-sandbox:bookworm-slim";
+                attribute :>> readOnlyRoot = true;
+                attribute :>> network = "bridge";
+                attribute :>> memory = "1536m";
+                attribute :>> cpus = 2;
+                attribute :>> bindCount = 1;
+                attribute :>> bindModes = "[\"rw\"]";
+                attribute :>> environmentNames = "[\"GATEWAY_HOST\",\"GATEWAY_PORT\",\"HOOKS_TOKEN\",\"NAS_ACCOUNT\",\"NAS_BASE_PATH\",\"NAS_HOST\",\"NAS_PASSWORD\",\"OAUTH_BROKER_SECRET_KEY\",\"OPENAI_API_KEY\",\"READER_API_KEY\",\"SEARCH_API_KEY\",\"SEO_API_PASSWORD\",\"SEO_API_TOKEN\",\"SEO_API_USER\"]";
+            }
+            part execution : ExecutionPosture {
+                attribute :>> host = "auto";
+                attribute :>> security = "full";
+                attribute :>> ask = "off";
+                attribute :>> elevated = true;
+                attribute :>> elevatedChannelsCount = 1;
+                attribute :>> safeBins = "[\"jq\",\"python3\",\"wc\"]";
+                attribute :>> safeBinProfiles = "[\"wc\"]";
+                attribute :>> trustedDirCount = 1;
+                attribute :>> pathPrependCount = 1;
+                attribute :>> strictInlineEval = false;
+                attribute :>> approvalSecurity = "allowlist";
+                attribute :>> approvalAsk = "on-miss";
+                attribute :>> effectiveSecurity = "allowlist";
+                attribute :>> effectiveAsk = "on-miss";
+            }
+            part memory : AgentMemory {
+                attribute :>> searchEnabled = true;
+                attribute :>> searchProvider = "local";
+                attribute :>> searchFallback = "none";
+                attribute :>> searchSources = "[\"memory\"]";
+                attribute :>> extraPathCount = 0;
+                attribute :>> multimodal = false;
+                attribute :>> curatedSha256 = "ddfeb3c332f684f758dda35ed067aac03c68b2934e6c44880934d825dd77f51f";
+                attribute :>> curatedBytes = 96;
+                attribute :>> dailyCount = 1;
+                attribute :>> dailyFirstDate = "2026-05-30";
+                attribute :>> dailyLastDate = "2026-05-30";
+                attribute :>> dailyBytes = 16;
+                attribute :>> dailySha256 = "371942c13809f135478a482a31bd56195e4c58dfdc1994e5ba661ce959e940c9";
+                attribute :>> otherCount = 0;
+            }
+            part 'skill__archived/old-skill' : APESkills::InitialSkill {
+                attribute :>> id = "_archived/old-skill";
+                attribute :>> source = "skills/_archived/old-skill/SKILL.md";
+                attribute :>> digest = "014d5e0dac73fcebf0fda0968a2a9f804e2a843d1f336b7c2584cb599d6743ff";
+            }
+            part skill_escalation : APESkills::InitialSkill {
+                attribute :>> id = "escalation";
+                attribute :>> source = "skills/escalation/SKILL.md";
+                attribute :>> digest = "9016653f64a19a21a650b2e4f3a595367ffb58e08c62b7c16fcb4380e73a5237";
+            }
+            part 'skill_skill-1' : APESkills::InitialSkill {
+                attribute :>> id = "skill-1";
+                attribute :>> source = "skills/skill-1/SKILL.md";
+                attribute :>> digest = "5a606705b32ee492a189839360f5f82c3513a49f93a6e932b70225c012295688";
+            }
+            part 'skill_skill-aa' : APESkills::InitialSkill {
+                attribute :>> id = "skill-aa";
+                attribute :>> source = "skills/skill-aa/SKILL.md";
+                attribute :>> digest = "9558fb7feb3129b48fc78e76ca037a97ec0b5a0ab8ae851ca4ee74b59aa6fa7b";
+            }
+            part 'skill_skill-ad' : APESkills::InitialSkill {
+                attribute :>> id = "skill-ad";
+                attribute :>> source = "skills/skill-ad/SKILL.md";
+                attribute :>> digest = "56cd36b7200af5e52b4ad5f576076f0969af856e65e24ab2262347b60600fa2a";
+            }
+            part 'skill_skill-af' : APESkills::InitialSkill {
+                attribute :>> id = "skill-af";
+                attribute :>> source = "skills/skill-af/SKILL.md";
+                attribute :>> digest = "ac6f6b333cb367edf8ff0fd0539b42937d0017b46853df851bcdbc8bbde90e85";
+            }
+            part 'skill_skill-w' : APESkills::InitialSkill {
+                attribute :>> id = "skill-w";
+                attribute :>> source = "skills/skill-w/SKILL.md";
+                attribute :>> digest = "13039487b0c3a43c9fddf066738b54522c3cca19d3d4931e7ef8dcd467b4637f";
+            }
+            part 'file_AGENTS.md' : InstructionFile {
+                attribute :>> path = "AGENTS.md";
+                attribute :>> sha256 = "d91d06bf177f3ede9fecba6cc565218bb74f7a0e287eb37ee80d0a967c8fa877";
+                attribute :>> bytes = 96;
+            }
+            part 'file_HEARTBEAT.md' : InstructionFile {
+                attribute :>> path = "HEARTBEAT.md";
+                attribute :>> sha256 = "2240b35c8859c4f1c9b1a180cb9fd69c0d7472dd912c4534baabd00ecab53d30";
+                attribute :>> bytes = 99;
+            }
+            part 'file_IDENTITY.md' : InstructionFile {
+                attribute :>> path = "IDENTITY.md";
+                attribute :>> sha256 = "3b01b858fbc055bff440461191baf9b796dfb809afabeafae506acd491e00117";
+                attribute :>> bytes = 97;
+            }
+            part 'file_MEMORY.md' : InstructionFile {
+                attribute :>> path = "MEMORY.md";
+                attribute :>> sha256 = "ddfeb3c332f684f758dda35ed067aac03c68b2934e6c44880934d825dd77f51f";
+                attribute :>> bytes = 96;
+            }
+            part 'file_SOUL.md' : InstructionFile {
+                attribute :>> path = "SOUL.md";
+                attribute :>> sha256 = "af51faa07c4690f7ae03a659ac8ae5f10af6fc76697d156b1c4b3c8b587260a0";
+                attribute :>> bytes = 94;
+            }
+            part 'file_TOOLS.md' : InstructionFile {
+                attribute :>> path = "TOOLS.md";
+                attribute :>> sha256 = "cd08008f5e1034a8a01334a7729364a47be1fc1fdc0a1ca64ad38af0f34db80a";
+                attribute :>> bytes = 96;
+            }
+            part 'file_USER.md' : InstructionFile {
+                attribute :>> path = "USER.md";
+                attribute :>> sha256 = "87c9640cf1b1bd687325e211fe031e1bd1ac67b0c1daccc9ba967292cd079851";
+                attribute :>> bytes = 93;
+            }
         }
-        part memory : AgentMemory {
-            attribute :>> searchEnabled = true;
-            attribute :>> searchProvider = "local";
-            attribute :>> searchFallback = "none";
-            attribute :>> searchSources = "[\"memory\"]";
-            attribute :>> extraPathCount = 0;
-            attribute :>> multimodal = false;
-            attribute :>> curatedSha256 = "ddfeb3c332f684f758dda35ed067aac03c68b2934e6c44880934d825dd77f51f";
-            attribute :>> curatedBytes = 96;
-            attribute :>> dailyCount = 1;
-            attribute :>> dailyFirstDate = "2026-05-30";
-            attribute :>> dailyLastDate = "2026-05-30";
-            attribute :>> dailyBytes = 16;
-            attribute :>> dailySha256 = "371942c13809f135478a482a31bd56195e4c58dfdc1994e5ba661ce959e940c9";
-            attribute :>> otherCount = 0;
-        }
-        part 'skill__archived/old-skill' : APESkills::InitialSkill {
-            attribute :>> id = "_archived/old-skill";
-            attribute :>> source = "skills/_archived/old-skill/SKILL.md";
-            attribute :>> digest = "014d5e0dac73fcebf0fda0968a2a9f804e2a843d1f336b7c2584cb599d6743ff";
-        }
-        part skill_escalation : APESkills::InitialSkill {
-            attribute :>> id = "escalation";
-            attribute :>> source = "skills/escalation/SKILL.md";
-            attribute :>> digest = "9016653f64a19a21a650b2e4f3a595367ffb58e08c62b7c16fcb4380e73a5237";
-        }
-        part 'skill_skill-1' : APESkills::InitialSkill {
-            attribute :>> id = "skill-1";
-            attribute :>> source = "skills/skill-1/SKILL.md";
-            attribute :>> digest = "5a606705b32ee492a189839360f5f82c3513a49f93a6e932b70225c012295688";
-        }
-        part 'skill_skill-aa' : APESkills::InitialSkill {
-            attribute :>> id = "skill-aa";
-            attribute :>> source = "skills/skill-aa/SKILL.md";
-            attribute :>> digest = "9558fb7feb3129b48fc78e76ca037a97ec0b5a0ab8ae851ca4ee74b59aa6fa7b";
-        }
-        part 'skill_skill-ad' : APESkills::InitialSkill {
-            attribute :>> id = "skill-ad";
-            attribute :>> source = "skills/skill-ad/SKILL.md";
-            attribute :>> digest = "56cd36b7200af5e52b4ad5f576076f0969af856e65e24ab2262347b60600fa2a";
-        }
-        part 'skill_skill-af' : APESkills::InitialSkill {
-            attribute :>> id = "skill-af";
-            attribute :>> source = "skills/skill-af/SKILL.md";
-            attribute :>> digest = "ac6f6b333cb367edf8ff0fd0539b42937d0017b46853df851bcdbc8bbde90e85";
-        }
-        part 'skill_skill-w' : APESkills::InitialSkill {
-            attribute :>> id = "skill-w";
-            attribute :>> source = "skills/skill-w/SKILL.md";
-            attribute :>> digest = "13039487b0c3a43c9fddf066738b54522c3cca19d3d4931e7ef8dcd467b4637f";
-        }
-    part 'file_AGENTS.md' : InstructionFile {
-        attribute :>> path = "AGENTS.md";
-        attribute :>> sha256 = "d91d06bf177f3ede9fecba6cc565218bb74f7a0e287eb37ee80d0a967c8fa877";
-        attribute :>> bytes = 96;
-    }
-    part 'file_HEARTBEAT.md' : InstructionFile {
-        attribute :>> path = "HEARTBEAT.md";
-        attribute :>> sha256 = "2240b35c8859c4f1c9b1a180cb9fd69c0d7472dd912c4534baabd00ecab53d30";
-        attribute :>> bytes = 99;
-    }
-    part 'file_IDENTITY.md' : InstructionFile {
-        attribute :>> path = "IDENTITY.md";
-        attribute :>> sha256 = "3b01b858fbc055bff440461191baf9b796dfb809afabeafae506acd491e00117";
-        attribute :>> bytes = 97;
-    }
-    part 'file_MEMORY.md' : InstructionFile {
-        attribute :>> path = "MEMORY.md";
-        attribute :>> sha256 = "ddfeb3c332f684f758dda35ed067aac03c68b2934e6c44880934d825dd77f51f";
-        attribute :>> bytes = 96;
-    }
-    part 'file_SOUL.md' : InstructionFile {
-        attribute :>> path = "SOUL.md";
-        attribute :>> sha256 = "af51faa07c4690f7ae03a659ac8ae5f10af6fc76697d156b1c4b3c8b587260a0";
-        attribute :>> bytes = 94;
-    }
-    part 'file_TOOLS.md' : InstructionFile {
-        attribute :>> path = "TOOLS.md";
-        attribute :>> sha256 = "cd08008f5e1034a8a01334a7729364a47be1fc1fdc0a1ca64ad38af0f34db80a";
-        attribute :>> bytes = 96;
-    }
-    part 'file_USER.md' : InstructionFile {
-        attribute :>> path = "USER.md";
-        attribute :>> sha256 = "87c9640cf1b1bd687325e211fe031e1bd1ac67b0c1daccc9ba967292cd079851";
-        attribute :>> bytes = 93;
-    }
-    }
-    item 'tool_field:sandbox:browser' : ToolGrant {
-        attribute :>> tool = "browser";
-        attribute :>> layer = "sandbox";
-        attribute :>> pluginId = "browser";
-    }
-    item 'tool_field:sandbox:docs__*' : ToolGrant {
-        attribute :>> tool = "docs__*";
-        attribute :>> layer = "sandbox";
-        attribute :>> pluginId = "bundle-mcp";
-    }
-    item 'tool_field:sandbox:edit' : ToolGrant {
-        attribute :>> tool = "edit";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_field:sandbox:exec' : ToolGrant {
-        attribute :>> tool = "exec";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_field:sandbox:image' : ToolGrant {
-        attribute :>> tool = "image";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_field:sandbox:message' : ToolGrant {
-        attribute :>> tool = "message";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_field:sandbox:pdf' : ToolGrant {
-        attribute :>> tool = "pdf";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_field:sandbox:read' : ToolGrant {
-        attribute :>> tool = "read";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_field:sandbox:session_status' : ToolGrant {
-        attribute :>> tool = "session_status";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_field:sandbox:sessions_history' : ToolGrant {
-        attribute :>> tool = "sessions_history";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_field:sandbox:sessions_list' : ToolGrant {
-        attribute :>> tool = "sessions_list";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_field:sandbox:sessions_send' : ToolGrant {
-        attribute :>> tool = "sessions_send";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_field:sandbox:sessions_spawn' : ToolGrant {
-        attribute :>> tool = "sessions_spawn";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_field:sandbox:subagents' : ToolGrant {
-        attribute :>> tool = "subagents";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_field:sandbox:tts' : ToolGrant {
-        attribute :>> tool = "tts";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_field:sandbox:write' : ToolGrant {
-        attribute :>> tool = "write";
-        attribute :>> layer = "sandbox";
-    }
-    item 'cmd_field:safe-bin:python3' : CommandGrant {
-        attribute :>> command = "python3";
-        attribute :>> kind = "safe-bin";
-        attribute :>> argsRestricted = true;
-    }
-    item 'cmd_field:safe-bin:wc' : CommandGrant {
-        attribute :>> command = "wc";
-        attribute :>> kind = "safe-bin";
-        attribute :>> argsRestricted = true;
-    }
-    part 'delegation_field:lead' : DelegationRule {
-        attribute :>> fromAgent = "field";
-        attribute :>> toAgent = "lead";
-    }
-    part def Agent_lead :> OpenClawAgent {
-        attribute :>> id = "lead";
-        attribute :>> displayName = "Lead";
-        attribute :>> emoji = "🔍";
-        attribute :>> primaryModel = "ollama/glm-5.1:cloud";
-        attribute :>> fallbackModels = "[\"openai/gpt-5.5\"]";
-        doc /* Sanitized OpenClaw tool policy provenance: {
+        part def Agent_lead :> OpenClawAgent {
+            attribute :>> id = "lead";
+            attribute :>> displayName = "Lead";
+            attribute :>> emoji = "🔍";
+            attribute :>> primaryModel = "ollama/glm-5.1:cloud";
+            attribute :>> fallbackModels = "[\"openai/gpt-5.5\"]";
+            doc /* Sanitized OpenClaw tool policy provenance: {
   "agent": {
     "allow": null,
     "alsoAllow": [],
@@ -1088,517 +789,305 @@ package OpenClawInstance {
     "profile": null
   }
 } */
-        ref item 'grant_host:agents_list' : ToolGrant = 'tool_lead:host:agents_list';
-        ref item 'grant_host:browser' : ToolGrant = 'tool_lead:host:browser';
-        ref item 'grant_host:canvas' : ToolGrant = 'tool_lead:host:canvas';
-        ref item 'grant_host:code_execution' : ToolGrant = 'tool_lead:host:code_execution';
-        ref item 'grant_host:cron' : ToolGrant = 'tool_lead:host:cron';
-        ref item 'grant_host:docs__*' : ToolGrant = 'tool_lead:host:docs__*';
-        ref item 'grant_host:edit' : ToolGrant = 'tool_lead:host:edit';
-        ref item 'grant_host:exec' : ToolGrant = 'tool_lead:host:exec';
-        ref item 'grant_host:gateway' : ToolGrant = 'tool_lead:host:gateway';
-        ref item 'grant_host:heartbeat_respond' : ToolGrant = 'tool_lead:host:heartbeat_respond';
-        ref item 'grant_host:image' : ToolGrant = 'tool_lead:host:image';
-        ref item 'grant_host:image_generate' : ToolGrant = 'tool_lead:host:image_generate';
-        ref item 'grant_host:memory_get' : ToolGrant = 'tool_lead:host:memory_get';
-        ref item 'grant_host:memory_search' : ToolGrant = 'tool_lead:host:memory_search';
-        ref item 'grant_host:message' : ToolGrant = 'tool_lead:host:message';
-        ref item 'grant_host:music_generate' : ToolGrant = 'tool_lead:host:music_generate';
-        ref item 'grant_host:nodes' : ToolGrant = 'tool_lead:host:nodes';
-        ref item 'grant_host:outlook-graph__*' : ToolGrant = 'tool_lead:host:outlook-graph__*';
-        ref item 'grant_host:pdf' : ToolGrant = 'tool_lead:host:pdf';
-        ref item 'grant_host:process' : ToolGrant = 'tool_lead:host:process';
-        ref item 'grant_host:read' : ToolGrant = 'tool_lead:host:read';
-        ref item 'grant_host:session_status' : ToolGrant = 'tool_lead:host:session_status';
-        ref item 'grant_host:sessions_history' : ToolGrant = 'tool_lead:host:sessions_history';
-        ref item 'grant_host:sessions_list' : ToolGrant = 'tool_lead:host:sessions_list';
-        ref item 'grant_host:sessions_send' : ToolGrant = 'tool_lead:host:sessions_send';
-        ref item 'grant_host:sessions_spawn' : ToolGrant = 'tool_lead:host:sessions_spawn';
-        ref item 'grant_host:sessions_yield' : ToolGrant = 'tool_lead:host:sessions_yield';
-        ref item 'grant_host:skill_workshop' : ToolGrant = 'tool_lead:host:skill_workshop';
-        ref item 'grant_host:stock_quote' : ToolGrant = 'tool_lead:host:stock_quote';
-        ref item 'grant_host:subagents' : ToolGrant = 'tool_lead:host:subagents';
-        ref item 'grant_host:tts' : ToolGrant = 'tool_lead:host:tts';
-        ref item 'grant_host:update_plan' : ToolGrant = 'tool_lead:host:update_plan';
-        ref item 'grant_host:video_generate' : ToolGrant = 'tool_lead:host:video_generate';
-        ref item 'grant_host:web_fetch' : ToolGrant = 'tool_lead:host:web_fetch';
-        ref item 'grant_host:web_search' : ToolGrant = 'tool_lead:host:web_search';
-        ref item 'grant_host:whatsapp_login' : ToolGrant = 'tool_lead:host:whatsapp_login';
-        ref item 'grant_host:write' : ToolGrant = 'tool_lead:host:write';
-        ref item 'grant_host:x_search' : ToolGrant = 'tool_lead:host:x_search';
-        ref item 'command_name:rg' : CommandGrant = 'cmd_lead:name:rg';
-        ref item 'command_path:git' : CommandGrant = 'cmd_lead:path:git';
-        ref item 'command_safe-bin:python3' : CommandGrant = 'cmd_lead:safe-bin:python3';
-        ref item 'command_safe-bin:wc' : CommandGrant = 'cmd_lead:safe-bin:wc';
-    }
-    part agent_lead : Agent_lead {
-        part sandbox : Sandbox {
-            attribute :>> mode = "off";
-            attribute :>> workspaceAccess = "none";
-            attribute :>> image = "openclaw-sandbox:bookworm-slim";
-            attribute :>> readOnlyRoot = true;
-            attribute :>> network = "none";
-            attribute :>> bindCount = 0;
-            attribute :>> bindModes = "[]";
-            attribute :>> environmentNames = "[\"OAUTH_BROKER_SECRET_KEY\",\"READER_API_KEY\",\"SEARCH_API_KEY\"]";
+            ref item 'grant_host:agents_list' : ToolGrant = Authority::'tool_lead:host:agents_list';
+            ref item 'grant_host:browser' : ToolGrant = Authority::'tool_lead:host:browser';
+            ref item 'grant_host:canvas' : ToolGrant = Authority::'tool_lead:host:canvas';
+            ref item 'grant_host:code_execution' : ToolGrant = Authority::'tool_lead:host:code_execution';
+            ref item 'grant_host:cron' : ToolGrant = Authority::'tool_lead:host:cron';
+            ref item 'grant_host:docs__*' : ToolGrant = Authority::'tool_lead:host:docs__*';
+            ref item 'grant_host:edit' : ToolGrant = Authority::'tool_lead:host:edit';
+            ref item 'grant_host:exec' : ToolGrant = Authority::'tool_lead:host:exec';
+            ref item 'grant_host:gateway' : ToolGrant = Authority::'tool_lead:host:gateway';
+            ref item 'grant_host:heartbeat_respond' : ToolGrant = Authority::'tool_lead:host:heartbeat_respond';
+            ref item 'grant_host:image' : ToolGrant = Authority::'tool_lead:host:image';
+            ref item 'grant_host:image_generate' : ToolGrant = Authority::'tool_lead:host:image_generate';
+            ref item 'grant_host:memory_get' : ToolGrant = Authority::'tool_lead:host:memory_get';
+            ref item 'grant_host:memory_search' : ToolGrant = Authority::'tool_lead:host:memory_search';
+            ref item 'grant_host:message' : ToolGrant = Authority::'tool_lead:host:message';
+            ref item 'grant_host:music_generate' : ToolGrant = Authority::'tool_lead:host:music_generate';
+            ref item 'grant_host:nodes' : ToolGrant = Authority::'tool_lead:host:nodes';
+            ref item 'grant_host:outlook-graph__*' : ToolGrant = Authority::'tool_lead:host:outlook-graph__*';
+            ref item 'grant_host:pdf' : ToolGrant = Authority::'tool_lead:host:pdf';
+            ref item 'grant_host:process' : ToolGrant = Authority::'tool_lead:host:process';
+            ref item 'grant_host:read' : ToolGrant = Authority::'tool_lead:host:read';
+            ref item 'grant_host:session_status' : ToolGrant = Authority::'tool_lead:host:session_status';
+            ref item 'grant_host:sessions_history' : ToolGrant = Authority::'tool_lead:host:sessions_history';
+            ref item 'grant_host:sessions_list' : ToolGrant = Authority::'tool_lead:host:sessions_list';
+            ref item 'grant_host:sessions_send' : ToolGrant = Authority::'tool_lead:host:sessions_send';
+            ref item 'grant_host:sessions_spawn' : ToolGrant = Authority::'tool_lead:host:sessions_spawn';
+            ref item 'grant_host:sessions_yield' : ToolGrant = Authority::'tool_lead:host:sessions_yield';
+            ref item 'grant_host:skill_workshop' : ToolGrant = Authority::'tool_lead:host:skill_workshop';
+            ref item 'grant_host:stock_quote' : ToolGrant = Authority::'tool_lead:host:stock_quote';
+            ref item 'grant_host:subagents' : ToolGrant = Authority::'tool_lead:host:subagents';
+            ref item 'grant_host:tts' : ToolGrant = Authority::'tool_lead:host:tts';
+            ref item 'grant_host:update_plan' : ToolGrant = Authority::'tool_lead:host:update_plan';
+            ref item 'grant_host:video_generate' : ToolGrant = Authority::'tool_lead:host:video_generate';
+            ref item 'grant_host:web_fetch' : ToolGrant = Authority::'tool_lead:host:web_fetch';
+            ref item 'grant_host:web_search' : ToolGrant = Authority::'tool_lead:host:web_search';
+            ref item 'grant_host:whatsapp_login' : ToolGrant = Authority::'tool_lead:host:whatsapp_login';
+            ref item 'grant_host:write' : ToolGrant = Authority::'tool_lead:host:write';
+            ref item 'grant_host:x_search' : ToolGrant = Authority::'tool_lead:host:x_search';
+            ref item 'command_name:rg' : CommandGrant = Authority::'cmd_lead:name:rg';
+            ref item 'command_path:git' : CommandGrant = Authority::'cmd_lead:path:git';
+            ref item 'command_safe-bin:python3' : CommandGrant = Authority::'cmd_lead:safe-bin:python3';
+            ref item 'command_safe-bin:wc' : CommandGrant = Authority::'cmd_lead:safe-bin:wc';
         }
-        part execution : ExecutionPosture {
-            attribute :>> host = "auto";
-            attribute :>> security = "allowlist";
-            attribute :>> ask = "on-miss";
-            attribute :>> elevated = true;
-            attribute :>> elevatedChannelsCount = 1;
-            attribute :>> safeBins = "[\"jq\",\"python3\",\"wc\"]";
-            attribute :>> safeBinProfiles = "[\"wc\"]";
-            attribute :>> trustedDirCount = 1;
-            attribute :>> pathPrependCount = 1;
-            attribute :>> strictInlineEval = false;
-            attribute :>> approvalSecurity = "allowlist";
-            attribute :>> approvalAsk = "on-miss";
-            attribute :>> effectiveSecurity = "allowlist";
-            attribute :>> effectiveAsk = "on-miss";
+        part agent_lead : Agent_lead {
+            part sandbox : Sandbox {
+                attribute :>> mode = "off";
+                attribute :>> workspaceAccess = "none";
+                attribute :>> image = "openclaw-sandbox:bookworm-slim";
+                attribute :>> readOnlyRoot = true;
+                attribute :>> network = "none";
+                attribute :>> bindCount = 0;
+                attribute :>> bindModes = "[]";
+                attribute :>> environmentNames = "[\"OAUTH_BROKER_SECRET_KEY\",\"READER_API_KEY\",\"SEARCH_API_KEY\"]";
+            }
+            part execution : ExecutionPosture {
+                attribute :>> host = "auto";
+                attribute :>> security = "allowlist";
+                attribute :>> ask = "on-miss";
+                attribute :>> elevated = true;
+                attribute :>> elevatedChannelsCount = 1;
+                attribute :>> safeBins = "[\"jq\",\"python3\",\"wc\"]";
+                attribute :>> safeBinProfiles = "[\"wc\"]";
+                attribute :>> trustedDirCount = 1;
+                attribute :>> pathPrependCount = 1;
+                attribute :>> strictInlineEval = false;
+                attribute :>> approvalSecurity = "allowlist";
+                attribute :>> approvalAsk = "on-miss";
+                attribute :>> effectiveSecurity = "allowlist";
+                attribute :>> effectiveAsk = "on-miss";
+            }
+            part memory : AgentMemory {
+                attribute :>> searchEnabled = true;
+                attribute :>> searchProvider = "local";
+                attribute :>> searchFallback = "none";
+                attribute :>> searchSources = "[\"memory\"]";
+                attribute :>> extraPathCount = 0;
+                attribute :>> multimodal = false;
+                attribute :>> curatedSha256 = "c531ab42932f6eb6d328dfe37087a5a61511f55b5167eac15923eec50402310b";
+                attribute :>> curatedBytes = 97;
+                attribute :>> dailyCount = 2;
+                attribute :>> dailyFirstDate = "2026-06-01";
+                attribute :>> dailyLastDate = "2026-06-02";
+                attribute :>> dailyBytes = 32;
+                attribute :>> dailySha256 = "fff8b2bf3669aa98b4fccab9de17d486d49f3bf68bc51fedce99802e66e7d9d5";
+                attribute :>> otherCount = 2;
+            }
+            part 'skill__archived/old-skill' : APESkills::InitialSkill {
+                attribute :>> id = "_archived/old-skill";
+                attribute :>> source = "skills/_archived/old-skill/SKILL.md";
+                attribute :>> digest = "014d5e0dac73fcebf0fda0968a2a9f804e2a843d1f336b7c2584cb599d6743ff";
+            }
+            part skill_escalation : APESkills::InitialSkill {
+                attribute :>> id = "escalation";
+                attribute :>> source = "skills/escalation/SKILL.md";
+                attribute :>> digest = "9016653f64a19a21a650b2e4f3a595367ffb58e08c62b7c16fcb4380e73a5237";
+            }
+            part 'skill_skill-a' : APESkills::InitialSkill {
+                attribute :>> id = "skill-a";
+                attribute :>> source = "skills/skill-a/SKILL.md";
+                attribute :>> digest = "9ca693e57ada940ff0f2330331a99c89795813abe606f5c34ac0534c5d5092b4";
+            }
+            part 'skill_skill-aa' : APESkills::InitialSkill {
+                attribute :>> id = "skill-aa";
+                attribute :>> source = "skills/skill-aa/SKILL.md";
+                attribute :>> digest = "9558fb7feb3129b48fc78e76ca037a97ec0b5a0ab8ae851ca4ee74b59aa6fa7b";
+            }
+            part 'skill_skill-ac' : APESkills::InitialSkill {
+                attribute :>> id = "skill-ac";
+                attribute :>> source = "skills/skill-ac/SKILL.md";
+                attribute :>> digest = "99184c50cc246dccdab6bbe7764195b788bec87858366000c903a0474fc1d366";
+            }
+            part 'skill_skill-ad' : APESkills::InitialSkill {
+                attribute :>> id = "skill-ad";
+                attribute :>> source = "skills/skill-ad/SKILL.md";
+                attribute :>> digest = "56cd36b7200af5e52b4ad5f576076f0969af856e65e24ab2262347b60600fa2a";
+            }
+            part 'skill_skill-ae' : APESkills::InitialSkill {
+                attribute :>> id = "skill-ae";
+                attribute :>> source = "skills/skill-ae/SKILL.md";
+                attribute :>> digest = "444c9a1de2cd27c0ce912e2ac5963cc62f113712bd04dec49e5ba977bda67e85";
+            }
+            part 'skill_skill-af' : APESkills::InitialSkill {
+                attribute :>> id = "skill-af";
+                attribute :>> source = "skills/skill-af/SKILL.md";
+                attribute :>> digest = "ac6f6b333cb367edf8ff0fd0539b42937d0017b46853df851bcdbc8bbde90e85";
+            }
+            part 'skill_skill-ag' : APESkills::InitialSkill {
+                attribute :>> id = "skill-ag";
+                attribute :>> source = "skills/skill-ag/SKILL.md";
+                attribute :>> digest = "7e9c5bce57935d2f04817937aacc358547bcfbb9f2b3c20d22f1c6aae16feed6";
+            }
+            part 'skill_skill-ah' : APESkills::InitialSkill {
+                attribute :>> id = "skill-ah";
+                attribute :>> source = "skills/skill-ah/SKILL.md";
+                attribute :>> digest = "136bfddd214a7ba3aa371c42b9157bc156e36ca080bedeacdf5ccd591cc5f7c1";
+            }
+            part 'skill_skill-ai' : APESkills::InitialSkill {
+                attribute :>> id = "skill-ai";
+                attribute :>> source = "skills/skill-ai/SKILL.md";
+                attribute :>> digest = "889f1a3ed0d84e4d70a8f68620b40d2307a5673d8c8abc7ca206fe51105d82a1";
+            }
+            part 'skill_skill-b' : APESkills::InitialSkill {
+                attribute :>> id = "skill-b";
+                attribute :>> source = "skills/skill-b/SKILL.md";
+                attribute :>> digest = "4ba04c614857ae97cb8cbfd8df099854159b3be0781b8a2a332db2bf890ee0ca";
+            }
+            part 'skill_skill-c' : APESkills::InitialSkill {
+                attribute :>> id = "skill-c";
+                attribute :>> source = "skills/skill-c/SKILL.md";
+                attribute :>> digest = "266d62b94a1573b46c035139e68863395b49585bc5401a26ccd22e616a55c0d6";
+            }
+            part 'skill_skill-d' : APESkills::InitialSkill {
+                attribute :>> id = "skill-d";
+                attribute :>> source = "skills/skill-d/SKILL.md";
+                attribute :>> digest = "b07a1de09c706da4bef569d18998ec720a3fb10f7bdea1e5780eaa67087b5fec";
+            }
+            part 'skill_skill-e' : APESkills::InitialSkill {
+                attribute :>> id = "skill-e";
+                attribute :>> source = "skills/skill-e/SKILL.md";
+                attribute :>> digest = "4b1c2ed9c2a55afb87e2908a782dff18613b132740b61e15b0146ff51319efe3";
+            }
+            part 'skill_skill-g' : APESkills::InitialSkill {
+                attribute :>> id = "skill-g";
+                attribute :>> source = "skills/skill-g/SKILL.md";
+                attribute :>> digest = "69da147fe174898130411b72d1548fc4995423fbae5d8c0a09196a88cc51cccf";
+            }
+            part 'skill_skill-h' : APESkills::InitialSkill {
+                attribute :>> id = "skill-h";
+                attribute :>> source = "skills/skill-h/SKILL.md";
+                attribute :>> digest = "e579a18b2ff2c9abbf3f7eb985a9ff3d59874ec40c17005e863ce2c9b342d8ac";
+            }
+            part 'skill_skill-i' : APESkills::InitialSkill {
+                attribute :>> id = "skill-i";
+                attribute :>> source = "skills/skill-i/SKILL.md";
+                attribute :>> digest = "d2757c119ce2c3ad26b931afd4446010077fe0c7de24dafbf1a5656fd7f6a95c";
+            }
+            part 'skill_skill-j' : APESkills::InitialSkill {
+                attribute :>> id = "skill-j";
+                attribute :>> source = "skills/skill-j/SKILL.md";
+                attribute :>> digest = "dae38a8f9ed3e9b1e37b14f494fef4a277de66f4da503d4887cbf7bd1a50377d";
+            }
+            part 'skill_skill-k' : APESkills::InitialSkill {
+                attribute :>> id = "skill-k";
+                attribute :>> source = "skills/skill-k/SKILL.md";
+                attribute :>> digest = "b0dc29f43cc461359d37924ed4f9c95ebd7dec3cecfe4de409b4f1c6ce025b5c";
+            }
+            part 'skill_skill-l' : APESkills::InitialSkill {
+                attribute :>> id = "skill-l";
+                attribute :>> source = "skills/skill-l/SKILL.md";
+                attribute :>> digest = "104d8e0c94e383e3de6d2aa3358ea71032563ff729ffb16e3fb63d1615e57832";
+            }
+            part 'skill_skill-m' : APESkills::InitialSkill {
+                attribute :>> id = "skill-m";
+                attribute :>> source = "skills/skill-m/SKILL.md";
+                attribute :>> digest = "b1a0627a57cab6fbb823b4a9053b4d3204c91e36d9d367853cadc6c32e74f153";
+            }
+            part 'skill_skill-n' : APESkills::InitialSkill {
+                attribute :>> id = "skill-n";
+                attribute :>> source = "skills/skill-n/SKILL.md";
+                attribute :>> digest = "d44935251e7f132ee5753b8cb6ab7e52e3967b84e5c480e330509c84ba2ee470";
+            }
+            part 'skill_skill-o' : APESkills::InitialSkill {
+                attribute :>> id = "skill-o";
+                attribute :>> source = "skills/skill-o/SKILL.md";
+                attribute :>> digest = "2efedf9402b6a469005ead7eb54a7e8cae9225d5bd8156b13b922d8cf0390697";
+            }
+            part 'skill_skill-p' : APESkills::InitialSkill {
+                attribute :>> id = "skill-p";
+                attribute :>> source = "skills/skill-p/SKILL.md";
+                attribute :>> digest = "0fa975fc95416d9e9f8597fe600902af63fe61f2cbacbdbfd91110cf87349ffb";
+            }
+            part 'skill_skill-q' : APESkills::InitialSkill {
+                attribute :>> id = "skill-q";
+                attribute :>> source = "skills/skill-q/SKILL.md";
+                attribute :>> digest = "bb6961f39ac7bc96f6125193469a6f492e6fde2ae75c9c501cd23da35f78ea5a";
+            }
+            part 'skill_skill-r' : APESkills::InitialSkill {
+                attribute :>> id = "skill-r";
+                attribute :>> source = "skills/skill-r/SKILL.md";
+                attribute :>> digest = "7392a241c07a1903027a0b4eb0ee777dd33b1929874547e15af65abc1930276f";
+            }
+            part 'skill_skill-s' : APESkills::InitialSkill {
+                attribute :>> id = "skill-s";
+                attribute :>> source = "skills/skill-s/SKILL.md";
+                attribute :>> digest = "13132b65ca431a04a02e833b6dcadef60201b518dd2f2bf519c5b79fad2388d2";
+            }
+            part 'skill_skill-t' : APESkills::InitialSkill {
+                attribute :>> id = "skill-t";
+                attribute :>> source = "skills/skill-t/SKILL.md";
+                attribute :>> digest = "4dc4d3872a53d8881c487e88324e3c250e6b3b5fea4d9687a69cb4d048568efe";
+            }
+            part 'skill_skill-u' : APESkills::InitialSkill {
+                attribute :>> id = "skill-u";
+                attribute :>> source = "skills/skill-u/SKILL.md";
+                attribute :>> digest = "7ed3e153fc5cd1aac6dabf4b044922641c673dd7a393f20745002f94d66e8ec7";
+            }
+            part 'skill_skill-v' : APESkills::InitialSkill {
+                attribute :>> id = "skill-v";
+                attribute :>> source = "skills/skill-v/SKILL.md";
+                attribute :>> digest = "26641101dedf0c403b585c08105e051bf1e2eaa3ead627d03d18b9ad01abd4e7";
+            }
+            part 'skill_skill-w' : APESkills::InitialSkill {
+                attribute :>> id = "skill-w";
+                attribute :>> source = "skills/skill-w/SKILL.md";
+                attribute :>> digest = "13039487b0c3a43c9fddf066738b54522c3cca19d3d4931e7ef8dcd467b4637f";
+            }
+            part 'file_AGENTS.md' : InstructionFile {
+                attribute :>> path = "AGENTS.md";
+                attribute :>> sha256 = "d91d06bf177f3ede9fecba6cc565218bb74f7a0e287eb37ee80d0a967c8fa877";
+                attribute :>> bytes = 96;
+            }
+            part 'file_HEARTBEAT.md' : InstructionFile {
+                attribute :>> path = "HEARTBEAT.md";
+                attribute :>> sha256 = "4c880c91872557b161e81253cc3e0ec057003d915cbbdf28718df8eaaea896b0";
+                attribute :>> bytes = 98;
+            }
+            part 'file_HOURLY_REPORT.md' : InstructionFile {
+                attribute :>> path = "HOURLY_REPORT.md";
+                attribute :>> sha256 = "9f229d4620559f9420d06817243e43f17b0d7197cda430f3219fe053ea6dc4dd";
+                attribute :>> bytes = 102;
+            }
+            part 'file_IDENTITY.md' : InstructionFile {
+                attribute :>> path = "IDENTITY.md";
+                attribute :>> sha256 = "9df1377d19bdb846c4427ed40c82832b2a56f47179edb9b2f912fbc786b51acd";
+                attribute :>> bytes = 97;
+            }
+            part 'file_MEMORY.md' : InstructionFile {
+                attribute :>> path = "MEMORY.md";
+                attribute :>> sha256 = "c531ab42932f6eb6d328dfe37087a5a61511f55b5167eac15923eec50402310b";
+                attribute :>> bytes = 97;
+            }
+            part 'file_QUALITY.md' : InstructionFile {
+                attribute :>> path = "QUALITY.md";
+                attribute :>> sha256 = "4f7ff65a0f3688247f4361d350a221d89d925097461fd67b4debbaa2074ad599";
+                attribute :>> bytes = 97;
+            }
+            part 'file_SOUL.md' : InstructionFile {
+                attribute :>> path = "SOUL.md";
+                attribute :>> sha256 = "510c25d377ffd2852f0e5822afb03722bf1d67de968e8dcbfc3c4dc2ccdc7248";
+                attribute :>> bytes = 95;
+            }
+            part 'file_TOOLS.md' : InstructionFile {
+                attribute :>> path = "TOOLS.md";
+                attribute :>> sha256 = "1e8761e52b8308de9bdc41083a6092c216d541d3633c9cee9ccf9d98a9c2eaf0";
+                attribute :>> bytes = 96;
+            }
+            part 'file_USER.md' : InstructionFile {
+                attribute :>> path = "USER.md";
+                attribute :>> sha256 = "d3490b50efe29fac8516d4c9de332c9fee11b0f237657111e093d4ef36cd20b7";
+                attribute :>> bytes = 94;
+            }
         }
-        part memory : AgentMemory {
-            attribute :>> searchEnabled = true;
-            attribute :>> searchProvider = "local";
-            attribute :>> searchFallback = "none";
-            attribute :>> searchSources = "[\"memory\"]";
-            attribute :>> extraPathCount = 0;
-            attribute :>> multimodal = false;
-            attribute :>> curatedSha256 = "c531ab42932f6eb6d328dfe37087a5a61511f55b5167eac15923eec50402310b";
-            attribute :>> curatedBytes = 97;
-            attribute :>> dailyCount = 2;
-            attribute :>> dailyFirstDate = "2026-06-01";
-            attribute :>> dailyLastDate = "2026-06-02";
-            attribute :>> dailyBytes = 32;
-            attribute :>> dailySha256 = "fff8b2bf3669aa98b4fccab9de17d486d49f3bf68bc51fedce99802e66e7d9d5";
-            attribute :>> otherCount = 2;
-        }
-        part 'skill__archived/old-skill' : APESkills::InitialSkill {
-            attribute :>> id = "_archived/old-skill";
-            attribute :>> source = "skills/_archived/old-skill/SKILL.md";
-            attribute :>> digest = "014d5e0dac73fcebf0fda0968a2a9f804e2a843d1f336b7c2584cb599d6743ff";
-        }
-        part skill_escalation : APESkills::InitialSkill {
-            attribute :>> id = "escalation";
-            attribute :>> source = "skills/escalation/SKILL.md";
-            attribute :>> digest = "9016653f64a19a21a650b2e4f3a595367ffb58e08c62b7c16fcb4380e73a5237";
-        }
-        part 'skill_skill-a' : APESkills::InitialSkill {
-            attribute :>> id = "skill-a";
-            attribute :>> source = "skills/skill-a/SKILL.md";
-            attribute :>> digest = "9ca693e57ada940ff0f2330331a99c89795813abe606f5c34ac0534c5d5092b4";
-        }
-        part 'skill_skill-aa' : APESkills::InitialSkill {
-            attribute :>> id = "skill-aa";
-            attribute :>> source = "skills/skill-aa/SKILL.md";
-            attribute :>> digest = "9558fb7feb3129b48fc78e76ca037a97ec0b5a0ab8ae851ca4ee74b59aa6fa7b";
-        }
-        part 'skill_skill-ac' : APESkills::InitialSkill {
-            attribute :>> id = "skill-ac";
-            attribute :>> source = "skills/skill-ac/SKILL.md";
-            attribute :>> digest = "99184c50cc246dccdab6bbe7764195b788bec87858366000c903a0474fc1d366";
-        }
-        part 'skill_skill-ad' : APESkills::InitialSkill {
-            attribute :>> id = "skill-ad";
-            attribute :>> source = "skills/skill-ad/SKILL.md";
-            attribute :>> digest = "56cd36b7200af5e52b4ad5f576076f0969af856e65e24ab2262347b60600fa2a";
-        }
-        part 'skill_skill-ae' : APESkills::InitialSkill {
-            attribute :>> id = "skill-ae";
-            attribute :>> source = "skills/skill-ae/SKILL.md";
-            attribute :>> digest = "444c9a1de2cd27c0ce912e2ac5963cc62f113712bd04dec49e5ba977bda67e85";
-        }
-        part 'skill_skill-af' : APESkills::InitialSkill {
-            attribute :>> id = "skill-af";
-            attribute :>> source = "skills/skill-af/SKILL.md";
-            attribute :>> digest = "ac6f6b333cb367edf8ff0fd0539b42937d0017b46853df851bcdbc8bbde90e85";
-        }
-        part 'skill_skill-ag' : APESkills::InitialSkill {
-            attribute :>> id = "skill-ag";
-            attribute :>> source = "skills/skill-ag/SKILL.md";
-            attribute :>> digest = "7e9c5bce57935d2f04817937aacc358547bcfbb9f2b3c20d22f1c6aae16feed6";
-        }
-        part 'skill_skill-ah' : APESkills::InitialSkill {
-            attribute :>> id = "skill-ah";
-            attribute :>> source = "skills/skill-ah/SKILL.md";
-            attribute :>> digest = "136bfddd214a7ba3aa371c42b9157bc156e36ca080bedeacdf5ccd591cc5f7c1";
-        }
-        part 'skill_skill-ai' : APESkills::InitialSkill {
-            attribute :>> id = "skill-ai";
-            attribute :>> source = "skills/skill-ai/SKILL.md";
-            attribute :>> digest = "889f1a3ed0d84e4d70a8f68620b40d2307a5673d8c8abc7ca206fe51105d82a1";
-        }
-        part 'skill_skill-b' : APESkills::InitialSkill {
-            attribute :>> id = "skill-b";
-            attribute :>> source = "skills/skill-b/SKILL.md";
-            attribute :>> digest = "4ba04c614857ae97cb8cbfd8df099854159b3be0781b8a2a332db2bf890ee0ca";
-        }
-        part 'skill_skill-c' : APESkills::InitialSkill {
-            attribute :>> id = "skill-c";
-            attribute :>> source = "skills/skill-c/SKILL.md";
-            attribute :>> digest = "266d62b94a1573b46c035139e68863395b49585bc5401a26ccd22e616a55c0d6";
-        }
-        part 'skill_skill-d' : APESkills::InitialSkill {
-            attribute :>> id = "skill-d";
-            attribute :>> source = "skills/skill-d/SKILL.md";
-            attribute :>> digest = "b07a1de09c706da4bef569d18998ec720a3fb10f7bdea1e5780eaa67087b5fec";
-        }
-        part 'skill_skill-e' : APESkills::InitialSkill {
-            attribute :>> id = "skill-e";
-            attribute :>> source = "skills/skill-e/SKILL.md";
-            attribute :>> digest = "4b1c2ed9c2a55afb87e2908a782dff18613b132740b61e15b0146ff51319efe3";
-        }
-        part 'skill_skill-g' : APESkills::InitialSkill {
-            attribute :>> id = "skill-g";
-            attribute :>> source = "skills/skill-g/SKILL.md";
-            attribute :>> digest = "69da147fe174898130411b72d1548fc4995423fbae5d8c0a09196a88cc51cccf";
-        }
-        part 'skill_skill-h' : APESkills::InitialSkill {
-            attribute :>> id = "skill-h";
-            attribute :>> source = "skills/skill-h/SKILL.md";
-            attribute :>> digest = "e579a18b2ff2c9abbf3f7eb985a9ff3d59874ec40c17005e863ce2c9b342d8ac";
-        }
-        part 'skill_skill-i' : APESkills::InitialSkill {
-            attribute :>> id = "skill-i";
-            attribute :>> source = "skills/skill-i/SKILL.md";
-            attribute :>> digest = "d2757c119ce2c3ad26b931afd4446010077fe0c7de24dafbf1a5656fd7f6a95c";
-        }
-        part 'skill_skill-j' : APESkills::InitialSkill {
-            attribute :>> id = "skill-j";
-            attribute :>> source = "skills/skill-j/SKILL.md";
-            attribute :>> digest = "dae38a8f9ed3e9b1e37b14f494fef4a277de66f4da503d4887cbf7bd1a50377d";
-        }
-        part 'skill_skill-k' : APESkills::InitialSkill {
-            attribute :>> id = "skill-k";
-            attribute :>> source = "skills/skill-k/SKILL.md";
-            attribute :>> digest = "b0dc29f43cc461359d37924ed4f9c95ebd7dec3cecfe4de409b4f1c6ce025b5c";
-        }
-        part 'skill_skill-l' : APESkills::InitialSkill {
-            attribute :>> id = "skill-l";
-            attribute :>> source = "skills/skill-l/SKILL.md";
-            attribute :>> digest = "104d8e0c94e383e3de6d2aa3358ea71032563ff729ffb16e3fb63d1615e57832";
-        }
-        part 'skill_skill-m' : APESkills::InitialSkill {
-            attribute :>> id = "skill-m";
-            attribute :>> source = "skills/skill-m/SKILL.md";
-            attribute :>> digest = "b1a0627a57cab6fbb823b4a9053b4d3204c91e36d9d367853cadc6c32e74f153";
-        }
-        part 'skill_skill-n' : APESkills::InitialSkill {
-            attribute :>> id = "skill-n";
-            attribute :>> source = "skills/skill-n/SKILL.md";
-            attribute :>> digest = "d44935251e7f132ee5753b8cb6ab7e52e3967b84e5c480e330509c84ba2ee470";
-        }
-        part 'skill_skill-o' : APESkills::InitialSkill {
-            attribute :>> id = "skill-o";
-            attribute :>> source = "skills/skill-o/SKILL.md";
-            attribute :>> digest = "2efedf9402b6a469005ead7eb54a7e8cae9225d5bd8156b13b922d8cf0390697";
-        }
-        part 'skill_skill-p' : APESkills::InitialSkill {
-            attribute :>> id = "skill-p";
-            attribute :>> source = "skills/skill-p/SKILL.md";
-            attribute :>> digest = "0fa975fc95416d9e9f8597fe600902af63fe61f2cbacbdbfd91110cf87349ffb";
-        }
-        part 'skill_skill-q' : APESkills::InitialSkill {
-            attribute :>> id = "skill-q";
-            attribute :>> source = "skills/skill-q/SKILL.md";
-            attribute :>> digest = "bb6961f39ac7bc96f6125193469a6f492e6fde2ae75c9c501cd23da35f78ea5a";
-        }
-        part 'skill_skill-r' : APESkills::InitialSkill {
-            attribute :>> id = "skill-r";
-            attribute :>> source = "skills/skill-r/SKILL.md";
-            attribute :>> digest = "7392a241c07a1903027a0b4eb0ee777dd33b1929874547e15af65abc1930276f";
-        }
-        part 'skill_skill-s' : APESkills::InitialSkill {
-            attribute :>> id = "skill-s";
-            attribute :>> source = "skills/skill-s/SKILL.md";
-            attribute :>> digest = "13132b65ca431a04a02e833b6dcadef60201b518dd2f2bf519c5b79fad2388d2";
-        }
-        part 'skill_skill-t' : APESkills::InitialSkill {
-            attribute :>> id = "skill-t";
-            attribute :>> source = "skills/skill-t/SKILL.md";
-            attribute :>> digest = "4dc4d3872a53d8881c487e88324e3c250e6b3b5fea4d9687a69cb4d048568efe";
-        }
-        part 'skill_skill-u' : APESkills::InitialSkill {
-            attribute :>> id = "skill-u";
-            attribute :>> source = "skills/skill-u/SKILL.md";
-            attribute :>> digest = "7ed3e153fc5cd1aac6dabf4b044922641c673dd7a393f20745002f94d66e8ec7";
-        }
-        part 'skill_skill-v' : APESkills::InitialSkill {
-            attribute :>> id = "skill-v";
-            attribute :>> source = "skills/skill-v/SKILL.md";
-            attribute :>> digest = "26641101dedf0c403b585c08105e051bf1e2eaa3ead627d03d18b9ad01abd4e7";
-        }
-        part 'skill_skill-w' : APESkills::InitialSkill {
-            attribute :>> id = "skill-w";
-            attribute :>> source = "skills/skill-w/SKILL.md";
-            attribute :>> digest = "13039487b0c3a43c9fddf066738b54522c3cca19d3d4931e7ef8dcd467b4637f";
-        }
-    part 'file_AGENTS.md' : InstructionFile {
-        attribute :>> path = "AGENTS.md";
-        attribute :>> sha256 = "d91d06bf177f3ede9fecba6cc565218bb74f7a0e287eb37ee80d0a967c8fa877";
-        attribute :>> bytes = 96;
-    }
-    part 'file_HEARTBEAT.md' : InstructionFile {
-        attribute :>> path = "HEARTBEAT.md";
-        attribute :>> sha256 = "4c880c91872557b161e81253cc3e0ec057003d915cbbdf28718df8eaaea896b0";
-        attribute :>> bytes = 98;
-    }
-    part 'file_HOURLY_REPORT.md' : InstructionFile {
-        attribute :>> path = "HOURLY_REPORT.md";
-        attribute :>> sha256 = "9f229d4620559f9420d06817243e43f17b0d7197cda430f3219fe053ea6dc4dd";
-        attribute :>> bytes = 102;
-    }
-    part 'file_IDENTITY.md' : InstructionFile {
-        attribute :>> path = "IDENTITY.md";
-        attribute :>> sha256 = "9df1377d19bdb846c4427ed40c82832b2a56f47179edb9b2f912fbc786b51acd";
-        attribute :>> bytes = 97;
-    }
-    part 'file_MEMORY.md' : InstructionFile {
-        attribute :>> path = "MEMORY.md";
-        attribute :>> sha256 = "c531ab42932f6eb6d328dfe37087a5a61511f55b5167eac15923eec50402310b";
-        attribute :>> bytes = 97;
-    }
-    part 'file_QUALITY.md' : InstructionFile {
-        attribute :>> path = "QUALITY.md";
-        attribute :>> sha256 = "4f7ff65a0f3688247f4361d350a221d89d925097461fd67b4debbaa2074ad599";
-        attribute :>> bytes = 97;
-    }
-    part 'file_SOUL.md' : InstructionFile {
-        attribute :>> path = "SOUL.md";
-        attribute :>> sha256 = "510c25d377ffd2852f0e5822afb03722bf1d67de968e8dcbfc3c4dc2ccdc7248";
-        attribute :>> bytes = 95;
-    }
-    part 'file_TOOLS.md' : InstructionFile {
-        attribute :>> path = "TOOLS.md";
-        attribute :>> sha256 = "1e8761e52b8308de9bdc41083a6092c216d541d3633c9cee9ccf9d98a9c2eaf0";
-        attribute :>> bytes = 96;
-    }
-    part 'file_USER.md' : InstructionFile {
-        attribute :>> path = "USER.md";
-        attribute :>> sha256 = "d3490b50efe29fac8516d4c9de332c9fee11b0f237657111e093d4ef36cd20b7";
-        attribute :>> bytes = 94;
-    }
-    }
-    item 'tool_lead:host:agents_list' : ToolGrant {
-        attribute :>> tool = "agents_list";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:browser' : ToolGrant {
-        attribute :>> tool = "browser";
-        attribute :>> layer = "host";
-        attribute :>> pluginId = "browser";
-    }
-    item 'tool_lead:host:canvas' : ToolGrant {
-        attribute :>> tool = "canvas";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:code_execution' : ToolGrant {
-        attribute :>> tool = "code_execution";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:cron' : ToolGrant {
-        attribute :>> tool = "cron";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:docs__*' : ToolGrant {
-        attribute :>> tool = "docs__*";
-        attribute :>> layer = "host";
-        attribute :>> pluginId = "bundle-mcp";
-    }
-    item 'tool_lead:host:edit' : ToolGrant {
-        attribute :>> tool = "edit";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:exec' : ToolGrant {
-        attribute :>> tool = "exec";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:gateway' : ToolGrant {
-        attribute :>> tool = "gateway";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:heartbeat_respond' : ToolGrant {
-        attribute :>> tool = "heartbeat_respond";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:image' : ToolGrant {
-        attribute :>> tool = "image";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:image_generate' : ToolGrant {
-        attribute :>> tool = "image_generate";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:memory_get' : ToolGrant {
-        attribute :>> tool = "memory_get";
-        attribute :>> layer = "host";
-        attribute :>> pluginId = "memory-core";
-    }
-    item 'tool_lead:host:memory_search' : ToolGrant {
-        attribute :>> tool = "memory_search";
-        attribute :>> layer = "host";
-        attribute :>> pluginId = "memory-core";
-    }
-    item 'tool_lead:host:message' : ToolGrant {
-        attribute :>> tool = "message";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:music_generate' : ToolGrant {
-        attribute :>> tool = "music_generate";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:nodes' : ToolGrant {
-        attribute :>> tool = "nodes";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:outlook-graph__*' : ToolGrant {
-        attribute :>> tool = "outlook-graph__*";
-        attribute :>> layer = "host";
-        attribute :>> pluginId = "bundle-mcp";
-    }
-    item 'tool_lead:host:pdf' : ToolGrant {
-        attribute :>> tool = "pdf";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:process' : ToolGrant {
-        attribute :>> tool = "process";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:read' : ToolGrant {
-        attribute :>> tool = "read";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:session_status' : ToolGrant {
-        attribute :>> tool = "session_status";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:sessions_history' : ToolGrant {
-        attribute :>> tool = "sessions_history";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:sessions_list' : ToolGrant {
-        attribute :>> tool = "sessions_list";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:sessions_send' : ToolGrant {
-        attribute :>> tool = "sessions_send";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:sessions_spawn' : ToolGrant {
-        attribute :>> tool = "sessions_spawn";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:sessions_yield' : ToolGrant {
-        attribute :>> tool = "sessions_yield";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:skill_workshop' : ToolGrant {
-        attribute :>> tool = "skill_workshop";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:stock_quote' : ToolGrant {
-        attribute :>> tool = "stock_quote";
-        attribute :>> layer = "host";
-        attribute :>> pluginId = "stock-quotes";
-    }
-    item 'tool_lead:host:subagents' : ToolGrant {
-        attribute :>> tool = "subagents";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:tts' : ToolGrant {
-        attribute :>> tool = "tts";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:update_plan' : ToolGrant {
-        attribute :>> tool = "update_plan";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:video_generate' : ToolGrant {
-        attribute :>> tool = "video_generate";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:web_fetch' : ToolGrant {
-        attribute :>> tool = "web_fetch";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:web_search' : ToolGrant {
-        attribute :>> tool = "web_search";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:whatsapp_login' : ToolGrant {
-        attribute :>> tool = "whatsapp_login";
-        attribute :>> layer = "host";
-        attribute :>> pluginId = "whatsapp";
-    }
-    item 'tool_lead:host:write' : ToolGrant {
-        attribute :>> tool = "write";
-        attribute :>> layer = "host";
-    }
-    item 'tool_lead:host:x_search' : ToolGrant {
-        attribute :>> tool = "x_search";
-        attribute :>> layer = "host";
-    }
-    item 'cmd_lead:name:rg' : CommandGrant {
-        attribute :>> command = "rg";
-        attribute :>> kind = "name";
-        attribute :>> argsRestricted = false;
-    }
-    item 'cmd_lead:path:git' : CommandGrant {
-        attribute :>> command = "git";
-        attribute :>> kind = "path";
-        attribute :>> argsRestricted = true;
-    }
-    item 'cmd_lead:safe-bin:python3' : CommandGrant {
-        attribute :>> command = "python3";
-        attribute :>> kind = "safe-bin";
-        attribute :>> argsRestricted = true;
-    }
-    item 'cmd_lead:safe-bin:wc' : CommandGrant {
-        attribute :>> command = "wc";
-        attribute :>> kind = "safe-bin";
-        attribute :>> argsRestricted = true;
-    }
-    part 'delegation_lead:client' : DelegationRule {
-        attribute :>> fromAgent = "lead";
-        attribute :>> toAgent = "client";
-    }
-    part 'delegation_lead:coach' : DelegationRule {
-        attribute :>> fromAgent = "lead";
-        attribute :>> toAgent = "coach";
-    }
-    part 'delegation_lead:devbox' : DelegationRule {
-        attribute :>> fromAgent = "lead";
-        attribute :>> toAgent = "devbox";
-    }
-    part 'delegation_lead:field' : DelegationRule {
-        attribute :>> fromAgent = "lead";
-        attribute :>> toAgent = "field";
-    }
-    part 'delegation_lead:secretary' : DelegationRule {
-        attribute :>> fromAgent = "lead";
-        attribute :>> toAgent = "secretary";
-    }
-    part heartbeat_lead : ScheduledCase {
-        attribute :>> id = "heartbeat:lead";
-        attribute :>> displayName = "Heartbeat lead";
-        attribute :>> enabled = true;
-        attribute :>> targetAgent = "lead";
-        attribute :>> envelope = AssemblyCases::EnvelopeKind::reassessment;
-        ref part :>> owner = agent_lead;
-        attribute :>> schedule : MillisecondEvery {
-            attribute :>> durationMs = 1800000;
-            attribute :>> count = 30;
-            attribute :>> unit = AssemblyCases::ScheduleUnit::minute;
-        }
-    }
-    part def Agent_secretary :> OpenClawAgent {
-        attribute :>> id = "secretary";
-        attribute :>> displayName = "Secretary";
-        attribute :>> emoji = "🌸";
-        attribute :>> primaryModel = "ollama/glm-5.1:cloud";
-        attribute :>> fallbackModels = "[\"openai/gpt-5.5\"]";
-        doc /* Sanitized OpenClaw tool policy provenance: {
+        part def Agent_secretary :> OpenClawAgent {
+            attribute :>> id = "secretary";
+            attribute :>> displayName = "Secretary";
+            attribute :>> emoji = "🌸";
+            attribute :>> primaryModel = "ollama/glm-5.1:cloud";
+            attribute :>> fallbackModels = "[\"openai/gpt-5.5\"]";
+            doc /* Sanitized OpenClaw tool policy provenance: {
   "agent": {
     "allow": null,
     "alsoAllow": [
@@ -1665,700 +1154,1225 @@ package OpenClawInstance {
     "profile": null
   }
 } */
-        ref item 'grant_sandbox:browser' : ToolGrant = 'tool_secretary:sandbox:browser';
-        ref item 'grant_sandbox:edit' : ToolGrant = 'tool_secretary:sandbox:edit';
-        ref item 'grant_sandbox:exec' : ToolGrant = 'tool_secretary:sandbox:exec';
-        ref item 'grant_sandbox:image' : ToolGrant = 'tool_secretary:sandbox:image';
-        ref item 'grant_sandbox:message' : ToolGrant = 'tool_secretary:sandbox:message';
-        ref item 'grant_sandbox:read' : ToolGrant = 'tool_secretary:sandbox:read';
-        ref item 'grant_sandbox:session_status' : ToolGrant = 'tool_secretary:sandbox:session_status';
-        ref item 'grant_sandbox:sessions_history' : ToolGrant = 'tool_secretary:sandbox:sessions_history';
-        ref item 'grant_sandbox:sessions_list' : ToolGrant = 'tool_secretary:sandbox:sessions_list';
-        ref item 'grant_sandbox:sessions_send' : ToolGrant = 'tool_secretary:sandbox:sessions_send';
-        ref item 'grant_sandbox:sessions_spawn' : ToolGrant = 'tool_secretary:sandbox:sessions_spawn';
-        ref item 'grant_sandbox:subagents' : ToolGrant = 'tool_secretary:sandbox:subagents';
-        ref item 'grant_sandbox:write' : ToolGrant = 'tool_secretary:sandbox:write';
-        ref item 'command_safe-bin:python3' : CommandGrant = 'cmd_secretary:safe-bin:python3';
-        ref item 'command_safe-bin:wc' : CommandGrant = 'cmd_secretary:safe-bin:wc';
-    }
-    part agent_secretary : Agent_secretary {
-        part sandbox : Sandbox {
-            attribute :>> mode = "all";
-            attribute :>> scope = "agent";
-            attribute :>> workspaceAccess = "rw";
-            attribute :>> image = "openclaw-sandbox:bookworm-slim";
-            attribute :>> readOnlyRoot = true;
-            attribute :>> network = "bridge";
-            attribute :>> memory = "1536m";
-            attribute :>> cpus = 2;
-            attribute :>> bindCount = 1;
-            attribute :>> bindModes = "[\"rw\"]";
-            attribute :>> environmentNames = "[\"GATEWAY_HOST\",\"GATEWAY_PORT\",\"HOOKS_TOKEN\",\"OAUTH_BROKER_SECRET_KEY\",\"OPENAI_API_KEY\",\"READER_API_KEY\",\"SEARCH_API_KEY\"]";
+            ref item 'grant_sandbox:browser' : ToolGrant = Authority::'tool_secretary:sandbox:browser';
+            ref item 'grant_sandbox:edit' : ToolGrant = Authority::'tool_secretary:sandbox:edit';
+            ref item 'grant_sandbox:exec' : ToolGrant = Authority::'tool_secretary:sandbox:exec';
+            ref item 'grant_sandbox:image' : ToolGrant = Authority::'tool_secretary:sandbox:image';
+            ref item 'grant_sandbox:message' : ToolGrant = Authority::'tool_secretary:sandbox:message';
+            ref item 'grant_sandbox:read' : ToolGrant = Authority::'tool_secretary:sandbox:read';
+            ref item 'grant_sandbox:session_status' : ToolGrant = Authority::'tool_secretary:sandbox:session_status';
+            ref item 'grant_sandbox:sessions_history' : ToolGrant = Authority::'tool_secretary:sandbox:sessions_history';
+            ref item 'grant_sandbox:sessions_list' : ToolGrant = Authority::'tool_secretary:sandbox:sessions_list';
+            ref item 'grant_sandbox:sessions_send' : ToolGrant = Authority::'tool_secretary:sandbox:sessions_send';
+            ref item 'grant_sandbox:sessions_spawn' : ToolGrant = Authority::'tool_secretary:sandbox:sessions_spawn';
+            ref item 'grant_sandbox:subagents' : ToolGrant = Authority::'tool_secretary:sandbox:subagents';
+            ref item 'grant_sandbox:write' : ToolGrant = Authority::'tool_secretary:sandbox:write';
+            ref item 'command_safe-bin:python3' : CommandGrant = Authority::'cmd_secretary:safe-bin:python3';
+            ref item 'command_safe-bin:wc' : CommandGrant = Authority::'cmd_secretary:safe-bin:wc';
         }
-        part execution : ExecutionPosture {
-            attribute :>> host = "auto";
-            attribute :>> security = "full";
-            attribute :>> ask = "off";
-            attribute :>> elevated = true;
-            attribute :>> elevatedChannelsCount = 1;
-            attribute :>> safeBins = "[\"jq\",\"python3\",\"wc\"]";
-            attribute :>> safeBinProfiles = "[\"wc\"]";
-            attribute :>> trustedDirCount = 1;
-            attribute :>> pathPrependCount = 1;
-            attribute :>> strictInlineEval = false;
-            attribute :>> approvalSecurity = "allowlist";
-            attribute :>> approvalAsk = "on-miss";
-            attribute :>> effectiveSecurity = "allowlist";
-            attribute :>> effectiveAsk = "on-miss";
+        part agent_secretary : Agent_secretary {
+            part sandbox : Sandbox {
+                attribute :>> mode = "all";
+                attribute :>> scope = "agent";
+                attribute :>> workspaceAccess = "rw";
+                attribute :>> image = "openclaw-sandbox:bookworm-slim";
+                attribute :>> readOnlyRoot = true;
+                attribute :>> network = "bridge";
+                attribute :>> memory = "1536m";
+                attribute :>> cpus = 2;
+                attribute :>> bindCount = 1;
+                attribute :>> bindModes = "[\"rw\"]";
+                attribute :>> environmentNames = "[\"GATEWAY_HOST\",\"GATEWAY_PORT\",\"HOOKS_TOKEN\",\"OAUTH_BROKER_SECRET_KEY\",\"OPENAI_API_KEY\",\"READER_API_KEY\",\"SEARCH_API_KEY\"]";
+            }
+            part execution : ExecutionPosture {
+                attribute :>> host = "auto";
+                attribute :>> security = "full";
+                attribute :>> ask = "off";
+                attribute :>> elevated = true;
+                attribute :>> elevatedChannelsCount = 1;
+                attribute :>> safeBins = "[\"jq\",\"python3\",\"wc\"]";
+                attribute :>> safeBinProfiles = "[\"wc\"]";
+                attribute :>> trustedDirCount = 1;
+                attribute :>> pathPrependCount = 1;
+                attribute :>> strictInlineEval = false;
+                attribute :>> approvalSecurity = "allowlist";
+                attribute :>> approvalAsk = "on-miss";
+                attribute :>> effectiveSecurity = "allowlist";
+                attribute :>> effectiveAsk = "on-miss";
+            }
+            part memory : AgentMemory {
+                attribute :>> searchEnabled = true;
+                attribute :>> searchProvider = "local";
+                attribute :>> searchFallback = "none";
+                attribute :>> searchSources = "[\"memory\"]";
+                attribute :>> extraPathCount = 0;
+                attribute :>> multimodal = false;
+                attribute :>> curatedSha256 = "585844ea5a330d9f8af28757b385fb20976b9ab28411fcd04498fe1fc82cc219";
+                attribute :>> curatedBytes = 96;
+                attribute :>> dailyCount = 0;
+                attribute :>> dailyBytes = 0;
+                attribute :>> otherCount = 0;
+            }
+            part skill_escalation : APESkills::InitialSkill {
+                attribute :>> id = "escalation";
+                attribute :>> source = "skills/escalation/SKILL.md";
+                attribute :>> digest = "9016653f64a19a21a650b2e4f3a595367ffb58e08c62b7c16fcb4380e73a5237";
+            }
+            part 'skill_skill-aa' : APESkills::InitialSkill {
+                attribute :>> id = "skill-aa";
+                attribute :>> source = "skills/skill-aa/SKILL.md";
+                attribute :>> digest = "9558fb7feb3129b48fc78e76ca037a97ec0b5a0ab8ae851ca4ee74b59aa6fa7b";
+            }
+            part 'skill_skill-af' : APESkills::InitialSkill {
+                attribute :>> id = "skill-af";
+                attribute :>> source = "skills/skill-af/SKILL.md";
+                attribute :>> digest = "ac6f6b333cb367edf8ff0fd0539b42937d0017b46853df851bcdbc8bbde90e85";
+            }
+            part 'skill_skill-o' : APESkills::InitialSkill {
+                attribute :>> id = "skill-o";
+                attribute :>> source = "skills/skill-o/SKILL.md";
+                attribute :>> digest = "2efedf9402b6a469005ead7eb54a7e8cae9225d5bd8156b13b922d8cf0390697";
+            }
+            part 'skill_skill-w' : APESkills::InitialSkill {
+                attribute :>> id = "skill-w";
+                attribute :>> source = "skills/skill-w/SKILL.md";
+                attribute :>> digest = "13039487b0c3a43c9fddf066738b54522c3cca19d3d4931e7ef8dcd467b4637f";
+            }
+            part 'file_AGENTS.md' : InstructionFile {
+                attribute :>> path = "AGENTS.md";
+                attribute :>> sha256 = "ff14a1059aa60f5a5599eed3b3648955448a682868345bd8bd28b83613406139";
+                attribute :>> bytes = 95;
+            }
+            part 'file_BOOTSTRAP.md' : InstructionFile {
+                attribute :>> path = "BOOTSTRAP.md";
+                attribute :>> sha256 = "e180683f4d5a0f79d90af1f959dd6b5903b3f84ad8b8df5a31c43b65544ad73d";
+                attribute :>> bytes = 98;
+            }
+            part 'file_HEARTBEAT.md' : InstructionFile {
+                attribute :>> path = "HEARTBEAT.md";
+                attribute :>> sha256 = "c887582b41120f6814d7c5c5d7bea26489b7b373166288613edb5de6d0dfb9a0";
+                attribute :>> bytes = 98;
+            }
+            part 'file_IDENTITY.md' : InstructionFile {
+                attribute :>> path = "IDENTITY.md";
+                attribute :>> sha256 = "971215e97ec880ddabca6468baccbfee8a3378d74b5ca000ab0d1a0f697e4475";
+                attribute :>> bytes = 97;
+            }
+            part 'file_MEMORY.md' : InstructionFile {
+                attribute :>> path = "MEMORY.md";
+                attribute :>> sha256 = "585844ea5a330d9f8af28757b385fb20976b9ab28411fcd04498fe1fc82cc219";
+                attribute :>> bytes = 96;
+            }
+            part 'file_SOUL.md' : InstructionFile {
+                attribute :>> path = "SOUL.md";
+                attribute :>> sha256 = "d2be594f4acd9aa704f47eec0066d8a84d02bee2e236b856869e280f562549d8";
+                attribute :>> bytes = 94;
+            }
+            part 'file_TOOLS.md' : InstructionFile {
+                attribute :>> path = "TOOLS.md";
+                attribute :>> sha256 = "77f4cfe08e7ff807c0eaf215947769853cf451ea5b3bcf0882b21ce3863b6b9b";
+                attribute :>> bytes = 95;
+            }
+            part 'file_USER.md' : InstructionFile {
+                attribute :>> path = "USER.md";
+                attribute :>> sha256 = "fcece882ae38e92204752feefe5c6e8b5d57101ad86712b59a03590705e07e81";
+                attribute :>> bytes = 93;
+            }
         }
-        part memory : AgentMemory {
-            attribute :>> searchEnabled = true;
-            attribute :>> searchProvider = "local";
-            attribute :>> searchFallback = "none";
-            attribute :>> searchSources = "[\"memory\"]";
-            attribute :>> extraPathCount = 0;
-            attribute :>> multimodal = false;
-            attribute :>> curatedSha256 = "585844ea5a330d9f8af28757b385fb20976b9ab28411fcd04498fe1fc82cc219";
-            attribute :>> curatedBytes = 96;
-            attribute :>> dailyCount = 0;
-            attribute :>> dailyBytes = 0;
-            attribute :>> otherCount = 0;
+        part provider_google : ModelProvider {
+            attribute :>> name = "google";
+            attribute :>> modelIds = "[\"gemini-3-pro-image-preview\"]";
         }
-        part skill_escalation : APESkills::InitialSkill {
-            attribute :>> id = "escalation";
-            attribute :>> source = "skills/escalation/SKILL.md";
-            attribute :>> digest = "9016653f64a19a21a650b2e4f3a595367ffb58e08c62b7c16fcb4380e73a5237";
+        part provider_ollama : ModelProvider {
+            attribute :>> name = "ollama";
+            attribute :>> apiKind = "ollama";
+            attribute :>> modelIds = "[\"glm-5.1:cloud\",\"nemotron-3-super:cloud\"]";
         }
-        part 'skill_skill-aa' : APESkills::InitialSkill {
-            attribute :>> id = "skill-aa";
-            attribute :>> source = "skills/skill-aa/SKILL.md";
-            attribute :>> digest = "9558fb7feb3129b48fc78e76ca037a97ec0b5a0ab8ae851ca4ee74b59aa6fa7b";
+    }
+    package Tools {
+        doc /* Tool providers: plugins that declare tools and configured MCP servers. */
+        part plugin_browser : OpenClawPlugin {
+            attribute :>> pluginId = "browser";
+            attribute :>> enabled = true;
+            attribute :>> tools = "[\"browser\"]";
+            attribute :>> optionalTools = "[]";
+            attribute :>> toolProfiles = "[]";
         }
-        part 'skill_skill-af' : APESkills::InitialSkill {
-            attribute :>> id = "skill-af";
-            attribute :>> source = "skills/skill-af/SKILL.md";
-            attribute :>> digest = "ac6f6b333cb367edf8ff0fd0539b42937d0017b46853df851bcdbc8bbde90e85";
+        part 'plugin_memory-core' : OpenClawPlugin {
+            attribute :>> pluginId = "memory-core";
+            attribute :>> enabled = true;
+            attribute :>> tools = "[\"memory_get\",\"memory_search\"]";
+            attribute :>> optionalTools = "[]";
+            attribute :>> toolProfiles = "[]";
         }
-        part 'skill_skill-o' : APESkills::InitialSkill {
-            attribute :>> id = "skill-o";
-            attribute :>> source = "skills/skill-o/SKILL.md";
-            attribute :>> digest = "2efedf9402b6a469005ead7eb54a7e8cae9225d5bd8156b13b922d8cf0390697";
+        part 'plugin_stock-quotes' : OpenClawPlugin {
+            attribute :>> pluginId = "stock-quotes";
+            attribute :>> enabled = true;
+            attribute :>> tools = "[\"stock_quote\"]";
+            attribute :>> optionalTools = "[]";
+            attribute :>> toolProfiles = "[{\"id\":\"stock_quote\",\"profiles\":[\"coding\"]}]";
         }
-        part 'skill_skill-w' : APESkills::InitialSkill {
-            attribute :>> id = "skill-w";
-            attribute :>> source = "skills/skill-w/SKILL.md";
-            attribute :>> digest = "13039487b0c3a43c9fddf066738b54522c3cca19d3d4931e7ef8dcd467b4637f";
+        part plugin_whatsapp : OpenClawPlugin {
+            attribute :>> pluginId = "whatsapp";
+            attribute :>> enabled = true;
+            attribute :>> tools = "[\"whatsapp_login\"]";
+            attribute :>> optionalTools = "[\"whatsapp_login\"]";
+            attribute :>> toolProfiles = "[]";
         }
-    part 'file_AGENTS.md' : InstructionFile {
-        attribute :>> path = "AGENTS.md";
-        attribute :>> sha256 = "ff14a1059aa60f5a5599eed3b3648955448a682868345bd8bd28b83613406139";
-        attribute :>> bytes = 95;
-    }
-    part 'file_BOOTSTRAP.md' : InstructionFile {
-        attribute :>> path = "BOOTSTRAP.md";
-        attribute :>> sha256 = "e180683f4d5a0f79d90af1f959dd6b5903b3f84ad8b8df5a31c43b65544ad73d";
-        attribute :>> bytes = 98;
-    }
-    part 'file_HEARTBEAT.md' : InstructionFile {
-        attribute :>> path = "HEARTBEAT.md";
-        attribute :>> sha256 = "c887582b41120f6814d7c5c5d7bea26489b7b373166288613edb5de6d0dfb9a0";
-        attribute :>> bytes = 98;
-    }
-    part 'file_IDENTITY.md' : InstructionFile {
-        attribute :>> path = "IDENTITY.md";
-        attribute :>> sha256 = "971215e97ec880ddabca6468baccbfee8a3378d74b5ca000ab0d1a0f697e4475";
-        attribute :>> bytes = 97;
-    }
-    part 'file_MEMORY.md' : InstructionFile {
-        attribute :>> path = "MEMORY.md";
-        attribute :>> sha256 = "585844ea5a330d9f8af28757b385fb20976b9ab28411fcd04498fe1fc82cc219";
-        attribute :>> bytes = 96;
-    }
-    part 'file_SOUL.md' : InstructionFile {
-        attribute :>> path = "SOUL.md";
-        attribute :>> sha256 = "d2be594f4acd9aa704f47eec0066d8a84d02bee2e236b856869e280f562549d8";
-        attribute :>> bytes = 94;
-    }
-    part 'file_TOOLS.md' : InstructionFile {
-        attribute :>> path = "TOOLS.md";
-        attribute :>> sha256 = "77f4cfe08e7ff807c0eaf215947769853cf451ea5b3bcf0882b21ce3863b6b9b";
-        attribute :>> bytes = 95;
-    }
-    part 'file_USER.md' : InstructionFile {
-        attribute :>> path = "USER.md";
-        attribute :>> sha256 = "fcece882ae38e92204752feefe5c6e8b5d57101ad86712b59a03590705e07e81";
-        attribute :>> bytes = 93;
-    }
-    }
-    item 'tool_secretary:sandbox:browser' : ToolGrant {
-        attribute :>> tool = "browser";
-        attribute :>> layer = "sandbox";
-        attribute :>> pluginId = "browser";
-    }
-    item 'tool_secretary:sandbox:edit' : ToolGrant {
-        attribute :>> tool = "edit";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_secretary:sandbox:exec' : ToolGrant {
-        attribute :>> tool = "exec";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_secretary:sandbox:image' : ToolGrant {
-        attribute :>> tool = "image";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_secretary:sandbox:message' : ToolGrant {
-        attribute :>> tool = "message";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_secretary:sandbox:read' : ToolGrant {
-        attribute :>> tool = "read";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_secretary:sandbox:session_status' : ToolGrant {
-        attribute :>> tool = "session_status";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_secretary:sandbox:sessions_history' : ToolGrant {
-        attribute :>> tool = "sessions_history";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_secretary:sandbox:sessions_list' : ToolGrant {
-        attribute :>> tool = "sessions_list";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_secretary:sandbox:sessions_send' : ToolGrant {
-        attribute :>> tool = "sessions_send";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_secretary:sandbox:sessions_spawn' : ToolGrant {
-        attribute :>> tool = "sessions_spawn";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_secretary:sandbox:subagents' : ToolGrant {
-        attribute :>> tool = "subagents";
-        attribute :>> layer = "sandbox";
-    }
-    item 'tool_secretary:sandbox:write' : ToolGrant {
-        attribute :>> tool = "write";
-        attribute :>> layer = "sandbox";
-    }
-    item 'cmd_secretary:safe-bin:python3' : CommandGrant {
-        attribute :>> command = "python3";
-        attribute :>> kind = "safe-bin";
-        attribute :>> argsRestricted = true;
-    }
-    item 'cmd_secretary:safe-bin:wc' : CommandGrant {
-        attribute :>> command = "wc";
-        attribute :>> kind = "safe-bin";
-        attribute :>> argsRestricted = true;
-    }
-    part 'delegation_secretary:lead' : DelegationRule {
-        attribute :>> fromAgent = "secretary";
-        attribute :>> toAgent = "lead";
-    }
-    part 'account_discord:default' : ChannelAccount {
-        attribute :>> channel = "discord";
-        attribute :>> accountId = "default";
-        attribute :>> enabled = true;
-        attribute :>> dmPolicy = "allowlist";
-        attribute :>> groupPolicy = "allowlist";
-    }
-    part 'account_discord:sandbox' : ChannelAccount {
-        attribute :>> channel = "discord";
-        attribute :>> accountId = "sandbox";
-        attribute :>> enabled = true;
-        attribute :>> dmPolicy = "disabled";
-        attribute :>> groupPolicy = "allowlist";
-    }
-    part 'account_telegram:default' : ChannelAccount {
-        attribute :>> channel = "telegram";
-        attribute :>> accountId = "default";
-        attribute :>> enabled = true;
-        attribute :>> dmPolicy = "pairing";
-        attribute :>> groupPolicy = "allowlist";
-    }
-    part 'account_telegram:field' : ChannelAccount {
-        attribute :>> channel = "telegram";
-        attribute :>> accountId = "field";
-        attribute :>> enabled = true;
-        attribute :>> dmPolicy = "pairing";
-        attribute :>> groupPolicy = "allowlist";
-    }
-    part 'account_telegram:lead' : ChannelAccount {
-        attribute :>> channel = "telegram";
-        attribute :>> accountId = "lead";
-        attribute :>> enabled = true;
-        attribute :>> dmPolicy = "pairing";
-        attribute :>> groupPolicy = "allowlist";
-    }
-    part 'account_whatsapp:coaching' : ChannelAccount {
-        attribute :>> channel = "whatsapp";
-        attribute :>> accountId = "coaching";
-        attribute :>> enabled = true;
-        attribute :>> dmPolicy = "allowlist";
-        attribute :>> groupPolicy = "allowlist";
-    }
-    part 'account_whatsapp:default' : ChannelAccount {
-        attribute :>> channel = "whatsapp";
-        attribute :>> accountId = "default";
-        attribute :>> enabled = true;
-        attribute :>> dmPolicy = "allowlist";
-        attribute :>> groupPolicy = "allowlist";
-    }
-    part 'account_whatsapp:devbox' : ChannelAccount {
-        attribute :>> channel = "whatsapp";
-        attribute :>> accountId = "devbox";
-        attribute :>> enabled = false;
-        attribute :>> dmPolicy = "allowlist";
-        attribute :>> groupPolicy = "allowlist";
-    }
-    part 'account_whatsapp:field' : ChannelAccount {
-        attribute :>> channel = "whatsapp";
-        attribute :>> accountId = "field";
-        attribute :>> enabled = true;
-        attribute :>> dmPolicy = "allowlist";
-        attribute :>> groupPolicy = "allowlist";
-    }
-    part 'account_whatsapp:secretary' : ChannelAccount {
-        attribute :>> channel = "whatsapp";
-        attribute :>> accountId = "secretary";
-        attribute :>> enabled = true;
-        attribute :>> dmPolicy = "allowlist";
-        attribute :>> groupPolicy = "allowlist";
-    }
-    connection 'binding_binding-1b6d7fadd02512869b66-7' : AgentBinding connect agent_field to 'account_telegram:field' {
-
-    }
-    connection 'binding_binding-40a6ca9891072b8f0537-5' : AgentBinding connect agent_client to 'account_whatsapp:coaching' {
-        attribute :>> peerKind = "direct";
-    }
-    connection 'binding_binding-449f56fb335550499a13-4' : AgentBinding connect agent_coach to 'account_whatsapp:coaching' {
-        attribute :>> peerKind = "direct";
-    }
-    connection 'binding_binding-765daf766d61288f0dff-6' : AgentBinding connect agent_lead to 'account_telegram:lead' {
-
-    }
-    connection 'binding_binding-7ea0ec7db3778bcb9435-1' : AgentBinding connect agent_secretary to 'account_whatsapp:secretary' {
-        attribute :>> peerKind = "direct";
-    }
-    connection 'binding_binding-c98dcabd536f3e6fb436-2' : AgentBinding connect agent_lead to 'account_discord:default' {
-
-    }
-    connection 'binding_binding-f06f0d0d3698fe4a4a98-0' : AgentBinding connect agent_field to 'account_whatsapp:field' {
-        attribute :>> peerKind = "direct";
-    }
-    connection 'binding_binding-f302b80e62a7fbb9fcfa-3' : AgentBinding connect agent_devbox to 'account_discord:sandbox' {
-
-    }
-    part 'cron_job-1' : ScheduledCase {
-        attribute :>> id = "job-1";
-        attribute :>> displayName = "Daily digest";
-        attribute :>> enabled = false;
-        attribute :>> targetAgent = "main";
-        attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
-        attribute :>> schedule : CronSchedule {
-            attribute :>> expression = "30 7 * * *";
-            attribute :>> timezone = "America/New_York";
+        part plugin_workboard : OpenClawPlugin {
+            attribute :>> pluginId = "workboard";
+            attribute :>> enabled = false;
+            attribute :>> tools = "[\"board_claim\",\"board_list\"]";
+            attribute :>> optionalTools = "[\"board_claim\",\"board_list\"]";
+            attribute :>> toolProfiles = "[]";
         }
-    part file_prompt : InstructionFile {
-        attribute :>> path = "state/openclaw.sqlite#cron_jobs/job-1/job_json/payload/message";
-        attribute :>> sha256 = "94480fa29d6311f7834319e207ae665a9b26eb52a0a489080095a0647d9a8314";
-        attribute :>> bytes = 15;
-    }
-    }
-    part 'cron_job-10' : ScheduledCase {
-        attribute :>> id = "job-10";
-        attribute :>> displayName = "Weekly Retrospective";
-        attribute :>> enabled = false;
-        attribute :>> targetAgent = "lead";
-        attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
-        ref part :>> owner = agent_lead;
-        attribute :>> schedule : CronSchedule {
-            attribute :>> expression = "0 12 * * 4";
+        part mcp_9tools : McpServer {
+            attribute :>> serverId = "9tools";
+            attribute :>> toolPrefix = "mcp-9tools";
+            attribute :>> enabled = false;
+            attribute :>> transport = "sse";
+            attribute :>> oauth = false;
+            attribute :>> toolInclude = "[]";
+            attribute :>> toolExclude = "[]";
+            attribute :>> envNames = "[]";
+            attribute :>> headerNames = "[]";
+            attribute :>> argCount = 0;
         }
-    part file_prompt : InstructionFile {
-        attribute :>> path = "state/openclaw.sqlite#cron_jobs/job-10/job_json/payload/message";
-        attribute :>> sha256 = "76363c03d9ebc637ef9d41600ca9abfb25824bc8b2e5b32f7cfaca18385dd66e";
-        attribute :>> bytes = 16;
-    }
-    }
-    part 'cron_job-2' : ScheduledCase {
-        attribute :>> id = "job-2";
-        attribute :>> displayName = "Security check";
-        attribute :>> enabled = false;
-        attribute :>> targetAgent = "main";
-        attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
-        attribute :>> schedule : CronSchedule {
-            attribute :>> expression = "0 6,12,18,0 * * *";
-            attribute :>> timezone = "America/New_York";
+        part 'mcp_Outlook Graph' : McpServer {
+            attribute :>> serverId = "Outlook Graph";
+            attribute :>> toolPrefix = "outlook-graph";
+            attribute :>> enabled = true;
+            attribute :>> transport = "streamable-http";
+            attribute :>> oauth = true;
+            attribute :>> oauthIdentity = "per-requester";
+            attribute :>> toolInclude = "[]";
+            attribute :>> toolExclude = "[]";
+            attribute :>> envNames = "[]";
+            attribute :>> headerNames = "[\"Authorization\"]";
+            attribute :>> argCount = 0;
         }
-    part file_prompt : InstructionFile {
-        attribute :>> path = "state/openclaw.sqlite#cron_jobs/job-2/job_json/payload/message";
-        attribute :>> sha256 = "e71cf18990d2630d752caa32d26da513ad1e06e100855127254ea525e3e4fad0";
-        attribute :>> bytes = 15;
-    }
-    }
-    part 'cron_job-3' : ScheduledCase {
-        attribute :>> id = "job-3";
-        attribute :>> displayName = "process-leads";
-        attribute :>> enabled = false;
-        attribute :>> targetAgent = "main";
-        attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
-        attribute :>> schedule : CronSchedule {
-            attribute :>> expression = "0 9 * * *";
-            attribute :>> timezone = "Europe/Paris";
+        part mcp_docs : McpServer {
+            attribute :>> serverId = "docs";
+            attribute :>> toolPrefix = "docs";
+            attribute :>> enabled = true;
+            attribute :>> transport = "stdio";
+            attribute :>> oauth = false;
+            attribute :>> toolInclude = "[\"search_*\"]";
+            attribute :>> toolExclude = "[]";
+            attribute :>> envNames = "[\"DOCS_TOKEN\"]";
+            attribute :>> headerNames = "[]";
+            attribute :>> argCount = 2;
         }
-    part file_prompt : InstructionFile {
-        attribute :>> path = "state/openclaw.sqlite#cron_jobs/job-3/job_json/payload/message";
-        attribute :>> sha256 = "2293c41222dd2e0d7bd76a075685a7ce73c07602f4743a3764edf138c271885c";
-        attribute :>> bytes = 15;
     }
-    }
-    part 'cron_job-4' : ScheduledCase {
-        attribute :>> id = "job-4";
-        attribute :>> displayName = "Daily analytics report";
-        attribute :>> enabled = false;
-        attribute :>> targetAgent = "main";
-        attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
-        attribute :>> schedule : CronSchedule {
-            attribute :>> expression = "0 8 * * *";
-            attribute :>> timezone = "Europe/Paris";
+    package Context {
+        doc /* Instance-wide context: bundled skill entries and the memory backend. */
+        part bundled_1password : BundledSkill {
+            attribute :>> name = "1password";
+            attribute :>> enabled = false;
         }
-    part file_prompt : InstructionFile {
-        attribute :>> path = "state/openclaw.sqlite#cron_jobs/job-4/job_json/payload/message";
-        attribute :>> sha256 = "9029c33f8ca5c17545657eb22f461aba46e52251bfc60c36cc3f3f1c4f5e1dcb";
-        attribute :>> bytes = 15;
-    }
-    }
-    part 'cron_job-5' : ScheduledCase {
-        attribute :>> id = "job-5";
-        attribute :>> displayName = "Weekly scouting A";
-        attribute :>> enabled = false;
-        attribute :>> targetAgent = "main";
-        attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
-        attribute :>> schedule : CronSchedule {
-            attribute :>> expression = "0 1 * * 2,5";
-            attribute :>> timezone = "UTC";
+        part bundled_blogwatcher : BundledSkill {
+            attribute :>> name = "blogwatcher";
+            attribute :>> enabled = false;
         }
-    part file_prompt : InstructionFile {
-        attribute :>> path = "state/openclaw.sqlite#cron_jobs/job-5/job_json/payload/message";
-        attribute :>> sha256 = "4f8e21fb826bb015c25a1df356f54c7e4c0125b6f01679c36c3d9e9737038bba";
-        attribute :>> bytes = 15;
-    }
-    }
-    part 'cron_job-6' : ScheduledCase {
-        attribute :>> id = "job-6";
-        attribute :>> displayName = "Weekly scouting B";
-        attribute :>> enabled = false;
-        attribute :>> targetAgent = "main";
-        attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
-        attribute :>> schedule : CronSchedule {
-            attribute :>> expression = "0 2 * * 1,4";
-            attribute :>> timezone = "UTC";
+        part bundled_blucli : BundledSkill {
+            attribute :>> name = "blucli";
+            attribute :>> enabled = false;
         }
-    part file_prompt : InstructionFile {
-        attribute :>> path = "state/openclaw.sqlite#cron_jobs/job-6/job_json/payload/message";
-        attribute :>> sha256 = "efb652d4a2b0feb8593e52b2e8973f2f8b6c6e777514cb93e50fd0a6856f2fdf";
-        attribute :>> bytes = 15;
-    }
-    }
-    part 'cron_job-7' : ScheduledCase {
-        attribute :>> id = "job-7";
-        attribute :>> displayName = "field-usage-daily";
-        attribute :>> enabled = false;
-        attribute :>> targetAgent = "lead";
-        attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
-        ref part :>> owner = agent_lead;
-        attribute :>> schedule : CronSchedule {
-            attribute :>> expression = "0 22 * * *";
-            attribute :>> timezone = "UTC";
+        part bundled_camsnap : BundledSkill {
+            attribute :>> name = "camsnap";
+            attribute :>> enabled = false;
         }
-    part file_prompt : InstructionFile {
-        attribute :>> path = "state/openclaw.sqlite#cron_jobs/job-7/job_json/payload/message";
-        attribute :>> sha256 = "051ccd4da86981fea5f36459f6f7e922f200cb156531f0d1b4988daae23cac91";
-        attribute :>> bytes = 15;
-    }
-    }
-    part 'cron_job-8' : ScheduledCase {
-        attribute :>> id = "job-8";
-        attribute :>> displayName = "field-usage-alert";
-        attribute :>> enabled = false;
-        attribute :>> targetAgent = "lead";
-        attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
-        ref part :>> owner = agent_lead;
-        attribute :>> schedule : MillisecondEvery {
-            attribute :>> durationMs = 3600000;
-            attribute :>> count = 60;
-            attribute :>> unit = AssemblyCases::ScheduleUnit::minute;
+        part 'bundled_coding-agent' : BundledSkill {
+            attribute :>> name = "coding-agent";
+            attribute :>> enabled = false;
         }
-    part file_prompt : InstructionFile {
-        attribute :>> path = "state/openclaw.sqlite#cron_jobs/job-8/job_json/payload/message";
-        attribute :>> sha256 = "5b2d6d4c42f111ebdf129558498501f3a47d6ac9248ba05e4df5e1943d597b2d";
-        attribute :>> bytes = 15;
-    }
-    }
-    part 'cron_job-9' : ScheduledCase {
-        attribute :>> id = "job-9";
-        attribute :>> displayName = "Daily marketing report";
-        attribute :>> enabled = false;
-        attribute :>> targetAgent = "lead";
-        attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
-        ref part :>> owner = agent_lead;
-        attribute :>> schedule : CronSchedule {
-            attribute :>> expression = "0 8 * * *";
-            attribute :>> timezone = "Europe/Paris";
+        part bundled_discord : BundledSkill {
+            attribute :>> name = "discord";
+            attribute :>> enabled = false;
         }
-    part file_prompt : InstructionFile {
-        attribute :>> path = "state/openclaw.sqlite#cron_jobs/job-9/job_json/payload/message";
-        attribute :>> sha256 = "e26143239af944d7daa23f2272320cc1b86e9dae7596d219e2125bde84bfd556";
-        attribute :>> bytes = 16;
+        part bundled_eightctl : BundledSkill {
+            attribute :>> name = "eightctl";
+            attribute :>> enabled = false;
+        }
+        part bundled_gemini : BundledSkill {
+            attribute :>> name = "gemini";
+            attribute :>> enabled = false;
+        }
+        part bundled_gifgrep : BundledSkill {
+            attribute :>> name = "gifgrep";
+            attribute :>> enabled = false;
+        }
+        part bundled_github : BundledSkill {
+            attribute :>> name = "github";
+            attribute :>> enabled = true;
+        }
+        part bundled_goplaces : BundledSkill {
+            attribute :>> name = "goplaces";
+            attribute :>> enabled = false;
+        }
+        part bundled_healthcheck : BundledSkill {
+            attribute :>> name = "healthcheck";
+            attribute :>> enabled = true;
+        }
+        part bundled_himalaya : BundledSkill {
+            attribute :>> name = "himalaya";
+            attribute :>> enabled = false;
+        }
+        part bundled_mcporter : BundledSkill {
+            attribute :>> name = "mcporter";
+            attribute :>> enabled = false;
+        }
+        part 'bundled_model-usage' : BundledSkill {
+            attribute :>> name = "model-usage";
+            attribute :>> enabled = true;
+        }
+        part 'bundled_nano-pdf' : BundledSkill {
+            attribute :>> name = "nano-pdf";
+            attribute :>> enabled = false;
+        }
+        part bundled_obsidian : BundledSkill {
+            attribute :>> name = "obsidian";
+            attribute :>> enabled = false;
+        }
+        part 'bundled_openai-whisper' : BundledSkill {
+            attribute :>> name = "openai-whisper";
+            attribute :>> enabled = false;
+        }
+        part bundled_openhue : BundledSkill {
+            attribute :>> name = "openhue";
+            attribute :>> enabled = false;
+        }
+        part bundled_oracle : BundledSkill {
+            attribute :>> name = "oracle";
+            attribute :>> enabled = false;
+        }
+        part bundled_ordercli : BundledSkill {
+            attribute :>> name = "ordercli";
+            attribute :>> enabled = false;
+        }
+        part bundled_sag : BundledSkill {
+            attribute :>> name = "sag";
+            attribute :>> enabled = false;
+        }
+        part 'bundled_session-logs' : BundledSkill {
+            attribute :>> name = "session-logs";
+            attribute :>> enabled = true;
+        }
+        part 'bundled_sherpa-onnx-tts' : BundledSkill {
+            attribute :>> name = "sherpa-onnx-tts";
+            attribute :>> enabled = false;
+        }
+        part 'bundled_skill-creator' : BundledSkill {
+            attribute :>> name = "skill-creator";
+            attribute :>> enabled = true;
+        }
+        part bundled_slack : BundledSkill {
+            attribute :>> name = "slack";
+            attribute :>> enabled = false;
+        }
+        part bundled_songsee : BundledSkill {
+            attribute :>> name = "songsee";
+            attribute :>> enabled = false;
+        }
+        part bundled_sonoscli : BundledSkill {
+            attribute :>> name = "sonoscli";
+            attribute :>> enabled = false;
+        }
+        part 'bundled_spotify-player' : BundledSkill {
+            attribute :>> name = "spotify-player";
+            attribute :>> enabled = false;
+        }
+        part bundled_summarize : BundledSkill {
+            attribute :>> name = "summarize";
+            attribute :>> enabled = false;
+        }
+        part bundled_trello : BundledSkill {
+            attribute :>> name = "trello";
+            attribute :>> enabled = false;
+        }
+        part 'bundled_voice-call' : BundledSkill {
+            attribute :>> name = "voice-call";
+            attribute :>> enabled = false;
+        }
+        part bundled_wacli : BundledSkill {
+            attribute :>> name = "wacli";
+            attribute :>> enabled = false;
+        }
+        part bundled_xurl : BundledSkill {
+            attribute :>> name = "xurl";
+            attribute :>> enabled = false;
+        }
+        part memoryBackend : MemoryBackend {
+            attribute :>> dreamingEnabled = true;
+            attribute :>> dreamingFrequency = "0 3 * * *";
+            attribute :>> activeMemoryEnabled = true;
+            attribute :>> activeMemoryAgents = "[\"lead\"]";
+            attribute :>> activeMemoryChatTypes = "[\"direct\"]";
+            attribute :>> persistTranscripts = false;
+        }
     }
+    package Cases {
+        doc /* Cron jobs and heartbeats as scheduled cases. */
+        part heartbeat_lead : ScheduledCase {
+            attribute :>> id = "heartbeat:lead";
+            attribute :>> displayName = "Heartbeat lead";
+            attribute :>> enabled = true;
+            attribute :>> targetAgent = "lead";
+            attribute :>> envelope = AssemblyCases::EnvelopeKind::reassessment;
+            ref part :>> owner = Operators::agent_lead;
+            attribute :>> schedule : MillisecondEvery {
+                attribute :>> durationMs = 1800000;
+                attribute :>> count = 30;
+                attribute :>> unit = AssemblyCases::ScheduleUnit::minute;
+            }
+        }
+        part 'cron_job-1' : ScheduledCase {
+            attribute :>> id = "job-1";
+            attribute :>> displayName = "Daily digest";
+            attribute :>> enabled = false;
+            attribute :>> targetAgent = "main";
+            attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
+            attribute :>> schedule : CronSchedule {
+                attribute :>> expression = "30 7 * * *";
+                attribute :>> timezone = "America/New_York";
+            }
+            part file_prompt : InstructionFile {
+                attribute :>> path = "state/openclaw.sqlite#cron_jobs/job-1/job_json/payload/message";
+                attribute :>> sha256 = "94480fa29d6311f7834319e207ae665a9b26eb52a0a489080095a0647d9a8314";
+                attribute :>> bytes = 15;
+            }
+        }
+        part 'cron_job-10' : ScheduledCase {
+            attribute :>> id = "job-10";
+            attribute :>> displayName = "Weekly Retrospective";
+            attribute :>> enabled = false;
+            attribute :>> targetAgent = "lead";
+            attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
+            ref part :>> owner = Operators::agent_lead;
+            attribute :>> schedule : CronSchedule {
+                attribute :>> expression = "0 12 * * 4";
+            }
+            part file_prompt : InstructionFile {
+                attribute :>> path = "state/openclaw.sqlite#cron_jobs/job-10/job_json/payload/message";
+                attribute :>> sha256 = "76363c03d9ebc637ef9d41600ca9abfb25824bc8b2e5b32f7cfaca18385dd66e";
+                attribute :>> bytes = 16;
+            }
+        }
+        part 'cron_job-2' : ScheduledCase {
+            attribute :>> id = "job-2";
+            attribute :>> displayName = "Security check";
+            attribute :>> enabled = false;
+            attribute :>> targetAgent = "main";
+            attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
+            attribute :>> schedule : CronSchedule {
+                attribute :>> expression = "0 6,12,18,0 * * *";
+                attribute :>> timezone = "America/New_York";
+            }
+            part file_prompt : InstructionFile {
+                attribute :>> path = "state/openclaw.sqlite#cron_jobs/job-2/job_json/payload/message";
+                attribute :>> sha256 = "e71cf18990d2630d752caa32d26da513ad1e06e100855127254ea525e3e4fad0";
+                attribute :>> bytes = 15;
+            }
+        }
+        part 'cron_job-3' : ScheduledCase {
+            attribute :>> id = "job-3";
+            attribute :>> displayName = "process-leads";
+            attribute :>> enabled = false;
+            attribute :>> targetAgent = "main";
+            attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
+            attribute :>> schedule : CronSchedule {
+                attribute :>> expression = "0 9 * * *";
+                attribute :>> timezone = "Europe/Paris";
+            }
+            part file_prompt : InstructionFile {
+                attribute :>> path = "state/openclaw.sqlite#cron_jobs/job-3/job_json/payload/message";
+                attribute :>> sha256 = "2293c41222dd2e0d7bd76a075685a7ce73c07602f4743a3764edf138c271885c";
+                attribute :>> bytes = 15;
+            }
+        }
+        part 'cron_job-4' : ScheduledCase {
+            attribute :>> id = "job-4";
+            attribute :>> displayName = "Daily analytics report";
+            attribute :>> enabled = false;
+            attribute :>> targetAgent = "main";
+            attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
+            attribute :>> schedule : CronSchedule {
+                attribute :>> expression = "0 8 * * *";
+                attribute :>> timezone = "Europe/Paris";
+            }
+            part file_prompt : InstructionFile {
+                attribute :>> path = "state/openclaw.sqlite#cron_jobs/job-4/job_json/payload/message";
+                attribute :>> sha256 = "9029c33f8ca5c17545657eb22f461aba46e52251bfc60c36cc3f3f1c4f5e1dcb";
+                attribute :>> bytes = 15;
+            }
+        }
+        part 'cron_job-5' : ScheduledCase {
+            attribute :>> id = "job-5";
+            attribute :>> displayName = "Weekly scouting A";
+            attribute :>> enabled = false;
+            attribute :>> targetAgent = "main";
+            attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
+            attribute :>> schedule : CronSchedule {
+                attribute :>> expression = "0 1 * * 2,5";
+                attribute :>> timezone = "UTC";
+            }
+            part file_prompt : InstructionFile {
+                attribute :>> path = "state/openclaw.sqlite#cron_jobs/job-5/job_json/payload/message";
+                attribute :>> sha256 = "4f8e21fb826bb015c25a1df356f54c7e4c0125b6f01679c36c3d9e9737038bba";
+                attribute :>> bytes = 15;
+            }
+        }
+        part 'cron_job-6' : ScheduledCase {
+            attribute :>> id = "job-6";
+            attribute :>> displayName = "Weekly scouting B";
+            attribute :>> enabled = false;
+            attribute :>> targetAgent = "main";
+            attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
+            attribute :>> schedule : CronSchedule {
+                attribute :>> expression = "0 2 * * 1,4";
+                attribute :>> timezone = "UTC";
+            }
+            part file_prompt : InstructionFile {
+                attribute :>> path = "state/openclaw.sqlite#cron_jobs/job-6/job_json/payload/message";
+                attribute :>> sha256 = "efb652d4a2b0feb8593e52b2e8973f2f8b6c6e777514cb93e50fd0a6856f2fdf";
+                attribute :>> bytes = 15;
+            }
+        }
+        part 'cron_job-7' : ScheduledCase {
+            attribute :>> id = "job-7";
+            attribute :>> displayName = "field-usage-daily";
+            attribute :>> enabled = false;
+            attribute :>> targetAgent = "lead";
+            attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
+            ref part :>> owner = Operators::agent_lead;
+            attribute :>> schedule : CronSchedule {
+                attribute :>> expression = "0 22 * * *";
+                attribute :>> timezone = "UTC";
+            }
+            part file_prompt : InstructionFile {
+                attribute :>> path = "state/openclaw.sqlite#cron_jobs/job-7/job_json/payload/message";
+                attribute :>> sha256 = "051ccd4da86981fea5f36459f6f7e922f200cb156531f0d1b4988daae23cac91";
+                attribute :>> bytes = 15;
+            }
+        }
+        part 'cron_job-8' : ScheduledCase {
+            attribute :>> id = "job-8";
+            attribute :>> displayName = "field-usage-alert";
+            attribute :>> enabled = false;
+            attribute :>> targetAgent = "lead";
+            attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
+            ref part :>> owner = Operators::agent_lead;
+            attribute :>> schedule : MillisecondEvery {
+                attribute :>> durationMs = 3600000;
+                attribute :>> count = 60;
+                attribute :>> unit = AssemblyCases::ScheduleUnit::minute;
+            }
+            part file_prompt : InstructionFile {
+                attribute :>> path = "state/openclaw.sqlite#cron_jobs/job-8/job_json/payload/message";
+                attribute :>> sha256 = "5b2d6d4c42f111ebdf129558498501f3a47d6ac9248ba05e4df5e1943d597b2d";
+                attribute :>> bytes = 15;
+            }
+        }
+        part 'cron_job-9' : ScheduledCase {
+            attribute :>> id = "job-9";
+            attribute :>> displayName = "Daily marketing report";
+            attribute :>> enabled = false;
+            attribute :>> targetAgent = "lead";
+            attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
+            ref part :>> owner = Operators::agent_lead;
+            attribute :>> schedule : CronSchedule {
+                attribute :>> expression = "0 8 * * *";
+                attribute :>> timezone = "Europe/Paris";
+            }
+            part file_prompt : InstructionFile {
+                attribute :>> path = "state/openclaw.sqlite#cron_jobs/job-9/job_json/payload/message";
+                attribute :>> sha256 = "e26143239af944d7daa23f2272320cc1b86e9dae7596d219e2125bde84bfd556";
+                attribute :>> bytes = 16;
+            }
+        }
     }
-    part 'hook_hook-0' : ExternalTrigger {
-        attribute :>> name = "Webhook";
-        attribute :>> targetAgent = "lead";
-        attribute :>> deliveryChannel = "whatsapp";
-    part file_template : InstructionFile {
-        attribute :>> path = "openclaw.json#/hooks/mappings/0/messageTemplate";
-        attribute :>> sha256 = "b7b734e170d526bd7f9599afa6eb09455078aeff359e068360fab35e9578fdc5";
-        attribute :>> bytes = 15;
+    package Entries {
+        doc /* Channel accounts, the agents bound to them, and hooks. */
+        part 'account_discord:default' : ChannelAccount {
+            attribute :>> channel = "discord";
+            attribute :>> accountId = "default";
+            attribute :>> enabled = true;
+            attribute :>> dmPolicy = "allowlist";
+            attribute :>> groupPolicy = "allowlist";
+        }
+        part 'account_discord:sandbox' : ChannelAccount {
+            attribute :>> channel = "discord";
+            attribute :>> accountId = "sandbox";
+            attribute :>> enabled = true;
+            attribute :>> dmPolicy = "disabled";
+            attribute :>> groupPolicy = "allowlist";
+        }
+        part 'account_telegram:default' : ChannelAccount {
+            attribute :>> channel = "telegram";
+            attribute :>> accountId = "default";
+            attribute :>> enabled = true;
+            attribute :>> dmPolicy = "pairing";
+            attribute :>> groupPolicy = "allowlist";
+        }
+        part 'account_telegram:field' : ChannelAccount {
+            attribute :>> channel = "telegram";
+            attribute :>> accountId = "field";
+            attribute :>> enabled = true;
+            attribute :>> dmPolicy = "pairing";
+            attribute :>> groupPolicy = "allowlist";
+        }
+        part 'account_telegram:lead' : ChannelAccount {
+            attribute :>> channel = "telegram";
+            attribute :>> accountId = "lead";
+            attribute :>> enabled = true;
+            attribute :>> dmPolicy = "pairing";
+            attribute :>> groupPolicy = "allowlist";
+        }
+        part 'account_whatsapp:coaching' : ChannelAccount {
+            attribute :>> channel = "whatsapp";
+            attribute :>> accountId = "coaching";
+            attribute :>> enabled = true;
+            attribute :>> dmPolicy = "allowlist";
+            attribute :>> groupPolicy = "allowlist";
+        }
+        part 'account_whatsapp:default' : ChannelAccount {
+            attribute :>> channel = "whatsapp";
+            attribute :>> accountId = "default";
+            attribute :>> enabled = true;
+            attribute :>> dmPolicy = "allowlist";
+            attribute :>> groupPolicy = "allowlist";
+        }
+        part 'account_whatsapp:devbox' : ChannelAccount {
+            attribute :>> channel = "whatsapp";
+            attribute :>> accountId = "devbox";
+            attribute :>> enabled = false;
+            attribute :>> dmPolicy = "allowlist";
+            attribute :>> groupPolicy = "allowlist";
+        }
+        part 'account_whatsapp:field' : ChannelAccount {
+            attribute :>> channel = "whatsapp";
+            attribute :>> accountId = "field";
+            attribute :>> enabled = true;
+            attribute :>> dmPolicy = "allowlist";
+            attribute :>> groupPolicy = "allowlist";
+        }
+        part 'account_whatsapp:secretary' : ChannelAccount {
+            attribute :>> channel = "whatsapp";
+            attribute :>> accountId = "secretary";
+            attribute :>> enabled = true;
+            attribute :>> dmPolicy = "allowlist";
+            attribute :>> groupPolicy = "allowlist";
+        }
+        connection 'binding_binding-1b6d7fadd02512869b66-7' : AgentBinding connect Operators::agent_field to 'account_telegram:field' {
+        }
+        connection 'binding_binding-40a6ca9891072b8f0537-5' : AgentBinding connect Operators::agent_client to 'account_whatsapp:coaching' {
+            attribute :>> peerKind = "direct";
+        }
+        connection 'binding_binding-449f56fb335550499a13-4' : AgentBinding connect Operators::agent_coach to 'account_whatsapp:coaching' {
+            attribute :>> peerKind = "direct";
+        }
+        connection 'binding_binding-765daf766d61288f0dff-6' : AgentBinding connect Operators::agent_lead to 'account_telegram:lead' {
+        }
+        connection 'binding_binding-7ea0ec7db3778bcb9435-1' : AgentBinding connect Operators::agent_secretary to 'account_whatsapp:secretary' {
+            attribute :>> peerKind = "direct";
+        }
+        connection 'binding_binding-c98dcabd536f3e6fb436-2' : AgentBinding connect Operators::agent_lead to 'account_discord:default' {
+        }
+        connection 'binding_binding-f06f0d0d3698fe4a4a98-0' : AgentBinding connect Operators::agent_field to 'account_whatsapp:field' {
+            attribute :>> peerKind = "direct";
+        }
+        connection 'binding_binding-f302b80e62a7fbb9fcfa-3' : AgentBinding connect Operators::agent_devbox to 'account_discord:sandbox' {
+        }
+        part 'hook_hook-0' : ExternalTrigger {
+            attribute :>> name = "Webhook";
+            attribute :>> targetAgent = "lead";
+            attribute :>> deliveryChannel = "whatsapp";
+            part file_template : InstructionFile {
+                attribute :>> path = "openclaw.json#/hooks/mappings/0/messageTemplate";
+                attribute :>> sha256 = "b7b734e170d526bd7f9599afa6eb09455078aeff359e068360fab35e9578fdc5";
+                attribute :>> bytes = 15;
+            }
+        }
     }
-    }
-    part bundled_1password : BundledSkill {
-        attribute :>> name = "1password";
-        attribute :>> enabled = false;
-    }
-    part bundled_blogwatcher : BundledSkill {
-        attribute :>> name = "blogwatcher";
-        attribute :>> enabled = false;
-    }
-    part bundled_blucli : BundledSkill {
-        attribute :>> name = "blucli";
-        attribute :>> enabled = false;
-    }
-    part bundled_camsnap : BundledSkill {
-        attribute :>> name = "camsnap";
-        attribute :>> enabled = false;
-    }
-    part 'bundled_coding-agent' : BundledSkill {
-        attribute :>> name = "coding-agent";
-        attribute :>> enabled = false;
-    }
-    part bundled_discord : BundledSkill {
-        attribute :>> name = "discord";
-        attribute :>> enabled = false;
-    }
-    part bundled_eightctl : BundledSkill {
-        attribute :>> name = "eightctl";
-        attribute :>> enabled = false;
-    }
-    part bundled_gemini : BundledSkill {
-        attribute :>> name = "gemini";
-        attribute :>> enabled = false;
-    }
-    part bundled_gifgrep : BundledSkill {
-        attribute :>> name = "gifgrep";
-        attribute :>> enabled = false;
-    }
-    part bundled_github : BundledSkill {
-        attribute :>> name = "github";
-        attribute :>> enabled = true;
-    }
-    part bundled_goplaces : BundledSkill {
-        attribute :>> name = "goplaces";
-        attribute :>> enabled = false;
-    }
-    part bundled_healthcheck : BundledSkill {
-        attribute :>> name = "healthcheck";
-        attribute :>> enabled = true;
-    }
-    part bundled_himalaya : BundledSkill {
-        attribute :>> name = "himalaya";
-        attribute :>> enabled = false;
-    }
-    part bundled_mcporter : BundledSkill {
-        attribute :>> name = "mcporter";
-        attribute :>> enabled = false;
-    }
-    part 'bundled_model-usage' : BundledSkill {
-        attribute :>> name = "model-usage";
-        attribute :>> enabled = true;
-    }
-    part 'bundled_nano-pdf' : BundledSkill {
-        attribute :>> name = "nano-pdf";
-        attribute :>> enabled = false;
-    }
-    part bundled_obsidian : BundledSkill {
-        attribute :>> name = "obsidian";
-        attribute :>> enabled = false;
-    }
-    part 'bundled_openai-whisper' : BundledSkill {
-        attribute :>> name = "openai-whisper";
-        attribute :>> enabled = false;
-    }
-    part bundled_openhue : BundledSkill {
-        attribute :>> name = "openhue";
-        attribute :>> enabled = false;
-    }
-    part bundled_oracle : BundledSkill {
-        attribute :>> name = "oracle";
-        attribute :>> enabled = false;
-    }
-    part bundled_ordercli : BundledSkill {
-        attribute :>> name = "ordercli";
-        attribute :>> enabled = false;
-    }
-    part bundled_sag : BundledSkill {
-        attribute :>> name = "sag";
-        attribute :>> enabled = false;
-    }
-    part 'bundled_session-logs' : BundledSkill {
-        attribute :>> name = "session-logs";
-        attribute :>> enabled = true;
-    }
-    part 'bundled_sherpa-onnx-tts' : BundledSkill {
-        attribute :>> name = "sherpa-onnx-tts";
-        attribute :>> enabled = false;
-    }
-    part 'bundled_skill-creator' : BundledSkill {
-        attribute :>> name = "skill-creator";
-        attribute :>> enabled = true;
-    }
-    part bundled_slack : BundledSkill {
-        attribute :>> name = "slack";
-        attribute :>> enabled = false;
-    }
-    part bundled_songsee : BundledSkill {
-        attribute :>> name = "songsee";
-        attribute :>> enabled = false;
-    }
-    part bundled_sonoscli : BundledSkill {
-        attribute :>> name = "sonoscli";
-        attribute :>> enabled = false;
-    }
-    part 'bundled_spotify-player' : BundledSkill {
-        attribute :>> name = "spotify-player";
-        attribute :>> enabled = false;
-    }
-    part bundled_summarize : BundledSkill {
-        attribute :>> name = "summarize";
-        attribute :>> enabled = false;
-    }
-    part bundled_trello : BundledSkill {
-        attribute :>> name = "trello";
-        attribute :>> enabled = false;
-    }
-    part 'bundled_voice-call' : BundledSkill {
-        attribute :>> name = "voice-call";
-        attribute :>> enabled = false;
-    }
-    part bundled_wacli : BundledSkill {
-        attribute :>> name = "wacli";
-        attribute :>> enabled = false;
-    }
-    part bundled_xurl : BundledSkill {
-        attribute :>> name = "xurl";
-        attribute :>> enabled = false;
-    }
-    part provider_google : ModelProvider {
-        attribute :>> name = "google";
-        attribute :>> modelIds = "[\"gemini-3-pro-image-preview\"]";
-    }
-    part provider_ollama : ModelProvider {
-        attribute :>> name = "ollama";
-        attribute :>> apiKind = "ollama";
-        attribute :>> modelIds = "[\"glm-5.1:cloud\",\"nemotron-3-super:cloud\"]";
-    }
-    part plugin_browser : OpenClawPlugin {
-        attribute :>> pluginId = "browser";
-        attribute :>> enabled = true;
-        attribute :>> tools = "[\"browser\"]";
-        attribute :>> optionalTools = "[]";
-        attribute :>> toolProfiles = "[]";
-    }
-    part 'plugin_memory-core' : OpenClawPlugin {
-        attribute :>> pluginId = "memory-core";
-        attribute :>> enabled = true;
-        attribute :>> tools = "[\"memory_get\",\"memory_search\"]";
-        attribute :>> optionalTools = "[]";
-        attribute :>> toolProfiles = "[]";
-    }
-    part 'plugin_stock-quotes' : OpenClawPlugin {
-        attribute :>> pluginId = "stock-quotes";
-        attribute :>> enabled = true;
-        attribute :>> tools = "[\"stock_quote\"]";
-        attribute :>> optionalTools = "[]";
-        attribute :>> toolProfiles = "[{\"id\":\"stock_quote\",\"profiles\":[\"coding\"]}]";
-    }
-    part plugin_whatsapp : OpenClawPlugin {
-        attribute :>> pluginId = "whatsapp";
-        attribute :>> enabled = true;
-        attribute :>> tools = "[\"whatsapp_login\"]";
-        attribute :>> optionalTools = "[\"whatsapp_login\"]";
-        attribute :>> toolProfiles = "[]";
-    }
-    part plugin_workboard : OpenClawPlugin {
-        attribute :>> pluginId = "workboard";
-        attribute :>> enabled = false;
-        attribute :>> tools = "[\"board_claim\",\"board_list\"]";
-        attribute :>> optionalTools = "[\"board_claim\",\"board_list\"]";
-        attribute :>> toolProfiles = "[]";
-    }
-    part mcp_9tools : McpServer {
-        attribute :>> serverId = "9tools";
-        attribute :>> toolPrefix = "mcp-9tools";
-        attribute :>> enabled = false;
-        attribute :>> transport = "sse";
-        attribute :>> oauth = false;
-        attribute :>> toolInclude = "[]";
-        attribute :>> toolExclude = "[]";
-        attribute :>> envNames = "[]";
-        attribute :>> headerNames = "[]";
-        attribute :>> argCount = 0;
-    }
-    part 'mcp_Outlook Graph' : McpServer {
-        attribute :>> serverId = "Outlook Graph";
-        attribute :>> toolPrefix = "outlook-graph";
-        attribute :>> enabled = true;
-        attribute :>> transport = "streamable-http";
-        attribute :>> oauth = true;
-        attribute :>> oauthIdentity = "per-requester";
-        attribute :>> toolInclude = "[]";
-        attribute :>> toolExclude = "[]";
-        attribute :>> envNames = "[]";
-        attribute :>> headerNames = "[\"Authorization\"]";
-        attribute :>> argCount = 0;
-    }
-    part mcp_docs : McpServer {
-        attribute :>> serverId = "docs";
-        attribute :>> toolPrefix = "docs";
-        attribute :>> enabled = true;
-        attribute :>> transport = "stdio";
-        attribute :>> oauth = false;
-        attribute :>> toolInclude = "[\"search_*\"]";
-        attribute :>> toolExclude = "[]";
-        attribute :>> envNames = "[\"DOCS_TOKEN\"]";
-        attribute :>> headerNames = "[]";
-        attribute :>> argCount = 2;
-    }
-    part execApprovals : ExecApprovals {
-        attribute :>> defaultSecurity = "allowlist";
-        attribute :>> defaultAsk = "on-miss";
-        attribute :>> askFallback = "deny";
-        attribute :>> autoAllowSkills = false;
-        attribute :>> wildcardCommands = "[{\"id\":\"path:*\",\"command\":\"*\",\"kind\":\"path\",\"argsRestricted\":false}]";
-    }
-    part memoryBackend : MemoryBackend {
-        attribute :>> dreamingEnabled = true;
-        attribute :>> dreamingFrequency = "0 3 * * *";
-        attribute :>> activeMemoryEnabled = true;
-        attribute :>> activeMemoryAgents = "[\"lead\"]";
-        attribute :>> activeMemoryChatTypes = "[\"direct\"]";
-        attribute :>> persistTranscripts = false;
-    }
-    part messaging : MessagingPolicy {
-        attribute :>> enabled = true;
-        attribute :>> allowedTargets = "[\"*\"]";
+    package Authority {
+        doc /* Effective tool and command grants per agent, delegation and agent-to-agent messaging rules, and host exec approvals. */
+        item 'tool_client:sandbox:browser' : ToolGrant {
+            attribute :>> tool = "browser";
+            attribute :>> layer = "sandbox";
+            attribute :>> pluginId = "browser";
+        }
+        item 'tool_client:sandbox:edit' : ToolGrant {
+            attribute :>> tool = "edit";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_client:sandbox:exec' : ToolGrant {
+            attribute :>> tool = "exec";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_client:sandbox:image' : ToolGrant {
+            attribute :>> tool = "image";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_client:sandbox:message' : ToolGrant {
+            attribute :>> tool = "message";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_client:sandbox:read' : ToolGrant {
+            attribute :>> tool = "read";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_client:sandbox:session_status' : ToolGrant {
+            attribute :>> tool = "session_status";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_client:sandbox:sessions_history' : ToolGrant {
+            attribute :>> tool = "sessions_history";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_client:sandbox:sessions_list' : ToolGrant {
+            attribute :>> tool = "sessions_list";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_client:sandbox:sessions_send' : ToolGrant {
+            attribute :>> tool = "sessions_send";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_client:sandbox:sessions_spawn' : ToolGrant {
+            attribute :>> tool = "sessions_spawn";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_client:sandbox:subagents' : ToolGrant {
+            attribute :>> tool = "subagents";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_client:sandbox:write' : ToolGrant {
+            attribute :>> tool = "write";
+            attribute :>> layer = "sandbox";
+        }
+        item 'cmd_client:safe-bin:python3' : CommandGrant {
+            attribute :>> command = "python3";
+            attribute :>> kind = "safe-bin";
+            attribute :>> argsRestricted = true;
+        }
+        item 'cmd_client:safe-bin:wc' : CommandGrant {
+            attribute :>> command = "wc";
+            attribute :>> kind = "safe-bin";
+            attribute :>> argsRestricted = true;
+        }
+        item 'tool_coach:sandbox:browser' : ToolGrant {
+            attribute :>> tool = "browser";
+            attribute :>> layer = "sandbox";
+            attribute :>> pluginId = "browser";
+        }
+        item 'tool_coach:sandbox:edit' : ToolGrant {
+            attribute :>> tool = "edit";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_coach:sandbox:exec' : ToolGrant {
+            attribute :>> tool = "exec";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_coach:sandbox:gateway' : ToolGrant {
+            attribute :>> tool = "gateway";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_coach:sandbox:image' : ToolGrant {
+            attribute :>> tool = "image";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_coach:sandbox:message' : ToolGrant {
+            attribute :>> tool = "message";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_coach:sandbox:read' : ToolGrant {
+            attribute :>> tool = "read";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_coach:sandbox:session_status' : ToolGrant {
+            attribute :>> tool = "session_status";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_coach:sandbox:sessions_history' : ToolGrant {
+            attribute :>> tool = "sessions_history";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_coach:sandbox:sessions_list' : ToolGrant {
+            attribute :>> tool = "sessions_list";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_coach:sandbox:sessions_send' : ToolGrant {
+            attribute :>> tool = "sessions_send";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_coach:sandbox:sessions_spawn' : ToolGrant {
+            attribute :>> tool = "sessions_spawn";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_coach:sandbox:subagents' : ToolGrant {
+            attribute :>> tool = "subagents";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_coach:sandbox:web_fetch' : ToolGrant {
+            attribute :>> tool = "web_fetch";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_coach:sandbox:web_search' : ToolGrant {
+            attribute :>> tool = "web_search";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_coach:sandbox:write' : ToolGrant {
+            attribute :>> tool = "write";
+            attribute :>> layer = "sandbox";
+        }
+        item 'cmd_coach:safe-bin:python3' : CommandGrant {
+            attribute :>> command = "python3";
+            attribute :>> kind = "safe-bin";
+            attribute :>> argsRestricted = true;
+        }
+        item 'cmd_coach:safe-bin:wc' : CommandGrant {
+            attribute :>> command = "wc";
+            attribute :>> kind = "safe-bin";
+            attribute :>> argsRestricted = true;
+        }
+        item 'tool_devbox:sandbox:browser' : ToolGrant {
+            attribute :>> tool = "browser";
+            attribute :>> layer = "sandbox";
+            attribute :>> pluginId = "browser";
+        }
+        item 'tool_devbox:sandbox:edit' : ToolGrant {
+            attribute :>> tool = "edit";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_devbox:sandbox:exec' : ToolGrant {
+            attribute :>> tool = "exec";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_devbox:sandbox:image' : ToolGrant {
+            attribute :>> tool = "image";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_devbox:sandbox:message' : ToolGrant {
+            attribute :>> tool = "message";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_devbox:sandbox:read' : ToolGrant {
+            attribute :>> tool = "read";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_devbox:sandbox:session_status' : ToolGrant {
+            attribute :>> tool = "session_status";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_devbox:sandbox:sessions_history' : ToolGrant {
+            attribute :>> tool = "sessions_history";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_devbox:sandbox:sessions_list' : ToolGrant {
+            attribute :>> tool = "sessions_list";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_devbox:sandbox:sessions_send' : ToolGrant {
+            attribute :>> tool = "sessions_send";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_devbox:sandbox:sessions_spawn' : ToolGrant {
+            attribute :>> tool = "sessions_spawn";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_devbox:sandbox:subagents' : ToolGrant {
+            attribute :>> tool = "subagents";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_devbox:sandbox:web_fetch' : ToolGrant {
+            attribute :>> tool = "web_fetch";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_devbox:sandbox:web_search' : ToolGrant {
+            attribute :>> tool = "web_search";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_devbox:sandbox:write' : ToolGrant {
+            attribute :>> tool = "write";
+            attribute :>> layer = "sandbox";
+        }
+        item 'cmd_devbox:safe-bin:python3' : CommandGrant {
+            attribute :>> command = "python3";
+            attribute :>> kind = "safe-bin";
+            attribute :>> argsRestricted = true;
+        }
+        item 'cmd_devbox:safe-bin:wc' : CommandGrant {
+            attribute :>> command = "wc";
+            attribute :>> kind = "safe-bin";
+            attribute :>> argsRestricted = true;
+        }
+        item 'tool_field:sandbox:browser' : ToolGrant {
+            attribute :>> tool = "browser";
+            attribute :>> layer = "sandbox";
+            attribute :>> pluginId = "browser";
+        }
+        item 'tool_field:sandbox:docs__*' : ToolGrant {
+            attribute :>> tool = "docs__*";
+            attribute :>> layer = "sandbox";
+            attribute :>> pluginId = "bundle-mcp";
+        }
+        item 'tool_field:sandbox:edit' : ToolGrant {
+            attribute :>> tool = "edit";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_field:sandbox:exec' : ToolGrant {
+            attribute :>> tool = "exec";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_field:sandbox:image' : ToolGrant {
+            attribute :>> tool = "image";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_field:sandbox:message' : ToolGrant {
+            attribute :>> tool = "message";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_field:sandbox:pdf' : ToolGrant {
+            attribute :>> tool = "pdf";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_field:sandbox:read' : ToolGrant {
+            attribute :>> tool = "read";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_field:sandbox:session_status' : ToolGrant {
+            attribute :>> tool = "session_status";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_field:sandbox:sessions_history' : ToolGrant {
+            attribute :>> tool = "sessions_history";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_field:sandbox:sessions_list' : ToolGrant {
+            attribute :>> tool = "sessions_list";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_field:sandbox:sessions_send' : ToolGrant {
+            attribute :>> tool = "sessions_send";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_field:sandbox:sessions_spawn' : ToolGrant {
+            attribute :>> tool = "sessions_spawn";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_field:sandbox:subagents' : ToolGrant {
+            attribute :>> tool = "subagents";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_field:sandbox:tts' : ToolGrant {
+            attribute :>> tool = "tts";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_field:sandbox:write' : ToolGrant {
+            attribute :>> tool = "write";
+            attribute :>> layer = "sandbox";
+        }
+        item 'cmd_field:safe-bin:python3' : CommandGrant {
+            attribute :>> command = "python3";
+            attribute :>> kind = "safe-bin";
+            attribute :>> argsRestricted = true;
+        }
+        item 'cmd_field:safe-bin:wc' : CommandGrant {
+            attribute :>> command = "wc";
+            attribute :>> kind = "safe-bin";
+            attribute :>> argsRestricted = true;
+        }
+        item 'tool_lead:host:agents_list' : ToolGrant {
+            attribute :>> tool = "agents_list";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:browser' : ToolGrant {
+            attribute :>> tool = "browser";
+            attribute :>> layer = "host";
+            attribute :>> pluginId = "browser";
+        }
+        item 'tool_lead:host:canvas' : ToolGrant {
+            attribute :>> tool = "canvas";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:code_execution' : ToolGrant {
+            attribute :>> tool = "code_execution";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:cron' : ToolGrant {
+            attribute :>> tool = "cron";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:docs__*' : ToolGrant {
+            attribute :>> tool = "docs__*";
+            attribute :>> layer = "host";
+            attribute :>> pluginId = "bundle-mcp";
+        }
+        item 'tool_lead:host:edit' : ToolGrant {
+            attribute :>> tool = "edit";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:exec' : ToolGrant {
+            attribute :>> tool = "exec";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:gateway' : ToolGrant {
+            attribute :>> tool = "gateway";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:heartbeat_respond' : ToolGrant {
+            attribute :>> tool = "heartbeat_respond";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:image' : ToolGrant {
+            attribute :>> tool = "image";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:image_generate' : ToolGrant {
+            attribute :>> tool = "image_generate";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:memory_get' : ToolGrant {
+            attribute :>> tool = "memory_get";
+            attribute :>> layer = "host";
+            attribute :>> pluginId = "memory-core";
+        }
+        item 'tool_lead:host:memory_search' : ToolGrant {
+            attribute :>> tool = "memory_search";
+            attribute :>> layer = "host";
+            attribute :>> pluginId = "memory-core";
+        }
+        item 'tool_lead:host:message' : ToolGrant {
+            attribute :>> tool = "message";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:music_generate' : ToolGrant {
+            attribute :>> tool = "music_generate";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:nodes' : ToolGrant {
+            attribute :>> tool = "nodes";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:outlook-graph__*' : ToolGrant {
+            attribute :>> tool = "outlook-graph__*";
+            attribute :>> layer = "host";
+            attribute :>> pluginId = "bundle-mcp";
+        }
+        item 'tool_lead:host:pdf' : ToolGrant {
+            attribute :>> tool = "pdf";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:process' : ToolGrant {
+            attribute :>> tool = "process";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:read' : ToolGrant {
+            attribute :>> tool = "read";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:session_status' : ToolGrant {
+            attribute :>> tool = "session_status";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:sessions_history' : ToolGrant {
+            attribute :>> tool = "sessions_history";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:sessions_list' : ToolGrant {
+            attribute :>> tool = "sessions_list";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:sessions_send' : ToolGrant {
+            attribute :>> tool = "sessions_send";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:sessions_spawn' : ToolGrant {
+            attribute :>> tool = "sessions_spawn";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:sessions_yield' : ToolGrant {
+            attribute :>> tool = "sessions_yield";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:skill_workshop' : ToolGrant {
+            attribute :>> tool = "skill_workshop";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:stock_quote' : ToolGrant {
+            attribute :>> tool = "stock_quote";
+            attribute :>> layer = "host";
+            attribute :>> pluginId = "stock-quotes";
+        }
+        item 'tool_lead:host:subagents' : ToolGrant {
+            attribute :>> tool = "subagents";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:tts' : ToolGrant {
+            attribute :>> tool = "tts";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:update_plan' : ToolGrant {
+            attribute :>> tool = "update_plan";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:video_generate' : ToolGrant {
+            attribute :>> tool = "video_generate";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:web_fetch' : ToolGrant {
+            attribute :>> tool = "web_fetch";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:web_search' : ToolGrant {
+            attribute :>> tool = "web_search";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:whatsapp_login' : ToolGrant {
+            attribute :>> tool = "whatsapp_login";
+            attribute :>> layer = "host";
+            attribute :>> pluginId = "whatsapp";
+        }
+        item 'tool_lead:host:write' : ToolGrant {
+            attribute :>> tool = "write";
+            attribute :>> layer = "host";
+        }
+        item 'tool_lead:host:x_search' : ToolGrant {
+            attribute :>> tool = "x_search";
+            attribute :>> layer = "host";
+        }
+        item 'cmd_lead:name:rg' : CommandGrant {
+            attribute :>> command = "rg";
+            attribute :>> kind = "name";
+            attribute :>> argsRestricted = false;
+        }
+        item 'cmd_lead:path:git' : CommandGrant {
+            attribute :>> command = "git";
+            attribute :>> kind = "path";
+            attribute :>> argsRestricted = true;
+        }
+        item 'cmd_lead:safe-bin:python3' : CommandGrant {
+            attribute :>> command = "python3";
+            attribute :>> kind = "safe-bin";
+            attribute :>> argsRestricted = true;
+        }
+        item 'cmd_lead:safe-bin:wc' : CommandGrant {
+            attribute :>> command = "wc";
+            attribute :>> kind = "safe-bin";
+            attribute :>> argsRestricted = true;
+        }
+        item 'tool_secretary:sandbox:browser' : ToolGrant {
+            attribute :>> tool = "browser";
+            attribute :>> layer = "sandbox";
+            attribute :>> pluginId = "browser";
+        }
+        item 'tool_secretary:sandbox:edit' : ToolGrant {
+            attribute :>> tool = "edit";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_secretary:sandbox:exec' : ToolGrant {
+            attribute :>> tool = "exec";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_secretary:sandbox:image' : ToolGrant {
+            attribute :>> tool = "image";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_secretary:sandbox:message' : ToolGrant {
+            attribute :>> tool = "message";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_secretary:sandbox:read' : ToolGrant {
+            attribute :>> tool = "read";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_secretary:sandbox:session_status' : ToolGrant {
+            attribute :>> tool = "session_status";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_secretary:sandbox:sessions_history' : ToolGrant {
+            attribute :>> tool = "sessions_history";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_secretary:sandbox:sessions_list' : ToolGrant {
+            attribute :>> tool = "sessions_list";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_secretary:sandbox:sessions_send' : ToolGrant {
+            attribute :>> tool = "sessions_send";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_secretary:sandbox:sessions_spawn' : ToolGrant {
+            attribute :>> tool = "sessions_spawn";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_secretary:sandbox:subagents' : ToolGrant {
+            attribute :>> tool = "subagents";
+            attribute :>> layer = "sandbox";
+        }
+        item 'tool_secretary:sandbox:write' : ToolGrant {
+            attribute :>> tool = "write";
+            attribute :>> layer = "sandbox";
+        }
+        item 'cmd_secretary:safe-bin:python3' : CommandGrant {
+            attribute :>> command = "python3";
+            attribute :>> kind = "safe-bin";
+            attribute :>> argsRestricted = true;
+        }
+        item 'cmd_secretary:safe-bin:wc' : CommandGrant {
+            attribute :>> command = "wc";
+            attribute :>> kind = "safe-bin";
+            attribute :>> argsRestricted = true;
+        }
+        part 'delegation_client:coach' : DelegationRule {
+            attribute :>> fromAgent = "client";
+            attribute :>> toAgent = "coach";
+        }
+        part 'delegation_coach:client' : DelegationRule {
+            attribute :>> fromAgent = "coach";
+            attribute :>> toAgent = "client";
+        }
+        part 'delegation_devbox:lead' : DelegationRule {
+            attribute :>> fromAgent = "devbox";
+            attribute :>> toAgent = "lead";
+        }
+        part 'delegation_field:lead' : DelegationRule {
+            attribute :>> fromAgent = "field";
+            attribute :>> toAgent = "lead";
+        }
+        part 'delegation_lead:client' : DelegationRule {
+            attribute :>> fromAgent = "lead";
+            attribute :>> toAgent = "client";
+        }
+        part 'delegation_lead:coach' : DelegationRule {
+            attribute :>> fromAgent = "lead";
+            attribute :>> toAgent = "coach";
+        }
+        part 'delegation_lead:devbox' : DelegationRule {
+            attribute :>> fromAgent = "lead";
+            attribute :>> toAgent = "devbox";
+        }
+        part 'delegation_lead:field' : DelegationRule {
+            attribute :>> fromAgent = "lead";
+            attribute :>> toAgent = "field";
+        }
+        part 'delegation_lead:secretary' : DelegationRule {
+            attribute :>> fromAgent = "lead";
+            attribute :>> toAgent = "secretary";
+        }
+        part 'delegation_secretary:lead' : DelegationRule {
+            attribute :>> fromAgent = "secretary";
+            attribute :>> toAgent = "lead";
+        }
+        part messaging : MessagingPolicy {
+            attribute :>> enabled = true;
+            attribute :>> allowedTargets = "[\"*\"]";
+        }
+        part execApprovals : ExecApprovals {
+            attribute :>> defaultSecurity = "allowlist";
+            attribute :>> defaultAsk = "on-miss";
+            attribute :>> askFallback = "deny";
+            attribute :>> autoAllowSkills = false;
+            attribute :>> wildcardCommands = "[{\"id\":\"path:*\",\"command\":\"*\",\"kind\":\"path\",\"argsRestricted\":false}]";
+        }
     }
 }

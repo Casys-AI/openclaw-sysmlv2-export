@@ -128,7 +128,9 @@ Deno.test("MCP ownership and command grants preserve their policy scope", async 
       const allowed = emit(snapshot).get("OpenClawInstance.sysml")!;
       for (const command of agent.execution.commands) {
         assert.ok(allowed.includes(
-          `ref item ${name("command", command.id)} : CommandGrant = ${
+          `ref item ${
+            name("command", command.id)
+          } : CommandGrant = Authority::${
             name("cmd", `${agent.id}:${command.id}`)
           };`,
         ));

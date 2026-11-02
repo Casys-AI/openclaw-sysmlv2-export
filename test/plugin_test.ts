@@ -115,11 +115,13 @@ Deno.test("plugin runs are kept as versions", async (t) => {
         );
         assert.ok(
           lines.includes(
-            '-        attribute :>> displayName = "Field Assistant";',
+            '-            attribute :>> displayName = "Field Assistant";',
           ),
         );
         assert.ok(
-          lines.includes('+        attribute :>> displayName = "Field Lead";'),
+          lines.includes(
+            '+            attribute :>> displayName = "Field Lead";',
+          ),
         );
       },
     );
