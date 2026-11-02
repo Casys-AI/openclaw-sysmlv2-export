@@ -317,7 +317,7 @@ export async function runExport(
   const viewer = join(outDir, "index.html");
   await writeFile(
     viewer,
-    viewerPage(
+    await viewerPage(
       await Promise.all(versions.map(async (entry) => ({
         entry,
         files: await versionFiles(join(outDir, entry.id)),
