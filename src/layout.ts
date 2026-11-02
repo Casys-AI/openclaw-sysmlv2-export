@@ -417,17 +417,6 @@ function leaf(n: DiagramNode, max: number): Sized {
         h: 66,
         scene: { shape: n.shape, name: n.name },
       };
-    case "requirement":
-      return block({
-        ...n,
-        compartments: [
-          {
-            title: n.compartments[0].title,
-            rows: wrap(n.text ?? "", "row", max - 2 * M.padX, 5),
-          },
-          { title: "source", rows: n.compartments[0].rows },
-        ],
-      }, max);
     default:
       return block(n, max);
   }
@@ -788,20 +777,6 @@ function moved(scene: Scene, dx: number, dy: number): Scene {
     })),
   };
 }
-/** Scenes side by side or one under the other, `gap` apart, top-left aligned. */
-function stack(parts: Scene[], gap: number, side: "down" | "right"): Scene {
-  const out: Scene = { w: 0, h: 0, nodes: [], edges: [] };
-  let at = 0;
-  for (const part of parts) {
-    const m = side === "down" ? moved(part, 0, at) : moved(part, at, 0);
-    out.nodes.push(...m.nodes);
-    out.edges.push(...m.edges);
-    at += (side === "down" ? part.h : part.w) + gap;
-    out.w = r1(side === "down" ? Math.max(out.w, part.w) : at - gap);
-    out.h = r1(side === "down" ? at - gap : Math.max(out.h, part.h));
-  }
-  return out;
-}
 
 async function laidOut(view: DiagramView, s: Settings): Promise<Scene> {
   const { graph, scenes } = build(view, s);
@@ -809,100 +784,10 @@ async function laidOut(view: DiagramView, s: Settings): Promise<Scene> {
   return sceneOf(view, scenes, await elk.layout(graph));
 }
 
-/** A laid-out subtree: its size, and its nodes once placed. */
-interface Box {
-  w: number;
-  h: number;
-  place(x: number, y: number): SceneNode[];
-}
-/** Boxes left to right, wrapping at `width`; each row as tall as its tallest. */
-function flow(boxes: Box[], width: number, gap: number): Box {
-  const rows: Box[][] = [];
-  let used = 0;
-  for (const b of boxes) {
-    if (!rows.length || used + gap + b.w > width) {
-      rows.push([]);
-      used = -gap;
-    }
-    rows.at(-1)!.push(b);
-    used += gap + b.w;
-  }
-  const rowW = (row: Box[]) => row.reduce((s, b) => s + b.w + gap, -gap);
-  const rowH = (row: Box[]) => Math.max(...row.map((b) => b.h));
-  return {
-    w: Math.max(0, ...rows.map(rowW)),
-    h: rows.reduce((s, row) => s + rowH(row) + gap, -gap),
-    place: (x, y) =>
-      rows.flatMap((row) => {
-        let cx = x;
-        const placed = row.flatMap((b) => {
-          const nodes = b.place(cx, y);
-          cx += b.w + gap;
-          return nodes;
-        });
-        y += rowH(row) + gap;
-        return placed;
-      }),
-  };
-}
-
-/** Places a view's drawn elements (see tables.ts). System and Scheduled tasks
- * are layered graphs; a Behaviour view lays its procedures out as flows above
- * the parties they hand work to, with its rules beside or under them. */
+/** Places a view's drawn elements (see tables.ts) as a layered graph: System,
+ * Scheduled tasks, and a Behaviour view's procedures as flows above the
+ * parties they hand work to. */
 export async function layoutView(view: DiagramView): Promise<Scene> {
-  const margin = (s: Scene) => {
-    const m = moved(s, 24, 24);
-    return { ...m, w: r1(s.w + 48), h: r1(s.h + 48) };
-  };
-  const s = settings(view);
-  if (!view.id.startsWith("behaviour:")) return margin(await laidOut(view, s));
-  const rules = view.nodes.filter((n) => n.shape === "requirement");
-  const flows = {
-    ...view,
-    nodes: view.nodes.filter((n) => !rules.includes(n)),
-  };
-  const parts: Scene[] = [];
-  if (flows.nodes.length) parts.push(await laidOut(flows, s));
-  if (rules.length) {
-    const boxes = rules.map((n) => {
-      const size = leaf(n, s.max);
-      return {
-        w: s.max,
-        h: Math.round(size.h),
-        place: (x: number, y: number) => [{
-          id: n.id,
-          ...size.scene,
-          ...flags(n),
-          x,
-          y,
-          w: s.max,
-          h: Math.round(size.h),
-        }],
-      };
-    });
-    const block = (width: number): Scene => {
-      const grid = flow(boxes, width, 14);
-      return { w: grid.w, h: grid.h, nodes: grid.place(0, 0), edges: [] };
-    };
-    // Rules beside the flows in one to n columns, or under them as wide as
-    // they are: the arrangement that shows largest on a screen wins.
-    const [laid] = parts;
-    const arrangements = [
-      ...rules.map((_, i) =>
-        stack([...parts, block((i + 1) * s.max + i * 14)], 56, "right")
-      ),
-      ...(laid
-        ? [stack([laid, block(Math.max(laid.w, s.max))], 56, "down")]
-        : []),
-    ];
-    return margin(
-      arrangements.reduce((best, a) => shown(a) > shown(best) ? a : best),
-    );
-  }
-  return margin(stack(parts, 56, "right"));
+  const scene = await laidOut(view, settings(view));
+  return { ...moved(scene, 24, 24), w: r1(scene.w + 48), h: r1(scene.h + 48) };
 }
-
-/** The aspect ratio a view is fitted into: a common screen. */
-const SCREEN = 16 / 9;
-/** The scale at which a scene fits a SCREEN-shaped viewport of height 1. */
-const shown = (s: Scene) => Math.min(SCREEN / s.w, 1 / s.h);

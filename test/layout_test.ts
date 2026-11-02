@@ -42,17 +42,3 @@ Deno.test("layout is deterministic, nests containers and never overlaps siblings
     }
   }
 });
-
-Deno.test("a Behaviour view with many rules stays wider than tall", async () => {
-  const [field] = inference.agents;
-  const rules = Array.from({ length: 40 }, (_, i) => ({
-    ...field.rules[0],
-    id: `rule-${i}`,
-  }));
-  const view = diagramViews(snapshot, {
-    ...inference,
-    agents: [{ ...field, rules }],
-  }).find((v) => v.id === "behaviour:field")!;
-  const scene = await layoutView(view);
-  assert.ok(scene.w > scene.h, `${scene.w} × ${scene.h}`);
-});

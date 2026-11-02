@@ -16,13 +16,22 @@ export interface Head {
   muted?: true;
   dashed?: true;
 }
-export type TableData = {
-  kind: "matrix";
-  columns: (Head & { title: string })[];
-  rows: (Head & { depth: number })[];
-  /** [row, column, glyph, cell id]; the glyph is h(ost), s(andbox) or b(oth). */
-  cells: [number, number, string, string][];
-};
+export type TableData =
+  | {
+    kind: "matrix";
+    columns: (Head & { title: string })[];
+    rows: (Head & { depth: number })[];
+    /** [row, column, glyph, cell id]; the glyph is h(ost), s(andbox) or b(oth). */
+    cells: [number, number, string, string][];
+  }
+  | {
+    kind: "elements";
+    title: string;
+    columns: string[];
+    facet: string | null;
+    /** Each row's values, column by column ("—" for an attribute it lacks). */
+    rows: (Head & { values: string[] })[];
+  };
 
 function head(n: DiagramNode): Head {
   const kw = keyword(n);
@@ -38,9 +47,14 @@ function head(n: DiagramNode): Head {
 
 /** The elements a table shows instead of the diagram. */
 function tabled(table: ViewTable | null): Set<string> {
-  return table
-    ? new Set([...table.columns, ...table.rows, ...table.cells])
-    : new Set();
+  switch (table?.kind) {
+    case "matrix":
+      return new Set([...table.columns, ...table.rows, ...table.cells]);
+    case "elements":
+      return new Set(table.rows);
+    default:
+      return new Set();
+  }
 }
 
 /** The view without the elements its table shows: what layout.ts draws. */
@@ -65,6 +79,21 @@ export function tableData(view: DiagramView): TableData | null {
   const t = view.table;
   if (!t) return null;
   const nodes = new Map(view.nodes.map((n) => [n.id, n]));
+  if (t.kind === "elements") {
+    return {
+      kind: "elements",
+      title: t.title,
+      columns: t.columns,
+      facet: t.facet,
+      rows: t.rows.map((id) => {
+        const n = nodes.get(id)!, values = new Map(n.attributes);
+        return {
+          ...head(n),
+          values: t.columns.map((c) => values.get(c) ?? "—"),
+        };
+      }),
+    };
+  }
   const edges = new Map(view.edges.map((e) => [e.id, e]));
   const depth = (n: DiagramNode): number =>
     n.parent ? 1 + depth(nodes.get(n.parent)!) : 0;

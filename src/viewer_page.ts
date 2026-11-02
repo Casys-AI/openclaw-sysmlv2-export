@@ -195,6 +195,22 @@ svg.md-focus .md-edge.lit .md-line { stroke-width: 1.8; }
 .mx tbody tr:hover > th, .mx tbody tr:hover > td, .mx .hc { background-image: linear-gradient(var(--hover), var(--hover)); }
 .mx .selected, .mx .on { box-shadow: inset 0 0 0 2px var(--ink); }
 .mx thead th.selected { box-shadow: inset 0 -3px var(--ink); }
+.tb-title { color: var(--ink); font-weight: 600; }
+.et { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; }
+.et th { position: sticky; top: 0; z-index: 1; padding: 6px 10px; text-align: left; font-weight: 500; color: var(--muted); background: var(--card); border-bottom: 1px solid var(--line-strong); white-space: nowrap; }
+.et th button { all: unset; cursor: pointer; font-weight: 500; color: var(--muted); }
+.et th button:hover { color: var(--ink); }
+.et th[aria-sort="ascending"] button::after { content: " ↑"; } .et th[aria-sort="descending"] button::after { content: " ↓"; }
+.et td { padding: 5px 10px; border-bottom: 1px solid var(--line); vertical-align: top; white-space: nowrap; background: var(--card); }
+.et tbody tr { cursor: pointer; }
+.et tbody tr:hover > td { background-image: linear-gradient(var(--hover), var(--hover)); }
+.et tr.selected > td { box-shadow: inset 0 1px var(--ink), inset 0 -1px var(--ink); }
+.et tr.muted > td { color: var(--muted); }
+.et-name { font-weight: 600; }
+.et-wrap { white-space: normal !important; min-width: 260px; }
+.et-facet { color: var(--muted); font-style: italic; }
+.et-src button { all: unset; display: block; cursor: pointer; font: 11px var(--mono); text-decoration: underline; text-decoration-color: var(--line-strong); }
+.et-src button:hover { text-decoration-color: var(--ink); }
 .g { display: inline-block; position: relative; width: 11px; height: 11px; border: 1.2px solid var(--md-stroke); border-radius: 2px; vertical-align: middle; }
 .g.h, .g.b { background: var(--md-stroke); }
 .g.s { background: linear-gradient(to bottom right, transparent 50%, var(--md-stroke) 50%); }
@@ -266,13 +282,13 @@ const LEGENDS = {
   Structure: [["usage", "part usage"], ["connection", "connection : AgentBinding"], ["dashed", "disabled"]],
   Cases: [["usage", "scheduled case"], ["owner", "owner"], ["target", "unresolved targetAgent"], ["dashed", "disabled"]],
   Behaviour: [["initial", "start"], ["decision", "decision"], ["send", "hand-off or escalation"], ["final", "done"],
-    ["succession", "succession"], ["def", "requirement def"]],
+    ["succession", "succession"]],
 };
 
 const state = { version: 0, tab: "diagrams", view: "system", file: "OpenClawInstance.sysml", range: null,
   selected: null, hover: null, viewport: null, highlight: true, drawn: null,
-  // Tables: the text filter, folded groups.
-  filter: "", folded: new Set() };
+  // Tables: the text filter, folded groups, the facet value shown, the sort.
+  filter: "", folded: new Set(), facet: null, sort: null };
 
 function el(tag, cls, text) {
   const e = document.createElement(tag);
@@ -566,7 +582,7 @@ function renderLegend(view) {
     const s = el("span");
     const g = sv("svg", { viewBox: "0 0 26 14", "aria-hidden": "true" });
     const add = (tag, a) => g.append(sv(tag, a));
-    if (kind === "usage" || kind === "dashed" || kind === "def") add("rect", { x: 1, y: 1, width: 24, height: 12, rx: kind === "def" ? 1 : 4, fill: kind === "def" ? "#f3f2ef" : "#fff", stroke: kind === "dashed" ? "#8e8b85" : "#2b2b2d", "stroke-dasharray": kind === "dashed" ? "3 2" : null });
+    if (kind === "usage" || kind === "dashed") add("rect", { x: 1, y: 1, width: 24, height: 12, rx: 4, fill: "#fff", stroke: kind === "dashed" ? "#8e8b85" : "#2b2b2d", "stroke-dasharray": kind === "dashed" ? "3 2" : null });
     if (kind === "connection") add("path", { d: "M1,7 H25", stroke: "#4b4b4f", "stroke-width": 1.3 });
     if (kind === "owner" || kind === "succession") add("path", { d: "M1,7 H24 M19,3 L24,7 L19,11", stroke: "#4b4b4f", fill: "none", "stroke-width": 1.3 });
     if (kind === "target") add("path", { d: "M1,7 H24 M19,3 L24,7 L19,11", stroke: "#8e8b85", fill: "none", "stroke-dasharray": "2 2" });
@@ -584,7 +600,10 @@ function subtitle(view) {
   if (t && t.kind === "matrix") {
     return t.rows.filter((r) => r.shape === "tool" && !r.dashed).length + " tools × " + t.columns.length + " agents · SysML allocation matrix";
   }
-  return view.scene.nodes.filter((n) => !["frame", "group", "initial", "final"].includes(n.shape)).length + " elements";
+  return [
+    ...view.scene ? [view.scene.nodes.filter((n) => !["frame", "group", "initial", "final"].includes(n.shape)).length + " elements"] : [],
+    ...t ? [t.rows.length + " " + t.title.toLowerCase()] : [],
+  ].join(" · ");
 }
 
 function renderDiagram(keepViewport) {
@@ -611,20 +630,21 @@ function renderDiagram(keepViewport) {
   renderDelta(cur);
   renderLegend(view);
   const keep = keepViewport && state.drawn && state.drawn.view === view.id;
-  if (!keep) { state.selected = null; state.filter = ""; }
+  if (!keep) { state.selected = null; state.filter = ""; state.facet = null; state.sort = null; }
   document.getElementById("md").classList.toggle("hl", state.highlight);
   document.querySelector(".md-tools").hidden = !view.scene;
   stage.hidden = !view.scene;
   sheet.hidden = !view.table;
   sheet.classList.toggle("alone", !view.scene);
   state.drawn = { view: view.id, svg: null, world: null, scene: view.scene, payload: view };
-  if (view.scene) drawScene(view, delta, keep);
-  else canvas.replaceChildren();
+  // The table first: the diagram fits in the room it leaves.
   if (view.table) {
     const at = [sheet.scrollTop, sheet.scrollLeft];
     renderTable(sheet, view, delta);
     if (keep) [sheet.scrollTop, sheet.scrollLeft] = at;
   }
+  if (view.scene) drawScene(view, delta, keep);
+  else canvas.replaceChildren();
   if (state.selected && !headOf(view, state.selected)) state.selected = null;
   if (state.selected) select(state.selected, false); else applyFocus();
 }
@@ -799,7 +819,16 @@ function showLines(vi, file, from, to) {
 
 // ---- Tables
 function renderTable(box, view, delta) {
-  renderMatrix(box, view.table, marker(delta));
+  if (view.table.kind === "matrix") renderMatrix(box, view.table, marker(delta));
+  else renderElements(box, view, view.table, marker(delta));
+}
+function search(label) {
+  const input = el("input");
+  input.type = "search";
+  input.placeholder = label;
+  input.setAttribute("aria-label", label);
+  input.value = state.filter;
+  return input;
 }
 const GLYPH_WORDS = { h: "on the host", s: "in the sandbox", b: "on the host and in the sandbox" };
 function glyph(g) { return el("i", "g " + g); }
@@ -813,11 +842,7 @@ function renderMatrix(box, t, mark) {
     cells[r].set(c, [g, id]);
     for (const a of up(t.rows[r])) counts[a][c]++;
   }
-  const input = el("input");
-  input.type = "search";
-  input.placeholder = "Filter tools";
-  input.setAttribute("aria-label", "Filter tools");
-  input.value = state.filter;
+  const input = search("Filter tools");
   const groups = t.rows.filter((r) => r.shape !== "tool").map((r) => r.id);
   const bar = el("div", "tb-bar");
   bar.append(input, button("Expand all", () => { state.folded.clear(); rows(); }), button("Collapse all", () => { groups.forEach((g) => state.folded.add(g)); rows(); }));
@@ -890,6 +915,67 @@ function renderMatrix(box, t, mark) {
     for (const x of table.querySelectorAll("[data-col]")) x.classList.toggle("hc", x.dataset.col === col);
   };
   table.onpointerleave = () => { lit = null; for (const x of table.querySelectorAll(".hc")) x.classList.remove("hc"); };
+  rows();
+  box.replaceChildren(bar, table);
+}
+// Elements with some of their attributes, sortable by column and filtered by
+// text and by the facet column's values; each row links to its SysML lines.
+function renderElements(box, view, t, mark) {
+  const facet = t.columns.indexOf(t.facet);
+  const input = search("Filter " + t.title.toLowerCase());
+  const bar = el("div", "tb-bar");
+  bar.append(el("strong", "tb-title", t.title), input);
+  if (facet >= 0) {
+    const values = [null, ...new Set(t.rows.map((r) => r.values[facet]))];
+    bar.append(...values.map((v) => {
+      const n = t.rows.filter((r) => v === null || r.values[facet] === v).length;
+      const b = button((v === null ? "all" : v) + " " + n, () => { state.facet = v; renderElements(box, view, t, mark); applyFocus(); });
+      b.setAttribute("aria-pressed", String(state.facet === v));
+      return b;
+    }));
+  }
+  const text = (r, c) => c < 0 ? r.name : r.values[c];
+  const table = el("table", "et"), head = el("tr"), tbody = el("tbody");
+  [-1, ...t.columns.keys()].forEach((c) => {
+    const sorted = state.sort && state.sort.col === c;
+    const th = button(c < 0 ? "name" : t.columns[c], () => {
+      state.sort = sorted && state.sort.dir > 0 ? { col: c, dir: -1 } : sorted ? null : { col: c, dir: 1 };
+      renderElements(box, view, t, mark);
+      applyFocus();
+    });
+    const cell = el("th");
+    if (sorted) cell.setAttribute("aria-sort", state.sort.dir > 0 ? "ascending" : "descending");
+    cell.append(th);
+    head.append(cell);
+  });
+  head.append(el("th", "", "SysML"));
+  const thead = el("thead");
+  thead.append(head);
+  table.append(thead, tbody);
+  // Long values wrap; short ones stay on one line.
+  const wraps = t.columns.map((_, c) => t.rows.some((r) => r.values[c].length > 48));
+  const rows = () => {
+    const q = state.filter.trim().toLowerCase();
+    const shown = t.rows.filter((r) => (facet < 0 || state.facet === null || r.values[facet] === state.facet) &&
+      (!q || [r.name, ...r.values].some((v) => v.toLowerCase().includes(q))));
+    if (state.sort) shown.sort((a, b) => state.sort.dir * text(a, state.sort.col).localeCompare(text(b, state.sort.col)));
+    tbody.replaceChildren(...shown.map((r) => {
+      const tr = el("tr", (r.muted ? "muted" : "") + mark(r.id));
+      tr.dataset.id = r.id;
+      tr.tabIndex = 0;
+      tr.append(el("td", "et-name", r.name), ...r.values.map((v, c) => el("td", (wraps[c] ? "et-wrap" : "") + (c === facet ? " et-facet" : ""), v)));
+      const src = el("td", "et-src");
+      for (const [file, from, to] of (view.elements[r.id] || { s: [] }).s) {
+        const b = button(file + ":" + from + (to > from ? "–" + to : ""), (e) => { e.stopPropagation(); showLines(state.version, file, from, to); });
+        b.title = "Show in Files";
+        src.append(b);
+      }
+      tr.append(src);
+      return tr;
+    }));
+    applyFocus();
+  };
+  input.oninput = () => { state.filter = input.value; rows(); };
   rows();
   box.replaceChildren(bar, table);
 }

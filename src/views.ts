@@ -46,7 +46,7 @@ export interface DiagramNode {
   /** Declared name (without quotes), or a group's label. */
   name: string;
   type: string | null;
-  /** A step's, decision's or requirement's text; an agent's display name. */
+  /** A step's or decision's text; an agent's display name. */
   text: string | null;
   compartments: Compartment[];
   /** Shown by the inspector, in order. */
@@ -80,7 +80,16 @@ export interface DiagramEdge {
 export type ViewTable =
   /** A SysML allocation matrix: rows (origin groups, providers, tools) by
    * columns (agents); each cell is a `grant` edge from a column to a row. */
-  { kind: "matrix"; columns: string[]; rows: string[]; cells: string[] };
+  | { kind: "matrix"; columns: string[]; rows: string[]; cells: string[] }
+  /** Elements in rows, some of their attributes as columns. */
+  | {
+    kind: "elements";
+    title: string;
+    rows: string[];
+    columns: string[];
+    /** A column whose values filter the rows, or null. */
+    facet: string | null;
+  };
 export interface DiagramView {
   id: string;
   title: string;
@@ -736,8 +745,6 @@ function behaviourView(
       shape: "requirement",
       keyword: "requirement def",
       name: plain(rule),
-      text: r.text,
-      compartments: [{ title: r.kind, rows: [cite(r.source)] }],
       attributes: [
         ["kind", r.kind],
         ["text", r.text],
@@ -752,7 +759,15 @@ function behaviourView(
     group: "Behaviour",
     nodes,
     edges,
-    table: null,
+    table: inference.rules.length
+      ? {
+        kind: "elements",
+        title: "Rules",
+        rows: inference.rules.map((r) => `rule:${r.id}`),
+        columns: ["kind", "text", "source"],
+        facet: "kind",
+      }
+      : null,
   };
 }
 

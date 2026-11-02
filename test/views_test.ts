@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { emit } from "../src/emit.ts";
 import { emitInferred, type Inference } from "../src/infer.ts";
 import { parseSnapshot, type Snapshot } from "../src/snapshot.ts";
+import { drawing, tableData } from "../src/tables.ts";
 import { declarations, type DiagramView, diagramViews } from "../src/views.ts";
 
 const read = (path: string) =>
@@ -113,6 +114,33 @@ Deno.test("the fixture's views hold its agents, tools, schedules and procedures"
     "actor",
   );
   assert.equal(ids(behaviour, "rule:").length, 3);
+});
+
+Deno.test("a Behaviour view lists its rules in a table, not in its drawing", () => {
+  const behaviour = view(diagramViews(snapshot, inference), "behaviour:field");
+  assert.ok(!drawing(behaviour).nodes.some((n) => n.shape === "requirement"));
+  const table = tableData(behaviour);
+  assert.ok(table?.kind === "elements" && table.facet === "kind");
+  assert.deepEqual(table.rows.map((r) => [r.name, ...r.values]), [
+    [
+      "field_no_payments",
+      "prohibition",
+      "Never change a payment method or approve a refund.",
+      "SOUL.md:2",
+    ],
+    [
+      "field_reply_within_hour",
+      "constraint",
+      "Reply to every field message within one hour.",
+      "AGENTS.md:2-3",
+    ],
+    [
+      "field_share_site_address",
+      "permission",
+      "May share a site address with registered staff.",
+      "TOOLS.md:1",
+    ],
+  ]);
 });
 
 Deno.test("behaviour views exist only with inference", () => {
