@@ -1,0 +1,2704 @@
+{
+  "accounts": [
+    {
+      "accountId": "default",
+      "channel": "discord",
+      "dmPolicy": "allowlist",
+      "enabled": true,
+      "groupPolicy": "allowlist",
+      "id": "discord:default"
+    },
+    {
+      "accountId": "sandbox",
+      "channel": "discord",
+      "dmPolicy": "disabled",
+      "enabled": true,
+      "groupPolicy": "allowlist",
+      "id": "discord:sandbox"
+    },
+    {
+      "accountId": "default",
+      "channel": "telegram",
+      "dmPolicy": "pairing",
+      "enabled": true,
+      "groupPolicy": "allowlist",
+      "id": "telegram:default"
+    },
+    {
+      "accountId": "field",
+      "channel": "telegram",
+      "dmPolicy": "pairing",
+      "enabled": true,
+      "groupPolicy": "allowlist",
+      "id": "telegram:field"
+    },
+    {
+      "accountId": "lead",
+      "channel": "telegram",
+      "dmPolicy": "pairing",
+      "enabled": true,
+      "groupPolicy": "allowlist",
+      "id": "telegram:lead"
+    },
+    {
+      "accountId": "coaching",
+      "channel": "whatsapp",
+      "dmPolicy": "allowlist",
+      "enabled": true,
+      "groupPolicy": "allowlist",
+      "id": "whatsapp:coaching"
+    },
+    {
+      "accountId": "default",
+      "channel": "whatsapp",
+      "dmPolicy": "allowlist",
+      "enabled": true,
+      "groupPolicy": "allowlist",
+      "id": "whatsapp:default"
+    },
+    {
+      "accountId": "devbox",
+      "channel": "whatsapp",
+      "dmPolicy": "allowlist",
+      "enabled": false,
+      "groupPolicy": "allowlist",
+      "id": "whatsapp:devbox"
+    },
+    {
+      "accountId": "field",
+      "channel": "whatsapp",
+      "dmPolicy": "allowlist",
+      "enabled": true,
+      "groupPolicy": "allowlist",
+      "id": "whatsapp:field"
+    },
+    {
+      "accountId": "secretary",
+      "channel": "whatsapp",
+      "dmPolicy": "allowlist",
+      "enabled": true,
+      "groupPolicy": "allowlist",
+      "id": "whatsapp:secretary"
+    }
+  ],
+  "agents": [
+    {
+      "delegation": [
+        "coach"
+      ],
+      "emoji": "💬",
+      "execution": {
+        "ask": "off",
+        "elevated": true,
+        "elevatedChannelsCount": 1,
+        "host": "auto",
+        "security": "full"
+      },
+      "grants": [
+        {
+          "id": "sandbox:browser",
+          "layer": "sandbox",
+          "tool": "browser"
+        },
+        {
+          "id": "sandbox:edit",
+          "layer": "sandbox",
+          "tool": "edit"
+        },
+        {
+          "id": "sandbox:exec",
+          "layer": "sandbox",
+          "tool": "exec"
+        },
+        {
+          "id": "sandbox:image",
+          "layer": "sandbox",
+          "tool": "image"
+        },
+        {
+          "id": "sandbox:message",
+          "layer": "sandbox",
+          "tool": "message"
+        },
+        {
+          "id": "sandbox:read",
+          "layer": "sandbox",
+          "tool": "read"
+        },
+        {
+          "id": "sandbox:session_status",
+          "layer": "sandbox",
+          "tool": "session_status"
+        },
+        {
+          "id": "sandbox:sessions_history",
+          "layer": "sandbox",
+          "tool": "sessions_history"
+        },
+        {
+          "id": "sandbox:sessions_list",
+          "layer": "sandbox",
+          "tool": "sessions_list"
+        },
+        {
+          "id": "sandbox:sessions_send",
+          "layer": "sandbox",
+          "tool": "sessions_send"
+        },
+        {
+          "id": "sandbox:sessions_spawn",
+          "layer": "sandbox",
+          "tool": "sessions_spawn"
+        },
+        {
+          "id": "sandbox:subagents",
+          "layer": "sandbox",
+          "tool": "subagents"
+        },
+        {
+          "id": "sandbox:write",
+          "layer": "sandbox",
+          "tool": "write"
+        }
+      ],
+      "heartbeat": null,
+      "id": "client",
+      "implicit": false,
+      "model": {
+        "fallbacks": [
+          "openai/gpt-5.5"
+        ],
+        "primary": "ollama/glm-5.1:cloud"
+      },
+      "name": "Client",
+      "policy": {
+        "agent": {
+          "allow": null,
+          "alsoAllow": [
+            "message",
+            "sessions_send",
+            "sessions_list",
+            "sessions_history"
+          ],
+          "deny": [
+            "gateway",
+            "process",
+            "whatsapp_login",
+            "cron"
+          ],
+          "profile": null
+        },
+        "agentProvider": {
+          "allow": null,
+          "alsoAllow": [],
+          "deny": [],
+          "profile": null
+        },
+        "global": {
+          "allow": null,
+          "alsoAllow": [],
+          "deny": [],
+          "profile": "full"
+        },
+        "provider": {
+          "allow": null,
+          "alsoAllow": [],
+          "deny": [],
+          "profile": null
+        },
+        "sandbox": {
+          "allow": [
+            "exec",
+            "process",
+            "read",
+            "write",
+            "edit",
+            "apply_patch",
+            "image",
+            "sessions_list",
+            "sessions_history",
+            "sessions_send",
+            "sessions_spawn",
+            "subagents",
+            "session_status",
+            "message",
+            "browser"
+          ],
+          "alsoAllow": [],
+          "deny": [
+            "canvas",
+            "nodes",
+            "gateway",
+            "telegram",
+            "irc",
+            "googlechat",
+            "slack",
+            "signal",
+            "imessage",
+            "whatsapp_login",
+            "cron"
+          ],
+          "profile": null
+        }
+      },
+      "sandbox": {
+        "bindCount": 1,
+        "bindModes": [
+          "rw"
+        ],
+        "cpus": 2,
+        "dangerouslyAllowExternalBindSources": true,
+        "environmentNames": [
+          "DATABASE_URL",
+          "OAUTH_BROKER_SECRET_KEY",
+          "PAGES_BASE_URL",
+          "READER_API_KEY",
+          "SEARCH_API_KEY"
+        ],
+        "image": "openclaw-sandbox:fixture",
+        "memory": "1536m",
+        "mode": "all",
+        "network": "fixture-net",
+        "readOnlyRoot": true,
+        "scope": "agent",
+        "workspaceAccess": "rw"
+      },
+      "workspace": {
+        "instructions": [
+          {
+            "bytes": 95,
+            "id": "AGENTS.md",
+            "path": "AGENTS.md",
+            "sha256": "a9eb41db762e921fbae329785db20130f2c17ad1d3709bf7bd77331d69bc6a2f"
+          },
+          {
+            "bytes": 98,
+            "id": "HEARTBEAT.md",
+            "path": "HEARTBEAT.md",
+            "sha256": "c887582b41120f6814d7c5c5d7bea26489b7b373166288613edb5de6d0dfb9a0"
+          },
+          {
+            "bytes": 97,
+            "id": "IDENTITY.md",
+            "path": "IDENTITY.md",
+            "sha256": "4e60b96124733f530f8669654c49836bb3834b7fd3acbd6b93d38a963c9dde75"
+          },
+          {
+            "bytes": 94,
+            "id": "SOUL.md",
+            "path": "SOUL.md",
+            "sha256": "b27692b63ae23debfbff3bce11caa4224063ca96428a3661b79ea2ca9d130466"
+          },
+          {
+            "bytes": 95,
+            "id": "TOOLS.md",
+            "path": "TOOLS.md",
+            "sha256": "6bad8dc7af9ae1856be0e34382f044692b9e9f44540abbf2eca2ff1ccc501213"
+          },
+          {
+            "bytes": 93,
+            "id": "USER.md",
+            "path": "USER.md",
+            "sha256": "322df650d7970068667edfcba7d9f406c0fc54fcfdbb6ed01d03db743743b670"
+          }
+        ],
+        "malformedSkills": [],
+        "path": "workspace-client",
+        "skills": [
+          {
+            "bytes": 88,
+            "id": "skill-ab",
+            "name": "skill-ab",
+            "path": "skills/skill-ab/SKILL.md",
+            "sha256": "7e609512e7994fb792b23cb6da1bae7946c23fab711aab0a12be96db59656849"
+          },
+          {
+            "bytes": 87,
+            "id": "skill-x",
+            "name": "skill-x",
+            "path": "skills/skill-x/SKILL.md",
+            "sha256": "45e563f9d5529c8b8444dbc985ec6b71960d9e22d5ce7b61b2bf325f6ba28317"
+          },
+          {
+            "bytes": 87,
+            "id": "skill-z",
+            "name": "skill-z",
+            "path": "skills/skill-z/SKILL.md",
+            "sha256": "1cded481d858c1e173bac2c78278afc2557348b88b78895cc50950420f70e3be"
+          }
+        ],
+        "versioned": false
+      }
+    },
+    {
+      "delegation": [
+        "client"
+      ],
+      "emoji": "🏋️",
+      "execution": {
+        "ask": "off",
+        "elevated": true,
+        "elevatedChannelsCount": 1,
+        "host": "auto",
+        "security": "full"
+      },
+      "grants": [
+        {
+          "id": "sandbox:browser",
+          "layer": "sandbox",
+          "tool": "browser"
+        },
+        {
+          "id": "sandbox:edit",
+          "layer": "sandbox",
+          "tool": "edit"
+        },
+        {
+          "id": "sandbox:exec",
+          "layer": "sandbox",
+          "tool": "exec"
+        },
+        {
+          "id": "sandbox:gateway",
+          "layer": "sandbox",
+          "tool": "gateway"
+        },
+        {
+          "id": "sandbox:image",
+          "layer": "sandbox",
+          "tool": "image"
+        },
+        {
+          "id": "sandbox:message",
+          "layer": "sandbox",
+          "tool": "message"
+        },
+        {
+          "id": "sandbox:read",
+          "layer": "sandbox",
+          "tool": "read"
+        },
+        {
+          "id": "sandbox:session_status",
+          "layer": "sandbox",
+          "tool": "session_status"
+        },
+        {
+          "id": "sandbox:sessions_history",
+          "layer": "sandbox",
+          "tool": "sessions_history"
+        },
+        {
+          "id": "sandbox:sessions_list",
+          "layer": "sandbox",
+          "tool": "sessions_list"
+        },
+        {
+          "id": "sandbox:sessions_send",
+          "layer": "sandbox",
+          "tool": "sessions_send"
+        },
+        {
+          "id": "sandbox:sessions_spawn",
+          "layer": "sandbox",
+          "tool": "sessions_spawn"
+        },
+        {
+          "id": "sandbox:subagents",
+          "layer": "sandbox",
+          "tool": "subagents"
+        },
+        {
+          "id": "sandbox:web_fetch",
+          "layer": "sandbox",
+          "tool": "web_fetch"
+        },
+        {
+          "id": "sandbox:web_search",
+          "layer": "sandbox",
+          "tool": "web_search"
+        },
+        {
+          "id": "sandbox:write",
+          "layer": "sandbox",
+          "tool": "write"
+        }
+      ],
+      "heartbeat": null,
+      "id": "coach",
+      "implicit": false,
+      "model": {
+        "fallbacks": [
+          "openai/gpt-5.5"
+        ],
+        "primary": "ollama/glm-5.1:cloud"
+      },
+      "name": "Coach",
+      "policy": {
+        "agent": {
+          "allow": null,
+          "alsoAllow": [
+            "message",
+            "sessions_send",
+            "sessions_list",
+            "sessions_history",
+            "gateway"
+          ],
+          "deny": [
+            "process",
+            "whatsapp_login",
+            "cron"
+          ],
+          "profile": null
+        },
+        "agentProvider": {
+          "allow": null,
+          "alsoAllow": [],
+          "deny": [],
+          "profile": null
+        },
+        "global": {
+          "allow": null,
+          "alsoAllow": [],
+          "deny": [],
+          "profile": "full"
+        },
+        "provider": {
+          "allow": null,
+          "alsoAllow": [],
+          "deny": [],
+          "profile": null
+        },
+        "sandbox": {
+          "allow": [
+            "exec",
+            "process",
+            "read",
+            "write",
+            "edit",
+            "apply_patch",
+            "image",
+            "web_search",
+            "web_fetch",
+            "sessions_list",
+            "sessions_history",
+            "sessions_send",
+            "sessions_spawn",
+            "subagents",
+            "session_status",
+            "message",
+            "browser",
+            "gateway"
+          ],
+          "alsoAllow": [],
+          "deny": [
+            "canvas",
+            "nodes",
+            "telegram",
+            "irc",
+            "googlechat",
+            "slack",
+            "signal",
+            "imessage",
+            "whatsapp_login",
+            "cron"
+          ],
+          "profile": null
+        }
+      },
+      "sandbox": {
+        "bindCount": 1,
+        "bindModes": [
+          "rw"
+        ],
+        "cpus": 2,
+        "dangerouslyAllowExternalBindSources": true,
+        "environmentNames": [
+          "DATABASE_URL",
+          "OAUTH_BROKER_SECRET_KEY",
+          "PAGES_BASE_URL",
+          "READER_API_KEY",
+          "SEARCH_API_KEY"
+        ],
+        "image": "openclaw-sandbox:fixture",
+        "memory": "1536m",
+        "mode": "all",
+        "network": "fixture-net",
+        "readOnlyRoot": true,
+        "scope": "agent",
+        "workspaceAccess": "rw"
+      },
+      "workspace": {
+        "instructions": [
+          {
+            "bytes": 95,
+            "id": "AGENTS.md",
+            "path": "AGENTS.md",
+            "sha256": "9a42f8451c6ea3d10ba04f685e2ade657683a0a6030dbca5eceaad02d42445a1"
+          },
+          {
+            "bytes": 98,
+            "id": "HEARTBEAT.md",
+            "path": "HEARTBEAT.md",
+            "sha256": "c887582b41120f6814d7c5c5d7bea26489b7b373166288613edb5de6d0dfb9a0"
+          },
+          {
+            "bytes": 97,
+            "id": "IDENTITY.md",
+            "path": "IDENTITY.md",
+            "sha256": "4e60b96124733f530f8669654c49836bb3834b7fd3acbd6b93d38a963c9dde75"
+          },
+          {
+            "bytes": 94,
+            "id": "SOUL.md",
+            "path": "SOUL.md",
+            "sha256": "e2e3de489d34c1af2b99d0a7886adc93f6f2d8dfd897be28ff5394c39c38d8d5"
+          },
+          {
+            "bytes": 95,
+            "id": "TOOLS.md",
+            "path": "TOOLS.md",
+            "sha256": "8ccd6fb51d8ec213dbd309733df1b1ac576c529301fc7aaac7fce68f9fce178b"
+          },
+          {
+            "bytes": 93,
+            "id": "USER.md",
+            "path": "USER.md",
+            "sha256": "39ab53f3b30cf946da08fc7b29802ca133c8ef1e52fc4a7473a3ebd29a4fcedd"
+          }
+        ],
+        "malformedSkills": [],
+        "path": "workspace-coach",
+        "skills": [
+          {
+            "bytes": 87,
+            "id": "skill-f",
+            "name": "skill-f",
+            "path": "skills/skill-f/SKILL.md",
+            "sha256": "97854d51b5123604b5a18ea662d1de99522dcf8a1dabff839e69b9d7af276b55"
+          },
+          {
+            "bytes": 87,
+            "id": "skill-y",
+            "name": "skill-y",
+            "path": "skills/skill-y/SKILL.md",
+            "sha256": "bebb44f2e2e9ab703cd57d6fe10f5eb31bb079d299ff39f3b9d24b88060a1bee"
+          }
+        ],
+        "versioned": false
+      }
+    },
+    {
+      "delegation": [
+        "lead"
+      ],
+      "emoji": "🖖",
+      "execution": {
+        "ask": "off",
+        "elevated": true,
+        "elevatedChannelsCount": 1,
+        "host": "auto",
+        "security": "full"
+      },
+      "grants": [
+        {
+          "id": "sandbox:browser",
+          "layer": "sandbox",
+          "tool": "browser"
+        },
+        {
+          "id": "sandbox:edit",
+          "layer": "sandbox",
+          "tool": "edit"
+        },
+        {
+          "id": "sandbox:exec",
+          "layer": "sandbox",
+          "tool": "exec"
+        },
+        {
+          "id": "sandbox:image",
+          "layer": "sandbox",
+          "tool": "image"
+        },
+        {
+          "id": "sandbox:message",
+          "layer": "sandbox",
+          "tool": "message"
+        },
+        {
+          "id": "sandbox:read",
+          "layer": "sandbox",
+          "tool": "read"
+        },
+        {
+          "id": "sandbox:session_status",
+          "layer": "sandbox",
+          "tool": "session_status"
+        },
+        {
+          "id": "sandbox:sessions_history",
+          "layer": "sandbox",
+          "tool": "sessions_history"
+        },
+        {
+          "id": "sandbox:sessions_list",
+          "layer": "sandbox",
+          "tool": "sessions_list"
+        },
+        {
+          "id": "sandbox:sessions_send",
+          "layer": "sandbox",
+          "tool": "sessions_send"
+        },
+        {
+          "id": "sandbox:sessions_spawn",
+          "layer": "sandbox",
+          "tool": "sessions_spawn"
+        },
+        {
+          "id": "sandbox:subagents",
+          "layer": "sandbox",
+          "tool": "subagents"
+        },
+        {
+          "id": "sandbox:web_fetch",
+          "layer": "sandbox",
+          "tool": "web_fetch"
+        },
+        {
+          "id": "sandbox:web_search",
+          "layer": "sandbox",
+          "tool": "web_search"
+        },
+        {
+          "id": "sandbox:write",
+          "layer": "sandbox",
+          "tool": "write"
+        }
+      ],
+      "heartbeat": null,
+      "id": "devbox",
+      "implicit": false,
+      "model": {
+        "fallbacks": [
+          "openai/gpt-5.5"
+        ],
+        "primary": "ollama/glm-5.1:cloud"
+      },
+      "name": "Devbox",
+      "policy": {
+        "agent": {
+          "allow": null,
+          "alsoAllow": [
+            "message",
+            "sessions_send",
+            "sessions_list",
+            "sessions_history"
+          ],
+          "deny": [
+            "gateway",
+            "process",
+            "whatsapp_login",
+            "cron"
+          ],
+          "profile": null
+        },
+        "agentProvider": {
+          "allow": null,
+          "alsoAllow": [],
+          "deny": [],
+          "profile": null
+        },
+        "global": {
+          "allow": null,
+          "alsoAllow": [],
+          "deny": [],
+          "profile": "full"
+        },
+        "provider": {
+          "allow": null,
+          "alsoAllow": [],
+          "deny": [],
+          "profile": null
+        },
+        "sandbox": {
+          "allow": [
+            "exec",
+            "process",
+            "read",
+            "write",
+            "edit",
+            "apply_patch",
+            "image",
+            "web_search",
+            "web_fetch",
+            "sessions_list",
+            "sessions_history",
+            "sessions_send",
+            "sessions_spawn",
+            "subagents",
+            "session_status",
+            "message",
+            "browser"
+          ],
+          "alsoAllow": [],
+          "deny": [
+            "canvas",
+            "nodes",
+            "gateway",
+            "telegram",
+            "irc",
+            "googlechat",
+            "slack",
+            "signal",
+            "imessage",
+            "whatsapp_login",
+            "cron"
+          ],
+          "profile": null
+        }
+      },
+      "sandbox": {
+        "bindCount": 0,
+        "bindModes": [],
+        "cpus": 2,
+        "dangerouslyAllowExternalBindSources": false,
+        "environmentNames": [
+          "GATEWAY_HOST",
+          "GATEWAY_PORT",
+          "HOOKS_TOKEN",
+          "OAUTH_BROKER_SECRET_KEY",
+          "READER_API_KEY",
+          "SEARCH_API_KEY"
+        ],
+        "image": "openclaw-sandbox:bookworm-slim",
+        "memory": "1536m",
+        "mode": "all",
+        "network": "bridge",
+        "readOnlyRoot": true,
+        "scope": "agent",
+        "workspaceAccess": "rw"
+      },
+      "workspace": {
+        "instructions": [
+          {
+            "bytes": 95,
+            "id": "AGENTS.md",
+            "path": "AGENTS.md",
+            "sha256": "bf4517641e85238a20026a60ea1059807c6a105028847f7d44c76a45f87f6e57"
+          },
+          {
+            "bytes": 98,
+            "id": "HEARTBEAT.md",
+            "path": "HEARTBEAT.md",
+            "sha256": "c887582b41120f6814d7c5c5d7bea26489b7b373166288613edb5de6d0dfb9a0"
+          },
+          {
+            "bytes": 97,
+            "id": "IDENTITY.md",
+            "path": "IDENTITY.md",
+            "sha256": "4e60b96124733f530f8669654c49836bb3834b7fd3acbd6b93d38a963c9dde75"
+          },
+          {
+            "bytes": 95,
+            "id": "SOUL.md",
+            "path": "SOUL.md",
+            "sha256": "0f1876693709eef8411a28be1c3a7d9b384579f70e2acb29aafdcd1dc963f2de"
+          },
+          {
+            "bytes": 95,
+            "id": "TOOLS.md",
+            "path": "TOOLS.md",
+            "sha256": "f0935683663313f251af346f87bd7a91c2740f93f548178f9e23fb0ca7298b6e"
+          },
+          {
+            "bytes": 93,
+            "id": "USER.md",
+            "path": "USER.md",
+            "sha256": "2073cb4d6d9f48eb64299cd67e96bc89e897b9643cd515279894e774fa19640c"
+          }
+        ],
+        "malformedSkills": [],
+        "path": "workspace-devbox",
+        "skills": [
+          {
+            "bytes": 58,
+            "id": "_archived/old-skill",
+            "name": "old-skill",
+            "path": "skills/_archived/old-skill/SKILL.md",
+            "sha256": "014d5e0dac73fcebf0fda0968a2a9f804e2a843d1f336b7c2584cb599d6743ff"
+          },
+          {
+            "bytes": 90,
+            "id": "escalation",
+            "name": "escalation",
+            "path": "skills/escalation/SKILL.md",
+            "sha256": "9016653f64a19a21a650b2e4f3a595367ffb58e08c62b7c16fcb4380e73a5237"
+          }
+        ],
+        "versioned": false
+      }
+    },
+    {
+      "delegation": [
+        "lead"
+      ],
+      "emoji": null,
+      "execution": {
+        "ask": "off",
+        "elevated": true,
+        "elevatedChannelsCount": 1,
+        "host": "auto",
+        "security": "full"
+      },
+      "grants": [
+        {
+          "id": "sandbox:browser",
+          "layer": "sandbox",
+          "tool": "browser"
+        },
+        {
+          "id": "sandbox:edit",
+          "layer": "sandbox",
+          "tool": "edit"
+        },
+        {
+          "id": "sandbox:exec",
+          "layer": "sandbox",
+          "tool": "exec"
+        },
+        {
+          "id": "sandbox:image",
+          "layer": "sandbox",
+          "tool": "image"
+        },
+        {
+          "id": "sandbox:message",
+          "layer": "sandbox",
+          "tool": "message"
+        },
+        {
+          "id": "sandbox:pdf",
+          "layer": "sandbox",
+          "tool": "pdf"
+        },
+        {
+          "id": "sandbox:read",
+          "layer": "sandbox",
+          "tool": "read"
+        },
+        {
+          "id": "sandbox:session_status",
+          "layer": "sandbox",
+          "tool": "session_status"
+        },
+        {
+          "id": "sandbox:sessions_history",
+          "layer": "sandbox",
+          "tool": "sessions_history"
+        },
+        {
+          "id": "sandbox:sessions_list",
+          "layer": "sandbox",
+          "tool": "sessions_list"
+        },
+        {
+          "id": "sandbox:sessions_send",
+          "layer": "sandbox",
+          "tool": "sessions_send"
+        },
+        {
+          "id": "sandbox:sessions_spawn",
+          "layer": "sandbox",
+          "tool": "sessions_spawn"
+        },
+        {
+          "id": "sandbox:subagents",
+          "layer": "sandbox",
+          "tool": "subagents"
+        },
+        {
+          "id": "sandbox:tts",
+          "layer": "sandbox",
+          "tool": "tts"
+        },
+        {
+          "id": "sandbox:write",
+          "layer": "sandbox",
+          "tool": "write"
+        }
+      ],
+      "heartbeat": null,
+      "id": "field",
+      "implicit": false,
+      "model": {
+        "fallbacks": [
+          "openai/gpt-5.5"
+        ],
+        "primary": "ollama/glm-5.1:cloud"
+      },
+      "name": "Field Assistant",
+      "policy": {
+        "agent": {
+          "allow": null,
+          "alsoAllow": [
+            "message",
+            "sessions_send",
+            "sessions_list",
+            "sessions_history",
+            "tts"
+          ],
+          "deny": [
+            "gateway",
+            "process"
+          ],
+          "profile": null
+        },
+        "agentProvider": {
+          "allow": null,
+          "alsoAllow": [],
+          "deny": [],
+          "profile": null
+        },
+        "global": {
+          "allow": null,
+          "alsoAllow": [],
+          "deny": [],
+          "profile": "full"
+        },
+        "provider": {
+          "allow": null,
+          "alsoAllow": [],
+          "deny": [],
+          "profile": null
+        },
+        "sandbox": {
+          "allow": [
+            "exec",
+            "process",
+            "read",
+            "write",
+            "edit",
+            "apply_patch",
+            "image",
+            "pdf",
+            "sessions_list",
+            "sessions_history",
+            "sessions_send",
+            "sessions_spawn",
+            "subagents",
+            "session_status",
+            "message",
+            "browser",
+            "tts"
+          ],
+          "alsoAllow": [],
+          "deny": [
+            "canvas",
+            "nodes",
+            "gateway",
+            "telegram",
+            "discord",
+            "irc",
+            "googlechat",
+            "slack",
+            "signal",
+            "imessage"
+          ],
+          "profile": null
+        }
+      },
+      "sandbox": {
+        "bindCount": 1,
+        "bindModes": [
+          "rw"
+        ],
+        "cpus": 2,
+        "dangerouslyAllowExternalBindSources": true,
+        "environmentNames": [
+          "GATEWAY_HOST",
+          "GATEWAY_PORT",
+          "HOOKS_TOKEN",
+          "NAS_ACCOUNT",
+          "NAS_BASE_PATH",
+          "NAS_HOST",
+          "NAS_PASSWORD",
+          "OAUTH_BROKER_SECRET_KEY",
+          "OPENAI_API_KEY",
+          "READER_API_KEY",
+          "SEARCH_API_KEY",
+          "SEO_API_PASSWORD",
+          "SEO_API_TOKEN",
+          "SEO_API_USER"
+        ],
+        "image": "openclaw-sandbox:bookworm-slim",
+        "memory": "1536m",
+        "mode": "all",
+        "network": "bridge",
+        "readOnlyRoot": true,
+        "scope": "agent",
+        "workspaceAccess": "rw"
+      },
+      "workspace": {
+        "instructions": [
+          {
+            "bytes": 96,
+            "id": "AGENTS.md",
+            "path": "AGENTS.md",
+            "sha256": "d91d06bf177f3ede9fecba6cc565218bb74f7a0e287eb37ee80d0a967c8fa877"
+          },
+          {
+            "bytes": 99,
+            "id": "HEARTBEAT.md",
+            "path": "HEARTBEAT.md",
+            "sha256": "2240b35c8859c4f1c9b1a180cb9fd69c0d7472dd912c4534baabd00ecab53d30"
+          },
+          {
+            "bytes": 97,
+            "id": "IDENTITY.md",
+            "path": "IDENTITY.md",
+            "sha256": "3b01b858fbc055bff440461191baf9b796dfb809afabeafae506acd491e00117"
+          },
+          {
+            "bytes": 96,
+            "id": "MEMORY.md",
+            "path": "MEMORY.md",
+            "sha256": "ddfeb3c332f684f758dda35ed067aac03c68b2934e6c44880934d825dd77f51f"
+          },
+          {
+            "bytes": 94,
+            "id": "SOUL.md",
+            "path": "SOUL.md",
+            "sha256": "af51faa07c4690f7ae03a659ac8ae5f10af6fc76697d156b1c4b3c8b587260a0"
+          },
+          {
+            "bytes": 96,
+            "id": "TOOLS.md",
+            "path": "TOOLS.md",
+            "sha256": "cd08008f5e1034a8a01334a7729364a47be1fc1fdc0a1ca64ad38af0f34db80a"
+          },
+          {
+            "bytes": 93,
+            "id": "USER.md",
+            "path": "USER.md",
+            "sha256": "87c9640cf1b1bd687325e211fe031e1bd1ac67b0c1daccc9ba967292cd079851"
+          }
+        ],
+        "malformedSkills": [],
+        "path": "workspace-field",
+        "skills": [
+          {
+            "bytes": 58,
+            "id": "_archived/old-skill",
+            "name": "old-skill",
+            "path": "skills/_archived/old-skill/SKILL.md",
+            "sha256": "014d5e0dac73fcebf0fda0968a2a9f804e2a843d1f336b7c2584cb599d6743ff"
+          },
+          {
+            "bytes": 90,
+            "id": "escalation",
+            "name": "escalation",
+            "path": "skills/escalation/SKILL.md",
+            "sha256": "9016653f64a19a21a650b2e4f3a595367ffb58e08c62b7c16fcb4380e73a5237"
+          },
+          {
+            "bytes": 87,
+            "id": "skill-1",
+            "name": "skill-1",
+            "path": "skills/skill-1/SKILL.md",
+            "sha256": "5a606705b32ee492a189839360f5f82c3513a49f93a6e932b70225c012295688"
+          },
+          {
+            "bytes": 88,
+            "id": "skill-aa",
+            "name": "skill-aa",
+            "path": "skills/skill-aa/SKILL.md",
+            "sha256": "9558fb7feb3129b48fc78e76ca037a97ec0b5a0ab8ae851ca4ee74b59aa6fa7b"
+          },
+          {
+            "bytes": 88,
+            "id": "skill-ad",
+            "name": "skill-ad",
+            "path": "skills/skill-ad/SKILL.md",
+            "sha256": "56cd36b7200af5e52b4ad5f576076f0969af856e65e24ab2262347b60600fa2a"
+          },
+          {
+            "bytes": 88,
+            "id": "skill-af",
+            "name": "skill-af",
+            "path": "skills/skill-af/SKILL.md",
+            "sha256": "ac6f6b333cb367edf8ff0fd0539b42937d0017b46853df851bcdbc8bbde90e85"
+          },
+          {
+            "bytes": 87,
+            "id": "skill-w",
+            "name": "skill-w",
+            "path": "skills/skill-w/SKILL.md",
+            "sha256": "13039487b0c3a43c9fddf066738b54522c3cca19d3d4931e7ef8dcd467b4637f"
+          }
+        ],
+        "versioned": false
+      }
+    },
+    {
+      "delegation": [
+        "client",
+        "coach",
+        "devbox",
+        "field",
+        "secretary"
+      ],
+      "emoji": "🔍",
+      "execution": {
+        "ask": "off",
+        "elevated": true,
+        "elevatedChannelsCount": 1,
+        "host": "auto",
+        "security": "full"
+      },
+      "grants": [
+        {
+          "id": "host:agents_list",
+          "layer": "host",
+          "tool": "agents_list"
+        },
+        {
+          "id": "host:browser",
+          "layer": "host",
+          "tool": "browser"
+        },
+        {
+          "id": "host:canvas",
+          "layer": "host",
+          "tool": "canvas"
+        },
+        {
+          "id": "host:code_execution",
+          "layer": "host",
+          "tool": "code_execution"
+        },
+        {
+          "id": "host:cron",
+          "layer": "host",
+          "tool": "cron"
+        },
+        {
+          "id": "host:edit",
+          "layer": "host",
+          "tool": "edit"
+        },
+        {
+          "id": "host:exec",
+          "layer": "host",
+          "tool": "exec"
+        },
+        {
+          "id": "host:gateway",
+          "layer": "host",
+          "tool": "gateway"
+        },
+        {
+          "id": "host:heartbeat_respond",
+          "layer": "host",
+          "tool": "heartbeat_respond"
+        },
+        {
+          "id": "host:image",
+          "layer": "host",
+          "tool": "image"
+        },
+        {
+          "id": "host:image_generate",
+          "layer": "host",
+          "tool": "image_generate"
+        },
+        {
+          "id": "host:memory_get",
+          "layer": "host",
+          "tool": "memory_get"
+        },
+        {
+          "id": "host:memory_search",
+          "layer": "host",
+          "tool": "memory_search"
+        },
+        {
+          "id": "host:message",
+          "layer": "host",
+          "tool": "message"
+        },
+        {
+          "id": "host:music_generate",
+          "layer": "host",
+          "tool": "music_generate"
+        },
+        {
+          "id": "host:nodes",
+          "layer": "host",
+          "tool": "nodes"
+        },
+        {
+          "id": "host:pdf",
+          "layer": "host",
+          "tool": "pdf"
+        },
+        {
+          "id": "host:process",
+          "layer": "host",
+          "tool": "process"
+        },
+        {
+          "id": "host:read",
+          "layer": "host",
+          "tool": "read"
+        },
+        {
+          "id": "host:session_status",
+          "layer": "host",
+          "tool": "session_status"
+        },
+        {
+          "id": "host:sessions_history",
+          "layer": "host",
+          "tool": "sessions_history"
+        },
+        {
+          "id": "host:sessions_list",
+          "layer": "host",
+          "tool": "sessions_list"
+        },
+        {
+          "id": "host:sessions_send",
+          "layer": "host",
+          "tool": "sessions_send"
+        },
+        {
+          "id": "host:sessions_spawn",
+          "layer": "host",
+          "tool": "sessions_spawn"
+        },
+        {
+          "id": "host:sessions_yield",
+          "layer": "host",
+          "tool": "sessions_yield"
+        },
+        {
+          "id": "host:skill_workshop",
+          "layer": "host",
+          "tool": "skill_workshop"
+        },
+        {
+          "id": "host:subagents",
+          "layer": "host",
+          "tool": "subagents"
+        },
+        {
+          "id": "host:tts",
+          "layer": "host",
+          "tool": "tts"
+        },
+        {
+          "id": "host:update_plan",
+          "layer": "host",
+          "tool": "update_plan"
+        },
+        {
+          "id": "host:video_generate",
+          "layer": "host",
+          "tool": "video_generate"
+        },
+        {
+          "id": "host:web_fetch",
+          "layer": "host",
+          "tool": "web_fetch"
+        },
+        {
+          "id": "host:web_search",
+          "layer": "host",
+          "tool": "web_search"
+        },
+        {
+          "id": "host:write",
+          "layer": "host",
+          "tool": "write"
+        },
+        {
+          "id": "host:x_search",
+          "layer": "host",
+          "tool": "x_search"
+        }
+      ],
+      "heartbeat": {
+        "everyMs": 1800000,
+        "prompt": null,
+        "target": "last"
+      },
+      "id": "lead",
+      "implicit": false,
+      "model": {
+        "fallbacks": [
+          "openai/gpt-5.5"
+        ],
+        "primary": "ollama/glm-5.1:cloud"
+      },
+      "name": "Lead",
+      "policy": {
+        "agent": {
+          "allow": null,
+          "alsoAllow": [],
+          "deny": [],
+          "profile": null
+        },
+        "agentProvider": {
+          "allow": null,
+          "alsoAllow": [],
+          "deny": [],
+          "profile": null
+        },
+        "global": {
+          "allow": null,
+          "alsoAllow": [],
+          "deny": [],
+          "profile": "full"
+        },
+        "provider": {
+          "allow": null,
+          "alsoAllow": [],
+          "deny": [],
+          "profile": null
+        },
+        "sandbox": {
+          "allow": null,
+          "alsoAllow": [],
+          "deny": [],
+          "profile": null
+        }
+      },
+      "sandbox": {
+        "bindCount": 0,
+        "bindModes": [],
+        "cpus": null,
+        "dangerouslyAllowExternalBindSources": false,
+        "environmentNames": [
+          "OAUTH_BROKER_SECRET_KEY",
+          "READER_API_KEY",
+          "SEARCH_API_KEY"
+        ],
+        "image": "openclaw-sandbox:bookworm-slim",
+        "memory": null,
+        "mode": "off",
+        "network": "none",
+        "readOnlyRoot": true,
+        "scope": null,
+        "workspaceAccess": "none"
+      },
+      "workspace": {
+        "instructions": [
+          {
+            "bytes": 96,
+            "id": "AGENTS.md",
+            "path": "AGENTS.md",
+            "sha256": "d91d06bf177f3ede9fecba6cc565218bb74f7a0e287eb37ee80d0a967c8fa877"
+          },
+          {
+            "bytes": 98,
+            "id": "HEARTBEAT.md",
+            "path": "HEARTBEAT.md",
+            "sha256": "4c880c91872557b161e81253cc3e0ec057003d915cbbdf28718df8eaaea896b0"
+          },
+          {
+            "bytes": 102,
+            "id": "HOURLY_REPORT.md",
+            "path": "HOURLY_REPORT.md",
+            "sha256": "9f229d4620559f9420d06817243e43f17b0d7197cda430f3219fe053ea6dc4dd"
+          },
+          {
+            "bytes": 97,
+            "id": "IDENTITY.md",
+            "path": "IDENTITY.md",
+            "sha256": "9df1377d19bdb846c4427ed40c82832b2a56f47179edb9b2f912fbc786b51acd"
+          },
+          {
+            "bytes": 97,
+            "id": "MEMORY.md",
+            "path": "MEMORY.md",
+            "sha256": "c531ab42932f6eb6d328dfe37087a5a61511f55b5167eac15923eec50402310b"
+          },
+          {
+            "bytes": 97,
+            "id": "QUALITY.md",
+            "path": "QUALITY.md",
+            "sha256": "4f7ff65a0f3688247f4361d350a221d89d925097461fd67b4debbaa2074ad599"
+          },
+          {
+            "bytes": 95,
+            "id": "SOUL.md",
+            "path": "SOUL.md",
+            "sha256": "510c25d377ffd2852f0e5822afb03722bf1d67de968e8dcbfc3c4dc2ccdc7248"
+          },
+          {
+            "bytes": 96,
+            "id": "TOOLS.md",
+            "path": "TOOLS.md",
+            "sha256": "1e8761e52b8308de9bdc41083a6092c216d541d3633c9cee9ccf9d98a9c2eaf0"
+          },
+          {
+            "bytes": 94,
+            "id": "USER.md",
+            "path": "USER.md",
+            "sha256": "d3490b50efe29fac8516d4c9de332c9fee11b0f237657111e093d4ef36cd20b7"
+          }
+        ],
+        "malformedSkills": [],
+        "path": "workspace",
+        "skills": [
+          {
+            "bytes": 58,
+            "id": "_archived/old-skill",
+            "name": "old-skill",
+            "path": "skills/_archived/old-skill/SKILL.md",
+            "sha256": "014d5e0dac73fcebf0fda0968a2a9f804e2a843d1f336b7c2584cb599d6743ff"
+          },
+          {
+            "bytes": 90,
+            "id": "escalation",
+            "name": "escalation",
+            "path": "skills/escalation/SKILL.md",
+            "sha256": "9016653f64a19a21a650b2e4f3a595367ffb58e08c62b7c16fcb4380e73a5237"
+          },
+          {
+            "bytes": 87,
+            "id": "skill-a",
+            "name": "skill-a",
+            "path": "skills/skill-a/SKILL.md",
+            "sha256": "9ca693e57ada940ff0f2330331a99c89795813abe606f5c34ac0534c5d5092b4"
+          },
+          {
+            "bytes": 88,
+            "id": "skill-aa",
+            "name": "skill-aa",
+            "path": "skills/skill-aa/SKILL.md",
+            "sha256": "9558fb7feb3129b48fc78e76ca037a97ec0b5a0ab8ae851ca4ee74b59aa6fa7b"
+          },
+          {
+            "bytes": 88,
+            "id": "skill-ac",
+            "name": "skill-ac",
+            "path": "skills/skill-ac/SKILL.md",
+            "sha256": "99184c50cc246dccdab6bbe7764195b788bec87858366000c903a0474fc1d366"
+          },
+          {
+            "bytes": 88,
+            "id": "skill-ad",
+            "name": "skill-ad",
+            "path": "skills/skill-ad/SKILL.md",
+            "sha256": "56cd36b7200af5e52b4ad5f576076f0969af856e65e24ab2262347b60600fa2a"
+          },
+          {
+            "bytes": 88,
+            "id": "skill-ae",
+            "name": "skill-ae",
+            "path": "skills/skill-ae/SKILL.md",
+            "sha256": "444c9a1de2cd27c0ce912e2ac5963cc62f113712bd04dec49e5ba977bda67e85"
+          },
+          {
+            "bytes": 88,
+            "id": "skill-af",
+            "name": "skill-af",
+            "path": "skills/skill-af/SKILL.md",
+            "sha256": "ac6f6b333cb367edf8ff0fd0539b42937d0017b46853df851bcdbc8bbde90e85"
+          },
+          {
+            "bytes": 88,
+            "id": "skill-ag",
+            "name": "skill-ag",
+            "path": "skills/skill-ag/SKILL.md",
+            "sha256": "7e9c5bce57935d2f04817937aacc358547bcfbb9f2b3c20d22f1c6aae16feed6"
+          },
+          {
+            "bytes": 88,
+            "id": "skill-ah",
+            "name": "skill-ah",
+            "path": "skills/skill-ah/SKILL.md",
+            "sha256": "136bfddd214a7ba3aa371c42b9157bc156e36ca080bedeacdf5ccd591cc5f7c1"
+          },
+          {
+            "bytes": 88,
+            "id": "skill-ai",
+            "name": "skill-ai",
+            "path": "skills/skill-ai/SKILL.md",
+            "sha256": "889f1a3ed0d84e4d70a8f68620b40d2307a5673d8c8abc7ca206fe51105d82a1"
+          },
+          {
+            "bytes": 87,
+            "id": "skill-b",
+            "name": "skill-b",
+            "path": "skills/skill-b/SKILL.md",
+            "sha256": "4ba04c614857ae97cb8cbfd8df099854159b3be0781b8a2a332db2bf890ee0ca"
+          },
+          {
+            "bytes": 87,
+            "id": "skill-c",
+            "name": "skill-c",
+            "path": "skills/skill-c/SKILL.md",
+            "sha256": "266d62b94a1573b46c035139e68863395b49585bc5401a26ccd22e616a55c0d6"
+          },
+          {
+            "bytes": 87,
+            "id": "skill-d",
+            "name": "skill-d",
+            "path": "skills/skill-d/SKILL.md",
+            "sha256": "b07a1de09c706da4bef569d18998ec720a3fb10f7bdea1e5780eaa67087b5fec"
+          },
+          {
+            "bytes": 87,
+            "id": "skill-e",
+            "name": "skill-e",
+            "path": "skills/skill-e/SKILL.md",
+            "sha256": "4b1c2ed9c2a55afb87e2908a782dff18613b132740b61e15b0146ff51319efe3"
+          },
+          {
+            "bytes": 87,
+            "id": "skill-g",
+            "name": "skill-g",
+            "path": "skills/skill-g/SKILL.md",
+            "sha256": "69da147fe174898130411b72d1548fc4995423fbae5d8c0a09196a88cc51cccf"
+          },
+          {
+            "bytes": 87,
+            "id": "skill-h",
+            "name": "skill-h",
+            "path": "skills/skill-h/SKILL.md",
+            "sha256": "e579a18b2ff2c9abbf3f7eb985a9ff3d59874ec40c17005e863ce2c9b342d8ac"
+          },
+          {
+            "bytes": 87,
+            "id": "skill-i",
+            "name": "skill-i",
+            "path": "skills/skill-i/SKILL.md",
+            "sha256": "d2757c119ce2c3ad26b931afd4446010077fe0c7de24dafbf1a5656fd7f6a95c"
+          },
+          {
+            "bytes": 87,
+            "id": "skill-j",
+            "name": "skill-j",
+            "path": "skills/skill-j/SKILL.md",
+            "sha256": "dae38a8f9ed3e9b1e37b14f494fef4a277de66f4da503d4887cbf7bd1a50377d"
+          },
+          {
+            "bytes": 87,
+            "id": "skill-k",
+            "name": "skill-k",
+            "path": "skills/skill-k/SKILL.md",
+            "sha256": "b0dc29f43cc461359d37924ed4f9c95ebd7dec3cecfe4de409b4f1c6ce025b5c"
+          },
+          {
+            "bytes": 87,
+            "id": "skill-l",
+            "name": "skill-l",
+            "path": "skills/skill-l/SKILL.md",
+            "sha256": "104d8e0c94e383e3de6d2aa3358ea71032563ff729ffb16e3fb63d1615e57832"
+          },
+          {
+            "bytes": 87,
+            "id": "skill-m",
+            "name": "skill-m",
+            "path": "skills/skill-m/SKILL.md",
+            "sha256": "b1a0627a57cab6fbb823b4a9053b4d3204c91e36d9d367853cadc6c32e74f153"
+          },
+          {
+            "bytes": 87,
+            "id": "skill-n",
+            "name": "skill-n",
+            "path": "skills/skill-n/SKILL.md",
+            "sha256": "d44935251e7f132ee5753b8cb6ab7e52e3967b84e5c480e330509c84ba2ee470"
+          },
+          {
+            "bytes": 87,
+            "id": "skill-o",
+            "name": "skill-o",
+            "path": "skills/skill-o/SKILL.md",
+            "sha256": "2efedf9402b6a469005ead7eb54a7e8cae9225d5bd8156b13b922d8cf0390697"
+          },
+          {
+            "bytes": 87,
+            "id": "skill-p",
+            "name": "skill-p",
+            "path": "skills/skill-p/SKILL.md",
+            "sha256": "0fa975fc95416d9e9f8597fe600902af63fe61f2cbacbdbfd91110cf87349ffb"
+          },
+          {
+            "bytes": 87,
+            "id": "skill-q",
+            "name": "skill-q",
+            "path": "skills/skill-q/SKILL.md",
+            "sha256": "bb6961f39ac7bc96f6125193469a6f492e6fde2ae75c9c501cd23da35f78ea5a"
+          },
+          {
+            "bytes": 87,
+            "id": "skill-r",
+            "name": "skill-r",
+            "path": "skills/skill-r/SKILL.md",
+            "sha256": "7392a241c07a1903027a0b4eb0ee777dd33b1929874547e15af65abc1930276f"
+          },
+          {
+            "bytes": 87,
+            "id": "skill-s",
+            "name": "skill-s",
+            "path": "skills/skill-s/SKILL.md",
+            "sha256": "13132b65ca431a04a02e833b6dcadef60201b518dd2f2bf519c5b79fad2388d2"
+          },
+          {
+            "bytes": 87,
+            "id": "skill-t",
+            "name": "skill-t",
+            "path": "skills/skill-t/SKILL.md",
+            "sha256": "4dc4d3872a53d8881c487e88324e3c250e6b3b5fea4d9687a69cb4d048568efe"
+          },
+          {
+            "bytes": 87,
+            "id": "skill-u",
+            "name": "skill-u",
+            "path": "skills/skill-u/SKILL.md",
+            "sha256": "7ed3e153fc5cd1aac6dabf4b044922641c673dd7a393f20745002f94d66e8ec7"
+          },
+          {
+            "bytes": 87,
+            "id": "skill-v",
+            "name": "skill-v",
+            "path": "skills/skill-v/SKILL.md",
+            "sha256": "26641101dedf0c403b585c08105e051bf1e2eaa3ead627d03d18b9ad01abd4e7"
+          },
+          {
+            "bytes": 87,
+            "id": "skill-w",
+            "name": "skill-w",
+            "path": "skills/skill-w/SKILL.md",
+            "sha256": "13039487b0c3a43c9fddf066738b54522c3cca19d3d4931e7ef8dcd467b4637f"
+          }
+        ],
+        "versioned": true
+      }
+    },
+    {
+      "delegation": [
+        "lead"
+      ],
+      "emoji": "🌸",
+      "execution": {
+        "ask": "off",
+        "elevated": true,
+        "elevatedChannelsCount": 1,
+        "host": "auto",
+        "security": "full"
+      },
+      "grants": [
+        {
+          "id": "sandbox:browser",
+          "layer": "sandbox",
+          "tool": "browser"
+        },
+        {
+          "id": "sandbox:edit",
+          "layer": "sandbox",
+          "tool": "edit"
+        },
+        {
+          "id": "sandbox:exec",
+          "layer": "sandbox",
+          "tool": "exec"
+        },
+        {
+          "id": "sandbox:image",
+          "layer": "sandbox",
+          "tool": "image"
+        },
+        {
+          "id": "sandbox:message",
+          "layer": "sandbox",
+          "tool": "message"
+        },
+        {
+          "id": "sandbox:read",
+          "layer": "sandbox",
+          "tool": "read"
+        },
+        {
+          "id": "sandbox:session_status",
+          "layer": "sandbox",
+          "tool": "session_status"
+        },
+        {
+          "id": "sandbox:sessions_history",
+          "layer": "sandbox",
+          "tool": "sessions_history"
+        },
+        {
+          "id": "sandbox:sessions_list",
+          "layer": "sandbox",
+          "tool": "sessions_list"
+        },
+        {
+          "id": "sandbox:sessions_send",
+          "layer": "sandbox",
+          "tool": "sessions_send"
+        },
+        {
+          "id": "sandbox:sessions_spawn",
+          "layer": "sandbox",
+          "tool": "sessions_spawn"
+        },
+        {
+          "id": "sandbox:subagents",
+          "layer": "sandbox",
+          "tool": "subagents"
+        },
+        {
+          "id": "sandbox:write",
+          "layer": "sandbox",
+          "tool": "write"
+        }
+      ],
+      "heartbeat": null,
+      "id": "secretary",
+      "implicit": false,
+      "model": {
+        "fallbacks": [
+          "openai/gpt-5.5"
+        ],
+        "primary": "ollama/glm-5.1:cloud"
+      },
+      "name": "Secretary",
+      "policy": {
+        "agent": {
+          "allow": null,
+          "alsoAllow": [
+            "message",
+            "sessions_send",
+            "sessions_list",
+            "sessions_history"
+          ],
+          "deny": [
+            "gateway",
+            "process"
+          ],
+          "profile": null
+        },
+        "agentProvider": {
+          "allow": null,
+          "alsoAllow": [],
+          "deny": [],
+          "profile": null
+        },
+        "global": {
+          "allow": null,
+          "alsoAllow": [],
+          "deny": [],
+          "profile": "full"
+        },
+        "provider": {
+          "allow": null,
+          "alsoAllow": [],
+          "deny": [],
+          "profile": null
+        },
+        "sandbox": {
+          "allow": [
+            "exec",
+            "process",
+            "read",
+            "write",
+            "edit",
+            "apply_patch",
+            "image",
+            "sessions_list",
+            "sessions_history",
+            "sessions_send",
+            "sessions_spawn",
+            "subagents",
+            "session_status",
+            "message",
+            "browser"
+          ],
+          "alsoAllow": [],
+          "deny": [
+            "canvas",
+            "nodes",
+            "gateway",
+            "telegram",
+            "discord",
+            "irc",
+            "googlechat",
+            "slack",
+            "signal",
+            "imessage"
+          ],
+          "profile": null
+        }
+      },
+      "sandbox": {
+        "bindCount": 1,
+        "bindModes": [
+          "rw"
+        ],
+        "cpus": 2,
+        "dangerouslyAllowExternalBindSources": true,
+        "environmentNames": [
+          "GATEWAY_HOST",
+          "GATEWAY_PORT",
+          "HOOKS_TOKEN",
+          "OAUTH_BROKER_SECRET_KEY",
+          "OPENAI_API_KEY",
+          "READER_API_KEY",
+          "SEARCH_API_KEY"
+        ],
+        "image": "openclaw-sandbox:bookworm-slim",
+        "memory": "1536m",
+        "mode": "all",
+        "network": "bridge",
+        "readOnlyRoot": true,
+        "scope": "agent",
+        "workspaceAccess": "rw"
+      },
+      "workspace": {
+        "instructions": [
+          {
+            "bytes": 95,
+            "id": "AGENTS.md",
+            "path": "AGENTS.md",
+            "sha256": "ff14a1059aa60f5a5599eed3b3648955448a682868345bd8bd28b83613406139"
+          },
+          {
+            "bytes": 98,
+            "id": "BOOTSTRAP.md",
+            "path": "BOOTSTRAP.md",
+            "sha256": "e180683f4d5a0f79d90af1f959dd6b5903b3f84ad8b8df5a31c43b65544ad73d"
+          },
+          {
+            "bytes": 98,
+            "id": "HEARTBEAT.md",
+            "path": "HEARTBEAT.md",
+            "sha256": "c887582b41120f6814d7c5c5d7bea26489b7b373166288613edb5de6d0dfb9a0"
+          },
+          {
+            "bytes": 97,
+            "id": "IDENTITY.md",
+            "path": "IDENTITY.md",
+            "sha256": "971215e97ec880ddabca6468baccbfee8a3378d74b5ca000ab0d1a0f697e4475"
+          },
+          {
+            "bytes": 96,
+            "id": "MEMORY.md",
+            "path": "MEMORY.md",
+            "sha256": "585844ea5a330d9f8af28757b385fb20976b9ab28411fcd04498fe1fc82cc219"
+          },
+          {
+            "bytes": 94,
+            "id": "SOUL.md",
+            "path": "SOUL.md",
+            "sha256": "d2be594f4acd9aa704f47eec0066d8a84d02bee2e236b856869e280f562549d8"
+          },
+          {
+            "bytes": 95,
+            "id": "TOOLS.md",
+            "path": "TOOLS.md",
+            "sha256": "77f4cfe08e7ff807c0eaf215947769853cf451ea5b3bcf0882b21ce3863b6b9b"
+          },
+          {
+            "bytes": 93,
+            "id": "USER.md",
+            "path": "USER.md",
+            "sha256": "fcece882ae38e92204752feefe5c6e8b5d57101ad86712b59a03590705e07e81"
+          }
+        ],
+        "malformedSkills": [
+          "skills/SKILL.md"
+        ],
+        "path": "workspace-secretary",
+        "skills": [
+          {
+            "bytes": 90,
+            "id": "escalation",
+            "name": "escalation",
+            "path": "skills/escalation/SKILL.md",
+            "sha256": "9016653f64a19a21a650b2e4f3a595367ffb58e08c62b7c16fcb4380e73a5237"
+          },
+          {
+            "bytes": 88,
+            "id": "skill-aa",
+            "name": "skill-aa",
+            "path": "skills/skill-aa/SKILL.md",
+            "sha256": "9558fb7feb3129b48fc78e76ca037a97ec0b5a0ab8ae851ca4ee74b59aa6fa7b"
+          },
+          {
+            "bytes": 88,
+            "id": "skill-af",
+            "name": "skill-af",
+            "path": "skills/skill-af/SKILL.md",
+            "sha256": "ac6f6b333cb367edf8ff0fd0539b42937d0017b46853df851bcdbc8bbde90e85"
+          },
+          {
+            "bytes": 87,
+            "id": "skill-o",
+            "name": "skill-o",
+            "path": "skills/skill-o/SKILL.md",
+            "sha256": "2efedf9402b6a469005ead7eb54a7e8cae9225d5bd8156b13b922d8cf0390697"
+          },
+          {
+            "bytes": 87,
+            "id": "skill-w",
+            "name": "skill-w",
+            "path": "skills/skill-w/SKILL.md",
+            "sha256": "13039487b0c3a43c9fddf066738b54522c3cca19d3d4931e7ef8dcd467b4637f"
+          }
+        ],
+        "versioned": false
+      }
+    }
+  ],
+  "ambiguities": [
+    {
+      "code": "CRON_TIMEZONE_UNRESOLVED",
+      "context": "Cron uses the gateway host timezone, which is not collected.",
+      "recovery": "Set an explicit timezone; docs/automation/cron-jobs.md.",
+      "severity": "info",
+      "subject": "job-10"
+    },
+    {
+      "code": "ELEVATED_CONTEXT_REQUIRED",
+      "context": "Elevated exec is configured but depends on sender allowlists and session directives; no unconditional host grant is inferred.",
+      "recovery": "Verify sender and session gates; docs/tools/elevated.md.",
+      "severity": "info",
+      "subject": "client"
+    },
+    {
+      "code": "ELEVATED_CONTEXT_REQUIRED",
+      "context": "Elevated exec is configured but depends on sender allowlists and session directives; no unconditional host grant is inferred.",
+      "recovery": "Verify sender and session gates; docs/tools/elevated.md.",
+      "severity": "info",
+      "subject": "coach"
+    },
+    {
+      "code": "ELEVATED_CONTEXT_REQUIRED",
+      "context": "Elevated exec is configured but depends on sender allowlists and session directives; no unconditional host grant is inferred.",
+      "recovery": "Verify sender and session gates; docs/tools/elevated.md.",
+      "severity": "info",
+      "subject": "devbox"
+    },
+    {
+      "code": "ELEVATED_CONTEXT_REQUIRED",
+      "context": "Elevated exec is configured but depends on sender allowlists and session directives; no unconditional host grant is inferred.",
+      "recovery": "Verify sender and session gates; docs/tools/elevated.md.",
+      "severity": "info",
+      "subject": "field"
+    },
+    {
+      "code": "ELEVATED_CONTEXT_REQUIRED",
+      "context": "Elevated exec is configured but depends on sender allowlists and session directives; no unconditional host grant is inferred.",
+      "recovery": "Verify sender and session gates; docs/tools/elevated.md.",
+      "severity": "info",
+      "subject": "secretary"
+    },
+    {
+      "code": "FALLBACK_TOOL_POLICY_UNRESOLVED",
+      "context": "Grants describe the primary model. Fallback provider policies and model-native tools may differ.",
+      "recovery": "Resolve grants again for the actual fallback model; docs/tools/multi-agent-sandbox-tools.md and docs/tools/exec.md.",
+      "severity": "info",
+      "subject": "client"
+    },
+    {
+      "code": "FALLBACK_TOOL_POLICY_UNRESOLVED",
+      "context": "Grants describe the primary model. Fallback provider policies and model-native tools may differ.",
+      "recovery": "Resolve grants again for the actual fallback model; docs/tools/multi-agent-sandbox-tools.md and docs/tools/exec.md.",
+      "severity": "info",
+      "subject": "coach"
+    },
+    {
+      "code": "FALLBACK_TOOL_POLICY_UNRESOLVED",
+      "context": "Grants describe the primary model. Fallback provider policies and model-native tools may differ.",
+      "recovery": "Resolve grants again for the actual fallback model; docs/tools/multi-agent-sandbox-tools.md and docs/tools/exec.md.",
+      "severity": "info",
+      "subject": "devbox"
+    },
+    {
+      "code": "FALLBACK_TOOL_POLICY_UNRESOLVED",
+      "context": "Grants describe the primary model. Fallback provider policies and model-native tools may differ.",
+      "recovery": "Resolve grants again for the actual fallback model; docs/tools/multi-agent-sandbox-tools.md and docs/tools/exec.md.",
+      "severity": "info",
+      "subject": "field"
+    },
+    {
+      "code": "FALLBACK_TOOL_POLICY_UNRESOLVED",
+      "context": "Grants describe the primary model. Fallback provider policies and model-native tools may differ.",
+      "recovery": "Resolve grants again for the actual fallback model; docs/tools/multi-agent-sandbox-tools.md and docs/tools/exec.md.",
+      "severity": "info",
+      "subject": "lead"
+    },
+    {
+      "code": "FALLBACK_TOOL_POLICY_UNRESOLVED",
+      "context": "Grants describe the primary model. Fallback provider policies and model-native tools may differ.",
+      "recovery": "Resolve grants again for the actual fallback model; docs/tools/multi-agent-sandbox-tools.md and docs/tools/exec.md.",
+      "severity": "info",
+      "subject": "secretary"
+    },
+    {
+      "code": "STATIC_TOOL_AVAILABILITY",
+      "context": "Grants resolve documented built-in policy. Credentials, plugins, model-native tools and session approvals are not runtime-verified.",
+      "recovery": "Check runtime tool registration and host approvals before treating policy reachability as execution evidence; docs/gateway/config-tools.md and docs/tools/exec.md.",
+      "severity": "info",
+      "subject": "instance"
+    },
+    {
+      "code": "TOOL_CATALOG_INCOMPLETE",
+      "context": "Policy mentions tools outside the documented built-in catalog; they receive no grants.",
+      "recovery": "Inspect plugin registrations separately; docs/gateway/config-tools.md.",
+      "severity": "info",
+      "subject": "client"
+    },
+    {
+      "code": "TOOL_CATALOG_INCOMPLETE",
+      "context": "Policy mentions tools outside the documented built-in catalog; they receive no grants.",
+      "recovery": "Inspect plugin registrations separately; docs/gateway/config-tools.md.",
+      "severity": "info",
+      "subject": "coach"
+    },
+    {
+      "code": "TOOL_CATALOG_INCOMPLETE",
+      "context": "Policy mentions tools outside the documented built-in catalog; they receive no grants.",
+      "recovery": "Inspect plugin registrations separately; docs/gateway/config-tools.md.",
+      "severity": "info",
+      "subject": "devbox"
+    },
+    {
+      "code": "TOOL_CATALOG_INCOMPLETE",
+      "context": "Policy mentions tools outside the documented built-in catalog; they receive no grants.",
+      "recovery": "Inspect plugin registrations separately; docs/gateway/config-tools.md.",
+      "severity": "info",
+      "subject": "field"
+    },
+    {
+      "code": "TOOL_CATALOG_INCOMPLETE",
+      "context": "Policy mentions tools outside the documented built-in catalog; they receive no grants.",
+      "recovery": "Inspect plugin registrations separately; docs/gateway/config-tools.md.",
+      "severity": "info",
+      "subject": "secretary"
+    },
+    {
+      "code": "UNRESOLVED_AGENT_REFERENCE",
+      "context": "Cron target is absent from agents.list; it is not an implicit configured agent.",
+      "recovery": "Reconcile the cron target with configured agents; docs/concepts/multi-agent.md and docs/automation/cron-jobs.md.",
+      "severity": "info",
+      "subject": "job-1"
+    },
+    {
+      "code": "UNRESOLVED_AGENT_REFERENCE",
+      "context": "Cron target is absent from agents.list; it is not an implicit configured agent.",
+      "recovery": "Reconcile the cron target with configured agents; docs/concepts/multi-agent.md and docs/automation/cron-jobs.md.",
+      "severity": "info",
+      "subject": "job-2"
+    },
+    {
+      "code": "UNRESOLVED_AGENT_REFERENCE",
+      "context": "Cron target is absent from agents.list; it is not an implicit configured agent.",
+      "recovery": "Reconcile the cron target with configured agents; docs/concepts/multi-agent.md and docs/automation/cron-jobs.md.",
+      "severity": "info",
+      "subject": "job-3"
+    },
+    {
+      "code": "UNRESOLVED_AGENT_REFERENCE",
+      "context": "Cron target is absent from agents.list; it is not an implicit configured agent.",
+      "recovery": "Reconcile the cron target with configured agents; docs/concepts/multi-agent.md and docs/automation/cron-jobs.md.",
+      "severity": "info",
+      "subject": "job-4"
+    },
+    {
+      "code": "UNRESOLVED_AGENT_REFERENCE",
+      "context": "Cron target is absent from agents.list; it is not an implicit configured agent.",
+      "recovery": "Reconcile the cron target with configured agents; docs/concepts/multi-agent.md and docs/automation/cron-jobs.md.",
+      "severity": "info",
+      "subject": "job-5"
+    },
+    {
+      "code": "UNRESOLVED_AGENT_REFERENCE",
+      "context": "Cron target is absent from agents.list; it is not an implicit configured agent.",
+      "recovery": "Reconcile the cron target with configured agents; docs/concepts/multi-agent.md and docs/automation/cron-jobs.md.",
+      "severity": "info",
+      "subject": "job-6"
+    }
+  ],
+  "backupCount": 2,
+  "bindings": [
+    {
+      "account": "telegram:field",
+      "agentId": "field",
+      "id": "binding-1b6d7fadd02512869b66-7",
+      "peerKind": null
+    },
+    {
+      "account": "whatsapp:coaching",
+      "agentId": "client",
+      "id": "binding-40a6ca9891072b8f0537-5",
+      "peerKind": "direct"
+    },
+    {
+      "account": "whatsapp:coaching",
+      "agentId": "coach",
+      "id": "binding-449f56fb335550499a13-4",
+      "peerKind": "direct"
+    },
+    {
+      "account": "telegram:lead",
+      "agentId": "lead",
+      "id": "binding-765daf766d61288f0dff-6",
+      "peerKind": null
+    },
+    {
+      "account": "whatsapp:secretary",
+      "agentId": "secretary",
+      "id": "binding-7ea0ec7db3778bcb9435-1",
+      "peerKind": "direct"
+    },
+    {
+      "account": "discord:default",
+      "agentId": "lead",
+      "id": "binding-c98dcabd536f3e6fb436-2",
+      "peerKind": null
+    },
+    {
+      "account": "whatsapp:field",
+      "agentId": "field",
+      "id": "binding-f06f0d0d3698fe4a4a98-0",
+      "peerKind": "direct"
+    },
+    {
+      "account": "discord:sandbox",
+      "agentId": "devbox",
+      "id": "binding-f302b80e62a7fbb9fcfa-3",
+      "peerKind": null
+    }
+  ],
+  "bundledSkills": [
+    {
+      "enabled": false,
+      "id": "1password"
+    },
+    {
+      "enabled": false,
+      "id": "blogwatcher"
+    },
+    {
+      "enabled": false,
+      "id": "blucli"
+    },
+    {
+      "enabled": false,
+      "id": "camsnap"
+    },
+    {
+      "enabled": false,
+      "id": "coding-agent"
+    },
+    {
+      "enabled": false,
+      "id": "discord"
+    },
+    {
+      "enabled": false,
+      "id": "eightctl"
+    },
+    {
+      "enabled": false,
+      "id": "gemini"
+    },
+    {
+      "enabled": false,
+      "id": "gifgrep"
+    },
+    {
+      "enabled": true,
+      "id": "github"
+    },
+    {
+      "enabled": false,
+      "id": "goplaces"
+    },
+    {
+      "enabled": true,
+      "id": "healthcheck"
+    },
+    {
+      "enabled": false,
+      "id": "himalaya"
+    },
+    {
+      "enabled": false,
+      "id": "mcporter"
+    },
+    {
+      "enabled": true,
+      "id": "model-usage"
+    },
+    {
+      "enabled": false,
+      "id": "nano-pdf"
+    },
+    {
+      "enabled": false,
+      "id": "obsidian"
+    },
+    {
+      "enabled": false,
+      "id": "openai-whisper"
+    },
+    {
+      "enabled": false,
+      "id": "openhue"
+    },
+    {
+      "enabled": false,
+      "id": "oracle"
+    },
+    {
+      "enabled": false,
+      "id": "ordercli"
+    },
+    {
+      "enabled": false,
+      "id": "sag"
+    },
+    {
+      "enabled": true,
+      "id": "session-logs"
+    },
+    {
+      "enabled": false,
+      "id": "sherpa-onnx-tts"
+    },
+    {
+      "enabled": true,
+      "id": "skill-creator"
+    },
+    {
+      "enabled": false,
+      "id": "slack"
+    },
+    {
+      "enabled": false,
+      "id": "songsee"
+    },
+    {
+      "enabled": false,
+      "id": "sonoscli"
+    },
+    {
+      "enabled": false,
+      "id": "spotify-player"
+    },
+    {
+      "enabled": false,
+      "id": "summarize"
+    },
+    {
+      "enabled": false,
+      "id": "trello"
+    },
+    {
+      "enabled": false,
+      "id": "voice-call"
+    },
+    {
+      "enabled": false,
+      "id": "wacli"
+    },
+    {
+      "enabled": false,
+      "id": "xurl"
+    }
+  ],
+  "cron": [
+    {
+      "agentId": "main",
+      "delivery": {
+        "accountId": null,
+        "channel": "discord",
+        "mode": "announce"
+      },
+      "enabled": false,
+      "id": "job-1",
+      "model": "anthropic/claude-opus-4-6",
+      "name": "Daily digest",
+      "payloadKind": "agentTurn",
+      "prompt": {
+        "bytes": 15,
+        "id": "state/openclaw.sqlite#cron_jobs/job-1/job_json/payload/message",
+        "path": "state/openclaw.sqlite#cron_jobs/job-1/job_json/payload/message",
+        "sha256": "94480fa29d6311f7834319e207ae665a9b26eb52a0a489080095a0647d9a8314"
+      },
+      "runtime": {
+        "consecutiveErrors": 5,
+        "createdAtMs": 1771496119224,
+        "hasLastError": true,
+        "lastRunAtMs": 1776382200018,
+        "lastRunStatus": "error"
+      },
+      "schedule": {
+        "everyMs": null,
+        "expression": "30 7 * * *",
+        "kind": "cron",
+        "timezone": "America/New_York"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now"
+    },
+    {
+      "agentId": "lead",
+      "delivery": {
+        "accountId": null,
+        "channel": "discord",
+        "mode": "announce"
+      },
+      "enabled": false,
+      "id": "job-10",
+      "model": "anthropic/claude-opus-4-6",
+      "name": "Weekly Retrospective",
+      "payloadKind": "agentTurn",
+      "prompt": {
+        "bytes": 16,
+        "id": "state/openclaw.sqlite#cron_jobs/job-10/job_json/payload/message",
+        "path": "state/openclaw.sqlite#cron_jobs/job-10/job_json/payload/message",
+        "sha256": "76363c03d9ebc637ef9d41600ca9abfb25824bc8b2e5b32f7cfaca18385dd66e"
+      },
+      "runtime": {
+        "consecutiveErrors": 6,
+        "createdAtMs": 1772466027701,
+        "hasLastError": true,
+        "lastRunAtMs": 1776340800010,
+        "lastRunStatus": "error"
+      },
+      "schedule": {
+        "everyMs": null,
+        "expression": "0 12 * * 4",
+        "kind": "cron",
+        "timezone": null
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now"
+    },
+    {
+      "agentId": "main",
+      "delivery": {
+        "accountId": null,
+        "channel": "discord",
+        "mode": "announce"
+      },
+      "enabled": false,
+      "id": "job-2",
+      "model": "anthropic/claude-opus-4-6",
+      "name": "Security check",
+      "payloadKind": "agentTurn",
+      "prompt": {
+        "bytes": 15,
+        "id": "state/openclaw.sqlite#cron_jobs/job-2/job_json/payload/message",
+        "path": "state/openclaw.sqlite#cron_jobs/job-2/job_json/payload/message",
+        "sha256": "e71cf18990d2630d752caa32d26da513ad1e06e100855127254ea525e3e4fad0"
+      },
+      "runtime": {
+        "consecutiveErrors": 0,
+        "createdAtMs": 1771577714790,
+        "hasLastError": false,
+        "lastRunAtMs": 1776420000017,
+        "lastRunStatus": "ok"
+      },
+      "schedule": {
+        "everyMs": null,
+        "expression": "0 6,12,18,0 * * *",
+        "kind": "cron",
+        "timezone": "America/New_York"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now"
+    },
+    {
+      "agentId": "main",
+      "delivery": {
+        "accountId": null,
+        "channel": "discord",
+        "mode": "announce"
+      },
+      "enabled": false,
+      "id": "job-3",
+      "model": "anthropic/claude-haiku-4-5",
+      "name": "process-leads",
+      "payloadKind": "agentTurn",
+      "prompt": {
+        "bytes": 15,
+        "id": "state/openclaw.sqlite#cron_jobs/job-3/job_json/payload/message",
+        "path": "state/openclaw.sqlite#cron_jobs/job-3/job_json/payload/message",
+        "sha256": "2293c41222dd2e0d7bd76a075685a7ce73c07602f4743a3764edf138c271885c"
+      },
+      "runtime": {
+        "consecutiveErrors": 0,
+        "createdAtMs": 1771583947832,
+        "hasLastError": false,
+        "lastRunAtMs": 1776409200016,
+        "lastRunStatus": "ok"
+      },
+      "schedule": {
+        "everyMs": null,
+        "expression": "0 9 * * *",
+        "kind": "cron",
+        "timezone": "Europe/Paris"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now"
+    },
+    {
+      "agentId": "main",
+      "delivery": {
+        "accountId": null,
+        "channel": "discord",
+        "mode": "announce"
+      },
+      "enabled": false,
+      "id": "job-4",
+      "model": "anthropic/claude-haiku-4-5",
+      "name": "Daily analytics report",
+      "payloadKind": "agentTurn",
+      "prompt": {
+        "bytes": 15,
+        "id": "state/openclaw.sqlite#cron_jobs/job-4/job_json/payload/message",
+        "path": "state/openclaw.sqlite#cron_jobs/job-4/job_json/payload/message",
+        "sha256": "9029c33f8ca5c17545657eb22f461aba46e52251bfc60c36cc3f3f1c4f5e1dcb"
+      },
+      "runtime": {
+        "consecutiveErrors": 0,
+        "createdAtMs": 1771663959887,
+        "hasLastError": false,
+        "lastRunAtMs": 1776405600013,
+        "lastRunStatus": "ok"
+      },
+      "schedule": {
+        "everyMs": null,
+        "expression": "0 8 * * *",
+        "kind": "cron",
+        "timezone": "Europe/Paris"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now"
+    },
+    {
+      "agentId": "main",
+      "delivery": {
+        "accountId": null,
+        "channel": "discord",
+        "mode": "announce"
+      },
+      "enabled": false,
+      "id": "job-5",
+      "model": "anthropic/claude-opus-4-6",
+      "name": "Weekly scouting A",
+      "payloadKind": "agentTurn",
+      "prompt": {
+        "bytes": 15,
+        "id": "state/openclaw.sqlite#cron_jobs/job-5/job_json/payload/message",
+        "path": "state/openclaw.sqlite#cron_jobs/job-5/job_json/payload/message",
+        "sha256": "4f8e21fb826bb015c25a1df356f54c7e4c0125b6f01679c36c3d9e9737038bba"
+      },
+      "runtime": {
+        "consecutiveErrors": 0,
+        "createdAtMs": 1771750705546,
+        "hasLastError": false,
+        "lastRunAtMs": 1776387600016,
+        "lastRunStatus": "ok"
+      },
+      "schedule": {
+        "everyMs": null,
+        "expression": "0 1 * * 2,5",
+        "kind": "cron",
+        "timezone": "UTC"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now"
+    },
+    {
+      "agentId": "main",
+      "delivery": {
+        "accountId": null,
+        "channel": "discord",
+        "mode": "announce"
+      },
+      "enabled": false,
+      "id": "job-6",
+      "model": "anthropic/claude-haiku-4-5",
+      "name": "Weekly scouting B",
+      "payloadKind": "agentTurn",
+      "prompt": {
+        "bytes": 15,
+        "id": "state/openclaw.sqlite#cron_jobs/job-6/job_json/payload/message",
+        "path": "state/openclaw.sqlite#cron_jobs/job-6/job_json/payload/message",
+        "sha256": "efb652d4a2b0feb8593e52b2e8973f2f8b6c6e777514cb93e50fd0a6856f2fdf"
+      },
+      "runtime": {
+        "consecutiveErrors": 1,
+        "createdAtMs": 1771751098652,
+        "hasLastError": true,
+        "lastRunAtMs": 1776304800008,
+        "lastRunStatus": "error"
+      },
+      "schedule": {
+        "everyMs": null,
+        "expression": "0 2 * * 1,4",
+        "kind": "cron",
+        "timezone": "UTC"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now"
+    },
+    {
+      "agentId": "lead",
+      "delivery": {
+        "accountId": null,
+        "channel": "whatsapp",
+        "mode": "announce"
+      },
+      "enabled": false,
+      "id": "job-7",
+      "model": "anthropic/claude-haiku-4-5",
+      "name": "field-usage-daily",
+      "payloadKind": "agentTurn",
+      "prompt": {
+        "bytes": 15,
+        "id": "state/openclaw.sqlite#cron_jobs/job-7/job_json/payload/message",
+        "path": "state/openclaw.sqlite#cron_jobs/job-7/job_json/payload/message",
+        "sha256": "051ccd4da86981fea5f36459f6f7e922f200cb156531f0d1b4988daae23cac91"
+      },
+      "runtime": {
+        "consecutiveErrors": 0,
+        "createdAtMs": 1771993988025,
+        "hasLastError": false,
+        "lastRunAtMs": null,
+        "lastRunStatus": null
+      },
+      "schedule": {
+        "everyMs": null,
+        "expression": "0 22 * * *",
+        "kind": "cron",
+        "timezone": "UTC"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now"
+    },
+    {
+      "agentId": "lead",
+      "delivery": {
+        "accountId": null,
+        "channel": "whatsapp",
+        "mode": "announce"
+      },
+      "enabled": false,
+      "id": "job-8",
+      "model": "anthropic/claude-haiku-4-5",
+      "name": "field-usage-alert",
+      "payloadKind": "agentTurn",
+      "prompt": {
+        "bytes": 15,
+        "id": "state/openclaw.sqlite#cron_jobs/job-8/job_json/payload/message",
+        "path": "state/openclaw.sqlite#cron_jobs/job-8/job_json/payload/message",
+        "sha256": "5b2d6d4c42f111ebdf129558498501f3a47d6ac9248ba05e4df5e1943d597b2d"
+      },
+      "runtime": {
+        "consecutiveErrors": 0,
+        "createdAtMs": 1771994003463,
+        "hasLastError": false,
+        "lastRunAtMs": 1772008403494,
+        "lastRunStatus": "ok"
+      },
+      "schedule": {
+        "everyMs": 3600000,
+        "expression": null,
+        "kind": "every",
+        "timezone": null
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now"
+    },
+    {
+      "agentId": "lead",
+      "delivery": {
+        "accountId": null,
+        "channel": "discord",
+        "mode": "announce"
+      },
+      "enabled": false,
+      "id": "job-9",
+      "model": null,
+      "name": "Daily marketing report",
+      "payloadKind": "agentTurn",
+      "prompt": {
+        "bytes": 16,
+        "id": "state/openclaw.sqlite#cron_jobs/job-9/job_json/payload/message",
+        "path": "state/openclaw.sqlite#cron_jobs/job-9/job_json/payload/message",
+        "sha256": "e26143239af944d7daa23f2272320cc1b86e9dae7596d219e2125bde84bfd556"
+      },
+      "runtime": {
+        "consecutiveErrors": 0,
+        "createdAtMs": 1772194486282,
+        "hasLastError": false,
+        "lastRunAtMs": 1773039673306,
+        "lastRunStatus": "ok"
+      },
+      "schedule": {
+        "everyMs": null,
+        "expression": "0 8 * * *",
+        "kind": "cron",
+        "timezone": "Europe/Paris"
+      },
+      "sessionTarget": "isolated",
+      "wakeMode": "now"
+    }
+  ],
+  "environmentNames": [
+    "NODE_PATH"
+  ],
+  "hooks": [
+    {
+      "agentId": "lead",
+      "channel": "whatsapp",
+      "id": "hook-0",
+      "name": "Webhook",
+      "template": {
+        "bytes": 15,
+        "id": "openclaw.json#/hooks/mappings/0/messageTemplate",
+        "path": "openclaw.json#/hooks/mappings/0/messageTemplate",
+        "sha256": "b7b734e170d526bd7f9599afa6eb09455078aeff359e068360fab35e9578fdc5"
+      }
+    }
+  ],
+  "messaging": {
+    "allowedTargets": [
+      "*"
+    ],
+    "enabled": true
+  },
+  "openclawVersion": "2026.6.10",
+  "plaintextSecretCount": 35,
+  "providers": [
+    {
+      "api": null,
+      "id": "google",
+      "models": [
+        "gemini-3-pro-image-preview"
+      ]
+    },
+    {
+      "api": "ollama",
+      "id": "ollama",
+      "models": [
+        "glm-5.1:cloud",
+        "nemotron-3-super:cloud"
+      ]
+    }
+  ],
+  "schema": "openclaw-snapshot/1"
+}

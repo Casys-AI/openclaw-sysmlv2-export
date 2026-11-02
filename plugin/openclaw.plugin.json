@@ -1,0 +1,21 @@
+{
+  "id": "assembly-export",
+  "name": "Assembly Export",
+  "description": "Export this OpenClaw instance as SysML v2 for Assembly, with doctor findings and inferred procedures.",
+  "version": "0.1.0",
+  "activation": { "onStartup": true },
+  "contracts": { "tools": ["assembly_export"] },
+  "commandAliases": [{ "name": "assembly_export", "kind": "runtime-slash" }],
+  "cliCommands": [
+    {
+      "name": "assembly-export",
+      "description": "Export this instance to SysML v2 for Assembly",
+      "hasSubcommands": false
+    }
+  ],
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": { "outDir": { "type": "string" } }
+  }
+}

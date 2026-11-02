@@ -1,0 +1,31 @@
+{
+  "imports": {
+    "@logtape/redaction": "jsr:@logtape/redaction@2.4.2",
+    "diff": "npm:diff@9.0.0"
+  },
+  "tasks": {
+    "collect": "deno run --cached-only --allow-read --allow-write cli.ts collect",
+    "export": "deno run --cached-only --allow-read --allow-write cli.ts export",
+    "doctor": "deno run --cached-only --allow-read cli.ts doctor",
+    "diff": "deno run --cached-only --allow-read cli.ts diff",
+    "check": "deno check --cached-only src/*.ts cli.ts plugin/core.ts test/*.ts test/support/*.ts",
+    "test": "deno test --cached-only --allow-read --allow-write --allow-env=SYSML_TOOLKIT_DIR,TMPDIR,TMP,TEMP --ignore=test/toolkit_test.ts test/",
+    "test:toolkit": "deno test --cached-only --allow-read --allow-write --allow-env --allow-run test/toolkit_test.ts",
+    "plugin:build": "deno bundle --platform=node -o plugin/core.mjs plugin/core.ts"
+  },
+  "fmt": {
+    "exclude": [
+      "test/fixtures",
+      "test/golden",
+      "SPEC.md",
+      "plugin/core.mjs"
+    ]
+  },
+  "lint": {
+    "exclude": [
+      "test/fixtures",
+      "test/golden",
+      "plugin/core.mjs"
+    ]
+  }
+}

@@ -1,0 +1,1228 @@
+{
+  "meta": {
+    "lastTouchedVersion": "2026.6.10"
+  },
+  "env": {
+    "vars": {
+      "NODE_PATH": "CANARY-SECRET-1"
+    }
+  },
+  "browser": {
+    "enabled": true,
+    "headless": true,
+    "noSandbox": true,
+    "attachOnly": false
+  },
+  "auth": {
+    "profiles": {
+      "anthropic:openclaw": {
+        "provider": "anthropic",
+        "mode": "token"
+      },
+      "openai:default": {
+        "provider": "openai",
+        "mode": "oauth"
+      },
+      "openai:account-2": {
+        "provider": "openai",
+        "mode": "oauth"
+      }
+    }
+  },
+  "acp": {
+    "enabled": true,
+    "dispatch": {
+      "enabled": true
+    },
+    "backend": "acpx",
+    "defaultAgent": "codex"
+  },
+  "models": {
+    "providers": {
+      "google": {
+        "models": [
+          {
+            "id": "gemini-3-pro-image-preview",
+            "name": "gemini-3-pro-image-preview"
+          }
+        ],
+        "baseUrl": "CANARY-VALUE-1",
+        "apiKey": "CANARY-SECRET-2"
+      },
+      "ollama": {
+        "api": "ollama",
+        "models": [
+          {
+            "id": "nemotron-3-super:cloud",
+            "name": "Nemotron 3 Super (Cloud)",
+            "reasoning": true,
+            "input": [
+              "text"
+            ],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 262144,
+            "maxTokens": 16384,
+            "params": {
+              "num_ctx": 262144
+            }
+          },
+          {
+            "id": "glm-5.1:cloud",
+            "name": "GLM 5.1 (Cloud)",
+            "reasoning": true,
+            "input": [
+              "text"
+            ],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 131072,
+            "maxTokens": 16384,
+            "params": {
+              "num_ctx": 131072
+            }
+          }
+        ],
+        "baseUrl": "CANARY-VALUE-2",
+        "apiKey": "CANARY-SECRET-3"
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "openai/gpt-5.5",
+        "fallbacks": [
+          "anthropic/claude-opus-4-6",
+          "anthropic/claude-sonnet-4-6"
+        ]
+      },
+      "imageGenerationModel": {
+        "primary": "google/gemini-3-pro-image-preview"
+      },
+      "models": {
+        "anthropic/claude-opus-4-6": {},
+        "anthropic/claude-sonnet-4-6": {},
+        "openai/gpt-5.5": {
+          "alias": "gpt",
+          "agentRuntime": {
+            "id": "codex"
+          }
+        }
+      },
+      "contextPruning": {
+        "mode": "cache-ttl",
+        "ttl": "1h"
+      },
+      "compaction": {
+        "mode": "safeguard"
+      },
+      "thinkingDefault": "medium",
+      "verboseDefault": "off",
+      "imageMaxDimensionPx": 1200,
+      "heartbeat": {
+        "every": "30m",
+        "target": "last"
+      },
+      "maxConcurrent": 4,
+      "subagents": {
+        "maxConcurrent": 8
+      },
+      "workspace": "workspace",
+      "memorySearch": {
+        "enabled": true,
+        "provider": "local",
+        "fallback": "none",
+        "local": {
+          "modelPath": "CANARY-VALUE-3"
+        }
+      },
+      "sandbox": {
+        "sessionToolsVisibility": "all",
+        "docker": {
+          "env": {
+            "OAUTH_BROKER_SECRET_KEY": "CANARY-SECRET-4",
+            "SEARCH_API_KEY": "CANARY-SECRET-5",
+            "READER_API_KEY": "CANARY-SECRET-6"
+          }
+        }
+      }
+    },
+    "list": [
+      {
+        "id": "lead",
+        "workspace": "workspace",
+        "model": {
+          "primary": "ollama/glm-5.1:cloud",
+          "fallbacks": [
+            "openai/gpt-5.5"
+          ]
+        },
+        "identity": {
+          "name": "Lead",
+          "emoji": "🔍"
+        },
+        "subagents": {
+          "allowAgents": [
+            "devbox",
+            "field",
+            "secretary",
+            "coach",
+            "client"
+          ]
+        }
+      },
+      {
+        "id": "field",
+        "workspace": "workspace-field",
+        "model": {
+          "primary": "ollama/glm-5.1:cloud",
+          "fallbacks": [
+            "openai/gpt-5.5"
+          ]
+        },
+        "identity": {
+          "name": "Field Assistant"
+        },
+        "subagents": {
+          "allowAgents": [
+            "lead"
+          ]
+        },
+        "sandbox": {
+          "mode": "all",
+          "workspaceAccess": "rw",
+          "sessionToolsVisibility": "all",
+          "scope": "agent",
+          "browser": {
+            "enabled": true
+          },
+          "docker": {
+            "image": "openclaw-sandbox:bookworm-slim",
+            "readOnlyRoot": true,
+            "network": "bridge",
+            "env": {
+              "OPENAI_API_KEY": "CANARY-SECRET-14",
+              "HOOKS_TOKEN": "CANARY-SECRET-15",
+              "GATEWAY_HOST": "CANARY-SECRET-16",
+              "GATEWAY_PORT": "CANARY-SECRET-17",
+              "NAS_HOST": "CANARY-SECRET-7",
+              "NAS_ACCOUNT": "CANARY-SECRET-8",
+              "NAS_PASSWORD": "CANARY-SECRET-9",
+              "NAS_BASE_PATH": "CANARY-SECRET-10",
+              "SEO_API_USER": "CANARY-SECRET-11",
+              "SEO_API_PASSWORD": "CANARY-SECRET-12",
+              "SEO_API_TOKEN": "CANARY-SECRET-13"
+            },
+            "memory": "1536m",
+            "cpus": 2,
+            "extraHosts": [
+              "CANARY-VALUE-4"
+            ],
+            "binds": [
+              "CANARY-BIND-1:/workspace/bind-1"
+            ],
+            "dangerouslyAllowExternalBindSources": true
+          }
+        },
+        "tools": {
+          "alsoAllow": [
+            "message",
+            "sessions_send",
+            "sessions_list",
+            "sessions_history",
+            "tts"
+          ],
+          "deny": [
+            "gateway",
+            "process"
+          ],
+          "sandbox": {
+            "tools": {
+              "allow": [
+                "exec",
+                "process",
+                "read",
+                "write",
+                "edit",
+                "apply_patch",
+                "image",
+                "pdf",
+                "sessions_list",
+                "sessions_history",
+                "sessions_send",
+                "sessions_spawn",
+                "subagents",
+                "session_status",
+                "message",
+                "browser",
+                "tts"
+              ],
+              "deny": [
+                "canvas",
+                "nodes",
+                "gateway",
+                "telegram",
+                "discord",
+                "irc",
+                "googlechat",
+                "slack",
+                "signal",
+                "imessage"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "secretary",
+        "workspace": "workspace-secretary",
+        "model": {
+          "primary": "ollama/glm-5.1:cloud",
+          "fallbacks": [
+            "openai/gpt-5.5"
+          ]
+        },
+        "identity": {
+          "name": "Secretary",
+          "emoji": "🌸"
+        },
+        "subagents": {
+          "allowAgents": [
+            "lead"
+          ]
+        },
+        "sandbox": {
+          "mode": "all",
+          "workspaceAccess": "rw",
+          "sessionToolsVisibility": "all",
+          "scope": "agent",
+          "browser": {
+            "enabled": true
+          },
+          "docker": {
+            "image": "openclaw-sandbox:bookworm-slim",
+            "readOnlyRoot": true,
+            "network": "bridge",
+            "env": {
+              "OPENAI_API_KEY": "CANARY-SECRET-18",
+              "HOOKS_TOKEN": "CANARY-SECRET-19",
+              "GATEWAY_HOST": "CANARY-SECRET-20",
+              "GATEWAY_PORT": "CANARY-SECRET-21"
+            },
+            "memory": "1536m",
+            "cpus": 2,
+            "binds": [
+              "CANARY-BIND-2:/workspace/bind-2"
+            ],
+            "dangerouslyAllowExternalBindSources": true
+          }
+        },
+        "tools": {
+          "alsoAllow": [
+            "message",
+            "sessions_send",
+            "sessions_list",
+            "sessions_history"
+          ],
+          "deny": [
+            "gateway",
+            "process"
+          ],
+          "sandbox": {
+            "tools": {
+              "allow": [
+                "exec",
+                "process",
+                "read",
+                "write",
+                "edit",
+                "apply_patch",
+                "image",
+                "sessions_list",
+                "sessions_history",
+                "sessions_send",
+                "sessions_spawn",
+                "subagents",
+                "session_status",
+                "message",
+                "browser"
+              ],
+              "deny": [
+                "canvas",
+                "nodes",
+                "gateway",
+                "telegram",
+                "discord",
+                "irc",
+                "googlechat",
+                "slack",
+                "signal",
+                "imessage"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "devbox",
+        "workspace": "workspace-devbox",
+        "model": {
+          "primary": "ollama/glm-5.1:cloud",
+          "fallbacks": [
+            "openai/gpt-5.5"
+          ]
+        },
+        "identity": {
+          "name": "Devbox",
+          "emoji": "🖖"
+        },
+        "subagents": {
+          "allowAgents": [
+            "lead"
+          ]
+        },
+        "sandbox": {
+          "mode": "all",
+          "workspaceAccess": "rw",
+          "sessionToolsVisibility": "all",
+          "scope": "agent",
+          "browser": {
+            "enabled": true
+          },
+          "docker": {
+            "image": "openclaw-sandbox:bookworm-slim",
+            "readOnlyRoot": true,
+            "network": "bridge",
+            "env": {
+              "HOOKS_TOKEN": "CANARY-SECRET-22",
+              "GATEWAY_HOST": "CANARY-SECRET-23",
+              "GATEWAY_PORT": "CANARY-SECRET-24"
+            },
+            "memory": "1536m",
+            "cpus": 2
+          }
+        },
+        "tools": {
+          "alsoAllow": [
+            "message",
+            "sessions_send",
+            "sessions_list",
+            "sessions_history"
+          ],
+          "deny": [
+            "gateway",
+            "process",
+            "whatsapp_login",
+            "cron"
+          ],
+          "sandbox": {
+            "tools": {
+              "allow": [
+                "exec",
+                "process",
+                "read",
+                "write",
+                "edit",
+                "apply_patch",
+                "image",
+                "web_search",
+                "web_fetch",
+                "sessions_list",
+                "sessions_history",
+                "sessions_send",
+                "sessions_spawn",
+                "subagents",
+                "session_status",
+                "message",
+                "browser"
+              ],
+              "deny": [
+                "canvas",
+                "nodes",
+                "gateway",
+                "telegram",
+                "irc",
+                "googlechat",
+                "slack",
+                "signal",
+                "imessage",
+                "whatsapp_login",
+                "cron"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "coach",
+        "workspace": "workspace-coach",
+        "model": {
+          "primary": "ollama/glm-5.1:cloud",
+          "fallbacks": [
+            "openai/gpt-5.5"
+          ]
+        },
+        "identity": {
+          "name": "Coach",
+          "emoji": "🏋️"
+        },
+        "subagents": {
+          "allowAgents": [
+            "client"
+          ]
+        },
+        "sandbox": {
+          "mode": "all",
+          "workspaceAccess": "rw",
+          "sessionToolsVisibility": "all",
+          "scope": "agent",
+          "browser": {
+            "enabled": true
+          },
+          "docker": {
+            "image": "openclaw-sandbox:fixture",
+            "readOnlyRoot": true,
+            "network": "fixture-net",
+            "env": {
+              "DATABASE_URL": "CANARY-SECRET-25",
+              "PAGES_BASE_URL": "CANARY-SECRET-26"
+            },
+            "memory": "1536m",
+            "cpus": 2,
+            "binds": [
+              "CANARY-BIND-3:/workspace/bind-3"
+            ],
+            "dangerouslyAllowExternalBindSources": true
+          }
+        },
+        "tools": {
+          "alsoAllow": [
+            "message",
+            "sessions_send",
+            "sessions_list",
+            "sessions_history",
+            "gateway"
+          ],
+          "deny": [
+            "process",
+            "whatsapp_login",
+            "cron"
+          ],
+          "sandbox": {
+            "tools": {
+              "allow": [
+                "exec",
+                "process",
+                "read",
+                "write",
+                "edit",
+                "apply_patch",
+                "image",
+                "web_search",
+                "web_fetch",
+                "sessions_list",
+                "sessions_history",
+                "sessions_send",
+                "sessions_spawn",
+                "subagents",
+                "session_status",
+                "message",
+                "browser",
+                "gateway"
+              ],
+              "deny": [
+                "canvas",
+                "nodes",
+                "telegram",
+                "irc",
+                "googlechat",
+                "slack",
+                "signal",
+                "imessage",
+                "whatsapp_login",
+                "cron"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": "client",
+        "workspace": "workspace-client",
+        "model": {
+          "primary": "ollama/glm-5.1:cloud",
+          "fallbacks": [
+            "openai/gpt-5.5"
+          ]
+        },
+        "identity": {
+          "name": "Client",
+          "emoji": "💬"
+        },
+        "subagents": {
+          "allowAgents": [
+            "coach"
+          ]
+        },
+        "sandbox": {
+          "mode": "all",
+          "workspaceAccess": "rw",
+          "sessionToolsVisibility": "all",
+          "scope": "agent",
+          "browser": {
+            "enabled": true
+          },
+          "docker": {
+            "image": "openclaw-sandbox:fixture",
+            "readOnlyRoot": true,
+            "network": "fixture-net",
+            "env": {
+              "DATABASE_URL": "CANARY-SECRET-27",
+              "PAGES_BASE_URL": "CANARY-SECRET-28"
+            },
+            "memory": "1536m",
+            "cpus": 2,
+            "binds": [
+              "CANARY-BIND-4:/workspace/bind-4"
+            ],
+            "dangerouslyAllowExternalBindSources": true
+          }
+        },
+        "tools": {
+          "alsoAllow": [
+            "message",
+            "sessions_send",
+            "sessions_list",
+            "sessions_history"
+          ],
+          "deny": [
+            "gateway",
+            "process",
+            "whatsapp_login",
+            "cron"
+          ],
+          "sandbox": {
+            "tools": {
+              "allow": [
+                "exec",
+                "process",
+                "read",
+                "write",
+                "edit",
+                "apply_patch",
+                "image",
+                "sessions_list",
+                "sessions_history",
+                "sessions_send",
+                "sessions_spawn",
+                "subagents",
+                "session_status",
+                "message",
+                "browser"
+              ],
+              "deny": [
+                "canvas",
+                "nodes",
+                "gateway",
+                "telegram",
+                "irc",
+                "googlechat",
+                "slack",
+                "signal",
+                "imessage",
+                "whatsapp_login",
+                "cron"
+              ]
+            }
+          }
+        }
+      }
+    ]
+  },
+  "tools": {
+    "profile": "full",
+    "web": {
+      "search": {
+        "enabled": true,
+        "provider": "gemini"
+      },
+      "fetch": {
+        "enabled": true
+      }
+    },
+    "media": {
+      "audio": {
+        "enabled": true,
+        "models": [
+          {
+            "provider": "openai",
+            "model": "gpt-4o-mini-transcribe"
+          }
+        ],
+        "echoTranscript": true,
+        "echoFormat": "📝 \"{transcript}\""
+      }
+    },
+    "sessions": {
+      "visibility": "all"
+    },
+    "message": {
+      "crossContext": {
+        "allowWithinProvider": true,
+        "allowAcrossProviders": true
+      }
+    },
+    "agentToAgent": {
+      "enabled": true,
+      "allow": [
+        "*"
+      ]
+    },
+    "exec": {
+      "security": "full",
+      "ask": "off"
+    },
+    "elevated": {
+      "enabled": true,
+      "allowFrom": {
+        "discord": [
+          "CANARY-PEER-1"
+        ]
+      }
+    }
+  },
+  "bindings": [
+    {
+      "agentId": "field",
+      "match": {
+        "channel": "whatsapp",
+        "accountId": "field",
+        "peer": {
+          "kind": "direct",
+          "id": "CANARY-PEER-2"
+        }
+      }
+    },
+    {
+      "agentId": "secretary",
+      "match": {
+        "channel": "whatsapp",
+        "accountId": "secretary",
+        "peer": {
+          "kind": "direct",
+          "id": "CANARY-PEER-3"
+        }
+      }
+    },
+    {
+      "agentId": "lead",
+      "match": {
+        "channel": "discord",
+        "accountId": "default",
+        "guildId": "CANARY-PEER-4"
+      }
+    },
+    {
+      "agentId": "devbox",
+      "match": {
+        "channel": "discord",
+        "accountId": "sandbox",
+        "guildId": "CANARY-PEER-5"
+      }
+    },
+    {
+      "agentId": "coach",
+      "match": {
+        "channel": "whatsapp",
+        "accountId": "coaching",
+        "peer": {
+          "kind": "direct",
+          "id": "CANARY-PEER-6"
+        }
+      }
+    },
+    {
+      "agentId": "client",
+      "match": {
+        "channel": "whatsapp",
+        "accountId": "coaching",
+        "peer": {
+          "kind": "direct",
+          "id": "CANARY-PEER-7"
+        }
+      }
+    },
+    {
+      "agentId": "lead",
+      "match": {
+        "channel": "telegram",
+        "accountId": "lead"
+      }
+    },
+    {
+      "agentId": "field",
+      "match": {
+        "channel": "telegram",
+        "accountId": "field"
+      }
+    }
+  ],
+  "messages": {
+    "ackReactionScope": "group-mentions"
+  },
+  "commands": {
+    "native": "auto",
+    "nativeSkills": "auto",
+    "restart": true,
+    "ownerDisplay": "raw"
+  },
+  "session": {
+    "dmScope": "per-channel-peer",
+    "reset": {
+      "mode": "daily",
+      "atHour": 4,
+      "idleMinutes": 120
+    }
+  },
+  "hooks": {
+    "enabled": true,
+    "token": "CANARY-SECRET-29",
+    "mappings": [
+      {
+        "match": {
+          "path": "webhook"
+        },
+        "action": "agent",
+        "wakeMode": "now",
+        "name": "Webhook",
+        "agentId": "lead",
+        "messageTemplate": "CANARY-PROMPT-1",
+        "deliver": true,
+        "channel": "whatsapp",
+        "to": "CANARY-PEER-8",
+        "model": "anthropic/claude-haiku-4-5"
+      }
+    ],
+    "internal": {
+      "enabled": true,
+      "entries": {
+        "session-memory": {
+          "enabled": true
+        },
+        "command-logger": {
+          "enabled": true
+        },
+        "bootstrap-extra-files": {
+          "enabled": true
+        },
+        "boot-md": {
+          "enabled": true
+        }
+      }
+    }
+  },
+  "channels": {
+    "whatsapp": {
+      "enabled": true,
+      "dmPolicy": "pairing",
+      "selfChatMode": true,
+      "groupPolicy": "allowlist",
+      "debounceMs": 0,
+      "mediaMaxMb": 50,
+      "accounts": {
+        "default": {
+          "enabled": true,
+          "dmPolicy": "allowlist",
+          "selfChatMode": true,
+          "allowFrom": [
+            "CANARY-SECRET-30"
+          ],
+          "allowSendTo": [
+            "*"
+          ],
+          "groupPolicy": "allowlist",
+          "debounceMs": 0,
+          "name": "default account",
+          "groupAllowFrom": [
+            "CANARY-SECRET-31"
+          ]
+        },
+        "field": {
+          "enabled": true,
+          "dmPolicy": "allowlist",
+          "allowFrom": [
+            "CANARY-SECRET-32"
+          ],
+          "allowSendTo": [
+            "*"
+          ],
+          "groupPolicy": "allowlist",
+          "debounceMs": 0,
+          "name": "field account",
+          "groupAllowFrom": [
+            "CANARY-SECRET-33"
+          ]
+        },
+        "secretary": {
+          "enabled": true,
+          "dmPolicy": "allowlist",
+          "allowFrom": [
+            "CANARY-SECRET-34"
+          ],
+          "allowSendTo": [
+            "*"
+          ],
+          "groupPolicy": "allowlist",
+          "debounceMs": 0,
+          "name": "secretary account",
+          "groupAllowFrom": [
+            "CANARY-SECRET-35"
+          ]
+        },
+        "devbox": {
+          "enabled": false,
+          "dmPolicy": "allowlist",
+          "selfChatMode": true,
+          "allowFrom": [
+            "CANARY-SECRET-36",
+            "CANARY-SECRET-37"
+          ],
+          "allowSendTo": [
+            "*"
+          ],
+          "groupPolicy": "allowlist",
+          "debounceMs": 0,
+          "name": "devbox account"
+        },
+        "coaching": {
+          "enabled": true,
+          "dmPolicy": "allowlist",
+          "selfChatMode": true,
+          "allowFrom": [
+            "CANARY-SECRET-38",
+            "CANARY-SECRET-39"
+          ],
+          "allowSendTo": [
+            "*"
+          ],
+          "groupPolicy": "allowlist",
+          "debounceMs": 0,
+          "name": "coaching account",
+          "authDir": "CANARY-VALUE-5",
+          "groupAllowFrom": [
+            "CANARY-SECRET-40",
+            "CANARY-SECRET-41"
+          ]
+        }
+      }
+    },
+    "telegram": {
+      "enabled": true,
+      "dmPolicy": "pairing",
+      "groupPolicy": "allowlist",
+      "streaming": {
+        "mode": "partial"
+      },
+      "defaultAccount": "lead",
+      "accounts": {
+        "lead": {
+          "dmPolicy": "pairing",
+          "botToken": "CANARY-SECRET-42",
+          "groupPolicy": "allowlist",
+          "streaming": {
+            "mode": "partial"
+          }
+        },
+        "field": {
+          "dmPolicy": "pairing",
+          "botToken": "CANARY-SECRET-43",
+          "allowFrom": [
+            "CANARY-SECRET-44"
+          ],
+          "groupPolicy": "allowlist",
+          "streaming": {
+            "mode": "partial"
+          },
+          "groupAllowFrom": [
+            "CANARY-SECRET-45"
+          ]
+        },
+        "default": {
+          "dmPolicy": "pairing",
+          "groupPolicy": "allowlist",
+          "streaming": {
+            "mode": "partial"
+          }
+        }
+      }
+    },
+    "discord": {
+      "enabled": true,
+      "groupPolicy": "allowlist",
+      "streaming": {
+        "mode": "off"
+      },
+      "threadBindings": {
+        "enabled": true,
+        "spawnSessions": true
+      },
+      "accounts": {
+        "default": {
+          "name": "default account",
+          "enabled": true,
+          "token": "CANARY-SECRET-46",
+          "groupPolicy": "allowlist",
+          "streaming": {
+            "mode": "off"
+          },
+          "dmPolicy": "allowlist",
+          "allowFrom": [
+            "CANARY-SECRET-47",
+            "CANARY-SECRET-48"
+          ],
+          "guilds": {
+            "CANARY-ID-1": {
+              "slug": "CANARY-NAME-14",
+              "requireMention": false,
+              "users": [
+                "CANARY-SECRET-49",
+                "CANARY-SECRET-50"
+              ]
+            }
+          }
+        },
+        "sandbox": {
+          "name": "sandbox account",
+          "enabled": true,
+          "token": "CANARY-SECRET-51",
+          "allowBots": true,
+          "groupPolicy": "allowlist",
+          "streaming": {
+            "mode": "off"
+          },
+          "dmPolicy": "disabled",
+          "guilds": {
+            "CANARY-ID-2": {
+              "slug": "CANARY-NAME-15",
+              "requireMention": true,
+              "users": [
+                "CANARY-SECRET-52",
+                "CANARY-SECRET-53",
+                "CANARY-SECRET-54"
+              ]
+            }
+          }
+        }
+      }
+    }
+  },
+  "gateway": {
+    "port": 18789,
+    "mode": "local",
+    "bind": "loopback",
+    "tailscale": {
+      "mode": "off",
+      "resetOnExit": false
+    },
+    "nodes": {
+      "denyCommands": [
+        "camera.snap",
+        "camera.clip",
+        "screen.record",
+        "calendar.add",
+        "contacts.add",
+        "reminders.add"
+      ]
+    },
+    "auth": {
+      "mode": "token",
+      "token": "CANARY-SECRET-55"
+    }
+  },
+  "skills": {
+    "install": {
+      "nodeManager": "pnpm"
+    },
+    "entries": {
+      "skill-creator": {
+        "enabled": true
+      },
+      "healthcheck": {
+        "enabled": true
+      },
+      "summarize": {
+        "enabled": false,
+        "env": {
+          "GEMINI_API_KEY": "CANARY-SECRET-56"
+        }
+      },
+      "github": {
+        "enabled": true
+      },
+      "model-usage": {
+        "enabled": true
+      },
+      "session-logs": {
+        "enabled": true
+      },
+      "1password": {
+        "enabled": false
+      },
+      "blogwatcher": {
+        "enabled": false
+      },
+      "blucli": {
+        "enabled": false
+      },
+      "camsnap": {
+        "enabled": false
+      },
+      "coding-agent": {
+        "enabled": false
+      },
+      "discord": {
+        "enabled": false
+      },
+      "eightctl": {
+        "enabled": false
+      },
+      "gemini": {
+        "enabled": false
+      },
+      "gifgrep": {
+        "enabled": false
+      },
+      "goplaces": {
+        "enabled": false
+      },
+      "himalaya": {
+        "enabled": false
+      },
+      "mcporter": {
+        "enabled": false
+      },
+      "nano-pdf": {
+        "enabled": false
+      },
+      "obsidian": {
+        "enabled": false
+      },
+      "openai-whisper": {
+        "enabled": false
+      },
+      "openhue": {
+        "enabled": false
+      },
+      "oracle": {
+        "enabled": false
+      },
+      "ordercli": {
+        "enabled": false
+      },
+      "sag": {
+        "enabled": false
+      },
+      "sherpa-onnx-tts": {
+        "enabled": false
+      },
+      "slack": {
+        "enabled": false
+      },
+      "songsee": {
+        "enabled": false
+      },
+      "sonoscli": {
+        "enabled": false
+      },
+      "spotify-player": {
+        "enabled": false
+      },
+      "trello": {
+        "enabled": false
+      },
+      "voice-call": {
+        "enabled": false
+      },
+      "wacli": {
+        "enabled": false
+      },
+      "xurl": {
+        "enabled": false
+      }
+    }
+  },
+  "plugins": {
+    "load": {
+      "paths": [
+        "CANARY-VALUE-6"
+      ]
+    },
+    "entries": {
+      "whatsapp": {
+        "enabled": true
+      },
+      "msteams": {
+        "enabled": false
+      },
+      "memory-core": {
+        "enabled": true
+      },
+      "acpx": {
+        "enabled": true,
+        "config": {
+          "permissionMode": "approve-all",
+          "nonInteractivePermissions": "fail"
+        }
+      },
+      "browser": {
+        "enabled": true
+      },
+      "openai": {
+        "enabled": true
+      },
+      "anthropic": {
+        "enabled": true
+      },
+      "ollama": {
+        "enabled": true
+      },
+      "active-memory": {
+        "enabled": true,
+        "config": {
+          "enabled": true,
+          "agents": [
+            "lead"
+          ],
+          "allowedChatTypes": [
+            "direct"
+          ],
+          "modelFallbackPolicy": "default-remote",
+          "queryMode": "recent",
+          "promptStyle": "balanced",
+          "timeoutMs": 15000,
+          "maxSummaryChars": 220,
+          "persistTranscripts": false,
+          "logging": true
+        }
+      },
+      "google": {
+        "enabled": true
+      },
+      "codex": {
+        "enabled": true
+      },
+      "llama-cpp": {
+        "enabled": true
+      }
+    }
+  }
+}

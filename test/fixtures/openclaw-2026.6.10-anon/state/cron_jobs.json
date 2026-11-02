@@ -1,0 +1,60 @@
+{
+  "table": "cron_jobs",
+  "columns": [
+    "job_id",
+    "job_json",
+    "state_json"
+  ],
+  "rows": [
+    {
+      "job_id": "job-1",
+      "job_json": "{\"id\": \"job-1\", \"agentId\": \"main\", \"name\": \"Daily digest\", \"enabled\": false, \"createdAtMs\": 1771496119224, \"schedule\": {\"kind\": \"cron\", \"expr\": \"30 7 * * *\", \"tz\": \"America/New_York\"}, \"sessionTarget\": \"isolated\", \"wakeMode\": \"now\", \"payload\": {\"kind\": \"agentTurn\", \"message\": \"CANARY-PROMPT-2\", \"model\": \"anthropic/claude-opus-4-6\"}, \"delivery\": {\"mode\": \"announce\", \"channel\": \"discord\", \"to\": \"CANARY-PEER-9\"}}",
+      "state_json": "{\"lastRunAtMs\": 1776382200018, \"lastRunStatus\": \"error\", \"consecutiveErrors\": 5, \"lastError\": \"CANARY-TEXT-1\"}"
+    },
+    {
+      "job_id": "job-2",
+      "job_json": "{\"id\": \"job-2\", \"agentId\": \"main\", \"name\": \"Security check\", \"enabled\": false, \"createdAtMs\": 1771577714790, \"schedule\": {\"kind\": \"cron\", \"expr\": \"0 6,12,18,0 * * *\", \"tz\": \"America/New_York\"}, \"sessionTarget\": \"isolated\", \"wakeMode\": \"now\", \"payload\": {\"kind\": \"agentTurn\", \"message\": \"CANARY-PROMPT-3\", \"model\": \"anthropic/claude-opus-4-6\"}, \"delivery\": {\"mode\": \"announce\", \"channel\": \"discord\", \"to\": \"CANARY-PEER-10\"}}",
+      "state_json": "{\"lastRunAtMs\": 1776420000017, \"lastRunStatus\": \"ok\", \"consecutiveErrors\": 0}"
+    },
+    {
+      "job_id": "job-3",
+      "job_json": "{\"id\": \"job-3\", \"agentId\": \"main\", \"name\": \"process-leads\", \"enabled\": false, \"createdAtMs\": 1771583947832, \"schedule\": {\"kind\": \"cron\", \"expr\": \"0 9 * * *\", \"tz\": \"Europe/Paris\"}, \"sessionTarget\": \"isolated\", \"wakeMode\": \"now\", \"payload\": {\"kind\": \"agentTurn\", \"message\": \"CANARY-PROMPT-4\", \"model\": \"anthropic/claude-haiku-4-5\"}, \"delivery\": {\"mode\": \"announce\", \"channel\": \"discord\", \"to\": \"CANARY-PEER-11\"}}",
+      "state_json": "{\"lastRunAtMs\": 1776409200016, \"lastRunStatus\": \"ok\", \"consecutiveErrors\": 0}"
+    },
+    {
+      "job_id": "job-4",
+      "job_json": "{\"id\": \"job-4\", \"agentId\": \"main\", \"name\": \"Daily analytics report\", \"enabled\": false, \"createdAtMs\": 1771663959887, \"schedule\": {\"kind\": \"cron\", \"expr\": \"0 8 * * *\", \"tz\": \"Europe/Paris\"}, \"sessionTarget\": \"isolated\", \"wakeMode\": \"now\", \"payload\": {\"kind\": \"agentTurn\", \"message\": \"CANARY-PROMPT-5\", \"model\": \"anthropic/claude-haiku-4-5\"}, \"delivery\": {\"mode\": \"announce\", \"channel\": \"discord\", \"to\": \"CANARY-PEER-12\"}}",
+      "state_json": "{\"lastRunAtMs\": 1776405600013, \"lastRunStatus\": \"ok\", \"consecutiveErrors\": 0}"
+    },
+    {
+      "job_id": "job-5",
+      "job_json": "{\"id\": \"job-5\", \"agentId\": \"main\", \"name\": \"Weekly scouting A\", \"enabled\": false, \"createdAtMs\": 1771750705546, \"schedule\": {\"kind\": \"cron\", \"expr\": \"0 1 * * 2,5\", \"tz\": \"UTC\"}, \"sessionTarget\": \"isolated\", \"wakeMode\": \"now\", \"payload\": {\"kind\": \"agentTurn\", \"message\": \"CANARY-PROMPT-6\", \"model\": \"anthropic/claude-opus-4-6\"}, \"delivery\": {\"mode\": \"announce\", \"channel\": \"discord\", \"to\": \"CANARY-PEER-13\"}}",
+      "state_json": "{\"lastRunAtMs\": 1776387600016, \"lastRunStatus\": \"ok\", \"consecutiveErrors\": 0}"
+    },
+    {
+      "job_id": "job-6",
+      "job_json": "{\"id\": \"job-6\", \"agentId\": \"main\", \"name\": \"Weekly scouting B\", \"enabled\": false, \"createdAtMs\": 1771751098652, \"schedule\": {\"kind\": \"cron\", \"expr\": \"0 2 * * 1,4\", \"tz\": \"UTC\"}, \"sessionTarget\": \"isolated\", \"wakeMode\": \"now\", \"payload\": {\"kind\": \"agentTurn\", \"message\": \"CANARY-PROMPT-7\", \"model\": \"anthropic/claude-haiku-4-5\"}, \"delivery\": {\"mode\": \"announce\", \"channel\": \"discord\", \"to\": \"CANARY-PEER-14\"}}",
+      "state_json": "{\"lastRunAtMs\": 1776304800008, \"lastRunStatus\": \"error\", \"consecutiveErrors\": 1, \"lastError\": \"CANARY-TEXT-2\"}"
+    },
+    {
+      "job_id": "job-7",
+      "job_json": "{\"id\": \"job-7\", \"agentId\": \"lead\", \"name\": \"field-usage-daily\", \"enabled\": false, \"createdAtMs\": 1771993988025, \"schedule\": {\"kind\": \"cron\", \"expr\": \"0 22 * * *\", \"tz\": \"UTC\"}, \"sessionTarget\": \"isolated\", \"wakeMode\": \"now\", \"payload\": {\"kind\": \"agentTurn\", \"message\": \"CANARY-PROMPT-8\", \"model\": \"anthropic/claude-haiku-4-5\"}, \"delivery\": {\"mode\": \"announce\", \"channel\": \"whatsapp\", \"to\": \"CANARY-PEER-15\"}}",
+      "state_json": "{}"
+    },
+    {
+      "job_id": "job-8",
+      "job_json": "{\"id\": \"job-8\", \"agentId\": \"lead\", \"name\": \"field-usage-alert\", \"enabled\": false, \"createdAtMs\": 1771994003463, \"schedule\": {\"kind\": \"every\", \"everyMs\": 3600000}, \"sessionTarget\": \"isolated\", \"wakeMode\": \"now\", \"payload\": {\"kind\": \"agentTurn\", \"message\": \"CANARY-PROMPT-9\", \"model\": \"anthropic/claude-haiku-4-5\"}, \"delivery\": {\"mode\": \"announce\", \"channel\": \"whatsapp\", \"to\": \"CANARY-PEER-16\"}}",
+      "state_json": "{\"lastRunAtMs\": 1772008403494, \"lastRunStatus\": \"ok\", \"consecutiveErrors\": 0}"
+    },
+    {
+      "job_id": "job-9",
+      "job_json": "{\"id\": \"job-9\", \"agentId\": \"lead\", \"name\": \"Daily marketing report\", \"enabled\": false, \"createdAtMs\": 1772194486282, \"schedule\": {\"kind\": \"cron\", \"expr\": \"0 8 * * *\", \"tz\": \"Europe/Paris\"}, \"sessionTarget\": \"isolated\", \"wakeMode\": \"now\", \"payload\": {\"kind\": \"agentTurn\", \"message\": \"CANARY-PROMPT-10\"}, \"delivery\": {\"mode\": \"announce\", \"channel\": \"discord\", \"to\": \"CANARY-PEER-17\"}}",
+      "state_json": "{\"lastRunAtMs\": 1773039673306, \"lastRunStatus\": \"ok\", \"consecutiveErrors\": 0}"
+    },
+    {
+      "job_id": "job-10",
+      "job_json": "{\"id\": \"job-10\", \"agentId\": \"lead\", \"name\": \"Weekly Retrospective\", \"enabled\": false, \"createdAtMs\": 1772466027701, \"schedule\": {\"kind\": \"cron\", \"expr\": \"0 12 * * 4\"}, \"sessionTarget\": \"isolated\", \"wakeMode\": \"now\", \"payload\": {\"kind\": \"agentTurn\", \"message\": \"CANARY-PROMPT-11\", \"model\": \"anthropic/claude-opus-4-6\"}, \"delivery\": {\"mode\": \"announce\", \"channel\": \"discord\", \"to\": \"CANARY-PEER-18\"}}",
+      "state_json": "{\"lastRunAtMs\": 1776340800010, \"lastRunStatus\": \"error\", \"consecutiveErrors\": 6, \"lastError\": \"CANARY-TEXT-3\"}"
+    }
+  ]
+}

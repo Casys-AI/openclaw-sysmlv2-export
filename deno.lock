@@ -1,0 +1,30 @@
+{
+  "version": "5",
+  "specifiers": {
+    "jsr:@logtape/logtape@^2.4.2": "2.4.2",
+    "jsr:@logtape/redaction@2.4.2": "2.4.2",
+    "npm:diff@9.0.0": "9.0.0"
+  },
+  "jsr": {
+    "@logtape/logtape@2.4.2": {
+      "integrity": "308d84fb97124e5558a24eb23b94a8909fc60f4b0032e9328905a4264d14886b"
+    },
+    "@logtape/redaction@2.4.2": {
+      "integrity": "baf5dd7de54e3b21a310b4872ca9156c976a01acb16379622122bf13ccb1045f",
+      "dependencies": [
+        "jsr:@logtape/logtape"
+      ]
+    }
+  },
+  "npm": {
+    "diff@9.0.0": {
+      "integrity": "sha512-svtcdpS8CgJyqAjEQIXdb3OjhFVVYjzGAPO8WGCmRbrml64SPw/jJD4GoE98aR7r25A0XcgrK3F02yw9R/vhQw=="
+    }
+  },
+  "workspace": {
+    "dependencies": [
+      "jsr:@logtape/redaction@2.4.2",
+      "npm:diff@9.0.0"
+    ]
+  }
+}

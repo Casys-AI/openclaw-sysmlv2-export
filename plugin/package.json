@@ -1,0 +1,9 @@
+{
+  "name": "@casys/openclaw-assembly-export",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OpenClaw plugin: export an instance as SysML v2 for Assembly",
+  "type": "module",
+  "peerDependencies": { "openclaw": ">=2026.10.9" },
+  "openclaw": { "extensions": ["./index.mjs"] }
+}
