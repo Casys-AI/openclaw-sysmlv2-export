@@ -23,12 +23,16 @@ First release, for OpenClaw 2026.10.9 and later.
 - **Schedules and entries.** Cron jobs and heartbeats become scheduled cases;
   channel accounts, bindings and hooks become entries.
 - **Inference (optional).** `--infer`, or `/sysmlv2_export infer`, asks the
-  agents' own models to propose procedures and rules from their behaviour files.
-  Proposals cite their source lines and digest, are validated and masked, and
-  land in a separate package that is never admitted automatically.
+  agents' own models to propose procedures and rules from their behaviour files
+  and the prompts of their scheduled tasks. Proposals cite their source lines
+  and digest, are validated and masked, and land in a separate package that is
+  never admitted automatically.
 - **Versions and viewer.** Every run is kept in its own folder, listed in
   `versions.json`, with a static offline page to browse the files and see what
-  changed since the previous run.
+  changed since the previous run. The page draws four SysML v2 views: System
+  (agents and channel accounts), Tools (the catalog and each agent's grants),
+  Scheduled tasks and, with inference, one Behaviour view per agent. Elements
+  open their SysML text, and changes since the previous run are highlighted.
 - **Privacy.** Read-only collection; secrets, people's ids, URLs, host paths,
   prompts and file bodies never enter the export. A sanitized, deterministic
   snapshot (`openclaw-snapshot/5`) records what was read.
