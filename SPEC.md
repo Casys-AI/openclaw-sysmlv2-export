@@ -265,6 +265,9 @@ owner of MCP tools, `bundle-mcp`, is never emitted.
 
 ### 5.4 Context
 
+Each agent's context is a part of its agent usage in `Operators`; the `Context`
+package holds the instance-wide entries.
+
 | OpenClaw                               | SysML                                                                                                                               |
 | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | Instruction file                       | `InstructionFile` (path, SHA-256, bytes) in the agent's `AgentContext.instructions`.                                                |
@@ -293,6 +296,9 @@ set the inherited `count` and `unit = minute`, since
 | Hook mapping    | `ExternalTrigger` (name, target agent, delivery channel), template as an `InstructionFile`. |
 
 ### 5.7 Authority
+
+`Sandbox` and `ExecutionPosture` are parts of each agent usage in `Operators`;
+grants, approvals, delegation and messaging are in the `Authority` package.
 
 | OpenClaw                                  | SysML                                                                                                                                                                                                                                               |
 | ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
