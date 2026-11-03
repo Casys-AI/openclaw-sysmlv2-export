@@ -1,6 +1,6 @@
-/** The regular files of a ustar archive, by path. It only ever reads the pinned
- * Toolkit archive, whose hash is checked first, and nothing is written under
- * the paths it returns, so it parses that archive and no more. */
+/** Regular files of verified pinned ustar archives (runtime Toolkit and test
+ * oracle). Callers check the archive hash first; returned paths are map keys,
+ * never filesystem write destinations. */
 export function readToolkitTar(bytes: Uint8Array): Map<string, Uint8Array> {
   const files = new Map<string, Uint8Array>();
   const text = (from: number, to: number) =>

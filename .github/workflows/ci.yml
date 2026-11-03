@@ -30,3 +30,11 @@ jobs:
           echo "93d6ef0a2140fceabc3115cd95d629146bc004c3959bfa23d715cce8b06cc13c  $archive" | sha256sum -c -
           echo "SYSML_TOOLKIT_WASM_ARCHIVE=$archive" >> "$GITHUB_ENV"
       - run: deno task test:toolkit
+      - name: Download and verify pinned OpenSysML oracle
+        shell: bash
+        run: |
+          archive="$RUNNER_TEMP/sysml-linux-amd64-0.11.0.tar.gz"
+          curl --fail --location --output "$archive" https://github.com/Open-MBEE/OpenSysML/releases/download/v0.11.0/sysml-linux-amd64.tar.gz
+          echo "4a7e8f8b59fd9d839cd364b275b73a5d68a6c4ae3e5adf039c9f1d846a6b5b9d  $archive" | sha256sum -c -
+          echo "OPENSYSML_ARCHIVE=$archive" >> "$GITHUB_ENV"
+      - run: deno task test:opensysml
