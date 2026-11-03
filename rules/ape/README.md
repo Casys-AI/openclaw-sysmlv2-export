@@ -26,10 +26,11 @@ as referenced by the
 The 2048-character limit is a plugin boundary, not a Toolkit ID length claim.
 
 The syntactic slice retains the metaclasses and properties enumerated in
-[`src/ape-elements.ts`](../../src/ape-elements.ts), including compiled derived
-properties when supplied by the Toolkit. Nulls and empty lists are omitted. RDF
-values are unordered; the views do not require collection order and the
-projection emits no JSON collection annotations. For example:
+[`src/adapters/out/sysml-toolkit/compilation/ape-elements.ts`](../../src/adapters/out/sysml-toolkit/compilation/ape-elements.ts),
+including compiled derived properties when supplied by the Toolkit. Nulls and
+empty lists are omitted. RDF values are unordered; the views do not require
+collection order and the projection emits no JSON collection annotations. For
+example:
 
 ```sparql
 ?feature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName ?role ;
@@ -99,8 +100,8 @@ graphs are excluded. Each constraint executes once for all focus nodes with
 scoped `VALUES` bindings. An outer-only binding fails the W3C pre-binding 002,
 003, 005 and 007 cases in Oxigraph. Prefix declarations are read from the shapes
 graph without fetching imports over the network. The canonical
-[W3C test inventory](../../test/shacl_w3c_test.ts) records the 15 applicable
-cases and the eight individual skips with reasons.
+[W3C test inventory](../../test/integration/shacl_w3c_test.ts) records the 15
+applicable cases and the eight individual skips with reasons.
 
 The scoped `VALUES` inside `EXISTS` is evaluated per outer row and remains O(N)
 in the number of focus nodes. This approach suits scopes below about 1000

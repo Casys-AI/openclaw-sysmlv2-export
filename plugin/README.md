@@ -85,3 +85,6 @@ Source, documentation and specification:
 includes elkjs 0.9.3 (Eclipse Public License 2.0) to lay the diagrams out, and
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) holds the notices of every
 bundled package.
+
+Contributors: see [contribution boundaries](../CONTRIBUTING.md) and the
+[source map](../src/README.md).

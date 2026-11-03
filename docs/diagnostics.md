@@ -253,7 +253,8 @@ availability is checked separately.
 Review or recovery: Set the binding agentId to an existing agent or remove the
 obsolete binding.
 
-Source: `docs/concepts/multi-agent.md`; `src/doctor.ts (export endpoint check)`.
+Source: `docs/concepts/multi-agent.md`;
+`src/domain/model/diagnostics/doctor.ts (export endpoint check)`.
 
 ### `WORKSPACE_UNVERSIONED`
 
@@ -266,7 +267,7 @@ Review or recovery: If the workspace is not already backed up, track intended
 files in a private repository.
 
 Source: `docs/gateway/doctor/workspace-and-dreams.md, section 19`;
-`src/collect.ts (root marker only)`.
+`src/adapters/out/openclaw/collector.ts (root marker only)`.
 
 ### `MALFORMED_SKILLS_DIR`
 
@@ -279,7 +280,7 @@ Review or recovery: Inspect the entries locally and repair broken links
 belonging to intended skills.
 
 Source: `dist/skill-root-discovery-B5Jg-4aX.mjs, discoverSkillCandidates`;
-`src/collect.ts (unresolved entries)`.
+`src/adapters/out/openclaw/collector.ts (unresolved entries)`.
 
 ### `MCP_SANDBOX_GATE`
 
@@ -342,7 +343,8 @@ its 2026.6.10 catalog.
 Review or recovery: Confirm the source version and review catalog differences
 before relying on the import.
 
-Source: `src/collect.ts`; `src/policy.ts (adapter catalog selection)`.
+Source: `src/adapters/out/openclaw/collector.ts`;
+`src/domain/openclaw/policy.ts (adapter catalog selection)`.
 
 ### `PLUGIN_INVENTORY_ABSENT`
 
@@ -528,7 +530,8 @@ The configured workspace cannot be resolved because it does not exist.
 Review or recovery: Create the workspace or correct the configured workspace
 path.
 
-Source: `src/collect.ts, workspace (adapter filesystem check)`.
+Source:
+`src/adapters/out/openclaw/collector.ts, workspace (adapter filesystem check)`.
 
 ### `INSTRUCTION_OUTSIDE_ROOT`
 
@@ -539,7 +542,8 @@ and is not collected.
 
 Review or recovery: Keep intended instruction files inside the agent workspace.
 
-Source: `src/collect.ts, workspace (adapter collection boundary)`.
+Source:
+`src/adapters/out/openclaw/collector.ts, workspace (adapter collection boundary)`.
 
 ### `SKILL_SYMLINK_OUTSIDE_ROOT`
 
@@ -552,7 +556,8 @@ Review or recovery: Move the skill inside the workspace or review
 `skills.load.allowSymlinkTargets`; the adapter still excludes the external
 target.
 
-Source: `docs/tools/skills.md`; `src/collect.ts (adapter collection boundary)`.
+Source: `docs/tools/skills.md`;
+`src/adapters/out/openclaw/collector.ts (adapter collection boundary)`.
 
 ### `CRON_TIMEZONE_UNRESOLVED`
 
@@ -575,7 +580,8 @@ in durationMs.
 Review or recovery: Use `MillisecondEvery.durationMs`; inherited count and unit
 are intentionally unset.
 
-Source: `sysml/cases.sysml (adapter MillisecondEvery)`; `src/collect.ts`.
+Source: `sysml/cases.sysml (adapter MillisecondEvery)`;
+`src/adapters/out/openclaw/collector.ts`.
 
 ### `CRON_AGENT_UNRESOLVED`
 

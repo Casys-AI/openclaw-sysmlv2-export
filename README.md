@@ -233,6 +233,9 @@ skipped.
 [SPEC.md](SPEC.md) specifies the behaviour, the mapping and the limits;
 [CHANGELOG.md](CHANGELOG.md) lists the changes.
 
+Contributors: see [contribution boundaries](CONTRIBUTING.md) and the
+[source map](src/README.md).
+
 ## License
 
 MIT. The copied Assembly SysML library keeps Assembly's MIT license. The plugin
