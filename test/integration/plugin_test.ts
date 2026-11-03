@@ -92,8 +92,25 @@ Deno.test("plugin runs are kept as versions", async (t) => {
       assert.equal(first.outDir, join(out, "2026-11-02T10-15-00Z"));
       assert.equal(second.version, "2026-11-02T10-20-00Z");
       assert.deepEqual(second.findings, first.findings);
+      const listed = JSON.parse(
+        await readFile(join(out, "versions.json"), "utf8"),
+      );
+      // Each entry names its plugin version and the digest of its shapes.
+      const { version } = JSON.parse(
+        await readFile(
+          new URL("../../plugin/package.json", import.meta.url),
+          "utf8",
+        ),
+      );
+      for (const { plugin, shapes } of listed) {
+        assert.equal(plugin, version);
+        assert.match(shapes, /^[0-9a-f]{64}$/);
+      }
+      assert.equal(listed[0].shapes, listed[1].shapes);
       assert.deepEqual(
-        JSON.parse(await readFile(join(out, "versions.json"), "utf8")),
+        listed.map((
+          { plugin: _p, shapes: _s, ...entry }: Record<string, unknown>,
+        ) => entry),
         [{
           id: "2026-11-02T10-20-00Z",
           createdAt: "2026-11-02T10:20:00.000Z",
@@ -296,4 +313,59 @@ Deno.test("plugin owner tool binds the injected inventory parser", async () => {
   });
   await toolFactory!({ senderIsOwner: true, sandboxed: false }).execute();
   assert.deepEqual(calls, ["inventory", "export"]);
+});
+
+Deno.test("an inference is asked again only for an agent whose sources changed", async () => {
+  const fixture = await createFixture();
+  const out = await mkdtemp(join(tmpdir(), "reuse-"));
+  const asked: string[] = [];
+  const answer = (prompt: string, agentId: string) => {
+    asked.push(agentId);
+    return complete(prompt, agentId);
+  };
+  const run = (time: string) =>
+    runExport(fixture.home, fixture.plugins, out, answer, new Date(time));
+  try {
+    const first = await run("2026-11-02T10:15:00Z");
+    assert.equal(asked.length, 6);
+    asked.length = 0;
+    const second = await run("2026-11-02T10:20:00Z");
+    assert.deepEqual(asked, []);
+    assert.equal(second.inferred!.reused!.length, 6);
+    const inferenceOf = async (id: string) =>
+      JSON.parse(await readFile(join(out, id, "inference.json"), "utf8"));
+    const kept = await inferenceOf(second.version);
+    assert.deepEqual(
+      new Set(kept.agents.map((a: { inferredIn: string }) => a.inferredIn)),
+      new Set([first.version]),
+    );
+    assert.equal(
+      await readFile(join(second.outDir, "OpenClawInferred.sysml"), "utf8"),
+      await readFile(join(first.outDir, "OpenClawInferred.sysml"), "utf8"),
+    );
+    const agents = join(fixture.home, "workspace-field", "AGENTS.md");
+    await writeFile(
+      agents,
+      `${await readFile(agents, "utf8")}\nOne more line.\n`,
+    );
+    const third = await run("2026-11-02T10:25:00Z");
+    assert.deepEqual(asked, ["field"]);
+    assert.deepEqual(third.inferred!.reused!.length, 5);
+    const versions = JSON.parse(
+      await readFile(join(out, "versions.json"), "utf8"),
+    );
+    assert.deepEqual(versions[0].inferred.reused, {
+      agents: 5,
+      from: [first.version],
+    });
+    assert.deepEqual(
+      (await inferenceOf(third.version)).agents.find(
+        (a: { agentId: string }) => a.agentId === "field",
+      ).inferredIn,
+      third.version,
+    );
+  } finally {
+    await rm(out, { recursive: true, force: true });
+    await fixture.cleanup();
+  }
 });

@@ -10,7 +10,26 @@ export interface VersionEntry {
   validation?: ValidationSummary;
   findings?: FindingSummary;
   agents: number;
-  inferred: { procedures: number; rules: number; failed: number } | null;
+  /** Null when inference did not run for this version. */
+  inferred: {
+    procedures: number;
+    rules: number;
+    failed: number;
+    /** Agents that kept an earlier inference because what the model is sent
+     * did not change, and the versions whose runs made those inferences. */
+    reused?: { agents: number; from: string[] };
+  } | null;
+  /** Plugin version that wrote the entry; absent in older entries. */
+  plugin?: string;
+  /** Digest of the shipped shape files that checked it, to tell a new rule
+   * from a new finding; absent in older entries. */
+  shapes?: string;
+}
+
+/** What produced a run: the plugin and the checks it shipped. */
+export interface Producer {
+  plugin: string;
+  shapes: string;
 }
 
 /** A run's directory name: its UTC start time to the second, path-safe. */
