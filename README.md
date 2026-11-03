@@ -85,7 +85,9 @@ an export or change the instance. If the bundled Toolkit is missing or damaged,
 validation fails with `TOOLKIT_INTEGRITY`, model checks do not run, and the
 collector notes from the snapshot remain available.
 
-![The Doctor panel: each finding with the element it concerns and its fix](docs/screenshots/doctor.png)
+![The Doctor panel: findings grouped by code, each subject a chip, with what to do](docs/screenshots/doctor.png)
+
+![Reach: who can delegate to whom, with a delegation cycle lit from the Doctor](docs/screenshots/reach.png)
 
 [Diagnostics](docs/diagnostics.md) lists every code, its source in OpenClaw and
 its fix. To check an exported model without changing it, run
