@@ -292,12 +292,18 @@ svg.md-lod .md-edge:not(.hot) { opacity: .3; }
 .et-views button { all: unset; cursor: pointer; margin-right: 10px; color: var(--ink); text-decoration: underline; text-decoration-color: var(--line-strong); }
 .et-views button:hover { text-decoration-color: var(--ink); }
 .et-sum { display: flex; flex-wrap: wrap; gap: 10px; padding: 14px; border-bottom: 1px solid var(--line); cursor: pointer; }
-.et-sum div { display: flex; flex-direction: column; gap: 2px; min-width: 120px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
-.et-sum span { font-size: 11px; color: var(--muted); }
-.et-sum strong { font-size: 13px; font-weight: 600; }
-.hl .et-sum.changed div { border-color: var(--chg); } .et-sum.selected div { border-color: var(--ink); }
-.et-src button { all: unset; display: block; cursor: pointer; font: 11px var(--mono); text-decoration: underline; text-decoration-color: var(--line-strong); }
-.et-src button:hover { text-decoration-color: var(--ink); }
+.et-tile { display: grid; grid-template: "label label" auto "figure rest" auto / auto 1fr; align-items: baseline; gap: 0 7px; min-width: 110px; padding: 8px 12px 9px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
+button.et-tile { cursor: pointer; text-align: left; }
+button.et-tile:hover { border-color: var(--line-strong); background: var(--card); }
+.et-tile span { grid-area: label; font-size: 11px; color: var(--muted); }
+.et-tile strong { grid-area: figure; font-size: 20px; line-height: 1.2; font-weight: 600; letter-spacing: -.01em; }
+.et-tile small { grid-area: rest; font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.et-tile strong b { display: inline-flex; align-items: center; gap: 5px; margin-right: 12px; font-weight: 600; color: var(--doc); }
+.et-tile strong b::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--doc); }
+.hl .et-sum.changed { box-shadow: inset 3px 0 var(--chg); } .et-sum.selected { background: var(--accent-soft); }
+.et-src button { all: unset; display: grid; place-items: center; width: 22px; height: 18px; border-radius: 5px; cursor: pointer; color: var(--muted); }
+.et-src button:hover { color: var(--ink); background: var(--hover); }
+.et-src svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 .wk { border-collapse: separate; border-spacing: 0; font-size: 12px; }
 .wk th, .wk td { padding: 2px 14px; text-align: left; font-weight: 400; white-space: nowrap; vertical-align: middle; }
 .wk thead th { position: sticky; top: 0; z-index: 1; background: var(--card); border-bottom: 1px solid var(--line-strong); color: var(--muted); font-weight: 500; }
@@ -666,8 +672,8 @@ function drawNode(n, delta) {
   }
   const doc = state.doc.get(n.id);
   if (doc) {
-    const b = sv("g", { class: "md-doc doc-" + doc });
-    b.append(sv("circle", { cx: x + 2, cy: y + 2, r: 8 }), txt(x + 2, y + 5.5, "!"));
+    const b = sv("g", { class: "md-doc doc-" + doc.worst });
+    b.append(sv("title", {}, doc.codes), sv("circle", { cx: x + 2, cy: y + 2, r: 8 }), txt(x + 2, y + 5.5, "!"));
     g.append(b);
   }
   return g;
@@ -1072,8 +1078,9 @@ function applyFocus() {
   const sheet = document.getElementById("sheet");
   for (const e of sheet.querySelectorAll("[data-id]")) {
     e.classList.toggle("selected", e.dataset.id === state.selected);
-    const doc = state.doc.get(e.dataset.id);
-    if (doc) e.dataset.doc = doc; else delete e.dataset.doc;
+    const doc = state.doc.get(e.dataset.id), name = e.querySelector(".et-name");
+    if (doc) e.dataset.doc = doc.worst; else delete e.dataset.doc;
+    if (name) name.title = doc ? doc.codes : "";
   }
   // A panel's entries mark the selection.
   for (const e of document.querySelectorAll("#inspector [data-subject]")) e.classList.toggle("active", e.dataset.subject === state.selected);
@@ -1250,12 +1257,15 @@ function alsoIn(view, id) {
 // ---- Doctor
 const SEVERITIES = ["error", "warning", "info"];
 const plural = (n, word) => n + " " + word + (n === 1 ? "" : "s");
-// The worst error or warning per element of a version; notes mark nothing.
+// The worst error or warning per element of a version (notes mark nothing),
+// with the codes of its errors and warnings, worst first, as a tooltip.
 function marks(vi) {
-  const m = new Map();
-  for (const f of versions[vi].findings || []) {
-    const s = m.get(f.subject);
-    if (f.severity !== "info" && (!s || SEVERITIES.indexOf(f.severity) < SEVERITIES.indexOf(s))) m.set(f.subject, f.severity);
+  const m = new Map(), rank = (f) => SEVERITIES.indexOf(f.severity);
+  const marked = (versions[vi].findings || []).filter((f) => f.severity !== "info").sort((a, b) => rank(a) - rank(b));
+  for (const f of marked) {
+    const line = f.code + " (" + f.severity + ")", s = m.get(f.subject);
+    if (!s) m.set(f.subject, { worst: f.severity, codes: line });
+    else if (!s.codes.split("\n").includes(line)) s.codes += "\n" + line;
   }
   return m;
 }
@@ -1476,8 +1486,10 @@ function renderElements(box, view, t, mark) {
       // Its own declaration; the inspector lists the others.
       const src = el("td", "et-src");
       for (const [file, from, to] of view.elements[r.id].s.slice(0, 1)) {
-        const b = button(file + ":" + from + (to > from ? "–" + to : ""), (e) => { e.stopPropagation(); showLines(state.version, file, from, to); });
-        b.title = "Show in Files";
+        const b = button("", (e) => { e.stopPropagation(); showLines(state.version, file, from, to); });
+        b.title = file + ":" + from + (to > from ? "–" + to : "") + " · Show in Files";
+        b.setAttribute("aria-label", b.title);
+        b.append(sourceIcon());
         src.append(b);
       }
       tr.append(src);
@@ -1552,16 +1564,47 @@ function renderWeek(box, t, mark) {
   table.append(thead, tbody);
   box.replaceChildren(bar, table);
 }
+function sourceIcon() {
+  const g = sv("svg", { viewBox: "0 0 16 16", "aria-hidden": "true" });
+  g.append(sv("path", { d: "M5.5 4.5 2 8l3.5 3.5M10.5 4.5 14 8l-3.5 3.5" }));
+  return g;
+}
+// Where the Overview's totals lead: a view and, for Tools, the one group to
+// show unfolded. The labels are those of views.ts's instanceTotals.
+const TILE_VIEWS = { tools: ["tools"], plugins: ["tools", "origin:plugin"], "MCP servers": ["tools", "origin:mcp"],
+  "channel accounts": ["system"], "scheduled tasks": ["schedules"] };
+// The instance's totals as tiles, after the Doctor's: a tile opens what it
+// counts, and the band around them selects the instance.
 function summary(view, head, mark) {
   const box = el("div", "et-sum" + mark(head.id));
   box.dataset.id = head.id;
   box.tabIndex = 0;
-  for (const [k, v] of view.elements[head.id].a) {
-    const tile = el("div");
-    tile.append(el("span", "", k), el("strong", "", v));
-    box.append(tile);
-  }
+  box.append(doctorTile(), ...view.elements[head.id].a.map(([label, value]) => {
+    const [target, group] = TILE_VIEWS[label] || [];
+    return tile(label, value, target && entryOf(state.version, target) ? () => openCount(target, group) : null);
+  }));
   return box;
+}
+// A total's figure, large, and the rest of its value beside it.
+function tile(label, value, open) {
+  const t = open ? button("", (e) => { e.stopPropagation(); open(); }, "et-tile") : el("div", "et-tile");
+  const [, figure, rest] = /^(\d+)(?: · )?(.*)$/.exec(value) || [null, value, ""];
+  t.append(el("span", "", label), el("strong", "", figure), el("small", "", rest));
+  return t;
+}
+// The Doctor's errors and warnings, each count in its severity's colour.
+function doctorTile() {
+  const findings = versions[state.version].findings || [], count = (s) => findings.filter((f) => f.severity === s).length;
+  const t = tile("doctor", "0", () => openPanel("doctor")), shown = ["error", "warning"].filter((s) => count(s));
+  t.title = [plural(count("error"), "error"), plural(count("warning"), "warning"), plural(count("info"), "note")].join(", ");
+  if (shown.length) t.querySelector("strong").replaceChildren(...shown.map((s) => el("b", "doc-" + s, String(count(s)))));
+  return t;
+}
+// Opens the view a total counts; a Tools group shows alone, its own groups folded.
+function openCount(view, group) {
+  const rows = group ? payload(entryOf(state.version, view)).table.rows : [];
+  navigate({ tab: "diagrams", view, ...group ? { folded: new Set(rows.filter((r) => r.shape !== "tool" && r.id !== group).map((r) => r.id)) } : {} });
+  if (group) reveal(group);
 }
 
 // ---- Files and changes
