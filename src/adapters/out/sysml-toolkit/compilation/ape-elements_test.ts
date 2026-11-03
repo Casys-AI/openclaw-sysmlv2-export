@@ -4,8 +4,8 @@ import {
   prepareApeElements,
   RdfProjectionError,
   selectApeElements,
-} from "../src/ape-elements.ts";
-import { ExportError } from "../src/error.ts";
+} from "./ape-elements.ts";
+import { ExportError } from "../../../../infrastructure/error.ts";
 
 Deno.test("APE slice preserves retained values for unordered projection while omitting unused nodes and properties", () => {
   const ordered = [

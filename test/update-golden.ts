@@ -1,9 +1,9 @@
 /** Regenerate fixture goldens for review: deno run --allow-read --allow-write test/update-golden.ts */
 import { mkdir, writeFile } from "node:fs/promises";
-import { collect } from "../src/collect.ts";
-import { doctor } from "../src/doctor.ts";
-import { emit } from "../src/emit.ts";
-import { canonical } from "../src/snapshot.ts";
+import { collect } from "../src/adapters/out/openclaw/collector.ts";
+import { doctor } from "../src/domain/model/diagnostics/doctor.ts";
+import { emit } from "../src/adapters/out/sysml/emitter.ts";
+import { canonical } from "../src/infrastructure/canonical-json.ts";
 import { createFixture } from "./support/fixture.ts";
 
 const fixture = await createFixture({ git: true, backups: 2 });

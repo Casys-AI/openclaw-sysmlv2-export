@@ -1,12 +1,10 @@
 import assert from "node:assert/strict";
-import { collect } from "../src/collect.ts";
-import { ExportError } from "../src/error.ts";
-import {
-  emitInferred,
-  inferencePrompt,
-  parseAgentInference,
-} from "../src/infer.ts";
-import { createFixture } from "./support/fixture.ts";
+import { collect } from "../../src/adapters/out/openclaw/collector.ts";
+import { ExportError } from "../../src/infrastructure/error.ts";
+import { inferencePrompt } from "../../src/domain/model/inference.ts";
+import { emitInferred } from "../../src/adapters/out/sysml/inferred.ts";
+import { parseAgentInference } from "../../src/adapters/out/llm/inference.ts";
+import { createFixture } from "../support/fixture.ts";
 
 const step = (id: string, kind = "action", target: string | null = null) => ({
   id,

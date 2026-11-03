@@ -1,17 +1,22 @@
 import assert from "node:assert/strict";
-import { initOxigraph, namedNode, Store, type Term } from "../src/oxigraph.ts";
-import { ShaclQueryError } from "../src/shacl-query.ts";
+import {
+  initOxigraph,
+  namedNode,
+  Store,
+  type Term,
+} from "../../src/adapters/out/oxigraph/store.ts";
+import { ShaclQueryError } from "../../src/adapters/out/shacl/query.ts";
 import {
   readShaclProgram,
   SH,
   ShaclStageError,
   SHAPES_GRAPH,
   validateShacl,
-} from "../src/shacl.ts";
+} from "../../src/adapters/out/shacl/engine.ts";
 
 const MF = "http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#";
 const SHT = "http://www.w3.org/ns/shacl-test#";
-const FIXTURES = new URL("./fixtures/shacl-w3c/", import.meta.url);
+const FIXTURES = new URL("../fixtures/shacl-w3c/", import.meta.url);
 
 // The unchanged W3C corpus predates SHACL 1.2. These cases are intentionally
 // inapplicable; the asserted inventory keeps them distinct from successful cases.

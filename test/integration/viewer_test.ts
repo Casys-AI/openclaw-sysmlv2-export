@@ -1,15 +1,21 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import type { ApeFinding } from "../src/ape-rules.ts";
-import { doctor } from "../src/doctor.ts";
-import { emit } from "../src/emit.ts";
-import { emitInferred, type Inference } from "../src/infer.ts";
-import { canonical, parseSnapshot, type Snapshot } from "../src/snapshot.ts";
-import { viewerPage, type ViewerVersion } from "../src/viewer.ts";
+import type { ApeFinding } from "../../src/adapters/out/shacl/diagnostics.ts";
+import { doctor } from "../../src/domain/model/diagnostics/doctor.ts";
+import { emit } from "../../src/adapters/out/sysml/emitter.ts";
+import { type Inference } from "../../src/domain/model/inference.ts";
+import { emitInferred } from "../../src/adapters/out/sysml/inferred.ts";
+import { type Snapshot } from "../../src/domain/model/snapshot.ts";
+import { canonical } from "../../src/infrastructure/canonical-json.ts";
+import { parseSnapshot } from "../../src/infrastructure/snapshot-codec.ts";
+import {
+  viewerPage,
+  type ViewerVersion,
+} from "../../src/composition/viewer.ts";
 
 const snapshot: Snapshot = parseSnapshot(
   JSON.parse(
-    await readFile(new URL("./golden/snapshot.json", import.meta.url), "utf8"),
+    await readFile(new URL("../golden/snapshot.json", import.meta.url), "utf8"),
   ),
 );
 const version = (id: string, s: Snapshot): ViewerVersion => ({
@@ -308,7 +314,7 @@ Deno.test("an element added since the previous version is highlighted", async ()
 Deno.test("an Overview row changes with the declarations it sums up, not with inference", async () => {
   const inference: Inference = JSON.parse(
     await readFile(
-      new URL("./fixtures/inference.json", import.meta.url),
+      new URL("../fixtures/inference.json", import.meta.url),
       "utf8",
     ),
   );

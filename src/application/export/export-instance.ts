@@ -1,44 +1,26 @@
-/** Bundle entry for the OpenClaw plugin: the same pipeline as the CLI, with no
- * second implementation. Built to core.mjs by `deno task plugin:build`. */
 import {
-  mkdir,
-  readdir,
-  readFile,
-  realpath,
-  writeFile,
-} from "node:fs/promises";
-import { join, resolve, sep } from "node:path";
-import { DatabaseSync } from "node:sqlite";
-import { collect } from "../src/collect.ts";
-import { compareFindings, doctor } from "../src/doctor.ts";
-import { type ApeSummary, persistedApeReport } from "../src/ape-rules.ts";
-import { emit } from "../src/emit.ts";
-import { ExportError } from "../src/error.ts";
+  compareFindings,
+  doctor,
+} from "../../domain/model/diagnostics/doctor.ts";
+import {
+  type ApeSummary,
+  persistedApeReport,
+} from "../../domain/model/diagnostics/ape.ts";
+import type { ValidationSummary } from "../../domain/model/diagnostics/validation.ts";
+import { ExportError } from "../../domain/primitives/error.ts";
 import {
   type AgentInference,
   cronSources,
-  emitInferred,
   inferencePrompt,
-  parseAgentInference,
-} from "../src/infer.ts";
-import { arr, json, obj, required } from "../src/input.ts";
-import { ASSEMBLY_LIBRARY } from "../src/library.ts";
-import { digest } from "../src/redaction.ts";
-import {
-  type Agent,
-  canonical,
-  type Cron,
-  type FileRef,
-} from "../src/snapshot.ts";
+} from "../../domain/model/inference.ts";
+import { json } from "../../domain/primitives/input.ts";
+import type { FileRef } from "../../domain/model/snapshot.ts";
 import {
   type FindingSummary,
-  type VersionEntry,
   versionId,
   withVersion,
-} from "../src/versions.ts";
-import { viewerPage } from "../src/viewer.ts";
-import { validationReport, type ValidationSummary } from "../src/validate.ts";
-export { installToolkit, toolkitStatus } from "../src/toolkit-install.ts";
+} from "../../domain/export/versions.ts";
+import type { ExportPorts } from "./ports/out/export.port.ts";
 
 /** One model call about one agent: the raw text and the model that answered. */
 export type Complete = (
@@ -59,116 +41,12 @@ export interface ExportSummary {
   ape: ApeSummary;
 }
 
-/** Rereads an instruction file only if it is still inside the workspace and
- * still has the bytes the collector hashed. */
-async function collected(root: string, file: FileRef): Promise<string> {
-  const base = await realpath(root),
-    target = await realpath(join(root, file.path));
-  if (target !== base && !target.startsWith(`${base}${sep}`)) throw changed();
-  const bytes = await readFile(target);
-  if (digest(bytes) !== file.sha256) throw changed();
-  return bytes.toString("utf8");
-}
-
-function changed(): ExportError {
-  return new ExportError(
-    "INSTRUCTION_CHANGED",
-    "An instruction source moved, changed or became unreadable after collection",
-    "Run the export again.",
-  );
-}
-
-/** Raw prose is released only against the digest collected for this source. */
-function verified(value: unknown, file: FileRef): string {
-  if (typeof value !== "string" || digest(value) !== file.sha256) {
-    throw changed();
-  }
-  return value;
-}
-
-/** Read only the selected jobs, including committed WAL records, without
- * retaining bodies in the snapshot or exposing database/parser errors. */
-function collectedCron(stateDir: string, jobs: Cron[]) {
-  if (!jobs.length) return [];
-  let db: DatabaseSync | undefined;
-  try {
-    db = new DatabaseSync(join(stateDir, "state", "openclaw.sqlite"), {
-      readOnly: true,
-    });
-    db.exec("PRAGMA query_only=ON; BEGIN");
-    const query = db.prepare("SELECT job_json FROM cron_jobs WHERE job_id = ?");
-    const sources = jobs.map((job) => {
-      const current = obj(json(required(query.get(job.id)?.job_json))),
-        payload = obj(current.payload);
-      if (current.agentId !== job.agentId || payload.kind !== "agentTurn") {
-        throw changed();
-      }
-      return {
-        path: `cron:${job.id}`,
-        text: verified(payload.message, job.prompt!),
-        schedule: job.schedule,
-        enabled: job.enabled,
-      };
-    });
-    db.exec("ROLLBACK");
-    return sources;
-  } catch {
-    throw changed();
-  } finally {
-    db?.close();
-  }
-}
-
-/** Match the collector's keyed/list agent precedence and heartbeat inheritance. */
-async function collectedHeartbeat(stateDir: string, agent: Agent) {
-  const heartbeat = agent.heartbeat;
-  if (!heartbeat?.prompt) return [];
-  try {
-    const config = obj(
-        json(await readFile(join(stateDir, "openclaw.json"), "utf8")),
-      ),
-      agents = obj(config.agents),
-      entries = obj(agents.entries);
-    const own = obj(
-      Object.keys(entries).length
-        ? entries[agent.id]
-        : arr(agents.list).map(obj).find((a) => a.id === agent.id),
-    );
-    const hb = {
-      ...obj(obj(agents.defaults).heartbeat),
-      ...obj(own.heartbeat),
-    };
-    return [{
-      path: "heartbeat",
-      text: verified(hb.prompt, heartbeat.prompt),
-      enabled: heartbeat.everyMs > 0,
-      schedule: {
-        kind: "every" as const,
-        everyMs: heartbeat.everyMs,
-        expression: null,
-        timezone: null,
-      },
-    }];
-  } catch {
-    throw changed();
-  }
-}
-
 /** Workspace sources are behavior files: bootstrap-style names (AGENTS.md,
  * SOUL.md, TOOLS.md…), never the agent's memory or its owner's profile, nor
  * other notes kept in the workspace. */
 function isBehavior(f: FileRef): boolean {
   return /^[A-Z_]+\.md$/.test(f.path) &&
     !["MEMORY.md", "USER.md"].includes(f.path);
-}
-
-/** The runtime's own error, short and with anything token-like masked. */
-function modelError(e: unknown): string {
-  const code = (e as { code?: unknown })?.code;
-  const name = typeof code === "string" ? code : (e as Error)?.name ?? "Error";
-  const message = String((e as Error)?.message ?? "").slice(0, 160)
-    .replace(/CANARY-[A-Za-z0-9_-]+|[A-Za-z0-9_\-]{24,}/g, "[redacted]");
-  return message ? `${name}: ${message}` : name;
 }
 
 /** The model may wrap the object in prose or a fence; keep the outer object. */
@@ -200,57 +78,25 @@ export function pluginList(
   return json(result.stdout);
 }
 
-/** versions.json lists the runs kept in outDir; none before the first run. */
-async function readVersions(outDir: string): Promise<VersionEntry[]> {
-  try {
-    return JSON.parse(await readFile(join(outDir, "versions.json"), "utf8"));
-  } catch (e) {
-    if ((e as { code?: unknown }).code === "ENOENT") return [];
-    throw e;
-  }
-}
-
-/** A kept version's exported files by name (other files, such as a .DS_Store
- * left by a file browser, are not part of it). */
-async function versionFiles(dir: string): Promise<Record<string, string>> {
-  const names = await readdir(dir).catch((e) => {
-    throw e?.code === "ENOENT"
-      ? new ExportError(
-        "EXPORT_VERSION_MISSING",
-        "versions.json lists a version whose directory is gone",
-        "Restore the directory or remove its entry from versions.json.",
-      )
-      : e;
-  });
-  return Object.fromEntries(
-    await Promise.all(
-      names.filter((n) => n === "ape-report.ttl" || /\.(sysml|json)$/.test(n))
-        .map(async (n) => [
-          n,
-          await readFile(join(dir, n), "utf8"),
-        ]),
-    ),
-  );
-}
-
 /** Writes one run into its own `<outDir>/<UTC time>/` directory, named after
  * `now`, lists it in `<outDir>/versions.json` and regenerates the viewer,
  * `<outDir>/index.html`. `pluginList` is the output of `openclaw plugins list
  * --json`, or null to export without plugin tools. */
 export async function runExport(
+  ports: ExportPorts,
   stateDir: string,
   pluginList: unknown,
   outDir: string,
   complete: Complete | null,
   now: Date,
 ): Promise<ExportSummary> {
-  const snapshot = await collect(stateDir, pluginList);
+  const snapshot = await ports.collect(stateDir, pluginList);
   const findings = doctor(snapshot);
   const findingSummary: FindingSummary = { error: 0, warning: 0, info: 0 };
   const files = new Map([
-    ["snapshot.json", canonical(snapshot)],
-    ...emit(snapshot),
-    ...ASSEMBLY_LIBRARY,
+    ["snapshot.json", ports.serialize(snapshot)],
+    ...ports.sysml.emit(snapshot),
+    ...ports.sysml.library,
   ]);
   let inferred: ExportSummary["inferred"] = null;
   if (complete) {
@@ -258,17 +104,23 @@ export async function runExport(
     let model = "unknown";
     for (const agent of snapshot.agents) {
       const behavior = agent.workspace.instructions.filter(isBehavior);
-      const root = resolve(stateDir, agent.workspace.path);
+      const root = ports.instructions.workspaceRoot(
+        stateDir,
+        agent.workspace.path,
+      );
       try {
         const sources = [
           ...await Promise.all(
             behavior.map(async (f) => ({
               path: f.path,
-              text: await collected(root, f),
+              text: await ports.instructions.collected(root, f),
             })),
           ),
-          ...collectedCron(stateDir, cronSources(snapshot, agent.id)),
-          ...await collectedHeartbeat(stateDir, agent),
+          ...ports.instructions.collectedCron(
+            stateDir,
+            cronSources(snapshot, agent.id),
+          ),
+          ...await ports.instructions.collectedHeartbeat(stateDir, agent),
         ];
         if (!sources.length) continue;
         const answer = await complete(
@@ -277,7 +129,7 @@ export async function runExport(
         );
         model = answer.model ?? model;
         agents.push(
-          parseAgentInference(
+          ports.inference.parse(
             jsonObject(answer.text),
             snapshot,
             agent.id,
@@ -289,7 +141,7 @@ export async function runExport(
         failed.push(
           e instanceof ExportError
             ? `${agent.id}: ${e.code} (${e.context})`
-            : `${agent.id}: MODEL_FAILED (${modelError(e)})`,
+            : `${agent.id}: MODEL_FAILED (${ports.modelError(e)})`,
         );
       }
     }
@@ -298,17 +150,19 @@ export async function runExport(
       model,
       agents,
     };
-    files.set("inference.json", canonical(inference));
-    for (const [k, v] of emitInferred(snapshot, inference)) files.set(k, v);
+    files.set("inference.json", ports.serialize(inference));
+    for (const [k, v] of ports.sysml.emitInferred(snapshot, inference)) {
+      files.set(k, v);
+    }
     inferred = {
       procedures: agents.reduce((n, a) => n + a.procedures.length, 0),
       rules: agents.reduce((n, a) => n + a.rules.length, 0),
       failed,
     };
   }
-  const version = versionId(now), dir = join(outDir, version);
-  await mkdir(outDir, { recursive: true });
-  await mkdir(dir).catch((e) => {
+  const version = versionId(now), dir = ports.output.join(outDir, version);
+  await ports.output.mkdir(outDir, { recursive: true });
+  await ports.output.mkdir(dir).catch((e) => {
     throw e?.code === "EEXIST"
       ? new ExportError(
         "EXPORT_VERSION_EXISTS",
@@ -317,8 +171,10 @@ export async function runExport(
       )
       : e;
   });
-  for (const [name, text] of files) await writeFile(join(dir, name), text);
-  const { validation, diagnostics, ape } = await validationReport(
+  for (const [name, text] of files) {
+    await ports.output.writeFile(ports.output.join(dir, name), text);
+  }
+  const { validation, diagnostics, ape } = await ports.validationReport(
     new Map([...files].filter(([name]) => name.endsWith(".sysml"))),
     stateDir,
   );
@@ -326,14 +182,24 @@ export async function runExport(
   findings.sort(compareFindings);
   for (const finding of findings) findingSummary[finding.severity]++;
   if (ape.validationReport !== undefined) {
-    await writeFile(join(dir, "ape-report.ttl"), ape.validationReport);
+    await ports.output.writeFile(
+      ports.output.join(dir, "ape-report.ttl"),
+      ape.validationReport,
+    );
   }
-  await writeFile(join(dir, "findings.json"), canonical(findings));
-  await writeFile(
-    join(dir, "validation.json"),
-    canonical({ validation, ...diagnostics, ape: persistedApeReport(ape) }),
+  await ports.output.writeFile(
+    ports.output.join(dir, "findings.json"),
+    ports.serialize(findings),
   );
-  const versions = withVersion(await readVersions(outDir), {
+  await ports.output.writeFile(
+    ports.output.join(dir, "validation.json"),
+    ports.serialize({
+      validation,
+      ...diagnostics,
+      ape: persistedApeReport(ape),
+    }),
+  );
+  const versions = withVersion(await ports.output.readVersions(outDir), {
     id: version,
     createdAt: now.toISOString(),
     agents: snapshot.agents.length,
@@ -345,14 +211,19 @@ export async function runExport(
       failed: inferred.failed.length,
     },
   });
-  await writeFile(join(outDir, "versions.json"), canonical(versions));
-  const viewer = join(outDir, "index.html");
-  await writeFile(
+  await ports.output.writeFile(
+    ports.output.join(outDir, "versions.json"),
+    ports.serialize(versions),
+  );
+  const viewer = ports.output.join(outDir, "index.html");
+  await ports.output.writeFile(
     viewer,
-    await viewerPage(
+    await ports.viewerPage(
       await Promise.all(versions.map(async (entry) => ({
         entry,
-        files: await versionFiles(join(outDir, entry.id)),
+        files: await ports.output.versionFiles(
+          ports.output.join(outDir, entry.id),
+        ),
       }))),
     ),
   );

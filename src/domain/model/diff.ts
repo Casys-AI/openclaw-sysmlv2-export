@@ -1,11 +1,15 @@
-import { canonical, type Snapshot } from "./snapshot.ts";
+import { type Snapshot } from "./snapshot.ts";
 export interface Change {
   kind: string;
   subject: string;
   before: unknown;
   after: unknown;
 }
-export function diff(a: Snapshot, b: Snapshot): Change[] {
+export function diff(
+  a: Snapshot,
+  b: Snapshot,
+  canonical: (value: unknown) => string,
+): Change[] {
   const changes: Change[] = [];
   const compare = (
     kind: string,

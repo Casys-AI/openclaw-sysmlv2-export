@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { EMAIL_ADDRESS_PATTERN, JWT_PATTERN } from "@logtape/redaction";
-import { collect } from "../src/collect.ts";
-import { doctor } from "../src/doctor.ts";
-import { emit, name } from "../src/emit.ts";
-import { canonical } from "../src/snapshot.ts";
-import { createFixture } from "./support/fixture.ts";
+import { collect } from "../../src/adapters/out/openclaw/collector.ts";
+import { doctor } from "../../src/domain/model/diagnostics/doctor.ts";
+import { emit, name } from "../../src/adapters/out/sysml/emitter.ts";
+import { canonical } from "../../src/infrastructure/canonical-json.ts";
+import { createFixture } from "../support/fixture.ts";
 
 Deno.test("fixture output is deterministic, sanitized, and matches reviewed goldens", async () => {
   const fixture = await createFixture({ git: true, backups: 2 });
@@ -33,7 +33,10 @@ Deno.test("fixture output is deterministic, sanitized, and matches reviewed gold
       assert.doesNotMatch(output, JWT_PATTERN.pattern);
       assert.equal(
         output,
-        await readFile(new URL(`./golden/${name}`, import.meta.url), "utf8"),
+        await readFile(
+          new URL(`../golden/${name}`, import.meta.url),
+          "utf8",
+        ),
         name,
       );
     }

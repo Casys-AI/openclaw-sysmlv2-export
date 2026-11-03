@@ -1,16 +1,21 @@
+import { parseSnapshot } from "../../../infrastructure/snapshot-codec.ts";
 import { lstat, readdir, readFile, realpath, stat } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { ExportError, invalid, ioError } from "./error.ts";
-import { elementId } from "./element-id.ts";
-import { plaintextCredentialPaths } from "./credentials.ts";
+import {
+  ExportError,
+  invalid,
+  ioError,
+} from "../../../infrastructure/error.ts";
+import { elementId } from "../../../domain/model/element-id.ts";
+import { plaintextCredentialPaths } from "../../../domain/openclaw/credentials.ts";
 import {
   type ApprovalPolicy,
   approvalPolicy,
   configuredExec,
   effectiveExec,
   selectApprovals,
-} from "./execution.ts";
+} from "../../../domain/openclaw/execution.ts";
 import {
   arr,
   boolean,
@@ -22,15 +27,20 @@ import {
   required,
   strings,
   text,
-} from "./input.ts";
+} from "../../../domain/primitives/input.ts";
 import {
   digest,
   environmentNames,
   plaintextSecretCount,
   prose,
   redact,
-} from "./redaction.ts";
-import { info, is202610, model, resolvePolicy } from "./policy.ts";
+} from "../../../infrastructure/redaction.ts";
+import {
+  info,
+  is202610,
+  model,
+  resolvePolicy,
+} from "../../../domain/openclaw/policy.ts";
 import {
   type Agent,
   byId,
@@ -39,12 +49,11 @@ import {
   type FileRef,
   type Finding,
   type McpServer,
-  parseSnapshot,
   type Plugin,
   type Sandbox,
   type Snapshot,
   unique,
-} from "./snapshot.ts";
+} from "../../../domain/model/snapshot.ts";
 
 /** OpenClaw 2026.6 keeps agents in `agents.list`; 2026.10 moved them to keyed
  * `agents.entries` (docs/concepts/multi-agent.md). Each entry is redacted on

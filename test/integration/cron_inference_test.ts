@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { runExport } from "../plugin/core.ts";
-import { collect } from "../src/collect.ts";
-import { ExportError } from "../src/error.ts";
-import { parseAgentInference } from "../src/infer.ts";
-import { digest } from "../src/redaction.ts";
-import { createFixture } from "./support/fixture.ts";
+import { runExport } from "../../src/composition/openclaw.ts";
+import { collect } from "../../src/adapters/out/openclaw/collector.ts";
+import { ExportError } from "../../src/infrastructure/error.ts";
+import { parseAgentInference } from "../../src/adapters/out/llm/inference.ts";
+import { digest } from "../../src/infrastructure/redaction.ts";
+import { createFixture } from "../support/fixture.ts";
 
 const schedule = { kind: "cron", expr: "15 8 * * 1", tz: "Asia/Taipei" };
 const prompts = [

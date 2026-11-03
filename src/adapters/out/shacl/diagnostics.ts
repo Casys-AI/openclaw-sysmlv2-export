@@ -1,8 +1,11 @@
 import { readFile } from "node:fs/promises";
-import { compareFindings } from "./doctor.ts";
-import { elementId } from "./element-id.ts";
-import { isRecord, recordDiagnosticError } from "./error.ts";
-import { namedNode, type Store, type Term } from "./oxigraph.ts";
+import { compareFindings } from "../../../domain/model/diagnostics/doctor.ts";
+import { elementId } from "../../../domain/model/element-id.ts";
+import {
+  isRecord,
+  recordDiagnosticError,
+} from "../../../infrastructure/error.ts";
+import { namedNode, type Store, type Term } from "../oxigraph/store.ts";
 import {
   materializeShaclRules,
   readShaclProgram,
@@ -12,86 +15,21 @@ import {
   ShaclStageError,
   SHAPES_GRAPH,
   validateShacl,
-} from "./shacl.ts";
-import type { Finding } from "./snapshot.ts";
+} from "./engine.ts";
+import type { Finding } from "../../../domain/model/snapshot.ts";
 
-export interface ApeFinding extends Finding {
-  pattern: string;
-  finding: "present" | "absent" | "indeterminate";
-}
-export type ApeStage = "projection" | "loading" | "view" | "rule";
-export interface ApeReport {
-  status: "completed" | "skipped" | "failed";
-  code?: string;
-  context?: string | Record<string, unknown>;
-  recovery?: string;
-  stage?: ApeStage;
-  file?: string;
-  cause?: string;
-  findings: ApeFinding[];
-  validationReport?: string;
-  metrics?: {
-    elements: number;
-    sourceElements?: number;
-    baseQuads: number;
-    derivedQuads: number;
-    batches: number;
-    totalMs: number;
-    preparationMs: number;
-    projectionMs: number;
-    loadMs: number;
-    views: { file: string; graph: string; ms: number; quads: number }[];
-    queries: { code: string; ms: number; findings: number }[];
-  };
-}
-export type ApeSummary = Pick<ApeReport, "status" | "code"> & { count: number };
-
-export type PersistedApeReport =
-  & Omit<ApeReport, "metrics" | "validationReport">
-  & {
-    metrics?:
-      & Pick<
-        NonNullable<ApeReport["metrics"]>,
-        "elements" | "sourceElements" | "baseQuads" | "derivedQuads" | "batches"
-      >
-      & {
-        views: { file: string; graph: string; quads: number }[];
-        queries: { code: string; findings: number }[];
-      };
-  };
-
-/** Persist counts and identities; timings remain available only in memory. */
-export function persistedApeReport(
-  report: ApeReport | PersistedApeReport,
-): PersistedApeReport {
-  const { metrics, validationReport: _validationReport, ...stable } =
-    report as ApeReport;
-  return {
-    ...stable,
-    ...(metrics
-      ? {
-        metrics: {
-          elements: metrics.elements,
-          ...(metrics.sourceElements !== undefined
-            ? { sourceElements: metrics.sourceElements }
-            : {}),
-          baseQuads: metrics.baseQuads,
-          derivedQuads: metrics.derivedQuads,
-          batches: metrics.batches,
-          views: metrics.views.map(({ file, graph, quads }) => ({
-            file,
-            graph,
-            quads,
-          })),
-          queries: metrics.queries.map(({ code, findings }) => ({
-            code,
-            findings,
-          })),
-        },
-      }
-      : {}),
-  };
-}
+import type {
+  ApeFinding,
+  ApeStage,
+} from "../../../domain/model/diagnostics/ape.ts";
+export { persistedApeReport } from "../../../domain/model/diagnostics/ape.ts";
+export type {
+  ApeFinding,
+  ApeReport,
+  ApeStage,
+  ApeSummary,
+  PersistedApeReport,
+} from "../../../domain/model/diagnostics/ape.ts";
 
 /** The stage and original cause remain inspectable separately from compiler diagnostics. */
 export class ApeStageError extends Error {
@@ -143,7 +81,7 @@ const APE = "urn:ase:ape:v1:";
 const FILE = "rules/ape/ape.ttl";
 const SHAPE_URL = new URL(
   import.meta.url.endsWith(".ts")
-    ? "../rules/ape/ape.ttl"
+    ? "../../../../rules/ape/ape.ttl"
     : "./rules/ape/ape.ttl",
   import.meta.url,
 );
@@ -365,3 +303,15 @@ export function evaluateApeRules(store: Store, program: ApeProgram) {
     throw stageError(error);
   }
 }
+
+/** Bind native graph handles to the application diagnostics contracts. */
+export const shapesDiagnostics = {
+  readProgram: (store: { native: Store }) => readApeProgram(store.native),
+  materialize: (store: { native: Store }, program: ApeProgram) =>
+    materializeApeViews(store.native, program),
+  evaluate: (store: { native: Store }, program: ApeProgram) =>
+    evaluateApeRules(store.native, program),
+  failure: (stage: ApeStage, error: unknown) =>
+    (error instanceof ApeStageError ? error : new ApeStageError(stage, error))
+      .toJSON(),
+};

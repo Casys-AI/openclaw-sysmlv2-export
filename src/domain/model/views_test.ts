@@ -1,20 +1,26 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import { emit } from "../src/emit.ts";
-import { emitInferred, type Inference } from "../src/infer.ts";
-import { parseSnapshot, type Snapshot } from "../src/snapshot.ts";
-import { drawing, tableData } from "../src/tables.ts";
+import { emit } from "../../adapters/out/sysml/emitter.ts";
+import { type Inference } from "./inference.ts";
+import { emitInferred } from "../../adapters/out/sysml/inferred.ts";
+import { type Snapshot } from "./snapshot.ts";
+import { parseSnapshot } from "../../infrastructure/snapshot-codec.ts";
+import { drawing, tableData } from "./tables.ts";
 import {
   cronWeek,
   declarations,
   type DiagramView,
   diagramViews,
-} from "../src/views.ts";
+} from "./views.ts";
 
 const read = (path: string) =>
   readFile(new URL(path, import.meta.url), "utf8").then(JSON.parse);
-const snapshot: Snapshot = parseSnapshot(await read("./golden/snapshot.json"));
-const inference: Inference = await read("./fixtures/inference.json");
+const snapshot: Snapshot = parseSnapshot(
+  await read("../../../test/golden/snapshot.json"),
+);
+const inference: Inference = await read(
+  "../../../test/fixtures/inference.json",
+);
 
 const view = (views: DiagramView[], id: string) =>
   views.find((v) => v.id === id)!;

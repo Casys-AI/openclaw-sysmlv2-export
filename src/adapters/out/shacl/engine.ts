@@ -6,13 +6,13 @@ import {
   quad,
   type Store,
   type Term,
-} from "./oxigraph.ts";
+} from "../oxigraph/store.ts";
 import {
   admitConstruct,
   admitSelect,
   type AdmittedSelect,
   bindFocus,
-} from "./shacl-query.ts";
+} from "./query.ts";
 
 export const SH = "http://www.w3.org/ns/shacl#";
 export const SHAPES_GRAPH = "urn:ase:ape:v1:shapes";

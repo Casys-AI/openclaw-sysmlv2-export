@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { Worker } from "node:worker_threads";
-import { ExportError } from "../src/error.ts";
-import { type CompileDiagnostics, validate } from "../src/validate.ts";
+import { ExportError } from "../../src/infrastructure/error.ts";
+import {
+  type CompileDiagnostics,
+  validate,
+} from "../../src/adapters/out/sysml-toolkit/worker-client.ts";
 
 const compiled: CompileDiagnostics = {
   errors: [],
@@ -24,7 +27,7 @@ function fixture(mode: "hang" | "throw" | "exit", afterCompile = false) {
     },
     createWorker() {
       const worker = new Worker(
-        new URL("./support/toolkit-hang.mjs", import.meta.url),
+        new URL("../support/toolkit-hang.mjs", import.meta.url),
         {
           workerData: {
             started,

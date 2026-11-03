@@ -1,62 +1,66 @@
-import { createHash } from "node:crypto";
-import { type ElementSession, prepareApeElements } from "./ape-elements.ts";
-import { projectModelToNQuadBatches } from "./ape-rdf.ts";
-import {
-  type ApeReport,
-  type ApeStage,
-  ApeStageError,
-  evaluateApeRules,
-  materializeApeViews,
-  readApeProgram,
-} from "./ape-rules.ts";
-import { initOxigraph, Store } from "./oxigraph.ts";
+import type {
+  ApeReport,
+  ApeStage,
+} from "../../../domain/model/diagnostics/ape.ts";
+import type {
+  ApeTechnicalServices,
+  ModelShapesDiagnostics,
+} from "./ports/out/shapes-diagnostics.port.ts";
+import type {
+  ElementSession,
+  ToolkitElementsPort,
+} from "./ports/out/toolkit-elements.port.ts";
+import type {
+  ModelGraphStore,
+  RdfProjector,
+} from "../semantic/ports/out/rdf-projector.port.ts";
 
 /** Called only inside the validation worker, after a successful Toolkit check. */
-export async function checkApe(session: ElementSession): Promise<ApeReport> {
-  const started = performance.now();
+export async function checkApe<Store extends ModelGraphStore, Program>(
+  session: ElementSession,
+  toolkit: ToolkitElementsPort,
+  rdf: RdfProjector<Store>,
+  shapes: ModelShapesDiagnostics<Store, Program>,
+  technical: ApeTechnicalServices,
+): Promise<ApeReport> {
+  const started = technical.now();
   let stage: ApeStage = "projection";
   let store: Store | undefined;
   try {
-    const prepared = prepareApeElements(session);
-    const preparationMs = performance.now() - started;
-    const projectionStart = performance.now();
-    const hash = createHash("sha256").update("[");
-    prepared.elements.forEach((element, index) => {
-      if (index) hash.update(",");
-      hash.update(JSON.stringify(element));
-    });
-    const artifactDigest = hash.update("]").digest("hex");
-    const batches = projectModelToNQuadBatches({
+    const prepared = toolkit.prepare(session);
+    const preparationMs = technical.now() - started;
+    const projectionStart = technical.now();
+    const artifactDigest = technical.artifactDigest(prepared.elements);
+    const batches = rdf.project({
       ...prepared,
       build: { artifactDigest },
     });
-    let projectionMs = performance.now() - projectionStart;
+    let projectionMs = technical.now() - projectionStart;
     stage = "loading";
-    const loadStart = performance.now();
-    await initOxigraph();
-    store = new Store();
-    let loadMs = performance.now() - loadStart;
+    const loadStart = technical.now();
+    store = await rdf.createStore();
+    let loadMs = technical.now() - loadStart;
     let baseQuads = 0;
     let batchCount = 0;
     while (true) {
       stage = "projection";
-      const projectStart = performance.now();
+      const projectStart = technical.now();
       const next = batches.next();
-      projectionMs += performance.now() - projectStart;
+      projectionMs += technical.now() - projectStart;
       if (next.done) break;
       stage = "loading";
-      const batchStart = performance.now();
-      store.load(next.value.nquads, { format: "application/n-quads" });
-      loadMs += performance.now() - batchStart;
+      const batchStart = technical.now();
+      store.load(next.value.nquads);
+      loadMs += technical.now() - batchStart;
       baseQuads += next.value.quadCount;
       batchCount++;
     }
     stage = "loading";
-    const program = await readApeProgram(store);
+    const program = await shapes.readProgram(store);
     stage = "view";
-    const materialized = materializeApeViews(store, program);
+    const materialized = shapes.materialize(store, program);
     stage = "rule";
-    const { findings, queries, validationReport } = evaluateApeRules(
+    const { findings, queries, validationReport } = shapes.evaluate(
       store,
       program,
     );
@@ -70,7 +74,7 @@ export async function checkApe(session: ElementSession): Promise<ApeReport> {
         baseQuads,
         derivedQuads: materialized.derivedQuads,
         batches: batchCount,
-        totalMs: performance.now() - started,
+        totalMs: technical.now() - started,
         preparationMs,
         projectionMs,
         loadMs,
@@ -79,12 +83,10 @@ export async function checkApe(session: ElementSession): Promise<ApeReport> {
       },
     };
   } catch (error) {
-    const failure = error instanceof ApeStageError
-      ? error
-      : new ApeStageError(stage, error);
-    return { status: "failed", ...failure.toJSON(), findings: [] };
+    const failure = shapes.failure(stage, error);
+    return { status: "failed", ...failure, findings: [] };
   } finally {
     // The pinned Oxigraph runtime exports free(), omitted from its .d.ts.
-    if (store) (store as Store & { free(): void }).free();
+    if (store) store.free();
   }
 }

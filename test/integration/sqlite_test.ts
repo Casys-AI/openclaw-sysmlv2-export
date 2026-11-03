@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { DatabaseSync } from "node:sqlite";
 import { access } from "node:fs/promises";
 import { join } from "node:path";
-import { createFixture } from "./support/fixture.ts";
+import { createFixture } from "../support/fixture.ts";
 Deno.test("SQLite readOnly flag rejects writes and cannot create a missing database", async () => {
   const f = await createFixture();
   try {

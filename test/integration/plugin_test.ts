@@ -1,13 +1,15 @@
+import { createPluginEntry } from "../../src/adapters/in/openclaw/plugin.mjs";
 import assert from "node:assert/strict";
 import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { pluginList, runExport } from "../plugin/core.ts";
-import { doctor } from "../src/doctor.ts";
-import { ExportError } from "../src/error.ts";
-import { ASSEMBLY_LIBRARY } from "../src/library.ts";
-import { canonical, parseSnapshot } from "../src/snapshot.ts";
-import { createFixture } from "./support/fixture.ts";
+import { pluginList, runExport } from "../../src/composition/openclaw.ts";
+import { doctor } from "../../src/domain/model/diagnostics/doctor.ts";
+import { ExportError } from "../../src/infrastructure/error.ts";
+import { ASSEMBLY_LIBRARY } from "../../src/adapters/out/sysml/library.ts";
+import { canonical } from "../../src/infrastructure/canonical-json.ts";
+import { parseSnapshot } from "../../src/infrastructure/snapshot-codec.ts";
+import { createFixture } from "../support/fixture.ts";
 
 /** One inferred rule for `field`, nothing for the other agents. */
 const complete = (_prompt: string, agentId: string) =>
@@ -182,14 +184,14 @@ Deno.test("the plugin inventory command must succeed and print JSON", () => {
 
 Deno.test("the plugin summary names combined counts and the APE execution status", async () => {
   const source = await readFile(
-    new URL("../plugin/index.mjs", import.meta.url),
+    new URL("../../src/adapters/in/openclaw/plugin.mjs", import.meta.url),
     "utf8",
   );
   // Exercise the entry's actual formatter without loading the OpenClaw SDK.
   const summarize = new Function(
     source.slice(
       source.indexOf("function summarize(s)"),
-      source.indexOf("export default"),
+      source.indexOf("export function createPluginEntry"),
     ) +
       ";return summarize;",
   )();
@@ -231,4 +233,61 @@ Deno.test("the plugin summary names combined counts and the APE execution status
       /APE: completed \(12 findings\)/,
     );
   }
+});
+
+Deno.test("plugin owner tool binds the injected inventory parser", async () => {
+  const inventory = { code: 0, stdout: '{"plugins":[]}' };
+  const plugins = { plugins: [] };
+  const calls: unknown[] = [];
+  let toolFactory: (context: unknown) => { execute(): Promise<unknown> };
+  const unexpected = () => {
+    throw new Error("Unexpected service call");
+  };
+  const entry = createPluginEntry((definition: unknown) => definition, {
+    installToolkit: unexpected,
+    toolkitStatus: unexpected,
+    completeWith: unexpected,
+    pluginList(result: unknown) {
+      assert.equal(result, inventory);
+      calls.push("inventory");
+      return plugins;
+    },
+    runExport(
+      stateDir: string,
+      selected: unknown,
+      outDir: string,
+      complete: unknown,
+      now: Date,
+    ) {
+      assert.equal(stateDir, "/fake/state");
+      assert.equal(selected, plugins);
+      assert.equal(outDir, "/fake/state/sysmlv2-export");
+      assert.equal(complete, null);
+      assert(now instanceof Date);
+      calls.push("export");
+      return Promise.resolve({
+        outDir,
+        viewer: `${outDir}/index.html`,
+        version: "version",
+        agents: 1,
+        inferred: null,
+        findings: { error: 0, warning: 0, info: 0 },
+        validation: { status: "skipped", errors: 0 },
+        ape: { status: "skipped", count: 0 },
+      });
+    },
+  });
+  entry.register({
+    runtime: {
+      state: { resolveStateDir: () => "/fake/state" },
+      system: { runCommandWithTimeout: () => Promise.resolve(inventory) },
+    },
+    registerCommand() {},
+    registerTool(factory: typeof toolFactory) {
+      toolFactory = factory;
+    },
+    registerCli() {},
+  });
+  await toolFactory!({ senderIsOwner: true, sandboxed: false }).execute();
+  assert.deepEqual(calls, ["inventory", "export"]);
 });

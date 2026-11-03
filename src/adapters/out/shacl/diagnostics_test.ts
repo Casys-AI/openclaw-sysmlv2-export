@@ -5,10 +5,10 @@ import {
   evaluateApeRules,
   materializeApeViews,
   persistedApeReport,
-} from "../src/ape-rules.ts";
-import { recordDiagnosticError } from "../src/error.ts";
-import { initOxigraph, namedNode, Store } from "../src/oxigraph.ts";
-import { checkApe } from "../src/ape.ts";
+} from "./diagnostics.ts";
+import { recordDiagnosticError } from "../../../infrastructure/error.ts";
+import { initOxigraph, namedNode, Store } from "../oxigraph/store.ts";
+import { checkApe } from "../../../composition/ape.ts";
 import {
   readShaclProgram,
   REPORT_GRAPH,
@@ -16,7 +16,7 @@ import {
   ShaclStageError,
   SHAPES_GRAPH,
   validateShacl,
-} from "../src/shacl.ts";
+} from "./engine.ts";
 
 const prefixes = `@prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix ape: <urn:ase:ape:v1:> .

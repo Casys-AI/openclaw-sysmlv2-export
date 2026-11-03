@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { collect } from "../src/collect.ts";
-import { plaintextCredentialPaths } from "../src/credentials.ts";
-import { ExportError } from "../src/error.ts";
-import { plaintextSecretCount } from "../src/redaction.ts";
-import { canonical } from "../src/snapshot.ts";
-import { createFixture } from "./support/fixture.ts";
+import { collect } from "../../src/adapters/out/openclaw/collector.ts";
+import { plaintextCredentialPaths } from "../../src/domain/openclaw/credentials.ts";
+import { ExportError } from "../../src/infrastructure/error.ts";
+import { plaintextSecretCount } from "../../src/infrastructure/redaction.ts";
+import { canonical } from "../../src/infrastructure/canonical-json.ts";
+import { createFixture } from "../support/fixture.ts";
 
 Deno.test("absent agents.list uses only implicit main and the default workspace", async () => {
   const fixture = await createFixture();

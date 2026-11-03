@@ -1,13 +1,14 @@
 import assert from "node:assert/strict";
-import { collect } from "../src/collect.ts";
-import { doctor } from "../src/doctor.ts";
+import { collect } from "../../src/adapters/out/openclaw/collector.ts";
+import { doctor } from "../../src/domain/model/diagnostics/doctor.ts";
 import {
   approvalPolicy,
   configuredExec,
   effectiveExec,
-} from "../src/execution.ts";
-import { parseSnapshot, type Snapshot } from "../src/snapshot.ts";
-import { createFixture } from "./support/fixture.ts";
+} from "../../src/domain/openclaw/execution.ts";
+import { type Snapshot } from "../../src/domain/model/snapshot.ts";
+import { parseSnapshot } from "../../src/infrastructure/snapshot-codec.ts";
+import { createFixture } from "../support/fixture.ts";
 
 let cached: Promise<Snapshot> | undefined;
 function baseline(): Promise<Snapshot> {

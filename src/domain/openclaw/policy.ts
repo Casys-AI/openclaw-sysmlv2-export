@@ -1,7 +1,19 @@
-import { elementId } from "./element-id.ts";
-import { enumeration, type Obj, obj, strings, text } from "./input.ts";
-import type { Agent, Finding, Plugin, Policy, Sandbox } from "./snapshot.ts";
-import { byId, unique } from "./snapshot.ts";
+import { elementId } from "../model/element-id.ts";
+import {
+  enumeration,
+  type Obj,
+  obj,
+  strings,
+  text,
+} from "../primitives/input.ts";
+import type {
+  Agent,
+  Finding,
+  Plugin,
+  Policy,
+  Sandbox,
+} from "../model/snapshot.ts";
+import { byId, unique } from "../model/snapshot.ts";
 
 // OpenClaw 2026.6.10 docs/gateway/config-tools.md, Tool profiles / Tool groups.
 const groups202606: Record<string, string[]> = {

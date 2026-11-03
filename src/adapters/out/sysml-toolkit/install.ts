@@ -10,14 +10,14 @@ import {
 } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { gunzipSync } from "node:zlib";
-import { ExportError } from "./error.ts";
+import { ExportError } from "../../../infrastructure/error.ts";
 import {
   TOOLKIT_ARCHIVE_SHA256,
   TOOLKIT_FILES,
   TOOLKIT_URL,
   TOOLKIT_VERSION,
-} from "./toolkit-pin.ts";
-import { readToolkitTar } from "./toolkit-tar.ts";
+} from "../../sysml-toolkit-pin.ts";
+import { readToolkitTar } from "./tar.ts";
 
 export interface ToolkitStatus {
   installed: boolean;

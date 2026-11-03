@@ -1,13 +1,11 @@
-import { ExportError, isRecord } from "./error.ts";
+import { ExportError, isRecord } from "../../../../infrastructure/error.ts";
 
 /** Complete the syntactic APE slice from native Toolkit interchange.
  * Native catalog completion follows Assembly src/adapters/out/sysml-toolkit/compilation/compiler.ts,
  * 3 November 2026. Native IDs and explicit library classification remain.
  */
-export interface ElementSession {
-  toFullJson(includeLibrary: boolean): string;
-  rows(ids: string, fields: string): string;
-}
+import type { ElementSession } from "../../../../application/model/diagnostics/ports/out/toolkit-elements.port.ts";
+export type { ElementSession } from "../../../../application/model/diagnostics/ports/out/toolkit-elements.port.ts";
 
 export type Element = Record<string, unknown>;
 

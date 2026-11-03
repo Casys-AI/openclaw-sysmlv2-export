@@ -5,8 +5,8 @@ import {
   effectiveExec,
   type ExecPolicy,
   selectApprovals,
-} from "../src/execution.ts";
-import { ExportError } from "../src/error.ts";
+} from "./execution.ts";
+import { ExportError } from "../../infrastructure/error.ts";
 
 Deno.test("exec modes preserve their normalized pair and distinct mode", () => {
   for (

@@ -11,11 +11,12 @@ import {
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { EMAIL_ADDRESS_PATTERN, JWT_PATTERN } from "@logtape/redaction";
-import { collect } from "../src/collect.ts";
-import { doctor } from "../src/doctor.ts";
-import { ExportError } from "../src/error.ts";
-import { canonical, type Snapshot } from "../src/snapshot.ts";
-import { createFixture } from "./support/fixture.ts";
+import { collect } from "../../src/adapters/out/openclaw/collector.ts";
+import { doctor } from "../../src/domain/model/diagnostics/doctor.ts";
+import { ExportError } from "../../src/infrastructure/error.ts";
+import type { Snapshot } from "../../src/domain/model/snapshot.ts";
+import { canonical } from "../../src/infrastructure/canonical-json.ts";
+import { createFixture } from "../support/fixture.ts";
 
 async function treeHashes(
   home: string,

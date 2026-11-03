@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import { resolvePolicy } from "../src/policy.ts";
-import type { Finding, Plugin, Sandbox } from "../src/snapshot.ts";
+import { resolvePolicy } from "./policy.ts";
+import type { Finding, Plugin, Sandbox } from "../model/snapshot.ts";
 const sandbox: Sandbox = {
   mode: "off",
   scope: "agent",

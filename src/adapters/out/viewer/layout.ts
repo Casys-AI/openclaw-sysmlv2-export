@@ -1,6 +1,20 @@
+import {
+  flags,
+  keyword,
+  type Scene,
+  type SceneNode,
+} from "../../../domain/model/presentation.ts";
+export {
+  flags,
+  keyword,
+  type Scene,
+  type SceneEdge,
+  type SceneLabel,
+  type SceneNode,
+} from "../../../domain/model/presentation.ts";
 import * as elkjs from "elkjs/lib/elk.bundled.js";
 import type { ELK, ElkNode } from "elkjs/lib/elk.bundled.js";
-import type { DiagramNode, DiagramView, EdgeKind, Shape } from "./views.ts";
+import type { DiagramNode, DiagramView } from "../../../domain/model/views.ts";
 
 /** Positioned geometry of a view, computed at export time so the page only
  * draws SVG. Text is measured with Helvetica's metrics: the page draws
@@ -8,54 +22,6 @@ import type { DiagramNode, DiagramView, EdgeKind, Shape } from "./views.ts";
  * do not fit are cut with an ellipsis; the inspector keeps the full values.
  * ELK's algorithms are deterministic, and coordinates are rounded, so the same
  * view always gives the same scene. */
-
-export interface SceneLabel {
-  x: number;
-  y: number;
-  lines: string[];
-}
-export interface SceneNode {
-  id: string;
-  /** The containing frame or group, if any. */
-  parent?: string;
-  shape: Shape;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  kw?: string;
-  name?: string;
-  type?: string;
-  /** A frame's tab width, and a procedure's title and trigger lines. */
-  tab?: number;
-  title?: string;
-  head?: string[];
-  comps?: [string, string[]][];
-  /** Wrapped text of a step. */
-  lines?: string[];
-  /** A decision's text, beside its diamond. */
-  label?: SceneLabel;
-  /** The type is drawn on its own line, under the name. */
-  split?: true;
-  muted?: true;
-  dashed?: true;
-}
-export interface SceneEdge {
-  id: string;
-  kind: EdgeKind;
-  s: string;
-  t: string;
-  /** One polyline per section, as [x0, y0, x1, y1, …]. */
-  pts: number[][];
-  label?: SceneLabel;
-}
-export interface Scene {
-  w: number;
-  h: number;
-  /** Containers before their contents: drawing order is painting order. */
-  nodes: SceneNode[];
-  edges: SceneEdge[];
-}
 
 // Helvetica advance widths (1/1000 em) for U+0020…U+007E, regular and bold.
 const REGULAR = [
@@ -334,9 +300,6 @@ interface Sized {
   label?: string[];
 }
 
-export const keyword = (n: DiagramNode) =>
-  n.keyword ? `«${n.keyword}»` : undefined;
-
 /** A block's header and compartments, rows cut to the widest allowed. A type
  * that does not fit beside the name goes on its own line. */
 function block(n: DiagramNode, max: number): Sized {
@@ -461,12 +424,6 @@ function header(
     ),
   };
 }
-export const flags = (n: DiagramNode) => ({
-  ...(n.parent ? { parent: n.parent } : {}),
-  ...(n.muted ? { muted: true as const } : {}),
-  ...(n.dashed ? { dashed: true as const } : {}),
-});
-
 const BASE: Record<string, string> = {
   "elk.algorithm": "layered",
   "elk.edgeRouting": "ORTHOGONAL",

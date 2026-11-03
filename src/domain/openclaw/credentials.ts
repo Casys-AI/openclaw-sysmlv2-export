@@ -1,4 +1,4 @@
-import { obj } from "./input.ts";
+import { obj } from "../primitives/input.ts";
 
 // OpenClaw 2026.10.9 docs/reference/secretref-credential-surface.md and
 // dist/target-registry-query-BxzYFe4n.mjs: these four credential surfaces

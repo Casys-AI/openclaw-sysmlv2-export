@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { collect } from "../src/collect.ts";
-import { diff } from "../src/diff.ts";
-import { doctor } from "../src/doctor.ts";
-import { ExportError } from "../src/error.ts";
-import { canonical } from "../src/snapshot.ts";
-import { createFixture } from "./support/fixture.ts";
+import { collect } from "../../src/adapters/out/openclaw/collector.ts";
+import { diff } from "../../src/domain/model/diff.ts";
+import { doctor } from "../../src/domain/model/diagnostics/doctor.ts";
+import { ExportError } from "../../src/infrastructure/error.ts";
+import { canonical } from "../../src/infrastructure/canonical-json.ts";
+import { createFixture } from "../support/fixture.ts";
 
 Deno.test("collector selects the versioned catalog and reports unknown versions", async () => {
   const f = await createFixture();
@@ -129,7 +129,7 @@ Deno.test("SQLite host policy tightens exec and preserves each side in snapshot 
       assert.ok(
         !doctor(guarded).some((f) => f.code === "EXEC_WITHOUT_APPROVAL"),
       );
-      const hostChange = diff(open, guarded).find((d) =>
+      const hostChange = diff(open, guarded, canonical).find((d) =>
         d.kind === "agent.execution"
       )!;
       assert.deepEqual(hostChange.before, open.agents[0].execution);
@@ -139,7 +139,9 @@ Deno.test("SQLite host policy tightens exec and preserves each side in snapshot 
       const restricted = await collect(f.home);
       assert.deepEqual(restricted.agents[0].execution.effective, ex.effective);
       assert.ok(
-        diff(guarded, restricted).some((d) => d.kind === "agent.execution"),
+        diff(guarded, restricted, canonical).some((d) =>
+          d.kind === "agent.execution"
+        ),
       );
       store({ agents: { main: { ask: "CANARY-ASK" } } });
       await assert.rejects(

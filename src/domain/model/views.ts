@@ -1,6 +1,7 @@
+import { name } from "./sysml-name.ts";
 import { elementId } from "./element-id.ts";
-import { type Grant, grants, name, ORIGINS } from "./emit.ts";
-import type { Inference } from "./infer.ts";
+import { type Grant, grants, ORIGINS } from "../openclaw/tool-grants.ts";
+import type { Inference } from "./inference.ts";
 import type { Agent, Snapshot } from "./snapshot.ts";
 
 /** Diagram model of one version: the viewer's views (Overview, System, Tools,

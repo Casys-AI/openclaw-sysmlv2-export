@@ -4,8 +4,8 @@ import {
   admitSelect,
   bindFocus,
   ShaclQueryError,
-} from "../src/shacl-query.ts";
-import { initOxigraph, Store } from "../src/oxigraph.ts";
+} from "./query.ts";
+import { initOxigraph, Store } from "../oxigraph/store.ts";
 
 function rows(store: Store, query: string): string[] {
   const result = store.query(query);

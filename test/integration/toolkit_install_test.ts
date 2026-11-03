@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ExportError } from "../src/error.ts";
+import { ExportError } from "../../src/infrastructure/error.ts";
 import {
   installToolkit,
   readToolkit,
   toolkitPath,
   toolkitStatus,
-} from "../src/toolkit-install.ts";
+} from "../../src/adapters/out/sysml-toolkit/install.ts";
 
 const code = (expected: string) => (e: unknown) =>
   e instanceof ExportError && e.code === expected;

@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { main, run } from "../cli.ts";
-import { ExportError } from "../src/error.ts";
-import { createFixture } from "./support/fixture.ts";
+import { main, run } from "../../src/composition/cli.ts";
+import { ExportError } from "../../src/infrastructure/error.ts";
+import { createFixture } from "../support/fixture.ts";
 
 Deno.test("CLI collect/export/doctor/diff compose with deterministic sanitized output", async () => {
   const fixture = await createFixture();

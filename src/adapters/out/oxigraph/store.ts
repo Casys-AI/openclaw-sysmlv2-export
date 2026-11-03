@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { initSync } from "oxigraph/web";
+import { initSync, Store } from "oxigraph/web";
 
 export * from "oxigraph/web";
 
@@ -11,4 +11,19 @@ export async function initOxigraph(
 ): Promise<void> {
   const bytes = input instanceof Uint8Array ? input : await readFile(input);
   initSync({ module: bytes });
+}
+
+/** One owned native store, released by the diagnostics usecase's finally. */
+export async function createModelGraphStore() {
+  await initOxigraph();
+  const native = new Store();
+  return {
+    native,
+    load(nquads: string) {
+      native.load(nquads, { format: "application/n-quads" });
+    },
+    free() {
+      (native as Store & { free(): void }).free();
+    },
+  };
 }

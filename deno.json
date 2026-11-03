@@ -12,10 +12,10 @@
     "export": "deno run --cached-only --allow-read --allow-write cli.ts export",
     "doctor": "deno run --cached-only --allow-read cli.ts doctor",
     "diff": "deno run --cached-only --allow-read cli.ts diff",
-    "check": "deno check --cached-only src/*.ts cli.ts plugin/core.ts test/*.ts test/support/*.ts",
-    "test": "deno test --cached-only --allow-read --allow-write --allow-env=SYSML_TOOLKIT_WASM_ARCHIVE,TMPDIR,TMP,TEMP test/",
-    "test:toolkit": "deno test --cached-only --allow-read --allow-write --allow-env=SYSML_TOOLKIT_WASM_ARCHIVE,TMPDIR,TMP,TEMP test/toolkit_test.ts test/toolkit_install_test.ts",
-    "plugin:build": "deno check --cached-only plugin/core.ts src/toolkit-worker.ts && deno bundle --deny-import --platform=node -o plugin/core.mjs plugin/core.ts && deno bundle --deny-import --platform=node -o plugin/toolkit-worker.mjs src/toolkit-worker.ts && deno run --cached-only --allow-read --allow-write scripts/package-ape.ts"
+    "check": "deno check --cached-only src/ cli.ts plugin/core.ts test/integration/ test/support/ test/update-golden.ts",
+    "test": "deno test --cached-only --allow-read --allow-write --allow-env=SYSML_TOOLKIT_WASM_ARCHIVE,TMPDIR,TMP,TEMP src/ test/integration/",
+    "test:toolkit": "deno test --cached-only --allow-read --allow-write --allow-env=SYSML_TOOLKIT_WASM_ARCHIVE,TMPDIR,TMP,TEMP test/integration/toolkit_test.ts test/integration/toolkit_install_test.ts",
+    "plugin:build": "deno check --cached-only plugin/core.ts src/adapters/out/sysml-toolkit/worker.ts && deno bundle --deny-import --platform=node -o plugin/core.mjs plugin/core.ts && deno bundle --deny-import --platform=node -o plugin/toolkit-worker.mjs src/adapters/out/sysml-toolkit/worker.ts && deno run --cached-only --allow-read --allow-write scripts/package-ape.ts"
   },
   "fmt": {
     "exclude": [

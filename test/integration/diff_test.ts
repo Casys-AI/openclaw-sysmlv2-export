@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
-import { collect } from "../src/collect.ts";
-import { diff } from "../src/diff.ts";
-import { canonical } from "../src/snapshot.ts";
-import { createFixture } from "./support/fixture.ts";
+import { collect } from "../../src/adapters/out/openclaw/collector.ts";
+import { diff as domainDiff } from "../../src/domain/model/diff.ts";
+import { canonical } from "../../src/infrastructure/canonical-json.ts";
+import { createFixture } from "../support/fixture.ts";
 
 Deno.test("diff reports structural mutations and additions/removals deterministically", async () => {
   const fixture = await createFixture();
@@ -84,3 +84,8 @@ Deno.test("diff reports structural mutations and additions/removals deterministi
     await fixture.cleanup();
   }
 });
+
+const diff = (
+  a: Parameters<typeof domainDiff>[0],
+  b: Parameters<typeof domainDiff>[1],
+) => domainDiff(a, b, canonical);

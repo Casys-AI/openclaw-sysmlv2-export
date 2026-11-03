@@ -3,18 +3,18 @@ import {
   evaluateApeRules,
   materializeApeViews,
   readApeProgram,
-} from "../src/ape-rules.ts";
+} from "./diagnostics.ts";
 import {
   BUILD_GRAPH_PREFIX,
   projectModelToNQuadBatches,
-} from "../src/ape-rdf.ts";
+} from "../oxigraph/rdf.ts";
 import {
   initOxigraph,
   literal,
   namedNode,
   quad,
   Store,
-} from "../src/oxigraph.ts";
+} from "../oxigraph/store.ts";
 
 Deno.test("actual views preserve unknown exec posture, scope wildcards and resolve named messaging references", async () => {
   const elements = new Map<string, Record<string, unknown>>();

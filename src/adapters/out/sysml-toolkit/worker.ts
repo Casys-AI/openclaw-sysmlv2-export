@@ -1,15 +1,18 @@
 import { Buffer } from "node:buffer";
 import { parentPort, workerData } from "node:worker_threads";
 import { gunzipSync } from "node:zlib";
-import { checkApe } from "./ape.ts";
-import { ExportError, recordDiagnosticError } from "./error.ts";
-import { readToolkit } from "./toolkit-install.ts";
+import { checkApe } from "../../../composition/ape.ts";
+import {
+  ExportError,
+  recordDiagnosticError,
+} from "../../../infrastructure/error.ts";
+import { readToolkit } from "./install.ts";
 import type {
   CompileDiagnostics,
   Diagnostic,
   ValidationRequest,
   ValidationResponse,
-} from "./validate.ts";
+} from "./worker-client.ts";
 
 interface Finding {
   severity: string;

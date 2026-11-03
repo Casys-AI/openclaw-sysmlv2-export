@@ -4,8 +4,8 @@ import {
   BUILD_GRAPH_PREFIX,
   type ModelProjectionInput,
   projectModelToNQuadBatches,
-} from "../src/ape-rdf.ts";
-import { initOxigraph, Store } from "../src/oxigraph.ts";
+} from "./rdf.ts";
+import { initOxigraph, Store } from "./store.ts";
 
 const SYSML = "https://www.omg.org/spec/SysML#";
 const XSD = "http://www.w3.org/2001/XMLSchema#";

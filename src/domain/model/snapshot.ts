@@ -1,6 +1,5 @@
-import { invalid } from "./error.ts";
-import { isCredentialPath } from "./credentials.ts";
-import { EMAIL_ADDRESS_PATTERN, JWT_PATTERN } from "@logtape/redaction";
+import { invalid } from "../primitives/error.ts";
+import { isCredentialPath } from "../openclaw/credentials.ts";
 
 export interface FileRef {
   id: string;
@@ -226,18 +225,6 @@ export interface Snapshot {
   ambiguities: Finding[];
 }
 
-/** Stable keys; entity arrays are sorted by id at construction. Ordered model
- * fallbacks and bind modes retain their semantic order. No locale or clock. */
-export function canonical(value: unknown): string {
-  return JSON.stringify(
-    value,
-    (_key, v) =>
-      v && typeof v === "object" && !Array.isArray(v)
-        ? Object.fromEntries(Object.keys(v).sort().map((k) => [k, v[k]]))
-        : v,
-    2,
-  ) + "\n";
-}
 export function byId<T extends { id: string }>(values: T[]): T[] {
   return values.sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
 }
@@ -451,7 +438,11 @@ const shape: Shape = {
   messaging: { enabled: bool, allowedTargets: strings },
   ambiguities: [finding],
 };
-function check(value: unknown, schema: Shape): void {
+function check(
+  value: unknown,
+  schema: Shape,
+  sensitive: (value: string) => boolean,
+): void {
   if (typeof schema === "string") {
     if (
       typeof value !== schema ||
@@ -461,13 +452,11 @@ function check(value: unknown, schema: Shape): void {
     if (
       typeof value === "string" &&
       (value.includes("CANARY-") ||
-        [EMAIL_ADDRESS_PATTERN, JWT_PATTERN].some((p) =>
-          new RegExp(p.pattern.source, p.pattern.flags).test(value)
-        ))
+        sensitive(value))
     ) invalid("Sensitive content in retained snapshot metadata");
   } else if (Array.isArray(schema)) {
     if (!Array.isArray(value)) invalid("Invalid snapshot array");
-    value.forEach((v) => check(v, schema[0]));
+    value.forEach((v) => check(v, schema[0], sensitive));
     const ids = value.filter((v) => v && typeof v === "object" && "id" in v)
       .map((v) => v.id);
     if (new Set(ids).size !== ids.length) {
@@ -478,7 +467,7 @@ function check(value: unknown, schema: Shape): void {
       invalid("Invalid snapshot enumeration");
     }
   } else if ("nullable" in schema) {
-    if (value !== null) check(value, schema.nullable as Shape);
+    if (value !== null) check(value, schema.nullable as Shape, sensitive);
   } else {
     if (!value || typeof value !== "object" || Array.isArray(value)) {
       invalid("Invalid snapshot object");
@@ -488,17 +477,20 @@ function check(value: unknown, schema: Shape): void {
     if (Object.keys(obj).some((k) => !Object.hasOwn(fields, k))) {
       invalid("Unknown snapshot field");
     }
-    for (const [k, s] of Object.entries(fields)) check(obj[k], s);
+    for (const [k, s] of Object.entries(fields)) check(obj[k], s, sensitive);
   }
 }
-export function parseSnapshot(value: unknown): Snapshot {
+export function parseSnapshot(
+  value: unknown,
+  sensitive: (value: string) => boolean,
+): Snapshot {
   // The optional /5 diagnostic metadata is absent in older exports. Preserve
   // collector subjects verbatim; this default does not migrate other fields.
   const withMetadata =
     value && typeof value === "object" && !Array.isArray(value)
       ? { plaintextCredentialPaths: null, ...value }
       : value;
-  check(withMetadata, shape);
+  check(withMetadata, shape, sensitive);
   const snapshot = withMetadata as Snapshot;
   if (
     snapshot.plaintextCredentialPaths?.some((path) => !isCredentialPath(path))

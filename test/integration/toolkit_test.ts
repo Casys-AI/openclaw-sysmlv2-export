@@ -2,17 +2,24 @@ import assert from "node:assert/strict";
 import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { run } from "../cli.ts";
-import { runExport } from "../plugin/core.ts";
-import { ExportError } from "../src/error.ts";
-import { installToolkit, toolkitPath } from "../src/toolkit-install.ts";
-import { validate } from "../src/validate.ts";
-import { emit } from "../src/emit.ts";
-import { ASSEMBLY_LIBRARY } from "../src/library.ts";
-import { emitInferred } from "../src/infer.ts";
-import { parseSnapshot } from "../src/snapshot.ts";
-import { initOxigraph, namedNode, Store } from "../src/oxigraph.ts";
-import { createFixture } from "./support/fixture.ts";
+import { run } from "../../cli.ts";
+import { runExport } from "../../src/composition/openclaw.ts";
+import { ExportError } from "../../src/infrastructure/error.ts";
+import {
+  installToolkit,
+  toolkitPath,
+} from "../../src/adapters/out/sysml-toolkit/install.ts";
+import { validate } from "../../src/adapters/out/sysml-toolkit/worker-client.ts";
+import { emit } from "../../src/adapters/out/sysml/emitter.ts";
+import { ASSEMBLY_LIBRARY } from "../../src/adapters/out/sysml/library.ts";
+import { emitInferred } from "../../src/adapters/out/sysml/inferred.ts";
+import { parseSnapshot } from "../../src/infrastructure/snapshot-codec.ts";
+import {
+  initOxigraph,
+  namedNode,
+  Store,
+} from "../../src/adapters/out/oxigraph/store.ts";
+import { createFixture } from "../support/fixture.ts";
 
 const archive = Deno.env.get("SYSML_TOOLKIT_WASM_ARCHIVE");
 
@@ -117,7 +124,7 @@ Deno.test({
       trial.set(
         "ApeTrial.sysml",
         await readFile(
-          new URL("./fixtures/ape-trial.sysml", import.meta.url),
+          new URL("../fixtures/ape-trial.sysml", import.meta.url),
           "utf8",
         ),
       );

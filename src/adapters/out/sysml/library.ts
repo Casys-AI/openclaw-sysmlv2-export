@@ -1,6 +1,6 @@
-import cases from "../sysml/cases.sysml" with { type: "text" };
-import core from "../sysml/core.sysml" with { type: "text" };
-import skills from "../sysml/skills.sysml" with { type: "text" };
+import cases from "../../../../sysml/cases.sysml" with { type: "text" };
+import core from "../../../../sysml/core.sysml" with { type: "text" };
+import skills from "../../../../sysml/skills.sysml" with { type: "text" };
 
 /** The Assembly packages the import builds on (AssemblyCore, AssemblyCases,
  * APESkills), copied from Assembly's model library (each file names its source

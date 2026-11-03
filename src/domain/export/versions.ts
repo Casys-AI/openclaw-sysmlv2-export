@@ -1,5 +1,5 @@
-import type { Finding } from "./snapshot.ts";
-import type { ValidationSummary } from "./validate.ts";
+import type { Finding } from "../model/snapshot.ts";
+import type { ValidationSummary } from "../model/diagnostics/validation.ts";
 
 export type FindingSummary = Record<Finding["severity"], number>;
 

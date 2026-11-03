@@ -1,4 +1,4 @@
-import { flags, keyword } from "./layout.ts";
+import { flags, keyword } from "./presentation.ts";
 import type {
   DiagramNode,
   DiagramView,

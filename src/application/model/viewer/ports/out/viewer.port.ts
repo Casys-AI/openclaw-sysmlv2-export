@@ -1,0 +1,17 @@
+import type {
+  FileChange,
+  Scene,
+} from "../../../../../domain/model/presentation.ts";
+import type { Snapshot } from "../../../../../domain/model/snapshot.ts";
+import type { DiagramView } from "../../../../../domain/model/views.ts";
+
+export interface ViewerPresentation {
+  layoutView(view: DiagramView): Promise<Scene>;
+  changes(
+    older: Record<string, string>,
+    newer: Record<string, string>,
+  ): FileChange[];
+  canonical(value: unknown): string;
+  parseSnapshot(value: unknown): Snapshot;
+  renderPage(data: unknown): string;
+}

@@ -1,7 +1,7 @@
-import type { Finding, Snapshot } from "./snapshot.ts";
-import { elementId } from "./element-id.ts";
-import { credentialPathParts } from "./credentials.ts";
-import { is202610 } from "./policy.ts";
+import type { Finding, Snapshot } from "../snapshot.ts";
+import { elementId } from "../element-id.ts";
+import { credentialPathParts } from "../../openclaw/credentials.ts";
+import { is202610 } from "../../openclaw/policy.ts";
 
 // OpenClaw 2026.10.9 dist/exec-safe-bin-runtime-policy-CgvU47MQ.mjs:
 // the interpreter list and versioned-name rule behind audit-BzL_D921.mjs's

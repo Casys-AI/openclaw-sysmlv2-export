@@ -1,15 +1,19 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
-import type { Inference } from "../src/infer.ts";
-import { layoutView, type Scene } from "../src/layout.ts";
-import { parseSnapshot } from "../src/snapshot.ts";
-import { drawing } from "../src/tables.ts";
-import { diagramViews } from "../src/views.ts";
+import type { Inference } from "../../../domain/model/inference.ts";
+import { layoutView, type Scene } from "./layout.ts";
+import { parseSnapshot } from "../../../infrastructure/snapshot-codec.ts";
+import { drawing } from "../../../domain/model/tables.ts";
+import { diagramViews } from "../../../domain/model/views.ts";
 
 const read = (path: string) =>
   readFile(new URL(path, import.meta.url), "utf8").then(JSON.parse);
-const snapshot = parseSnapshot(await read("./golden/snapshot.json"));
-const inference: Inference = await read("./fixtures/inference.json");
+const snapshot = parseSnapshot(
+  await read("../../../../test/golden/snapshot.json"),
+);
+const inference: Inference = await read(
+  "../../../../test/fixtures/inference.json",
+);
 
 const overlaps = (a: Scene["nodes"][number], b: Scene["nodes"][number]) =>
   a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;

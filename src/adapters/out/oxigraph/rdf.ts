@@ -8,8 +8,8 @@
 import {
   invalidProjection as invalid,
   RdfProjectionError,
-} from "./ape-elements.ts";
-import { isRecord } from "./error.ts";
+} from "../sysml-toolkit/compilation/ape-elements.ts";
+import { isRecord } from "../../../infrastructure/error.ts";
 
 export const APE_PROJECTION_VERSION = "openmbee-v1";
 export const BUILD_GRAPH_PREFIX = "urn:ase:ape:openmbee:v1:build:";

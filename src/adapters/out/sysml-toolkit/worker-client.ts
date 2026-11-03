@@ -1,27 +1,21 @@
 import { Worker } from "node:worker_threads";
-import { ExportError, recordDiagnosticError } from "./error.ts";
-import type { ApeReport } from "./ape-rules.ts";
+import {
+  ExportError,
+  recordDiagnosticError,
+} from "../../../infrastructure/error.ts";
+import type { ApeReport } from "../../../domain/model/diagnostics/ape.ts";
 
-export interface Diagnostic {
-  code: string;
-  message: string;
-  file: string | null;
-  line: number | null;
-  column: number | null;
-}
-export interface CompileDiagnostics {
-  errors: Diagnostic[];
-  warnings: Diagnostic[];
-}
-export interface Diagnostics extends CompileDiagnostics {
-  ape: ApeReport;
-}
-export interface ValidationSummary {
-  status: "passed" | "failed" | "skipped";
-  errors: number;
-  code?: string;
-  recovery?: string;
-}
+import type {
+  CompileDiagnostics,
+  Diagnostics,
+} from "../../../domain/model/diagnostics/validation.ts";
+export type {
+  CompileDiagnostics,
+  Diagnostic,
+  Diagnostics,
+  ValidationSummary,
+} from "../../../domain/model/diagnostics/validation.ts";
+
 export interface ValidationRequest {
   stateDir: string;
   sources: { name: string; text: string }[];
@@ -35,12 +29,10 @@ export type ValidationResponse =
   };
 
 const workerUrl = new URL(
-  import.meta.url.endsWith(".ts")
-    ? "./toolkit-worker.ts"
-    : "./toolkit-worker.mjs",
+  import.meta.url.endsWith(".ts") ? "./worker.ts" : "./toolkit-worker.mjs",
   import.meta.url,
 );
-const toolkitFailure = (cause: unknown) => {
+export const toolkitFailure = (cause: unknown) => {
   const error = new ExportError(
     "TOOLKIT_VALIDATION_FAILED",
     `The Toolkit worker could not complete validation: ${
@@ -143,51 +135,5 @@ export async function validate(
   } finally {
     clearTimeout(timer);
     await worker.terminate();
-  }
-}
-
-/** Validation is information: an unavailable compiler never loses an export. */
-export async function validationReport(
-  files: Map<string, string>,
-  stateDir: string,
-): Promise<
-  {
-    validation: ValidationSummary;
-    diagnostics: CompileDiagnostics;
-    ape: ApeReport;
-  }
-> {
-  try {
-    const { ape, ...diagnostics } = await validate(files, stateDir);
-    return {
-      validation: {
-        status: diagnostics.errors.length ? "failed" : "passed",
-        errors: diagnostics.errors.length,
-      },
-      diagnostics,
-      ape,
-    };
-  } catch (e) {
-    const error = e instanceof ExportError ? e : toolkitFailure(e);
-    const skipped = error.code === "TOOLKIT_NOT_INSTALLED";
-    return {
-      ape: { status: "skipped", code: error.code, findings: [] },
-      validation: {
-        status: skipped ? "skipped" : "failed",
-        errors: skipped ? 0 : 1,
-        code: error.code,
-        recovery: error.recovery,
-      },
-      diagnostics: {
-        errors: skipped ? [] : [{
-          code: error.code,
-          message: error.context,
-          file: null,
-          line: null,
-          column: null,
-        }],
-        warnings: [],
-      },
-    };
   }
 }

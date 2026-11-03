@@ -1,5 +1,5 @@
-import { invalid } from "./error.ts";
-import { enumeration, type Obj, obj } from "./input.ts";
+import { invalid } from "../primitives/error.ts";
+import { enumeration, type Obj, obj } from "../primitives/input.ts";
 import { is202610 } from "./policy.ts";
 
 const SECURITY = ["deny", "allowlist", "full"] as const;

@@ -1,7 +1,12 @@
-import { EMAIL_ADDRESS_PATTERN, JWT_PATTERN } from "@logtape/redaction";
-import { invalid } from "./error.ts";
-import { arr, enumeration, number, obj, required, text } from "./input.ts";
-import { name } from "./emit.ts";
+import { invalid } from "../primitives/error.ts";
+import {
+  arr,
+  enumeration,
+  number,
+  obj,
+  required,
+  text,
+} from "../primitives/input.ts";
 import type { Agent, Cron, FileRef, Snapshot } from "./snapshot.ts";
 
 /** Inference contract (`openclaw-inference/1`, SPEC.md "Inference"): proposals
@@ -133,7 +138,10 @@ export function cronSources(snapshot: Snapshot, agentId: string): Cron[] {
 }
 
 /** Stable labels resolve to collected digests, never to prompt bodies. */
-function sourceFiles(snapshot: Snapshot, agent: Agent): Map<string, FileRef> {
+export function sourceFiles(
+  snapshot: Snapshot,
+  agent: Agent,
+): Map<string, FileRef> {
   return new Map([
     ...agent.workspace.instructions.map((f): [string, FileRef] => [f.path, f]),
     ...cronSources(snapshot, agent.id).map((job): [string, FileRef] => [
@@ -201,17 +209,7 @@ function id(v: unknown, seen: Set<string>): string {
   seen.add(s);
   return s;
 }
-// Model text may copy contact details or credentials from the prose: mask them.
-const SENSITIVE = [
-  EMAIL_ADDRESS_PATTERN.pattern,
-  JWT_PATTERN.pattern,
-  /CANARY-[A-Za-z0-9_-]+/,
-  /[A-Za-z0-9_\-]{32,}/,
-  /\+?\d[\d ().-]{7,}\d/,
-].map((p) =>
-  new RegExp(p.source, p.flags.includes("g") ? p.flags : `${p.flags}g`)
-);
-function phrase(v: unknown): string {
+function phrase(v: unknown, SENSITIVE: RegExp[]): string {
   let s = required(v).trim();
   if (!s) invalid("Inference text must not be empty");
   for (const p of SENSITIVE) s = s.replace(p, "[redacted]");
@@ -235,6 +233,7 @@ export function parseAgentInference(
   value: unknown,
   snapshot: Snapshot,
   expectedAgentId: string,
+  SENSITIVE: RegExp[],
   sentFiles?: string[],
 ): AgentInference {
   const o = obj(value), agentId = required(o.agentId);
@@ -256,7 +255,7 @@ export function parseAgentInference(
   const seen = new Set<string>();
   return {
     agentId,
-    role: phrase(o.role),
+    role: phrase(o.role, SENSITIVE),
     procedures: arr(o.procedures).map((p) => {
       const po = obj(p);
       const steps = arr(po.steps).map((s) => {
@@ -271,13 +270,18 @@ export function parseAgentInference(
         if (target !== null && !targets.has(target)) {
           invalid("Inference step targets an unknown agent or party");
         }
-        return { id: id(so.id, seen), text: phrase(so.text), kind, target };
+        return {
+          id: id(so.id, seen),
+          text: phrase(so.text, SENSITIVE),
+          kind,
+          target,
+        };
       });
       if (!steps.length) invalid("A procedure needs at least one step");
       return {
         id: id(po.id, seen),
-        title: phrase(po.title),
-        trigger: phrase(po.trigger),
+        title: phrase(po.title, SENSITIVE),
+        trigger: phrase(po.trigger, SENSITIVE),
         steps,
         source: source(po.source, files),
       };
@@ -286,7 +290,7 @@ export function parseAgentInference(
       const ro = obj(r);
       return {
         id: id(ro.id, seen),
-        text: phrase(ro.text),
+        text: phrase(ro.text, SENSITIVE),
         kind: enumeration(ro.kind, [
           "permission",
           "constraint",
@@ -296,73 +300,4 @@ export function parseAgentInference(
       };
     }),
   };
-}
-
-const doc = (s: string) => `doc /* ${s.replaceAll("*/", "* /")} */`;
-
-/** Emits the proposals as a separate package, each element linked to the
- * digest of the file it was inferred from. */
-export function emitInferred(
-  snapshot: Snapshot,
-  inference: Inference,
-): Map<string, string> {
-  const lines = [
-    "package OpenClawInferred {",
-    "    private import ScalarValues::*;",
-    `    ${
-      doc(
-        `Proposals inferred by ${inference.model} from agent instruction sources. Not admitted: accept or decline each one.`,
-      )
-    }`,
-  ];
-  const fileOf = (agentId: string, s: Source) => {
-    const agent = snapshot.agents.find((a) => a.id === agentId)!;
-    const f = sourceFiles(snapshot, agent).get(s.file)!;
-    return `source ${s.file}:${s.fromLine}-${s.toLine} sha256 ${f.sha256}`;
-  };
-  for (
-    const a of [...inference.agents].sort((x, y) =>
-      x.agentId < y.agentId ? -1 : 1
-    )
-  ) {
-    for (const p of a.procedures) {
-      lines.push(
-        `    action def ${name(a.agentId, p.id.replaceAll("-", "_"))} {`,
-        `        ${
-          doc(
-            `Inferred procedure "${p.title}". Trigger: ${
-              p.trigger.replace(/\.$/, "")
-            }. ${fileOf(a.agentId, p.source)}`,
-          )
-        }`,
-      );
-      for (const s of p.steps) {
-        const to = s.target ? ` → ${s.target}` : "";
-        lines.push(
-          `        action ${name("step", s.id.replaceAll("-", "_"))} { ${
-            doc(`${s.kind}${to}: ${s.text}`)
-          } }`,
-        );
-      }
-      for (let i = 1; i < p.steps.length; i++) {
-        lines.push(
-          `        first ${
-            name("step", p.steps[i - 1].id.replaceAll("-", "_"))
-          } then ${name("step", p.steps[i].id.replaceAll("-", "_"))};`,
-        );
-      }
-      lines.push("    }");
-    }
-    for (const r of a.rules) {
-      lines.push(
-        `    requirement def ${name(a.agentId, r.id.replaceAll("-", "_"))} {`,
-        `        ${
-          doc(`Inferred ${r.kind}: ${r.text} ${fileOf(a.agentId, r.source)}`)
-        }`,
-        "    }",
-      );
-    }
-  }
-  lines.push("}");
-  return new Map([["OpenClawInferred.sysml", lines.join("\n") + "\n"]]);
 }
