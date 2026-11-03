@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
-import { materializeApeViews, readApeViews } from "../src/ape-rules.ts";
-import { projectModelToNQuads } from "../src/ape-rdf.ts";
+import {
+  evaluateApeRules,
+  materializeApeViews,
+  readApeRules,
+  readApeViews,
+} from "../src/ape-rules.ts";
+import { projectModelToNQuadBatches } from "../src/ape-rdf.ts";
 import {
   initOxigraph,
   literal,
@@ -133,14 +138,15 @@ Deno.test("actual views preserve unknown exec posture, scope wildcards and resol
   await initOxigraph();
   const store = new Store();
   const graph = namedNode(`urn:ase:build:${"e".repeat(64)}`);
-  store.load(
-    projectModelToNQuads({
+  for (
+    const batch of projectModelToNQuadBatches({
       build: { repositoryId: "view-test", artifactDigest: "e".repeat(64) },
       elements: [...elements.values()],
       libraryNativeIds: [],
-    }).nquads,
-    { format: "application/n-quads" },
-  );
+    })
+  ) {
+    store.load(batch.nquads, { format: "application/n-quads" });
+  }
   const views = await readApeViews();
   materializeApeViews(store, views);
   const node = (id: string) =>
@@ -186,4 +192,29 @@ Deno.test("actual views preserve unknown exec posture, scope wildcards and resol
   store.add(quad(askQuad.subject, askQuad.predicate, literal("always"), graph));
   materializeApeViews(store, views.filter((view) => view.name === "exec"));
   assert.deepEqual(values("exec", "unknown", "unapprovedHostExec"), ["false"]);
+});
+
+Deno.test("self-only messaging does not reach an operator; another sender does", async () => {
+  await initOxigraph();
+  const store = new Store();
+  const agent = namedNode("urn:test:operator"),
+    other = namedNode("urn:test:sender");
+  const ape = (name: string) => namedNode(`urn:ase:ape:v1:${name}`);
+  try {
+    store.add(
+      quad(agent, ape("agentId"), literal("operator"), ape("view:agents")),
+    );
+    store.add(quad(agent, ape("canMessage"), agent, ape("view:messaging")));
+    const rule = (await readApeRules()).filter((rule) =>
+      rule.code === "UNREACHABLE_OPERATOR"
+    );
+    assert.deepEqual(
+      evaluateApeRules(store, rule).findings.map((finding) => finding.subject),
+      ["agent:operator"],
+    );
+    store.add(quad(other, ape("canMessage"), agent, ape("view:messaging")));
+    assert.deepEqual(evaluateApeRules(store, rule).findings, []);
+  } finally {
+    (store as Store & { free(): void }).free();
+  }
 });

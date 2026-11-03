@@ -4,7 +4,11 @@ import {
   evaluateApeRules,
   materializeApeViews,
   parseApeRule,
+  persistedApeReport,
+  readApeRules,
 } from "../src/ape-rules.ts";
+import { recordDiagnosticError } from "../src/error.ts";
+import { pathToFileURL } from "node:url";
 import { initOxigraph, Store } from "../src/oxigraph.ts";
 import { checkApe } from "../src/ape.ts";
 
@@ -49,21 +53,23 @@ Deno.test("a rule naming {related} gives one finding per agent, related agents s
   await initOxigraph();
   const related = rule.replace(
     "Synthetic rule for the runner boundary.",
-    "Cycle with {related}.",
+    "Cycle with {related}; again {related}.",
   ).replace(
     'SELECT ?agentId WHERE { VALUES ?agentId { "z" "a:1" } }',
-    'SELECT ?agentId ?relatedAgentId WHERE { VALUES (?agentId ?relatedAgentId) { ("a" "c") ("a" "b") ("a" "b") } }',
+    () =>
+      `SELECT ?agentId ?relatedAgentId WHERE { VALUES (?agentId ?relatedAgentId) { ("a" "$&") ("a" "$'") ("a" "$$") ("a" "$$") } }`,
   );
   const result = evaluateApeRules(new Store(), [parseApeRule(related)]);
   assert.deepEqual(result.findings.map((f) => [f.subject, f.context]), [
-    ["agent:a", "Cycle with b, c."],
+    ["agent:a", "Cycle with $$, $&, $'; again $$, $&, $'."],
   ]);
   assert.throws(
     () =>
       evaluateApeRules(new Store(), [
         parseApeRule(rule.replace("boundary.", "{related}.")),
       ]),
-    (e) => e instanceof ApeStageError && /relatedAgentId/.test(e.cause),
+    (e) =>
+      e instanceof ApeStageError && /relatedAgentId/.test(e.toJSON().cause),
   );
 });
 
@@ -78,7 +84,7 @@ Deno.test("malformed rule metadata fails at the data boundary", () => {
       code: "APE_RULE_FAILED",
       stage: "rule",
       file: "rules/ape/malformed.rq",
-      cause: "Invalid APE rule header",
+      cause: new Error("Invalid APE rule header field: severity"),
     },
   );
   assert.throws(
@@ -86,8 +92,24 @@ Deno.test("malformed rule metadata fails at the data boundary", () => {
       parseApeRule(
         rule.replace("# finding: absent", "# finding: indeterminate"),
       ),
-    { code: "APE_RULE_FAILED", stage: "rule" },
+    { cause: new Error("Invalid APE rule header field: finding") },
   );
+  for (
+    const [text, reason] of [
+      [
+        rule.replace("# pattern: 4.2\n", ""),
+        "Missing APE rule header field: pattern",
+      ],
+      [
+        rule.replace("# pattern: 4.2", "# pattern: "),
+        "Invalid APE rule header field: pattern",
+      ],
+      [
+        rule.replace("# pattern: 4.2", "# pattern: 4.2\n# pattern: 4.3"),
+        "Duplicate APE rule header field: pattern",
+      ],
+    ]
+  ) assert.throws(() => parseApeRule(text), { cause: new Error(reason) });
 });
 
 Deno.test("a rule result without the required literal subject fails explicitly", async () => {
@@ -100,7 +122,7 @@ Deno.test("a rule result without the required literal subject fails explicitly",
     code: "APE_RULE_FAILED",
     stage: "rule",
     file: "rules/ape/wrong-subject.rq",
-    cause: "APE rule TEST_RULE must SELECT a literal ?agentId",
+    cause: new Error("APE rule TEST_RULE must SELECT a literal ?agentId"),
   });
 });
 
@@ -163,8 +185,9 @@ Deno.test("query syntax failures preserve the stage, file and parser cause", asy
       assert.ok(error instanceof ApeStageError);
       assert.equal(error.stage, stage);
       assert.equal(error.file, file);
-      assert.match(error.cause, /error|expected/i);
-      assert.ok(error.context.endsWith(error.cause));
+      assert.ok(error.cause instanceof Error);
+      assert.match(error.toJSON().cause, /error|expected/i);
+      assert.equal(error.toJSON().context, `APE ${stage} (${file})`);
       return true;
     });
   }
@@ -183,7 +206,7 @@ Deno.test("a non-quad view result fails before materializing any statements", as
     code: "APE_VIEW_FAILED",
     stage: "view",
     file: "rules/ape/views/not-construct.rq",
-    cause: "APE view must CONSTRUCT RDF quads",
+    cause: new Error("APE view must CONSTRUCT RDF quads"),
   });
   assert.equal(store.size, 0);
 });
@@ -201,4 +224,130 @@ Deno.test("APE preparation failure is reported separately from compiler diagnost
   assert.ok(report.cause);
   assert.deepEqual(report.findings, []);
   assert.ok(report.context && report.recovery);
+});
+
+Deno.test("rule discovery reads only root query files in sorted order", async () => {
+  const directory = await Deno.makeTempDir();
+  try {
+    await Deno.writeTextFile(
+      `${directory}/z.rq`,
+      rule.replace("TEST_RULE", "Z_RULE"),
+    );
+    await Deno.writeTextFile(
+      `${directory}/a.rq`,
+      rule.replace("TEST_RULE", "A_RULE"),
+    );
+    await Deno.writeTextFile(`${directory}/notes.txt`, "not a query");
+    await Deno.mkdir(`${directory}/views`);
+    await Deno.writeTextFile(
+      `${directory}/views/ignored.rq`,
+      "not a root rule",
+    );
+    assert.deepEqual(
+      (await readApeRules(pathToFileURL(`${directory}/`))).map((r) => r.code),
+      ["A_RULE", "Z_RULE"],
+    );
+  } finally {
+    await Deno.remove(directory, { recursive: true });
+  }
+});
+
+Deno.test("diagnostic serialization preserves native error identity and removes paths and graph input", () => {
+  const original = Object.assign(
+    new Error(
+      `Parser error at line 3 column 8 in /private/input.nq: <urn:synthetic:subject> <urn:predicate> "sensitive input" .\n"multiline\npayload"`,
+    ),
+    {
+      code: "RDF_DUPLICATE_NATIVE_ID",
+      context: {
+        nativeId: "duplicate-native-id",
+        locations: ["C:\\private\\input.nq", "file:///private/input.nq"],
+      },
+    },
+  );
+  const failure = new ApeStageError(
+    "projection",
+    original,
+    "/private/query.rq",
+  );
+  assert.equal(failure.cause, original);
+  assert.equal(failure.context, original.context);
+  const recorded = failure.toJSON();
+  assert.equal(recorded.code, original.code);
+  assert.equal(
+    (recorded.context as Record<string, unknown>).nativeId,
+    "duplicate-native-id",
+  );
+  assert.match(recorded.cause, /line 3 column 8/);
+  assert.doesNotMatch(
+    JSON.stringify(recorded),
+    /private|urn:synthetic|sensitive input|multiline|payload/,
+  );
+  assert.equal(
+    recordDiagnosticError(new Error("Failure reading /private/input.json"))
+      .message,
+    "Failure reading [path]",
+  );
+  assert.equal(
+    recordDiagnosticError(
+      new Error("parse failed\nprivate graph line without brackets"),
+    ).message,
+    "parse failed",
+  );
+  for (
+    const path of [
+      "/private/First Last/input.nq",
+      "C:\\private\\First Last\\input.nq",
+      "file:///private/First Last/input.nq",
+    ]
+  ) {
+    assert.equal(
+      recordDiagnosticError(new Error(`reading "${path}"`)).message,
+      "reading [path]",
+    );
+  }
+});
+
+Deno.test("APE reports persist only stable metrics and free the store on completion and failure", async () => {
+  const prototype = Store.prototype as Store & { free(): void };
+  const free = prototype.free;
+  const query = prototype.query;
+  let freed = 0;
+  prototype.free = function () {
+    freed++;
+    free.call(this);
+  };
+  const session = { toFullJson: () => "[]", rows: () => "[]" };
+  try {
+    const report = await checkApe(session);
+    assert.equal(report.status, "completed");
+    assert.equal(freed, 1);
+    const persisted = persistedApeReport(report);
+    assert.deepEqual(persistedApeReport(persisted), persisted);
+    assert.ok(report.metrics);
+    assert.deepEqual(
+      persistedApeReport({
+        ...report,
+        metrics: {
+          ...report.metrics,
+          totalMs: 999,
+          views: report.metrics.views.map((view) => ({ ...view, ms: 999 })),
+          queries: report.metrics.queries.map((query) => ({
+            ...query,
+            ms: 999,
+          })),
+        },
+      }),
+      persisted,
+    );
+    assert.doesNotMatch(JSON.stringify(persisted), /Ms|"ms"/);
+    prototype.query = () => {
+      throw new Error("synthetic query failure");
+    };
+    assert.equal((await checkApe(session)).status, "failed");
+    assert.equal(freed, 2);
+  } finally {
+    prototype.free = free;
+    prototype.query = query;
+  }
 });

@@ -23,6 +23,11 @@ async function queries(directory: URL, prefix = ""): Promise<string[]> {
 }
 const rules = await queries(source);
 if (rules.length === 0) throw new Error("No APE rule queries to package");
+try {
+  await Deno.remove(target, { recursive: true });
+} catch (error) {
+  if (!(error instanceof Deno.errors.NotFound)) throw error;
+}
 await Deno.mkdir(target, { recursive: true });
 for (const name of rules.sort()) {
   const destination = new URL(name, target);

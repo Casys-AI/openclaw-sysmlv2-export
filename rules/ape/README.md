@@ -47,10 +47,10 @@ literal value through its owned member:
 
 ## Derived vocabulary
 
-All predicates in this section use the prefix `ape: <urn:ase:ape:v1:>`. Views
-are materialized in the following order, each in its own named graph. Their
-`ape:source` objects and other source properties are native element IRIs, not
-copied identifiers.
+All predicates in this section use the prefix `ape: <urn:ase:ape:v1:>`. The view
+dependency order is declared in [`APE_VIEW_ORDER`](../../src/ape-rules.ts). Each
+view is materialized in its own named graph. Their `ape:source` objects and
+other source properties are native element IRIs, not copied identifiers.
 
 | Graph `urn:ase:ape:v1:view:` | Facts and provenance                                                                                                                                 |
 | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -77,8 +77,8 @@ of an exec grant emits false based on the complete owned grant graph.
 delegates transitively to an agent known to have it. `LINK_CYCLE` finds members
 of a delegation cycle involving at least two distinct agents.
 `UNREACHABLE_OPERATOR` reports an agent without a modeled entry, incoming
-non-self delegation, or enabled messaging target. These are structural findings,
-not assertions of runtime liveness or isolation.
+non-self delegation, or enabled messaging from another agent. These are
+structural findings, not assertions of runtime liveness or isolation.
 
 ## Portability
 

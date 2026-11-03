@@ -1,6 +1,7 @@
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
+import { compareFindings } from "./doctor.ts";
 import { elementId } from "./element-id.ts";
-import { ExportError } from "./error.ts";
+import { isRecord, recordDiagnosticError } from "./error.ts";
 import { namedNode, Quad, quad, type Store } from "./oxigraph.ts";
 import type { Finding } from "./snapshot.ts";
 
@@ -26,9 +27,9 @@ export interface ApeView {
   query: string;
 }
 export interface ApeReport {
-  status: "completed" | "partial" | "skipped" | "failed";
+  status: "completed" | "skipped" | "failed";
   code?: string;
-  context?: string;
+  context?: string | Record<string, unknown>;
   recovery?: string;
   stage?: ApeStage;
   file?: string;
@@ -37,7 +38,6 @@ export interface ApeReport {
   metrics?: {
     elements: number;
     sourceElements?: number;
-    quads: number;
     baseQuads: number;
     derivedQuads: number;
     batches: number;
@@ -51,36 +51,92 @@ export interface ApeReport {
 }
 export type ApeSummary = Pick<ApeReport, "status" | "code"> & { count: number };
 
+export type PersistedApeReport = Omit<ApeReport, "metrics"> & {
+  metrics?:
+    & Pick<
+      NonNullable<ApeReport["metrics"]>,
+      "elements" | "sourceElements" | "baseQuads" | "derivedQuads" | "batches"
+    >
+    & {
+      views: { file: string; graph: string; quads: number }[];
+      queries: { code: string; findings: number }[];
+    };
+};
+
+/** Persist counts and identities; timings remain available only in memory. */
+export function persistedApeReport(
+  report: ApeReport | PersistedApeReport,
+): PersistedApeReport {
+  const { metrics, ...stable } = report;
+  return {
+    ...stable,
+    ...(metrics
+      ? {
+        metrics: {
+          elements: metrics.elements,
+          ...(metrics.sourceElements !== undefined
+            ? { sourceElements: metrics.sourceElements }
+            : {}),
+          baseQuads: metrics.baseQuads,
+          derivedQuads: metrics.derivedQuads,
+          batches: metrics.batches,
+          views: metrics.views.map(({ file, graph, quads }) => ({
+            file,
+            graph,
+            quads,
+          })),
+          queries: metrics.queries.map(({ code, findings }) => ({
+            code,
+            findings,
+          })),
+        },
+      }
+      : {}),
+  };
+}
+
 /** The stage and original cause remain inspectable separately from compiler diagnostics. */
-export class ApeStageError extends ExportError {
-  override readonly cause: string;
+export class ApeStageError extends Error {
+  readonly code: string;
+  readonly context: string | Record<string, unknown>;
+  readonly recovery =
+    "Check the reported APE stage, query file and cause, then retry the export.";
   constructor(
     readonly stage: ApeStage,
     error: unknown,
     readonly file?: string,
   ) {
-    const cause = error instanceof ExportError
-      ? error.context
-      : error instanceof Error
-      ? error.message
-      : String(error);
-    super(
-      error instanceof ExportError
-        ? error.code
-        : stage === "projection"
-        ? "APE_GRAPH_FAILED"
-        : `APE_${stage.toUpperCase()}_FAILED`,
-      `APE ${stage}${file ? ` (${file})` : ""}: ${cause}`,
-      "Check the reported APE stage, query file and cause, then retry the export.",
-    );
-    this.cause = cause;
+    const record = isRecord(error) ? error : {};
+    const code = typeof record.code === "string"
+      ? record.code
+      : stage === "projection"
+      ? "APE_GRAPH_FAILED"
+      : `APE_${stage.toUpperCase()}_FAILED`;
+    super(code, { cause: error });
+    this.name = "ApeStageError";
+    this.code = code;
+    this.context =
+      typeof record.context === "string" || isRecord(record.context)
+        ? record.context
+        : `APE ${stage}${file ? ` (${file})` : ""}`;
   }
-  override toJSON() {
+  toJSON() {
+    const recorded = recordDiagnosticError({
+      code: this.code,
+      context: this.context,
+      message: isRecord(this.cause) && typeof this.cause.message === "string"
+        ? this.cause.message
+        : String(this.cause),
+    });
     return {
-      ...super.toJSON(),
+      code: recorded.code!,
+      context: recorded.context!,
+      recovery: this.recovery,
       stage: this.stage,
-      ...(this.file ? { file: this.file } : {}),
-      cause: this.cause,
+      ...(this.file
+        ? { file: recordDiagnosticError(new Error(this.file)).message }
+        : {}),
+      cause: recorded.message,
     };
   }
 }
@@ -88,18 +144,45 @@ export class ApeStageError extends ExportError {
 /** One admission boundary for the six metadata fields, before execution. */
 export function parseApeRule(text: string, file = "<inline>"): ApeRule {
   const header = text.split(/\r?\n\s*\r?\n/, 1)[0];
-  const fields = header.split(/\r?\n/).map((line) =>
-    /^# (code|severity|pattern|finding|context|recovery): (.+)$/.exec(line)
-  );
-  const meta = Object.fromEntries(
-    fields.filter((f) => f !== null).map((f) => [f[1], f[2]]),
-  );
-  if (
-    fields.length !== 6 || fields.some((f) => !f) ||
-    Object.keys(meta).length !== 6 || !/^[A-Z][A-Z_]+$/.test(meta.code) ||
-    !["error", "warning", "info"].includes(meta.severity) ||
-    !["present", "absent"].includes(meta.finding)
-  ) throw new ApeStageError("rule", new Error("Invalid APE rule header"), file);
+  const meta: Record<string, string> = {};
+  const invalid = (message: string): never => {
+    throw new ApeStageError("rule", new Error(message), file);
+  };
+  for (const line of header.split(/\r?\n/)) {
+    const field = /^# (\w+):\s*(.*)$/.exec(line);
+    if (!field) invalid("Invalid APE rule header line");
+    const [, name, value] = field!;
+    if (
+      !["code", "severity", "pattern", "finding", "context", "recovery"]
+        .includes(name)
+    ) {
+      invalid(`Invalid APE rule header field: ${name}`);
+    }
+    if (name in meta) invalid(`Duplicate APE rule header field: ${name}`);
+    meta[name] = value;
+  }
+  for (
+    const name of [
+      "code",
+      "severity",
+      "pattern",
+      "finding",
+      "context",
+      "recovery",
+    ]
+  ) {
+    if (!(name in meta)) invalid(`Missing APE rule header field: ${name}`);
+    if (!meta[name].trim()) invalid(`Invalid APE rule header field: ${name}`);
+  }
+  if (!/^[A-Z][A-Z_]+$/.test(meta.code)) {
+    invalid("Invalid APE rule header field: code");
+  }
+  if (!["error", "warning", "info"].includes(meta.severity)) {
+    invalid("Invalid APE rule header field: severity");
+  }
+  if (!["present", "absent"].includes(meta.finding)) {
+    invalid("Invalid APE rule header field: finding");
+  }
   return { ...meta, query: text, file } as unknown as ApeRule;
 }
 
@@ -111,32 +194,44 @@ const directory = () =>
 async function readQuery(
   name: string,
   stage: "view" | "rule",
+  root = directory(),
 ): Promise<string> {
   try {
-    return await readFile(new URL(name, directory()), "utf8");
+    return await readFile(new URL(name, root), "utf8");
   } catch (error) {
     throw new ApeStageError(stage, error, `rules/ape/${name}`);
   }
 }
 
 /** Files remain verbatim SPARQL, including their metadata comments. */
-export async function readApeRules(): Promise<ApeRule[]> {
-  const names = [
-    "grant-widens-parent.rq",
-    "link-cycle.rq",
-    "unreachable-operator.rq",
-  ];
+export async function readApeRules(root = directory()): Promise<ApeRule[]> {
+  let names: string[];
+  try {
+    names = (await readdir(root, { withFileTypes: true }))
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".rq"))
+      .map((entry) => entry.name).sort();
+  } catch (error) {
+    throw new ApeStageError("rule", error, "rules/ape");
+  }
   return await Promise.all(
     names.map(async (name) =>
-      parseApeRule(await readQuery(name, "rule"), `rules/ape/${name}`)
+      parseApeRule(await readQuery(name, "rule", root), `rules/ape/${name}`)
     ),
   );
 }
 
-/** Fixed dependency order; each query sees the earlier materialized views. */
+export const APE_VIEW_ORDER = [
+  "agents",
+  "delegation",
+  "messaging",
+  "entries",
+  "exec",
+] as const;
+
+/** Each query sees earlier views in APE_VIEW_ORDER. */
 export async function readApeViews(): Promise<ApeView[]> {
   return await Promise.all(
-    ["agents", "delegation", "messaging", "entries", "exec"].map(async (
+    APE_VIEW_ORDER.map(async (
       name,
     ) => ({
       name,
@@ -222,9 +317,9 @@ export function evaluateApeRules(store: Store, rules: ApeRule[]) {
         code: `APE_${rule.code}`,
         severity: rule.severity,
         subject: elementId("agent", agent),
-        context: rule.context.replace(
+        context: rule.context.replaceAll(
           "{related}",
-          [...others].sort().join(", "),
+          () => [...others].sort().join(", "),
         ),
         recovery: rule.recovery,
         pattern: rule.pattern,
@@ -237,16 +332,6 @@ export function evaluateApeRules(store: Store, rules: ApeRule[]) {
       findings: byAgent.size,
     });
   }
-  findings.sort((a, b) =>
-    a.code < b.code
-      ? -1
-      : a.code > b.code
-      ? 1
-      : a.subject < b.subject
-      ? -1
-      : a.subject > b.subject
-      ? 1
-      : 0
-  );
+  findings.sort(compareFindings);
   return { findings, queries };
 }
