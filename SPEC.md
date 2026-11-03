@@ -863,15 +863,16 @@ version.
   the nearest version that has the view) or `ELEMENT_NOT_FOUND`, its sentence in
   the tooltip.
 - **Page.** The header and the version picker state `inputs` (glyphs ● changed,
-  ○ same, ◆ re-emitted or inference only, ◇ not comparable) and `checks`. Marks
-  follow the version: none for `same` or `schema`, Behaviour only for
-  `inference`, otherwise `added` and `changed`, with `touched` fainter when the
-  configuration changed; the picker, the rail and the Changes panel count
-  `delta.count`. The Doctor titles "No error or warning" only for `verified`
-  checks, shows `doctor.groups` by source and `doctor.delta`, nests
-  `APE_GRANT_WIDENS_PARENT` under the `EXEC_WITHOUT_APPROVAL` of the agent its
-  `related` names, and lights a finding's `related` agents together. The Changes
-  tab lists `diff.subjects` before the files of `diff.groups`.
+  ○ same, ◆ inference only, ◇ not comparable) and `checks`; the header also says
+  how many elements a same-configuration export re-emitted. Marks follow the
+  version: none for `same` or `schema`, Behaviour only for `inference`,
+  otherwise `added` and `changed`, with `touched` fainter when the configuration
+  changed; the picker, the rail and the Changes panel count `delta.count`. The
+  Doctor titles "No error or warning" only for `verified` checks, shows
+  `doctor.groups` by source and `doctor.delta`, nests `APE_GRANT_WIDENS_PARENT`
+  under the `EXEC_WITHOUT_APPROVAL` of the agent its `related` names, and lights
+  a finding's `related` agents together. The Changes tab lists `diff.subjects`
+  before the files of `diff.groups`.
 - **Fit and framing.** Fit shows the whole scene, or the width of a scene taller
   than wide whose whole would read under 0.5; zooming out stops at 0.15 or at
   Fit, whichever is smaller. Framing an element fits it in the room the sidebar

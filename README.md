@@ -153,10 +153,9 @@ The header says what went into the version against the previous one: its
 configuration changed, only its inference, the same configuration (with how many
 elements the export re-emitted), or not comparable (an older format), and
 whether its checks ran; each version of the picker carries the same as a glyph
-(● changed, ○ same, ◆ re-emitted or inference only, ◇ not comparable). Only a
-real change is marked: with the same configuration nothing is, with another
-inference only Behaviour is, and an element whose SysML alone changed is marked
-fainter.
+(● changed, ○ same, ◆ inference only, ◇ not comparable). Only a real change is
+marked: with the same configuration nothing is, with another inference only
+Behaviour is, and an element whose SysML alone changed is marked fainter.
 
 The icon rail on the right opens three panels in a sidebar that you can collapse
 and resize. The Inspector shows the readable name, attributes and exact SysML

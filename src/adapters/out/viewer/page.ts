@@ -627,15 +627,17 @@ function store(key, value) {
 
 // ---- Header
 // What went into a version against the previous one (viewer.ts's inputs), as
-// a glyph for the version picker and words for the header.
+// a glyph for the version picker and words for the header. The glyph speaks of
+// the inputs only: ○ marks the same configuration, whether or not the export
+// re-emitted SysML (the words count those elements).
 function verdict(v) {
-  const reemitted = v.diff && v.diff.groups.some((g) => g.group !== "diagnostics");
-  const touched = (v.views || []).reduce((n, e) => n + (e.delta && e.delta.touched ? e.delta.touched.length : 0), 0);
   if (v.inputs === "changed") return { glyph: "●", words: "Configuration changed" };
   if (v.inputs === "inference") return { glyph: "◆", words: "Inference changed" };
   if (v.inputs === "schema") return { glyph: "◇", words: "Not comparable", detail: "The previous version's snapshot uses a format this viewer does not read." };
-  if (v.inputs === "same") return reemitted ? { glyph: "◆", words: "Same configuration · SysML re-emitted (" + (touched || v.changes.length) + ")" } : { glyph: "○", words: "Same configuration" };
-  return { glyph: "", words: "First version" };
+  if (v.inputs !== "same") return { glyph: "", words: "First version" };
+  const reemitted = v.diff && v.diff.groups.some((g) => g.group !== "diagnostics");
+  const touched = (v.views || []).reduce((n, e) => n + (e.delta && e.delta.touched ? e.delta.touched.length : 0), 0);
+  return { glyph: "○", words: "Same configuration" + (reemitted ? " · SysML re-emitted (" + (touched || v.changes.length) + ")" : "") };
 }
 // The inference of a version: not run, or what it found, carried or failed.
 function inferenceWords(v) {
