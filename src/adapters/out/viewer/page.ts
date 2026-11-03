@@ -189,7 +189,7 @@ svg.md-lod .md-edge:not(.hot) { opacity: .3; }
 .md-rail b { position: absolute; top: -1px; right: -3px; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 999px; font: 600 9.5px/15px var(--font); text-align: center; color: #fff; background: var(--doc, var(--md-soft)); }
 .md-rail b:empty { display: none; }
 .md-rail [data-panel="changes"] b { background: var(--chg); }
-.md-inspector { flex: 1 1 0; min-height: 0; overflow: auto; padding: 12px 16px 16px; font-size: 12px; }
+.md-inspector { flex: 1 1 0; min-height: 0; overflow: auto; padding: 12px 16px 16px; font-size: 12px; outline: none; }
 .md-side-empty { margin: 8px 0; color: var(--muted); }
 .md-side-note { margin: 0 0 12px; font-size: 11px; color: var(--muted); }
 .md-inspector h3 { margin: 2px 0 0; font-size: 15px; font-weight: 600; word-break: break-word; }
@@ -225,13 +225,16 @@ svg.md-lod .md-edge:not(.hot) { opacity: .3; }
 .md-back { all: unset; margin-left: 10px; cursor: pointer; font-size: 11.5px; color: var(--muted); text-decoration: underline; text-decoration-color: var(--line-strong); }
 .md-back:hover { color: var(--ink); }
 .md-changes + .md-back { display: block; margin: -4px 0 12px; }
-.md-canvas:focus-visible, button:focus-visible, select:focus-visible, [role="button"]:focus-visible { outline: 2px solid #797369; outline-offset: 2px; }
+/* :root lifts buttons over the all: unset of their families. */
+.md-canvas:focus-visible, :root button:focus-visible, select:focus-visible, [role="button"]:focus-visible { outline: 2px solid #797369; outline-offset: 2px; }
 /* A clicked element shows its selection, not the browser's focus ring. */
 .md-node:focus:not(:focus-visible) { outline: none; }
 
 /* Tables: a view's elements in rows, under its diagram or alone. */
 .md-sheet { flex: 0 0 auto; max-height: 42%; overflow: auto; isolation: isolate; margin: 0 12px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
 .md-sheet.alone { flex: 1 1 0; max-height: none; margin-top: 8px; }
+/* What scrolls into view clears the sticky header row and the matrix's sticky first column. */
+.md-sheet { scroll-padding: 40px 0 0; } .md-sheet:has(.mx) { scroll-padding: 64px 0 0 290px; }
 .tb-bar { position: sticky; left: 0; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--card); font-size: 12px; color: var(--muted); }
 .tb-bar input { width: 220px; padding: 4px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); font: inherit; color: var(--ink); }
 .tb-bar button { all: unset; cursor: pointer; padding: 2px 8px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); }
@@ -392,7 +395,7 @@ pre { padding: 8px 10px; }
 <aside class="md-side" id="side" aria-labelledby="side-title" hidden>
 <div class="md-side-grip" id="side-grip" role="separator" aria-orientation="vertical" aria-label="Resize the sidebar" title="Drag to resize · double-click to reset" tabindex="0"></div>
 <header class="md-side-head"><strong id="side-title"></strong><span class="md-side-tools" id="side-tools"></span><button type="button" id="side-collapse" title="Collapse the sidebar" aria-label="Collapse the sidebar">»</button></header>
-<div class="md-inspector" id="inspector"></div>
+<div class="md-inspector" id="inspector" tabindex="-1"></div>
 </aside>
 <nav class="md-rail" aria-label="Panels">
 <button type="button" data-panel="inspector" aria-label="Inspector" title="Inspector" aria-pressed="false"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="3" width="14" height="14" rx="2.5"/><path d="M6.5 7.5h7M6.5 10.5h7M6.5 13.5h4"/></svg></button>
@@ -634,8 +637,9 @@ function drawNode(n, delta) {
   const classes = ["md-node", n.shape, n.shape === "frame" || n.shape === "group" ? "container" : "leaf",
     n.kw && /def»$/.test(n.kw) ? "def" : "", n.muted ? "muted" : "", n.dashed ? "dashed" : "",
     delta && delta.added.includes(n.id) ? "added" : "", delta && delta.changed.includes(n.id) ? "changed" : ""];
+  const doc = state.doc.get(n.id), status = delta && delta.added.includes(n.id) ? "added" : delta && delta.changed.includes(n.id) ? "changed" : "";
   const g = sv("g", { class: classes.filter(Boolean).join(" "), "data-id": n.id, tabindex: 0, role: "button",
-    "aria-label": (n.kw ? n.kw + " " : "") + (n.name || n.lines && n.lines.join(" ") || n.shape) });
+    "aria-label": [(n.kw || n.shape) + " " + nameOf(n), status, doc && "worst finding " + doc.worst].filter(Boolean).join(", ") });
   g.append(sv("title", {}, n.name || (n.lines || []).join(" ") || (n.label ? n.label.lines.join(" ") : n.shape)));
   const { x, y, w, h } = n, cx = x + w / 2, cy = y + h / 2;
   g.append(n.shape === "initial" || n.shape === "final" ? sv("circle", { class: "md-ring-select", cx, cy, r: w / 2 })
@@ -684,7 +688,6 @@ function drawNode(n, delta) {
     b.append(sv("circle", { cx: x + w - 2, cy: y + 2, r: 8 }), txt(x + w - 2, y + 5.5, mark === "add" ? "+" : "~"));
     g.append(b);
   }
-  const doc = state.doc.get(n.id);
   if (doc) {
     const b = sv("g", { class: "md-doc doc-" + doc.worst });
     b.append(sv("title", {}, doc.codes), sv("circle", { cx: x + 2, cy: y + 2, r: 8 }), txt(x + 2, y + 5.5, "!"));
@@ -1121,6 +1124,8 @@ function select(id, center, stay) {
   // The inspector opens first: framing uses the room it leaves.
   const n = state.drawn.nodes && state.drawn.nodes.get(id), before = room().w;
   if (!stay) inspect(state.version, state.drawn.payload, id, status);
+  const h = headOf(state.drawn.payload, id);
+  announce((stay ? "Selected " : "Inspector: ") + (h.title || nameOf(h)));
   if (center && n) fitTo(id);
   else if (center) reveal(id);
   else if (n && room().w < before) keepInView(n);
@@ -1156,8 +1161,10 @@ function showPanel(name, parts, tools) {
   const box = document.getElementById("inspector");
   document.getElementById("side-title").textContent = PANELS[name];
   document.getElementById("side-tools").replaceChildren(...tools || []);
+  const inside = box.contains(document.activeElement);
   box.replaceChildren(...parts);
   document.getElementById("side").hidden = false;
+  if (inside) box.focus({ preventScroll: true });
   state.panelKey = [name, state.version, name === "doctor" ? "" : shownView(), name === "inspector" ? state.selected : ""].join("|");
   box.scrollTop = state.scrolls.get(state.panelKey) || 0;
   state.panel = name;
@@ -1407,7 +1414,8 @@ function renderMatrix(box, t, mark) {
       th.tabIndex = 0;
       if (r.shape !== "tool") {
         const open = !state.folded.has(r.id);
-        const fold = button(open ? "▾" : "▸", (e) => { e.stopPropagation(); if (open) state.folded.add(r.id); else state.folded.delete(r.id); rows(); }, "mx-fold");
+        const fold = button(open ? "▾" : "▸", (e) => { e.stopPropagation(); if (open) state.folded.add(r.id); else state.folded.delete(r.id); keepFocus(rows); }, "mx-fold");
+        fold.dataset.key = "fold:" + r.id;
         fold.setAttribute("aria-expanded", String(open));
         fold.setAttribute("aria-label", (open ? "Collapse " : "Expand ") + r.name);
         th.append(fold);
@@ -1423,8 +1431,8 @@ function renderMatrix(box, t, mark) {
         if (cell) {
           td.dataset.id = cell[1];
           td.className = mark(cell[1]).trim();
-          td.title = r.name + " · " + c.title + " · " + GLYPH_WORDS[cell[0]];
-          td.append(glyph(cell[0]));
+          td.title = r.name + " · " + c.title + " · " + GLYPH_WORDS[cell[0]] + (td.className ? " · " + td.className : "");
+          td.append(glyph(cell[0]), el("span", "sr", td.title));
         } else if (counts[i][j]) td.append(el("span", "mx-count", String(counts[i][j])));
         tr.append(td);
       });
@@ -1457,7 +1465,8 @@ function renderElements(box, view, t, mark) {
     const values = [null, ...new Set(t.rows.map((r) => r.values[facet]))];
     bar.append(...values.map((v) => {
       const n = t.rows.filter((r) => v === null || r.values[facet] === v).length;
-      const b = button((v === null ? "all" : v) + " " + n, () => { state.facet = v; renderElements(box, view, t, mark); applyFocus(); });
+      const b = button((v === null ? "all" : v) + " " + n, () => keepFocus(() => { state.facet = v; renderElements(box, view, t, mark); applyFocus(); }));
+      b.dataset.key = "facet:" + v;
       b.setAttribute("aria-pressed", String(state.facet === v));
       return b;
     }));
@@ -1466,11 +1475,12 @@ function renderElements(box, view, t, mark) {
   const table = el("table", "et"), head = el("tr"), tbody = el("tbody");
   [-1, ...t.columns.keys()].forEach((c) => {
     const sorted = state.sort && state.sort.col === c;
-    const th = button(c < 0 ? "name" : t.columns[c], () => {
+    const th = button(c < 0 ? "name" : t.columns[c], () => keepFocus(() => {
       state.sort = sorted && state.sort.dir > 0 ? { col: c, dir: -1 } : sorted ? null : { col: c, dir: 1 };
       renderElements(box, view, t, mark);
       applyFocus();
-    });
+    }));
+    th.dataset.key = "sort:" + c;
     const cell = el("th");
     if (sorted) cell.setAttribute("aria-sort", state.sort.dir > 0 ? "ascending" : "descending");
     cell.append(th);
@@ -1679,14 +1689,29 @@ function renderChanges() {
 }
 
 function render(keepViewport) {
-  renderHeader();
-  if (state.tab === "diagrams") renderDiagram(keepViewport);
-  else if (state.tab === "files") renderFiles();
-  else renderChanges();
+  keepFocus(() => {
+    renderHeader();
+    if (state.tab === "diagrams") renderDiagram(keepViewport);
+    else if (state.tab === "files") renderFiles();
+    else renderChanges();
+  });
   renderNote();
   const place = state.tab === "files" ? "Files" : state.tab === "changes" ? "Changes" : state.drawn ? state.drawn.payload.title : "Diagrams";
   document.title = place + " · " + when(versions[state.version]) + " · OpenClaw SysML v2";
   writeHash();
+}
+
+// A re-render replaces the focused control: focus goes to its successor, the
+// element with the same key (data-key, or data-id and tag), when there is one.
+function keepFocus(rerender) {
+  const a = document.activeElement;
+  const key = a && a !== document.body && (a.dataset.key ? '[data-key="' + CSS.escape(a.dataset.key) + '"]'
+    : a.dataset.id ? a.tagName.toLowerCase() + '[data-id="' + CSS.escape(a.dataset.id) + '"]' : null);
+  rerender();
+  if (key && !a.isConnected) {
+    const b = document.querySelector(key);
+    if (b) b.focus({ preventScroll: true });
+  }
 }
 
 // ---- Events
