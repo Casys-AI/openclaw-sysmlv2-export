@@ -1,0 +1,301 @@
+@prefix ape: <urn:ase:ape:v1:> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+ape:Prefixes sh:declare
+  [ sh:prefix "sysml" ; sh:namespace "https://www.omg.org/spec/SysML#"^^xsd:anyURI ],
+  [ sh:prefix "ape" ; sh:namespace "urn:ase:ape:v1:"^^xsd:anyURI ] .
+
+ape:AgentsView a sh:SPARQLRule ;
+  sh:runOnce true ; sh:order 10 ;
+  ape:name "agents" ; ape:graph <urn:ase:ape:v1:view:agents> ;
+  sh:prefixes ape:Prefixes ;
+  sh:construct """
+CONSTRUCT {
+  ?agent ape:agentId ?agentId ; ape:definition ?agentType ;
+    ape:source ?idFeature ; ape:scope ?scope .
+} WHERE {
+  GRAPH ?build {
+    ?agent a sysml:PartUsage ; sysml:definition ?agentType ; sysml:owner+ ?scope .
+    ?agentType (sysml:ownedSpecialization/sysml:general)+ ?base ;
+      sysml:ownedMember ?idFeature .
+    ?base sysml:qualifiedName "OpenClawImport::OpenClawAgent" .
+    ?idFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
+      "OpenClawImport::OpenClawAgent::id" ;
+      sysml:ownedMember/sysml:value ?agentId .
+    ?scope a sysml:Package ; sysml:owner ?root .
+    ?root a sysml:Namespace .
+    FILTER(isLiteral(?agentId))
+  }
+  FILTER(STRSTARTS(STR(?build), "urn:ase:ape:openmbee:v1:build:"))
+}
+""" .
+
+ape:DelegationView a sh:SPARQLRule ;
+  sh:runOnce true ; sh:order 20 ;
+  ape:name "delegation" ; ape:graph <urn:ase:ape:v1:view:delegation> ;
+  sh:prefixes ape:Prefixes ;
+  sh:construct """
+CONSTRUCT {
+  ?from ape:delegatesTo ?to .
+  ?source ape:from ?from ; ape:to ?to ; ape:source ?source ;
+    ape:wildcardTargets ?wildcard .
+} WHERE {
+  GRAPH <urn:ase:ape:v1:view:agents> {
+    ?from ape:agentId ?fromId .
+    ?to ape:agentId ?toId .
+  }
+  {
+    GRAPH ?build {
+      ?source a sysml:ConnectionUsage ;
+        sysml:definition/sysml:qualifiedName "OpenClawImport::DelegationRule" ;
+        sysml:sourceFeature ?from ; sysml:targetFeature ?to .
+    }
+  } UNION {
+    GRAPH <urn:ase:ape:v1:view:agents> {
+      ?from ape:scope ?scope .
+      ?to ape:scope ?scope .
+    }
+    GRAPH ?build {
+      ?source sysml:definition/sysml:qualifiedName "OpenClawImport::DelegationPolicy" ;
+        sysml:ownedMember ?fromFeature, ?wildcardFeature ; sysml:owner+ ?scope .
+      ?fromFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
+        "OpenClawImport::DelegationPolicy::fromAgent" ;
+        sysml:ownedMember/sysml:referent ?from .
+      ?wildcardFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
+        "OpenClawImport::DelegationPolicy::wildcardTargets" ;
+        sysml:ownedMember/sysml:value true .
+    }
+    BIND(true AS ?wildcard)
+  }
+  FILTER(STRSTARTS(STR(?build), "urn:ase:ape:openmbee:v1:build:"))
+}
+""" .
+
+ape:MessagingView a sh:SPARQLRule ;
+  sh:runOnce true ; sh:order 30 ;
+  ape:name "messaging" ; ape:graph <urn:ase:ape:v1:view:messaging> ;
+  sh:prefixes ape:Prefixes ;
+  sh:construct """
+CONSTRUCT {
+  ?policy ape:messageTarget ?target ; ape:source ?policy ;
+    ape:from ?from ; ape:to ?target ; ape:wildcardTargets ?wildcard .
+  ?from ape:canMessage ?target ; ape:messagePolicy ?policy .
+} WHERE {
+  GRAPH <urn:ase:ape:v1:view:agents> {
+    ?target ape:agentId ?targetId ; ape:scope ?scope .
+    ?from ape:agentId ?fromId ; ape:scope ?scope .
+  }
+  GRAPH ?build {
+    ?policy sysml:definition/sysml:qualifiedName "OpenClawImport::MessagingPolicy" ;
+      sysml:ownedMember ?enabledFeature ; sysml:owner+ ?scope .
+    ?enabledFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
+      "OpenClawImport::MessagingPolicy::enabled" ;
+      sysml:ownedMember/sysml:value true .
+    {
+      ?policy sysml:ownedMember ?targetFeature .
+      ?targetFeature sysml:ownedSubsetting/sysml:subsettedFeature/sysml:qualifiedName
+        "OpenClawImport::MessagingPolicy::targets" ;
+        sysml:ownedMember/sysml:referent ?target .
+    } UNION {
+      ?policy sysml:ownedMember ?wildcardFeature .
+      ?wildcardFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
+        "OpenClawImport::MessagingPolicy::wildcardTargets" ;
+        sysml:ownedMember/sysml:value true .
+      BIND(true AS ?wildcard)
+    }
+  }
+  FILTER(COALESCE(?wildcard, false) || EXISTS {
+    GRAPH ?build {
+      ?policy sysml:ownedMember ?fromFeature .
+      ?fromFeature sysml:ownedSubsetting/sysml:subsettedFeature/sysml:qualifiedName
+        "OpenClawImport::MessagingPolicy::targets" ;
+        sysml:ownedMember/sysml:referent ?from .
+    }
+  })
+  FILTER(STRSTARTS(STR(?build), "urn:ase:ape:openmbee:v1:build:"))
+}
+""" .
+
+ape:EntriesView a sh:SPARQLRule ;
+  sh:runOnce true ; sh:order 40 ;
+  ape:name "entries" ; ape:graph <urn:ase:ape:v1:view:entries> ;
+  sh:prefixes ape:Prefixes ;
+  sh:construct """
+CONSTRUCT {
+  ?agent ape:reachedBy ?entry .
+  ?entry ape:source ?entry ; ape:hookTargets ?hookTarget .
+} WHERE {
+  GRAPH <urn:ase:ape:v1:view:agents> { ?agent ape:agentId ?agentId . }
+  GRAPH ?build {
+    {
+      ?entry a sysml:ConnectionUsage ;
+        sysml:definition/sysml:qualifiedName "OpenClawImport::AgentBinding" ;
+        sysml:sourceFeature ?agent .
+    } UNION {
+      ?entry sysml:definition/sysml:qualifiedName "OpenClawImport::ScheduledCase" ;
+        sysml:ownedMember ?targetFeature .
+      ?targetFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName ?role ;
+        sysml:ownedMember/sysml:referent ?agent .
+      VALUES ?role {
+        "AssemblyCases::CaseType::owner"
+        "OpenClawImport::ScheduledCase::targetAgent"
+      }
+    } UNION {
+      ?entry sysml:definition/sysml:qualifiedName "OpenClawImport::ExternalTrigger" ;
+        sysml:ownedMember ?targetFeature .
+      ?targetFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
+        "OpenClawImport::ExternalTrigger::targetAgent" ;
+        sysml:ownedMember/sysml:referent ?agent .
+      BIND(?agent AS ?hookTarget)
+    }
+  }
+  FILTER(STRSTARTS(STR(?build), "urn:ase:ape:openmbee:v1:build:"))
+}
+""" .
+
+ape:ExecView a sh:SPARQLRule ;
+  sh:runOnce true ; sh:order 50 ;
+  ape:name "exec" ; ape:graph <urn:ase:ape:v1:view:exec> ;
+  sh:prefixes ape:Prefixes ;
+  sh:construct """
+CONSTRUCT {
+  ?agent ape:unapprovedHostExec ?unsafe ; ape:execGrant ?grant ;
+    ape:execPosture ?posture ; ape:source ?source .
+} WHERE {
+  GRAPH <urn:ase:ape:v1:view:agents> {
+    ?agent ape:agentId ?agentId ; ape:definition ?agentType .
+  }
+  GRAPH ?build {
+    ?agent sysml:definition ?agentType .
+    OPTIONAL {
+      ?agentType sysml:ownedMember ?grantReference .
+      ?grantReference sysml:definition/sysml:qualifiedName "OpenClawImport::ToolGrant" ;
+        sysml:ownedMember/sysml:referent ?grant .
+      ?grant sysml:ownedMember ?toolFeature .
+      ?toolFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
+        "OpenClawImport::ToolGrant::tool" ;
+        sysml:ownedMember/(sysml:referent|sysml:targetFeature) ?tool .
+      ?tool sysml:ownedMember ?toolIdFeature, ?originFeature .
+      ?toolIdFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
+        "OpenClawImport::OpenClawTool::toolId" ;
+        sysml:ownedMember/sysml:value "exec" .
+      ?originFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
+        "OpenClawImport::OpenClawTool::origin" ;
+        sysml:ownedMember/sysml:referent/sysml:qualifiedName
+          "OpenClawImport::ToolOrigin::builtin" .
+      OPTIONAL {
+        ?grant sysml:ownedMember ?layerFeature .
+        ?layerFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
+          "OpenClawImport::ToolGrant::layer" ;
+          sysml:ownedMember/sysml:value ?layer .
+        ?agent sysml:ownedMember ?posture .
+        ?posture sysml:definition/sysml:qualifiedName "OpenClawImport::ExecutionPosture" ;
+          sysml:ownedMember ?hostFeature, ?securityFeature, ?askFeature .
+        ?hostFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
+          "OpenClawImport::ExecutionPosture::host" ;
+          sysml:ownedMember/sysml:value ?host .
+        ?securityFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
+          "OpenClawImport::ExecutionPosture::effectiveSecurity" ;
+          sysml:ownedMember/sysml:value ?security .
+        ?askFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
+          "OpenClawImport::ExecutionPosture::effectiveAsk" ;
+          sysml:ownedMember/sysml:value ?ask .
+        VALUES ?layer { "host" "sandbox" }
+        VALUES ?host { "auto" "gateway" "sandbox" "node" }
+        VALUES ?security { "deny" "allowlist" "full" }
+        VALUES ?ask { "off" "on-miss" "always" }
+        BIND(((?host = "gateway" || (?host = "auto" && ?layer = "host")) &&
+          ?security = "full" && ?ask = "off") AS ?knownUnsafe)
+      }
+    }
+  }
+  FILTER(STRSTARTS(STR(?build), "urn:ase:ape:openmbee:v1:build:"))
+  FILTER(!BOUND(?grant) || BOUND(?knownUnsafe))
+  BIND(IF(BOUND(?grant), ?knownUnsafe, false) AS ?unsafe)
+  BIND(IF(BOUND(?grant), ?posture, ?agentType) AS ?source)
+}
+""" .
+
+ape:GRANT_WIDENS_PARENT a sh:NodeShape ;
+  sh:targetSubjectsOf ape:agentId ;
+  ape:code "GRANT_WIDENS_PARENT" ; ape:pattern "S3" ;
+  ape:finding "present" ;
+  ape:recovery "Review the delegated execution boundary and attenuate grants or require approval at the host execution endpoint." ;
+  sh:sparql ape:GRANT_WIDENS_PARENT-constraint .
+
+ape:GRANT_WIDENS_PARENT-constraint sh:severity sh:Warning ;
+  sh:message "This agent has no unapproved host exec but can delegate, directly or through other agents, to {$relatedAgentId}, whose builtin exec runs on the host with effective security full and ask off." ;
+  sh:prefixes ape:Prefixes ;
+  sh:select """
+SELECT DISTINCT $this ?value ?relatedAgentId WHERE {
+  GRAPH <urn:ase:ape:v1:view:agents> {
+    $this ape:agentId ?agentId .
+    ?value ape:agentId ?relatedAgentId .
+  }
+  GRAPH <urn:ase:ape:v1:view:exec> {
+    $this ape:unapprovedHostExec false .
+    ?value ape:unapprovedHostExec true .
+    FILTER NOT EXISTS { $this ape:unapprovedHostExec true . }
+  }
+  GRAPH <urn:ase:ape:v1:view:delegation> { $this ape:delegatesTo+ ?value . }
+}
+ORDER BY ?agentId
+""" .
+
+ape:LINK_CYCLE a sh:NodeShape ;
+  sh:targetSubjectsOf ape:agentId ;
+  ape:code "LINK_CYCLE" ; ape:pattern "4.2" ;
+  ape:finding "present" ;
+  ape:recovery "Review the delegation cycle and make its termination and supervisory intervention explicit." ;
+  sh:sparql ape:LINK_CYCLE-constraint .
+
+ape:LINK_CYCLE-constraint sh:severity sh:Warning ;
+  sh:message "This agent is in a directed delegation cycle with {$relatedAgentId}. Self-delegation alone is excluded." ;
+  sh:prefixes ape:Prefixes ;
+  sh:select """
+SELECT DISTINCT $this ?value ?relatedAgentId WHERE {
+  GRAPH <urn:ase:ape:v1:view:agents> {
+    $this ape:agentId ?agentId .
+    ?value ape:agentId ?relatedAgentId .
+  }
+  GRAPH <urn:ase:ape:v1:view:delegation> {
+    $this ape:delegatesTo+ ?value .
+    ?value ape:delegatesTo+ $this .
+    FILTER($this != ?value)
+  }
+}
+ORDER BY ?agentId
+""" .
+
+ape:UNREACHABLE_OPERATOR a sh:NodeShape ;
+  sh:targetSubjectsOf ape:agentId ;
+  ape:code "UNREACHABLE_OPERATOR" ; ape:pattern "4.2" ;
+  ape:finding "absent" ;
+  ape:recovery "Review the agent's intended entry or supervision path and model it explicitly." ;
+  sh:sparql ape:UNREACHABLE_OPERATOR-constraint .
+
+ape:UNREACHABLE_OPERATOR-constraint sh:severity sh:Warning ;
+  sh:message "No modeled channel binding, scheduled case, hook, incoming delegation from another agent or enabled messaging from another agent reaches this agent. This is structural reachability, not proof of runtime isolation." ;
+  sh:prefixes ape:Prefixes ;
+  sh:select """
+SELECT DISTINCT $this WHERE {
+  GRAPH <urn:ase:ape:v1:view:agents> { $this ape:agentId ?agentId . }
+  FILTER NOT EXISTS {
+    GRAPH <urn:ase:ape:v1:view:entries> { $this ape:reachedBy ?entry . }
+  }
+  FILTER NOT EXISTS {
+    GRAPH <urn:ase:ape:v1:view:delegation> {
+      ?other ape:delegatesTo $this .
+      FILTER(?other != $this)
+    }
+  }
+  FILTER NOT EXISTS {
+    GRAPH <urn:ase:ape:v1:view:messaging> {
+      ?other ape:canMessage $this .
+      FILTER(?other != $this)
+    }
+  }
+}
+ORDER BY ?agentId
+""" .

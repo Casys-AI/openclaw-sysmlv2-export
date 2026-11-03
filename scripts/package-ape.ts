@@ -15,14 +15,14 @@ async function queries(directory: URL, prefix = ""): Promise<string[]> {
           `${prefix}${entry.name}/`,
         ),
       );
-    } else if (entry.isFile && entry.name.endsWith(".rq")) {
+    } else if (entry.isFile && entry.name.endsWith(".ttl")) {
       paths.push(`${prefix}${entry.name}`);
     }
   }
   return paths;
 }
 const rules = await queries(source);
-if (rules.length === 0) throw new Error("No APE rule queries to package");
+if (rules.length === 0) throw new Error("No APE shapes to package");
 try {
   await Deno.remove(target, { recursive: true });
 } catch (error) {
@@ -34,4 +34,4 @@ for (const name of rules.sort()) {
   await Deno.mkdir(new URL(".", destination), { recursive: true });
   await Deno.copyFile(new URL(name, source), destination);
 }
-console.log(`Packaged Oxigraph WASM and ${rules.length} APE queries`);
+console.log(`Packaged Oxigraph WASM and ${rules.length} APE shapes`);

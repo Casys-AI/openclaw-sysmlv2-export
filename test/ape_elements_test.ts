@@ -7,7 +7,7 @@ import {
 } from "../src/ape-elements.ts";
 import { ExportError } from "../src/error.ts";
 
-Deno.test("APE slice preserves whole retained values and occurrence order while omitting unused nodes and properties", () => {
+Deno.test("APE slice preserves retained values for unordered projection while omitting unused nodes and properties", () => {
   const ordered = [
     { "@id": "omitted" },
     { "@id": "kept" },
@@ -75,7 +75,22 @@ Deno.test("source admission rejects invalid and duplicate native identities befo
     });
     return true;
   });
-  for (const nativeId of [null, "", "a".repeat(2049), "bad\0id"]) {
+  for (
+    const nativeId of [
+      null,
+      "",
+      "a".repeat(2049),
+      "bad\0id",
+      "lib:Type",
+      "a.b",
+      "with space",
+      "with\nnewline",
+      "élement",
+      "bad/id",
+      "percent%20",
+      "<bad>",
+    ]
+  ) {
     assert.throws(() => prepare([{ ...valid, "@id": nativeId }]), {
       code: "RDF_PROJECTION_INVALID",
     });
@@ -92,6 +107,28 @@ Deno.test("source admission rejects invalid and duplicate native identities befo
   assert.throws(() => prepare([null]), {
     context: { reason: "element is not an object" },
   });
+  // The full source boundary admits IDs even for nodes outside the APE slice.
+  assert.throws(
+    () => prepare([{ ...valid, "@id": "bad:id", "@type": "Comment" }]),
+    {
+      code: "RDF_PROJECTION_INVALID",
+    },
+  );
+  for (
+    const nativeId of [
+      "14c0aa22-5489-59b5-b438-ded26e83ba31",
+      "User_1-2",
+      "a".repeat(2048),
+    ]
+  ) {
+    const prepared = prepare([{
+      ...valid,
+      "@id": nativeId,
+      owner: { "@id": nativeId },
+    }]);
+    assert.equal(prepared.elements[0]["@id"], nativeId);
+    assert.deepEqual(prepared.elements[0].owner, { "@id": nativeId });
+  }
 });
 
 Deno.test("catalog completion fetches only absent references retained by the slice and classifies native IDs explicitly", () => {
@@ -145,11 +182,6 @@ Deno.test("catalog completion fetches only absent references retained by the sli
   });
   assert.deepEqual(calls, [["external"], ["scope"]]);
   assert.equal(prepared.sourceElementCount, 3);
-  assert.deepEqual(prepared.libraryNativeIds, [
-    "external",
-    "omitted-lib",
-    "scope",
-  ]);
   assert.deepEqual(prepared.elements.map((element) => element["@id"]), [
     "user",
     "external",
@@ -157,9 +189,39 @@ Deno.test("catalog completion fetches only absent references retained by the sli
   ]);
   assert.deepEqual(prepared.elements[0].ownedMember, raw[0].ownedMember);
   assert.equal(prepared.elements[1]["@type"], "DataType");
+  assert.equal(prepared.elements[1].isLibraryElement, true);
+  assert.equal(prepared.elements[1].declaredName, "external");
+  assert.equal(prepared.elements[1].qualifiedName, "Native::external");
+  assert.equal(prepared.elements[2].isLibraryElement, true);
   assert.deepEqual(prepared.elements[2].owner, { "@id": "omitted-lib" });
   assert.equal(prepared.elements[0].isLibraryElement, false);
   assert.equal(prepared.elements[0].ignored, undefined);
+});
+
+Deno.test("catalog owner identities pass the same native-ID admission boundary", () => {
+  assert.throws(() =>
+    prepareApeElements({
+      toFullJson: () =>
+        JSON.stringify([{
+          "@id": "user",
+          "@type": "PartUsage",
+          isLibraryElement: false,
+          definition: [{ "@id": "library" }],
+        }]),
+      rows: () =>
+        JSON.stringify([{
+          name: "Type",
+          metaclass: "PartDefinition",
+          isLibraryElement: true,
+          owner: "unsafe:owner",
+        }]),
+    }), (error: unknown) => {
+    assert(error instanceof RdfProjectionError);
+    assert.equal(error.code, "RDF_PROJECTION_INVALID");
+    assert.equal(error.context.nativeId, "unsafe:owner");
+    assert.match(error.message, /Flexo-safe/);
+    return true;
+  });
 });
 
 Deno.test("preparation preserves the source exception and distinguishes malformed native interchange", () => {

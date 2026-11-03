@@ -7,8 +7,7 @@ import {
   ApeStageError,
   evaluateApeRules,
   materializeApeViews,
-  readApeRules,
-  readApeViews,
+  readApeProgram,
 } from "./ape-rules.ts";
 import { initOxigraph, Store } from "./oxigraph.ts";
 
@@ -29,7 +28,7 @@ export async function checkApe(session: ElementSession): Promise<ApeReport> {
     const artifactDigest = hash.update("]").digest("hex");
     const batches = projectModelToNQuadBatches({
       ...prepared,
-      build: { repositoryId: "openclaw-export", artifactDigest },
+      build: { artifactDigest },
     });
     let projectionMs = performance.now() - projectionStart;
     stage = "loading";
@@ -52,14 +51,19 @@ export async function checkApe(session: ElementSession): Promise<ApeReport> {
       baseQuads += next.value.quadCount;
       batchCount++;
     }
+    stage = "loading";
+    const program = await readApeProgram(store);
     stage = "view";
-    const [views, rules] = await Promise.all([readApeViews(), readApeRules()]);
-    const materialized = materializeApeViews(store, views);
+    const materialized = materializeApeViews(store, program);
     stage = "rule";
-    const { findings, queries } = evaluateApeRules(store, rules);
+    const { findings, queries, validationReport } = evaluateApeRules(
+      store,
+      program,
+    );
     return {
       status: "completed",
       findings,
+      validationReport,
       metrics: {
         elements: prepared.elements.length,
         sourceElements: prepared.sourceElementCount,

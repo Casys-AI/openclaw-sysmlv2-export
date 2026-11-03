@@ -1,31 +1,26 @@
-import { readdir, readFile } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import { compareFindings } from "./doctor.ts";
 import { elementId } from "./element-id.ts";
 import { isRecord, recordDiagnosticError } from "./error.ts";
-import { namedNode, Quad, quad, type Store } from "./oxigraph.ts";
+import { namedNode, type Store, type Term } from "./oxigraph.ts";
+import {
+  materializeShaclRules,
+  readShaclProgram,
+  REPORT_GRAPH,
+  SH,
+  shaclDataOptions,
+  type ShaclProgram,
+  ShaclStageError,
+  SHAPES_GRAPH,
+  validateShacl,
+} from "./shacl.ts";
 import type { Finding } from "./snapshot.ts";
 
 export interface ApeFinding extends Finding {
   pattern: string;
   finding: "present" | "absent" | "indeterminate";
 }
-export interface ApeRule {
-  code: string;
-  severity: Finding["severity"];
-  pattern: string;
-  finding: ApeFinding["finding"];
-  context: string;
-  recovery: string;
-  query: string;
-  file?: string;
-}
 export type ApeStage = "projection" | "loading" | "view" | "rule";
-export interface ApeView {
-  name: string;
-  file: string;
-  graph: string;
-  query: string;
-}
 export interface ApeReport {
   status: "completed" | "skipped" | "failed";
   code?: string;
@@ -35,6 +30,7 @@ export interface ApeReport {
   file?: string;
   cause?: string;
   findings: ApeFinding[];
+  validationReport?: string;
   metrics?: {
     elements: number;
     sourceElements?: number;
@@ -51,23 +47,26 @@ export interface ApeReport {
 }
 export type ApeSummary = Pick<ApeReport, "status" | "code"> & { count: number };
 
-export type PersistedApeReport = Omit<ApeReport, "metrics"> & {
-  metrics?:
-    & Pick<
-      NonNullable<ApeReport["metrics"]>,
-      "elements" | "sourceElements" | "baseQuads" | "derivedQuads" | "batches"
-    >
-    & {
-      views: { file: string; graph: string; quads: number }[];
-      queries: { code: string; findings: number }[];
-    };
-};
+export type PersistedApeReport =
+  & Omit<ApeReport, "metrics" | "validationReport">
+  & {
+    metrics?:
+      & Pick<
+        NonNullable<ApeReport["metrics"]>,
+        "elements" | "sourceElements" | "baseQuads" | "derivedQuads" | "batches"
+      >
+      & {
+        views: { file: string; graph: string; quads: number }[];
+        queries: { code: string; findings: number }[];
+      };
+  };
 
 /** Persist counts and identities; timings remain available only in memory. */
 export function persistedApeReport(
   report: ApeReport | PersistedApeReport,
 ): PersistedApeReport {
-  const { metrics, ...stable } = report;
+  const { metrics, validationReport: _validationReport, ...stable } =
+    report as ApeReport;
   return {
     ...stable,
     ...(metrics
@@ -141,197 +140,243 @@ export class ApeStageError extends Error {
   }
 }
 
-/** One admission boundary for the six metadata fields, before execution. */
-export function parseApeRule(text: string, file = "<inline>"): ApeRule {
-  const header = text.split(/\r?\n\s*\r?\n/, 1)[0];
-  const meta: Record<string, string> = {};
-  const invalid = (message: string): never => {
-    throw new ApeStageError("rule", new Error(message), file);
-  };
-  for (const line of header.split(/\r?\n/)) {
-    const field = /^# (\w+):\s*(.*)$/.exec(line);
-    if (!field) invalid("Invalid APE rule header line");
-    const [, name, value] = field!;
-    if (
-      !["code", "severity", "pattern", "finding", "context", "recovery"]
-        .includes(name)
-    ) {
-      invalid(`Invalid APE rule header field: ${name}`);
-    }
-    if (name in meta) invalid(`Duplicate APE rule header field: ${name}`);
-    meta[name] = value;
-  }
-  for (
-    const name of [
-      "code",
-      "severity",
-      "pattern",
-      "finding",
-      "context",
-      "recovery",
-    ]
-  ) {
-    if (!(name in meta)) invalid(`Missing APE rule header field: ${name}`);
-    if (!meta[name].trim()) invalid(`Invalid APE rule header field: ${name}`);
-  }
-  if (!/^[A-Z][A-Z_]+$/.test(meta.code)) {
-    invalid("Invalid APE rule header field: code");
-  }
-  if (!["error", "warning", "info"].includes(meta.severity)) {
-    invalid("Invalid APE rule header field: severity");
-  }
-  if (!["present", "absent"].includes(meta.finding)) {
-    invalid("Invalid APE rule header field: finding");
-  }
-  return { ...meta, query: text, file } as unknown as ApeRule;
-}
-
-const directory = () =>
+const APE = "urn:ase:ape:v1:";
+const FILE = "rules/ape/ape.ttl";
+const shapeUrl = () =>
   new URL(
-    import.meta.url.endsWith(".ts") ? "../rules/ape/" : "./rules/ape/",
+    import.meta.url.endsWith(".ts")
+      ? "../rules/ape/ape.ttl"
+      : "./rules/ape/ape.ttl",
     import.meta.url,
   );
-async function readQuery(
-  name: string,
-  stage: "view" | "rule",
-  root = directory(),
-): Promise<string> {
+export interface ApeAnnotation {
+  code: string;
+  pattern: string;
+  finding: ApeFinding["finding"];
+  recovery: string;
+  message: string;
+}
+export interface ApeProgram extends ShaclProgram {
+  readonly annotations: ReadonlyMap<string, ApeAnnotation>;
+}
+/** Admit APE annotations once, alongside generic query admission. */
+export function admitApeProgram(
+  store: Store,
+  program: ShaclProgram,
+): ApeProgram {
   try {
-    return await readFile(new URL(name, root), "utf8");
+    return { ...program, annotations: annotations(store, program) };
   } catch (error) {
-    throw new ApeStageError(stage, error, `rules/ape/${name}`);
+    throw stageError(error, "loading", program.file);
   }
 }
+function selected(
+  store: Store,
+  query: string,
+  options?: Parameters<Store["query"]>[1],
+): Map<string, Term>[] {
+  const result = store.query(query, options);
+  if (!Array.isArray(result) || result.some((row) => !(row instanceof Map))) {
+    throw new Error("Expected APE SELECT results");
+  }
+  return result as Map<string, Term>[];
+}
+function annotations(
+  store: Store,
+  program: ShaclProgram,
+): Map<string, ApeAnnotation> {
+  const result = new Map<string, ApeAnnotation>();
+  const fields = ["code", "pattern", "finding", "recovery"];
+  for (const shape of program.shapes) {
+    if (shape.node.termType !== "NamedNode") {
+      throw new Error("APE source shapes must have named IRIs");
+    }
+    const values: Record<string, string> = {};
+    for (
+      const row of selected(
+        store,
+        `SELECT ?p ?o WHERE { ${shape.node} ?p ?o }`,
+        { default_graph: namedNode(program.shapesGraph), named_graphs: [] },
+      )
+    ) {
+      const predicate = row.get("p")!.value;
+      const name = predicate.slice(APE.length);
+      if (!predicate.startsWith(APE) || !fields.includes(name)) continue;
+      const value = row.get("o")!;
+      if (
+        value.termType !== "Literal" || !value.value.trim() || name in values
+      ) throw new Error(`Invalid APE shape annotation ${name}`);
+      values[name] = value.value;
+    }
+    for (const name of fields) {
+      if (!(name in values)) {
+        throw new Error(`Missing APE shape annotation ${name}`);
+      }
+    }
+    if (!/^[A-Z][A-Z_]+$/.test(values.code)) {
+      throw new Error("Invalid APE shape annotation code");
+    }
+    if (!["present", "absent"].includes(values.finding)) {
+      throw new Error("Invalid APE shape annotation finding");
+    }
+    for (const constraint of shape.constraints) {
+      if (constraint.sourceConstraint.termType !== "NamedNode") {
+        throw new Error("APE source constraints must have named IRIs");
+      }
+      if (
+        constraint.messages.length !== 1 ||
+        constraint.messages[0].termType !== "Literal"
+      ) throw new Error("APE constraints require one message");
+      result.set(
+        JSON.stringify([shape.node.value, constraint.sourceConstraint.value]),
+        {
+          ...values,
+          message: constraint.messages[0].value,
+        } as unknown as ApeAnnotation,
+      );
+    }
+  }
+  return result;
+}
+function stageError(
+  error: unknown,
+  fallback: ApeStage = "rule",
+  file = FILE,
+): ApeStageError {
+  return error instanceof ApeStageError
+    ? error
+    : error instanceof ShaclStageError
+    ? new ApeStageError(error.stage, error.cause, error.file ?? file)
+    : new ApeStageError(fallback, error, file);
+}
 
-/** Files remain verbatim SPARQL, including their metadata comments. */
-export async function readApeRules(root = directory()): Promise<ApeRule[]> {
-  let names: string[];
+/** Shapes are the only runtime rule source, packaged beside the bundled worker. */
+export async function readApeProgram(
+  store: Store,
+  url = shapeUrl(),
+): Promise<ApeProgram> {
   try {
-    names = (await readdir(root, { withFileTypes: true }))
-      .filter((entry) => entry.isFile() && entry.name.endsWith(".rq"))
-      .map((entry) => entry.name).sort();
-  } catch (error) {
-    throw new ApeStageError("rule", error, "rules/ape");
-  }
-  return await Promise.all(
-    names.map(async (name) =>
-      parseApeRule(await readQuery(name, "rule", root), `rules/ape/${name}`)
-    ),
-  );
-}
-
-export const APE_VIEW_ORDER = [
-  "agents",
-  "delegation",
-  "messaging",
-  "entries",
-  "exec",
-] as const;
-
-/** Each query sees earlier views in APE_VIEW_ORDER. */
-export async function readApeViews(): Promise<ApeView[]> {
-  return await Promise.all(
-    APE_VIEW_ORDER.map(async (
-      name,
-    ) => ({
-      name,
-      file: `rules/ape/views/${name}.rq`,
-      graph: `urn:ase:ape:v1:view:${name}`,
-      query: await readQuery(`views/${name}.rq`, "view"),
-    })),
-  );
-}
-
-export function materializeApeViews(store: Store, views: ApeView[]) {
-  const timings: NonNullable<ApeReport["metrics"]>["views"] = [];
-  let derivedQuads = 0;
-  for (const view of views) {
-    const started = performance.now();
-    try {
-      const result = store.query(view.query);
-      if (
-        !Array.isArray(result) ||
-        result.some((value) => !(value instanceof Quad))
-      ) {
-        throw new Error("APE view must CONSTRUCT RDF quads");
-      }
-      const graph = namedNode(view.graph);
-      const before = store.size;
-      for (const value of result as Quad[]) {
-        store.add(quad(value.subject, value.predicate, value.object, graph));
-      }
-      const quads = store.size - before;
-      derivedQuads += quads;
-      timings.push({
-        file: view.file,
-        graph: view.graph,
-        ms: performance.now() - started,
-        quads,
-      });
-    } catch (error) {
-      throw new ApeStageError("view", error, view.file);
-    }
-  }
-  return { views: timings, derivedQuads };
-}
-
-export function evaluateApeRules(store: Store, rules: ApeRule[]) {
-  const findings: ApeFinding[] = [];
-  const queries: NonNullable<ApeReport["metrics"]>["queries"] = [];
-  for (const rule of rules) {
-    const started = performance.now();
-    // A context naming {related} needs a literal ?relatedAgentId in every row.
-    const related = rule.context.includes("{related}");
-    const literal = (
-      row: Map<string, { termType: string; value: string }>,
-      name: string,
-    ) => row.get(name)?.termType === "Literal" && Boolean(row.get(name)?.value);
-    let rows;
-    try {
-      rows = store.query(rule.query);
-      // Every row names its agent; do not silently drop rows.
-      if (
-        !Array.isArray(rows) ||
-        rows.some((row) =>
-          !(row instanceof Map) || !literal(row, "agentId") ||
-          related !== literal(row, "relatedAgentId")
-        )
-      ) {
-        throw new Error(
-          `APE rule ${rule.code} must SELECT a literal ?agentId` +
-            (related ? " and ?relatedAgentId" : ""),
-        );
-      }
-    } catch (error) {
-      throw new ApeStageError("rule", error, rule.file);
-    }
-    // One finding per agent; the agents it relates to are listed sorted.
-    const byAgent = new Map<string, Set<string>>();
-    for (const row of rows as Map<string, { value: string }>[]) {
-      const agent = row.get("agentId")!.value;
-      if (!byAgent.has(agent)) byAgent.set(agent, new Set());
-      if (related) byAgent.get(agent)!.add(row.get("relatedAgentId")!.value);
-    }
-    for (const [agent, others] of byAgent) {
-      findings.push({
-        code: `APE_${rule.code}`,
-        severity: rule.severity,
-        subject: elementId("agent", agent),
-        context: rule.context.replaceAll(
-          "{related}",
-          () => [...others].sort().join(", "),
-        ),
-        recovery: rule.recovery,
-        pattern: rule.pattern,
-        finding: rule.finding,
-      });
-    }
-    queries.push({
-      code: rule.code,
-      ms: performance.now() - started,
-      findings: byAgent.size,
+    store.load(await readFile(url, "utf8"), {
+      format: "text/turtle",
+      base_iri: url.href,
+      to_graph_name: namedNode(SHAPES_GRAPH),
     });
+    const program = readShaclProgram(store, SHAPES_GRAPH, FILE);
+    return admitApeProgram(store, program);
+  } catch (error) {
+    throw stageError(error, "loading");
   }
-  findings.sort(compareFindings);
-  return { findings, queries };
+}
+
+export function materializeApeViews(store: Store, program: ShaclProgram) {
+  try {
+    return materializeShaclRules(store, program);
+  } catch (error) {
+    throw stageError(error, "view");
+  }
+}
+
+/** Map the standard report, never re-run an independent TypeScript rule pipeline. */
+export function evaluateApeRules(store: Store, program: ApeProgram) {
+  try {
+    const evaluated = validateShacl(store, program);
+    const meta = program.annotations;
+    const ids = new Map<string, string>();
+    for (
+      const row of selected(
+        store,
+        `SELECT ?node ?id WHERE { ?node <${APE}agentId> ?id }`,
+        shaclDataOptions(store, program.shapesGraph),
+      )
+    ) {
+      const node = row.get("node")!;
+      const id = row.get("id")!;
+      if (
+        node.termType !== "NamedNode" || id.termType !== "Literal" || !id.value
+      ) throw new Error("APE agents require IRI nodes and literal agentId");
+      if (ids.has(node.value) && ids.get(node.value) !== id.value) {
+        throw new Error("APE agent has conflicting agentId values");
+      }
+      ids.set(node.value, id.value);
+    }
+    const groups = new Map<
+      string,
+      {
+        annotation: ApeAnnotation;
+        focus: string;
+        severity: Finding["severity"];
+        related: Set<string>;
+      }
+    >();
+    for (
+      const row of selected(
+        store,
+        `SELECT ?focus ?shape ?constraint ?severity ?value WHERE {
+      ?result a <${SH}ValidationResult>; <${SH}focusNode> ?focus; <${SH}sourceShape> ?shape; <${SH}sourceConstraint> ?constraint;
+        <${SH}resultSeverity> ?severity; <${SH}value> ?value .
+    }`,
+        { default_graph: namedNode(REPORT_GRAPH), named_graphs: [] },
+      )
+    ) {
+      const annotation = meta.get(
+        JSON.stringify([row.get("shape")!.value, row.get("constraint")!.value]),
+      );
+      if (!annotation) {
+        throw new Error("Missing APE annotations for report result");
+      }
+      const focus = ids.get(row.get("focus")!.value);
+      if (!focus) throw new Error("APE report focus has no agentId");
+      const severity = ({
+        [SH + "Violation"]: "error",
+        [SH + "Warning"]: "warning",
+        [SH + "Info"]: "info",
+      } as const)[row.get("severity")!.value];
+      if (!severity) throw new Error("Unsupported APE result severity");
+      const key = JSON.stringify([annotation.code, focus]);
+      if (!groups.has(key)) {
+        groups.set(key, { annotation, focus, severity, related: new Set() });
+      }
+      const group = groups.get(key)!;
+      if (group.severity !== severity) {
+        throw new Error("APE finding group has conflicting severity");
+      }
+      if (/\{[?$]relatedAgentId\}/.test(annotation.message)) {
+        const related = ids.get(row.get("value")!.value);
+        if (!related) {
+          throw new Error("APE report value has no related agentId");
+        }
+        group.related.add(related);
+      }
+    }
+    const findings: ApeFinding[] = [...groups.values()].map((
+      { annotation, focus, severity, related },
+    ) => ({
+      code: `APE_${annotation.code}`,
+      severity,
+      subject: elementId("agent", focus),
+      context: annotation.message.replace(
+        /\{[?$]relatedAgentId\}/g,
+        () => [...related].sort().join(", "),
+      ),
+      recovery: annotation.recovery,
+      pattern: annotation.pattern,
+      finding: annotation.finding,
+    }));
+    findings.sort(compareFindings);
+    const queries = evaluated.queries.map((query) => {
+      const annotation = meta.get(
+        JSON.stringify([query.sourceShape.value, query.sourceConstraint.value]),
+      )!;
+      return {
+        code: annotation.code,
+        ms: query.ms,
+        findings: [...groups.values()].filter((group) =>
+          group.annotation.code === annotation.code
+        ).length,
+      };
+    });
+    return { findings, queries, validationReport: evaluated.validationReport };
+  } catch (error) {
+    throw stageError(error);
+  }
 }

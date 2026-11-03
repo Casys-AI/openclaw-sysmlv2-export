@@ -1,9 +1,8 @@
 import { ExportError, isRecord } from "./error.ts";
 
-/** Native catalog completion follows Assembly's prepareToolkitElements in
- * src/adapters/out/sysml-toolkit/compilation/compiler.ts, 3 November 2026.
- * Source/flow normalization is
- * outside this trial; native IDs and explicit library classification remain.
+/** Complete the syntactic APE slice from native Toolkit interchange.
+ * Native catalog completion follows Assembly src/adapters/out/sysml-toolkit/compilation/compiler.ts,
+ * 3 November 2026. Native IDs and explicit library classification remain.
  */
 export interface ElementSession {
   toFullJson(includeLibrary: boolean): string;
@@ -39,11 +38,12 @@ export function invalidProjection(
 function admitNativeId(value: unknown): string {
   if (
     typeof value !== "string" || !value || value.length > 2048 ||
-    value.includes("\0")
+    !/^[A-Za-z0-9_-]+$/.test(value)
   ) {
-    invalidProjection("nativeId must contain 1–2048 characters without NUL", {
-      nativeId: value,
-    });
+    invalidProjection(
+      "nativeId must contain 1–2048 Flexo-safe characters [A-Za-z0-9_-]",
+      { nativeId: value },
+    );
   }
   return value;
 }
@@ -114,7 +114,7 @@ function selectProperties(element: Element): Element {
 
 /** Apply the same slice to raw admitted or already catalog-completed elements.
  * Retained values are copied whole: omitted target nodes remain native-ID
- * references, and occurrence-list indices/order are never rewritten. Empty
+ * references. Array values are kept for the unordered RDF projection. Empty
  * top-level lists/nulls have no statements read by the views and are omitted.
  * The input and its nested values are never mutated.
  */
@@ -126,11 +126,10 @@ export function selectApeElements(elements: readonly Element[]): Element[] {
 
 /** Complete native references before the pure RDF projection; never infer a
  * library identity from a name. Owner references introduced by catalog stubs
- * are completed too, so their IRIs retain the correct library scope.
+ * are completed too. All references retain their native IDs.
  */
 export function prepareApeElements(session: ElementSession): {
   elements: Element[];
-  libraryNativeIds: string[];
   sourceElementCount: number;
 } {
   try {
@@ -156,11 +155,6 @@ export function prepareApeElements(session: ElementSession): {
     });
     const elements = selectApeElements(source);
     // All raw identities remain known even when their nodes are not projected.
-    const libraryIds = new Set(
-      source.filter((element) => element.isLibraryElement === true).map(
-        (element) => String(element["@id"]),
-      ),
-    );
     let missing = new Set<string>();
     const visit = (value: unknown): void => {
       if (Array.isArray(value)) value.forEach(visit);
@@ -217,7 +211,6 @@ export function prepareApeElements(session: ElementSession): {
       );
       for (const id of ids) {
         known.add(id);
-        libraryIds.add(id);
       }
       elements.push(...stubs);
       missing = new Set();
@@ -225,7 +218,6 @@ export function prepareApeElements(session: ElementSession): {
     }
     return {
       elements,
-      libraryNativeIds: [...libraryIds].sort(),
       sourceElementCount: source.length,
     };
   } catch (error) {

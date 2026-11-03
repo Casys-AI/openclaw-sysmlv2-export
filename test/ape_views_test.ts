@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import {
   evaluateApeRules,
   materializeApeViews,
-  readApeRules,
-  readApeViews,
+  readApeProgram,
 } from "../src/ape-rules.ts";
-import { projectModelToNQuadBatches } from "../src/ape-rdf.ts";
+import {
+  BUILD_GRAPH_PREFIX,
+  projectModelToNQuadBatches,
+} from "../src/ape-rdf.ts";
 import {
   initOxigraph,
   literal,
@@ -18,7 +20,13 @@ Deno.test("actual views preserve unknown exec posture, scope wildcards and resol
   const elements = new Map<string, Record<string, unknown>>();
   const ref = (id: string) => ({ "@id": id });
   const add = (id: string, type: string, props = {}) => {
-    elements.set(id, { "@id": id, "@type": type, ...props });
+    assert.match(id, /^[A-Za-z0-9_-]+$/);
+    elements.set(id, {
+      "@id": id,
+      "@type": type,
+      isLibraryElement: false,
+      ...props,
+    });
   };
   const field = (
     owner: string,
@@ -29,13 +37,14 @@ Deno.test("actual views preserve unknown exec posture, scope wildcards and resol
   ) => {
     role = `OpenClawImport::${role}`;
     const id = `${owner}-${role.split("::").at(-1)}-${value}`;
+    const roleId = `role-${role.replaceAll("::", "-")}`;
     const members = elements.get(owner)!.ownedMember as unknown[] | undefined;
     elements.get(owner)!.ownedMember = [...(members ?? []), ref(id)];
-    if (!elements.has(role)) {
-      add(role, "AttributeUsage", { qualifiedName: role });
+    if (!elements.has(roleId)) {
+      add(roleId, "AttributeUsage", { qualifiedName: role });
     }
     add(`${id}-relation`, subset ? "Subsetting" : "Redefinition", {
-      [subset ? "subsettedFeature" : "redefinedFeature"]: ref(role),
+      [subset ? "subsettedFeature" : "redefinedFeature"]: ref(roleId),
     });
     add(id, "AttributeUsage", {
       [subset ? "ownedSubsetting" : "ownedRedefinition"]: [
@@ -137,61 +146,74 @@ Deno.test("actual views preserve unknown exec posture, scope wildcards and resol
 
   await initOxigraph();
   const store = new Store();
-  const graph = namedNode(`urn:ase:build:${"e".repeat(64)}`);
-  for (
-    const batch of projectModelToNQuadBatches({
-      build: { repositoryId: "view-test", artifactDigest: "e".repeat(64) },
-      elements: [...elements.values()],
-      libraryNativeIds: [],
-    })
-  ) {
-    store.load(batch.nquads, { format: "application/n-quads" });
-  }
-  const views = await readApeViews();
-  materializeApeViews(store, views);
-  const node = (id: string) =>
-    namedNode(`urn:ase:model:view-test:${encodeURIComponent(id)}`);
-  const values = (view: string, id: string, predicate: string) =>
-    store.match(
-      node(id),
-      namedNode(`urn:ase:ape:v1:${predicate}`),
-      null,
-      namedNode(`urn:ase:ape:v1:view:${view}`),
-    ).map((statement) => statement.object.value).sort();
-  const localAgents = ["known", "local", "unknown"].map((id) => node(id).value)
-    .sort();
-  assert.deepEqual(values("exec", "known", "unapprovedHostExec"), ["true"]);
-  assert.deepEqual(values("exec", "unknown", "unapprovedHostExec"), []);
-  assert.deepEqual(values("exec", "local", "unapprovedHostExec"), ["false"]);
-  assert.deepEqual(values("delegation", "known", "delegatesTo"), localAgents);
-  assert.deepEqual(values("delegation", "delegation", "wildcardTargets"), [
-    "true",
-  ]);
-  assert.deepEqual(
-    values("messaging", "wildcard", "messageTarget"),
-    localAgents,
-  );
-  assert.deepEqual(values("messaging", "wildcard", "wildcardTargets"), [
-    "true",
-  ]);
-  assert.deepEqual(values("messaging", "named", "messageTarget"), [
-    node("known").value,
-  ]);
-  assert.deepEqual(values("messaging", "named", "from"), [node("known").value]);
-  assert.deepEqual(values("messaging", "known", "canMessage"), localAgents);
-  assert.deepEqual(values("messaging", "remote", "canMessage"), []);
+  const graph = namedNode(`${BUILD_GRAPH_PREFIX}${"e".repeat(64)}`);
+  try {
+    for (
+      const batch of projectModelToNQuadBatches({
+        build: { artifactDigest: "e".repeat(64) },
+        elements: [...elements.values()],
+      })
+    ) {
+      store.load(batch.nquads, { format: "application/n-quads" });
+    }
+    const program = await readApeProgram(store);
+    materializeApeViews(store, program);
+    const node = (id: string) => namedNode(`urn:sysmlv2:element:${id}`);
+    const values = (view: string, id: string, predicate: string) =>
+      store.match(
+        node(id),
+        namedNode(`urn:ase:ape:v1:${predicate}`),
+        null,
+        namedNode(`urn:ase:ape:v1:view:${view}`),
+      ).map((statement) => statement.object.value).sort();
+    const localAgents = ["known", "local", "unknown"].map((id) =>
+      node(id).value
+    )
+      .sort();
+    assert.deepEqual(values("exec", "known", "unapprovedHostExec"), ["true"]);
+    assert.deepEqual(values("exec", "unknown", "unapprovedHostExec"), []);
+    assert.deepEqual(values("exec", "local", "unapprovedHostExec"), ["false"]);
+    assert.deepEqual(values("delegation", "known", "delegatesTo"), localAgents);
+    assert.deepEqual(values("delegation", "delegation", "wildcardTargets"), [
+      "true",
+    ]);
+    assert.deepEqual(
+      values("messaging", "wildcard", "messageTarget"),
+      localAgents,
+    );
+    assert.deepEqual(values("messaging", "wildcard", "wildcardTargets"), [
+      "true",
+    ]);
+    assert.deepEqual(values("messaging", "named", "messageTarget"), [
+      node("known").value,
+    ]);
+    assert.deepEqual(values("messaging", "named", "from"), [
+      node("known").value,
+    ]);
+    assert.deepEqual(values("messaging", "known", "canMessage"), localAgents);
+    assert.deepEqual(values("messaging", "remote", "canMessage"), []);
 
-  // Resolve only the unknown enum literal; the actual exec query now proves false.
-  const askQuad = store.match(
-    node(unknownAsk),
-    namedNode("urn:ase:vocab:prop:value"),
-    null,
-    graph,
-  )[0];
-  store.delete(askQuad);
-  store.add(quad(askQuad.subject, askQuad.predicate, literal("always"), graph));
-  materializeApeViews(store, views.filter((view) => view.name === "exec"));
-  assert.deepEqual(values("exec", "unknown", "unapprovedHostExec"), ["false"]);
+    // Resolve only the unknown enum literal; the actual exec query now proves false.
+    const askQuad = store.match(
+      node(unknownAsk),
+      namedNode("https://www.omg.org/spec/SysML#value"),
+      null,
+      graph,
+    )[0];
+    store.delete(askQuad);
+    store.add(
+      quad(askQuad.subject, askQuad.predicate, literal("always"), graph),
+    );
+    materializeApeViews(store, {
+      ...program,
+      rules: program.rules.filter((rule) => rule.name === "exec"),
+    });
+    assert.deepEqual(values("exec", "unknown", "unapprovedHostExec"), [
+      "false",
+    ]);
+  } finally {
+    (store as Store & { free(): void }).free();
+  }
 });
 
 Deno.test("self-only messaging does not reach an operator; another sender does", async () => {
@@ -205,15 +227,21 @@ Deno.test("self-only messaging does not reach an operator; another sender does",
       quad(agent, ape("agentId"), literal("operator"), ape("view:agents")),
     );
     store.add(quad(agent, ape("canMessage"), agent, ape("view:messaging")));
-    const rule = (await readApeRules()).filter((rule) =>
-      rule.code === "UNREACHABLE_OPERATOR"
-    );
+    const program = await readApeProgram(store);
+    const unreachable = {
+      ...program,
+      shapes: program.shapes.filter((shape) =>
+        shape.node.value === "urn:ase:ape:v1:UNREACHABLE_OPERATOR"
+      ),
+    };
     assert.deepEqual(
-      evaluateApeRules(store, rule).findings.map((finding) => finding.subject),
+      evaluateApeRules(store, unreachable).findings.map((finding) =>
+        finding.subject
+      ),
       ["agent:operator"],
     );
     store.add(quad(other, ape("canMessage"), agent, ape("view:messaging")));
-    assert.deepEqual(evaluateApeRules(store, rule).findings, []);
+    assert.deepEqual(evaluateApeRules(store, unreachable).findings, []);
   } finally {
     (store as Store & { free(): void }).free();
   }
