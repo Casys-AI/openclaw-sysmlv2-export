@@ -173,7 +173,6 @@ export async function runExport(
   }
   const { validation, diagnostics, ape } = await ports.validationReport(
     new Map([...files].filter(([name]) => name.endsWith(".sysml"))),
-    stateDir,
   );
   findings.push(...ape.findings);
   findings.sort(compareFindings);

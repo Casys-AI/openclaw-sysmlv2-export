@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { parseSnapshot } from "../../src/infrastructure/snapshot-codec.ts";
-import { installToolkit } from "../../src/adapters/out/sysml-toolkit/install.ts";
+import { extractToolkit } from "../../src/adapters/out/sysml-toolkit/extract.ts";
 import { emit } from "../../src/adapters/out/sysml/emitter.ts";
 import { ASSEMBLY_LIBRARY } from "../../src/adapters/out/sysml/library.ts";
 import { prepareApeElements } from "../../src/adapters/out/sysml-toolkit/compilation/ape-elements.ts";
@@ -47,7 +47,7 @@ Deno.test({
   async fn(t) {
     const dir = await Deno.makeTempDir({ prefix: "openclaw-shapes-" });
     try {
-      await installToolkit(dir, { from: archive });
+      await extractToolkit(archive, dir);
       await initOxigraph();
       const baseline = parseSnapshot(
         JSON.parse(

@@ -75,7 +75,7 @@ function summarize(s) {
 
 export function createPluginEntry(
   definePluginEntry,
-  { installToolkit, pluginList, runExport, toolkitStatus, completeWith },
+  { pluginList, runExport, toolkitStatus, completeWith },
 ) {
   /** OpenClaw's plugin inventory (docs/cli/plugins/list.md). api.runtime gives
    * an external plugin no plugin registry and gateway.request rejects it
@@ -162,37 +162,24 @@ export function createPluginEntry(
       );
 
       api.registerCli(({ program }) => {
-        const toolkit = program.command("sysmlv2-toolkit")
+        program.command("sysmlv2-toolkit")
           .description(
-            "Install or verify the pinned SysML WebAssembly Toolkit",
-          );
-        const toolkitAction = (action) => async (options) => {
-          try {
-            const { stateDir } = paths(api);
-            const result = await action(stateDir, options);
-            process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
-          } catch (error) {
-            if (typeof error?.toJSON !== "function") throw error;
-            process.stdout.write(
-              `${JSON.stringify(error.toJSON(), null, 2)}\n`,
-            );
-            process.exitCode = 1;
-          }
-        };
-        toolkit.command("install")
-          .description("Download and verify the pinned public release")
-          .option(
-            "--from <archive.tgz>",
-            "Install from a local archive without network access",
+            "Verify the SysML WebAssembly Toolkit bundled with the plugin",
           )
-          .action(
-            toolkitAction((stateDir, options) =>
-              installToolkit(stateDir, { from: options.from })
-            ),
-          );
-        toolkit.command("status")
-          .description("Verify the installed Toolkit files")
-          .action(toolkitAction(toolkitStatus));
+          .command("status")
+          .description("Verify the bundled Toolkit files against their pins")
+          .action(async () => {
+            try {
+              const result = await toolkitStatus();
+              process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+            } catch (error) {
+              if (typeof error?.toJSON !== "function") throw error;
+              process.stdout.write(
+                `${JSON.stringify(error.toJSON(), null, 2)}\n`,
+              );
+              process.exitCode = 1;
+            }
+          });
         program.command("sysmlv2-export")
           .description("Export this instance to SysML v2 for Assembly")
           .option(
@@ -226,7 +213,8 @@ export function createPluginEntry(
           hasSubcommands: false,
         }, {
           name: "sysmlv2-toolkit",
-          description: "Install or verify the SysML WebAssembly Toolkit",
+          description:
+            "Verify the SysML WebAssembly Toolkit bundled with the plugin",
           hasSubcommands: true,
         }],
       });

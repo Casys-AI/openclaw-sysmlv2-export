@@ -6,7 +6,7 @@ import {
   ExportError,
   recordDiagnosticError,
 } from "../../../infrastructure/error.ts";
-import { readToolkit } from "./install.ts";
+import { readToolkit } from "./bundled.ts";
 import type {
   CompileDiagnostics,
   Diagnostic,
@@ -46,7 +46,7 @@ interface ToolkitModule {
 }
 
 async function compile(request: ValidationRequest): Promise<void> {
-  const files = await readToolkit(request.stateDir);
+  const files = await readToolkit(request.toolkit);
   // Import and instantiate the bytes that passed the hashes, without rereading disk.
   const module: ToolkitModule = await import(
     `data:text/javascript;base64,${
@@ -128,7 +128,7 @@ try {
   const error = cause instanceof ExportError ? cause : new ExportError(
     "TOOLKIT_VALIDATION_FAILED",
     "The Toolkit could not compile the supplied sources",
-    "Check the Toolkit installation and the exported sources, then retry.",
+    "Check the bundled Toolkit and the exported sources, then retry.",
   );
   if (error !== cause) error.cause = cause;
   const recorded = recordDiagnosticError(error);

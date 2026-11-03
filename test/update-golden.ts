@@ -3,7 +3,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { collect } from "../src/adapters/out/openclaw/collector.ts";
 import { emit } from "../src/adapters/out/sysml/emitter.ts";
 import { ASSEMBLY_LIBRARY } from "../src/adapters/out/sysml/library.ts";
-import { installToolkit } from "../src/adapters/out/sysml-toolkit/install.ts";
+import { extractToolkit } from "../src/adapters/out/sysml-toolkit/extract.ts";
 import { validate } from "../src/adapters/out/sysml-toolkit/worker-client.ts";
 import { compareFindings } from "../src/domain/model/diagnostics/findings.ts";
 import { canonical } from "../src/infrastructure/canonical-json.ts";
@@ -18,7 +18,7 @@ if (!archive) throw new Error("SYSML_TOOLKIT_WASM_ARCHIVE is required");
 const fixture = await createFixture({ git: true, backups: 2 });
 const state = await Deno.makeTempDir({ prefix: "golden-toolkit-" });
 try {
-  await installToolkit(state, { from: archive });
+  await extractToolkit(archive, state);
   const snapshot = await collect(fixture.home, fixture.plugins);
   const cases: Record<string, unknown> = {};
   let baseFindings: unknown;

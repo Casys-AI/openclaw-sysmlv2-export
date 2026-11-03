@@ -32,24 +32,28 @@ Deno.test("plugin runs are kept as versions", async (t) => {
   const fixture = await createFixture({ git: true, backups: 2 });
   const out = await mkdtemp(join(tmpdir(), "openclaw-plugin-test-"));
   try {
+    // No Toolkit there: the export is kept and its validation says why it failed.
+    const absent = join(out, "absent-toolkit");
     const first = await runExport(
       fixture.home,
       fixture.plugins,
       out,
       null,
       new Date("2026-11-02T10:15:00.250Z"),
+      absent,
     );
-    const skipped = {
-      status: "skipped",
-      errors: 0,
-      code: "TOOLKIT_NOT_INSTALLED",
-      recovery: "openclaw sysmlv2-toolkit install",
+    const failed = {
+      status: "failed",
+      errors: 1,
+      code: "TOOLKIT_INTEGRITY",
+      recovery: first.validation.recovery,
     };
-    assert.deepEqual(first.validation, skipped);
+    assert.match(failed.recovery!, /^Reinstall the plugin/);
+    assert.deepEqual(first.validation, failed);
     assert.deepEqual(first.ape, {
       status: "skipped",
       count: 0,
-      code: "TOOLKIT_NOT_INSTALLED",
+      code: "TOOLKIT_INTEGRITY",
     });
     const findings = parseSnapshot(
       JSON.parse(await readFile(join(first.outDir, "snapshot.json"), "utf8")),
@@ -69,10 +73,17 @@ Deno.test("plugin runs are kept as versions", async (t) => {
     assert.deepEqual(
       JSON.parse(await readFile(join(first.outDir, "validation.json"), "utf8")),
       {
-        validation: skipped,
-        errors: [],
+        validation: failed,
+        errors: [{
+          code: "TOOLKIT_INTEGRITY",
+          message:
+            "Toolkit file is missing, unreadable or modified: sysmlv2.js",
+          file: null,
+          line: null,
+          column: null,
+        }],
         warnings: [],
-        ape: { status: "skipped", code: "TOOLKIT_NOT_INSTALLED", findings: [] },
+        ape: { status: "skipped", code: "TOOLKIT_INTEGRITY", findings: [] },
       },
     );
     const config = join(fixture.home, "openclaw.json");
@@ -86,6 +97,7 @@ Deno.test("plugin runs are kept as versions", async (t) => {
       out,
       complete,
       new Date("2026-11-02T10:20:00Z"),
+      absent,
     );
 
     await t.step("versions.json lists the runs newest first", async () => {
@@ -98,14 +110,14 @@ Deno.test("plugin runs are kept as versions", async (t) => {
           id: "2026-11-02T10-20-00Z",
           createdAt: "2026-11-02T10:20:00.000Z",
           agents: 6,
-          validation: skipped,
+          validation: failed,
           findings: first.findings,
           inferred: { procedures: 0, rules: 1, failed: 0 },
         }, {
           id: "2026-11-02T10-15-00Z",
           createdAt: "2026-11-02T10:15:00.250Z",
           agents: 6,
-          validation: skipped,
+          validation: failed,
           findings: first.findings,
           inferred: null,
         }],
@@ -250,7 +262,6 @@ Deno.test("plugin owner tool binds the injected inventory parser", async () => {
     throw new Error("Unexpected service call");
   };
   const entry = createPluginEntry((definition: unknown) => definition, {
-    installToolkit: unexpected,
     toolkitStatus: unexpected,
     completeWith: unexpected,
     pluginList(result: unknown) {
