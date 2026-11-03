@@ -142,10 +142,14 @@ and its diagrams are laid out when the export runs. Pick a version, then a view.
   groups for the recorded version. Each cell is a grant, on the host, in the
   sandbox or both. Groups fold, and a filter or the number of agents that hold a
   tool (all, shared, one, none) narrows the tools; a group over a tool granted
-  on the host is marked.
+  on the host is marked. The legend lists only glyphs used by the matrix.
 - **Scheduled tasks**: cron jobs and heartbeats linked to the agent they wake,
-  above a week strip of the hours each one fires in, which selects its task; a
-  task shows its model, delivery and last run in the inspector.
+  as SysML parts with their compartments. Below, the week shows each task beside
+  its agent, with hours in UTC at the version's instant and the zone offset in a
+  tooltip. Hours in the gateway's uncollected time zone are hatched; disabled
+  tasks fade. A task or agent cell selects its node and frames it only when out
+  of view. Model, delivery and last-run status are available in tooltips and the
+  inspector.
 - **Behaviour**, with inference: an agent's proposed procedures as action flows,
   with decisions, hand-offs and escalations, and its rules in a requirements
   table with the lines they come from, read beside what the agent's

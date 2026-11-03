@@ -59,6 +59,16 @@ and `versions.json` entries still read.
   filters by holders, a week strip selects its task, Reach and hook edges are
   drawn with a legend per view, and Behaviour lists its procedures and states
   its authority. A diagram is laid out for the canvas its table leaves.
+- **Viewer: the scheduled week in UTC.** The week uses each time zone's offset
+  at the version's instant (shown in a tooltip), hatches hours in the gateway's
+  uncollected time zone, stretches its strips to the column, and places each
+  agent beside its tasks. Disabled tasks fade; model, delivery and last-run
+  details are in tooltips. A task or agent cell selects its diagram node and
+  frames it only when out of view. The SysML parts, compartments, owner edges
+  and diagram layout stay unchanged, as does the table's height limit.
+- **Viewer: Tools legend.** Only glyphs used by the matrix are listed.
+- **Finding comparison.** A finding whose text alone changed is neither new nor
+  resolved.
 - **Viewer: less text, more access.** The gestures' hint goes after first use,
   the legend folds, and two notes became tooltips. Every button shows its focus
   ring, focus survives re-renders, diagram elements and matrix cells have full

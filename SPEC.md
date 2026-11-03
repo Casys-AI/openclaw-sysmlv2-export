@@ -789,8 +789,8 @@ version.
 | Overview        | The first view. A table, one row per agent: model (its fallbacks named), host or sandbox (`· elevated` when an active sandbox has elevated exec configured), tools by origin, bound channel accounts, scheduled tasks enabled, context and, with inference, procedures and rules; the counts behind each cell as `figures`; the instance's totals above, naming the declarations they rest on; links to the agent's other views.                                                   |
 | System          | Agent part usages with compartments (attributes, context, tools by origin and layer), channel accounts grouped by channel, `AgentBinding` connections; hook mappings (`ExternalTrigger`) in a group of their own, each with an edge to the agent it starts (a dashed reference when the agent is absent). The inspector states each agent's posture: where exec runs and, for host exec, its policy; network, workspace access, external binds and elevated for an active sandbox. |
 | Reach           | Agents with their posture and inputs, `DelegationRule` connections between them (one edge per pair, double-ended when both ways; self, `*` and unknown targets draw none), the hooks that start them, and the instance's messaging policy as a block. Absent when nothing links an agent to anything. It lays out on its own, since System puts every agent in its first layer.                                                                                                    |
-| Tools           | The `Tools` package as a SysML allocation matrix: catalog tools grouped by origin and by plugin or MCP provider, built-in tools by the capability groups the recorded OpenClaw version names, against the agents; each cell an agent's `ToolGrant`s (host, sandbox or both); each tool row's holder count (all, shared, one or none), declared but ungranted tools dashed; plugin and MCP rows state their profiles, OAuth and tool filters.                                       |
-| Scheduled tasks | Heartbeats and cron jobs as `ScheduledCase` parts with schedule and state, an owner edge to the agent they wake (an unknown target is a dashed reference), and the week in which each fires. A task states its model and delivery; its last run is runtime state: shown, never a change.                                                                                                                                                                                           |
+| Tools           | The `Tools` package as a SysML allocation matrix: catalog tools grouped by origin and by plugin or MCP provider, built-in tools by the capability groups the recorded OpenClaw version names, against the agents; each cell an agent's `ToolGrant`s (host, sandbox or both); a legend limited to the glyphs used; each tool row's holder count (all, shared, one or none), declared but ungranted tools dashed; plugin and MCP rows state their profiles, OAuth and tool filters.  |
+| Scheduled tasks | Heartbeats and cron jobs as `ScheduledCase` parts with schedule and state, an owner edge to the agent they wake (an unknown target is a dashed reference), and the week in which each fires. A task states its model and delivery; its last run and failures in a row are runtime state: shown, never a change.                                                                                                                                                                    |
 | Behaviour       | Per agent with inference: one `action def` frame per procedure (start, actions, decisions, hand-offs and escalations to agents or actors, done), listed with its trigger and step count, and its rules (`requirement def`s) as a table of kind, text and source; each rule carries the agent's authority (where exec runs, its ask policy, the outbound tools granted) and its concern.                                                                                            |
 
 - **Same data as the text.** Views are built from the version's own
@@ -818,10 +818,19 @@ version.
   agent runs). A table under a diagram can be resized.
 - **Week.** A cron schedule is placed in a 7 × 24 hour week when its day of
   month and month are `*` (or `?`) and its fields are numbers, ranges, steps,
-  lists or day names, with five fields or six (seconds first): hours are in its
-  own time zone, or the gateway host's when it has none. An interval under a day
-  is a band over the whole week, its start being unknown; one-shot, date-bound
-  and longer schedules are listed as not weekly.
+  lists or day names, with five fields or six (seconds first). Hours are placed
+  in UTC using the time zone's offset at the version's `createdAt` instant,
+  passed through the optional `at` argument of `diagramViews`; without it, hours
+  stay local. `WeekRow.offset` records minutes ahead of UTC, displayed in a
+  tooltip. A zone the runtime does not recognise, or the gateway host's zone
+  (not collected), leaves `offset` null and its local hours hatched. The agent
+  occupies a first column spanning its tasks; its cell selects the agent node.
+  The strip fills its column and disabled tasks fade. A task or agent cell
+  frames its node only when outside the visible canvas, without changing other
+  tables' selection behaviour. The table retains the shared 42% height limit and
+  can be resized. `delivery` and `errors` supply task and last-run tooltips. An
+  interval under a day is a band over the whole week, its start being unknown;
+  one-shot, date-bound and longer schedules are listed as not weekly.
 - **Changes.** Against the previous version, an element is added when its id is
   new and removed when it is gone; table rows, columns and cells count as
   elements, so a new grant is a new cell and marks its tool's row as changed. It
@@ -849,7 +858,8 @@ version.
 - **Checks and findings.** Each version has a `checks` state (`verified`,
   `not-run`, `failed`, `unrecorded`), its readable labels by element id, its
   findings grouped by severity, code and recovery, and, against the last older
-  version whose APE analysis completed, its new and resolved findings; see
+  version whose APE analysis completed, its new and resolved findings. A finding
+  whose text alone changed is neither new nor resolved; see
   [Diagnostics](docs/diagnostics.md#whether-the-checks-ran).
 - **Unreadable snapshots.** A version whose snapshot fails this viewer's schema
   check keeps its files and diffs, without diagrams.
