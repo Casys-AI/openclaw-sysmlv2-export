@@ -3,7 +3,9 @@
     "@logtape/redaction": "jsr:@logtape/redaction@2.4.2",
     "diff": "npm:diff@9.0.0",
     "elkjs": "npm:elkjs@0.9.3",
-    "oxigraph/web": "npm:oxigraph@0.5.12/web.js"
+    "oxigraph/web": "npm:oxigraph@0.5.12/web.js",
+    "sparqljs": "npm:sparqljs@3.7.4",
+    "@types/sparqljs": "npm:@types/sparqljs@3.1.12"
   },
   "tasks": {
     "collect": "deno run --cached-only --allow-read --allow-write cli.ts collect",
