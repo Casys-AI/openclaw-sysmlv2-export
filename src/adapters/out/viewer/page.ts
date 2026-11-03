@@ -191,6 +191,9 @@ svg.md-lod .md-edge:not(.hot) { opacity: .3; }
 .md-side-note { margin: 0 0 12px; font-size: 11px; color: var(--muted); }
 .md-inspector h3 { margin: 2px 0 0; font-size: 15px; font-weight: 600; word-break: break-word; }
 .md-inspector h3 span { font-weight: 400; color: var(--muted); }
+.md-also { display: flex; flex-wrap: wrap; gap: 2px 12px; margin: 4px 0 0; font-size: 11.5px; }
+.md-also button { all: unset; cursor: pointer; color: var(--muted); text-decoration: underline; text-decoration-color: var(--line-strong); }
+.md-also button:hover { color: var(--ink); text-decoration-color: var(--ink); }
 .md-kicker { margin: 0; font-size: 10.5px; letter-spacing: .04em; color: var(--muted); }
 .md-inspector .md-kicker + ul, .md-inspector .md-kicker + .md-src { margin-top: 4px; }
 .md-inspector dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin: 12px 0; }
@@ -1159,6 +1162,7 @@ function inspect(vi, view, id, status) {
   const h = el("h3", "", nameOf(n));
   if (n.type) h.append(el("span", "", n.type));
   const parts = [el("p", "md-kicker", n.kw || n.shape), h];
+  if (vi === state.version) parts.push(...alsoIn(view, id));
   if (status) {
     const line = el("div");
     line.append(el("span", "md-status " + status, status === "removed" ? "removed since " + when(versions[vi]) : status + " since " + when(versions[vi + 1])),
@@ -1226,6 +1230,22 @@ function announce(text) {
   const live = document.getElementById("live");
   live.textContent = "";
   requestAnimationFrame(() => { live.textContent = text; });
+}
+// The other views of this version that show an agent, as links, read from
+// its Overview row; a Behaviour party stands for its agent.
+function alsoIn(view, id) {
+  const agent = id.startsWith("party:") ? "agent:" + id.slice(6) : id;
+  const overview = entryOf(state.version, "overview"), t = overview && payload(overview).table;
+  const row = t && t.rows.find((r) => r.id === agent && r.views);
+  if (!row) return [];
+  const ids = ["overview", ...row.views].filter((v) => v !== view.id);
+  const p = el("p", "md-also");
+  p.title = "Also in these views";
+  p.append(...ids.map((v) => {
+    const w = payload(entryOf(state.version, v));
+    return button(w.group === "Behaviour" ? "Behaviour" : w.title, () => go(v, agent));
+  }));
+  return [p];
 }
 // ---- Doctor
 const SEVERITIES = ["error", "warning", "info"];
