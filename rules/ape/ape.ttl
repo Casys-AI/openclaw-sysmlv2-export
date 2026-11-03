@@ -16,18 +16,18 @@ CONSTRUCT {
     ape:source ?idFeature ; ape:scope ?scope .
 } WHERE {
   GRAPH ?build {
-    ?agent a sysml:PartUsage ; sysml:definition ?agentType ; sysml:owner+ ?scope .
+    ?agent a sysml:PartUsage ; sysml:type ?agentType ; sysml:owner+ ?scope .
     ?agentType (sysml:ownedSpecialization/sysml:general)+ ?base ;
       sysml:ownedMember ?idFeature .
     ?base sysml:qualifiedName "OpenClawImport::OpenClawAgent" .
     ?idFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
       "OpenClawImport::OpenClawAgent::id" ;
-      sysml:ownedMember/sysml:value ?agentId .
-    ?scope a sysml:Package ; sysml:owner ?root .
-    ?root a sysml:Namespace .
+      sysml:value/sysml:value ?agentId .
+    ?scope a sysml:Package .
+    FILTER NOT EXISTS { ?scope sysml:owner ?parent . ?parent a sysml:Package . }
     FILTER(isLiteral(?agentId))
   }
-  FILTER(STRSTARTS(STR(?build), "urn:ase:ape:openmbee:v1:build:"))
+  FILTER(STRSTARTS(STR(?build), "urn:ase:ape:openmbee:v2:build:"))
 }
 """ .
 
@@ -48,7 +48,7 @@ CONSTRUCT {
   {
     GRAPH ?build {
       ?source a sysml:ConnectionUsage ;
-        sysml:definition/sysml:qualifiedName "OpenClawImport::DelegationRule" ;
+        sysml:type/sysml:qualifiedName "OpenClawImport::DelegationRule" ;
         sysml:sourceFeature ?from ; sysml:targetFeature ?to .
     }
   } UNION {
@@ -57,18 +57,18 @@ CONSTRUCT {
       ?to ape:scope ?scope .
     }
     GRAPH ?build {
-      ?source sysml:definition/sysml:qualifiedName "OpenClawImport::DelegationPolicy" ;
+      ?source sysml:type/sysml:qualifiedName "OpenClawImport::DelegationPolicy" ;
         sysml:ownedMember ?fromFeature, ?wildcardFeature ; sysml:owner+ ?scope .
       ?fromFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
         "OpenClawImport::DelegationPolicy::fromAgent" ;
-        sysml:ownedMember/sysml:referent ?from .
+        sysml:value/sysml:referent ?from .
       ?wildcardFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
         "OpenClawImport::DelegationPolicy::wildcardTargets" ;
-        sysml:ownedMember/sysml:value true .
+        sysml:value/sysml:value true .
     }
     BIND(true AS ?wildcard)
   }
-  FILTER(STRSTARTS(STR(?build), "urn:ase:ape:openmbee:v1:build:"))
+  FILTER(STRSTARTS(STR(?build), "urn:ase:ape:openmbee:v2:build:"))
 }
 """ .
 
@@ -87,21 +87,21 @@ CONSTRUCT {
     ?from ape:agentId ?fromId ; ape:scope ?scope .
   }
   GRAPH ?build {
-    ?policy sysml:definition/sysml:qualifiedName "OpenClawImport::MessagingPolicy" ;
+    ?policy sysml:type/sysml:qualifiedName "OpenClawImport::MessagingPolicy" ;
       sysml:ownedMember ?enabledFeature ; sysml:owner+ ?scope .
     ?enabledFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
       "OpenClawImport::MessagingPolicy::enabled" ;
-      sysml:ownedMember/sysml:value true .
+      sysml:value/sysml:value true .
     {
       ?policy sysml:ownedMember ?targetFeature .
       ?targetFeature sysml:ownedSubsetting/sysml:subsettedFeature/sysml:qualifiedName
         "OpenClawImport::MessagingPolicy::targets" ;
-        sysml:ownedMember/sysml:referent ?target .
+        sysml:value/sysml:referent ?target .
     } UNION {
       ?policy sysml:ownedMember ?wildcardFeature .
       ?wildcardFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
         "OpenClawImport::MessagingPolicy::wildcardTargets" ;
-        sysml:ownedMember/sysml:value true .
+        sysml:value/sysml:value true .
       BIND(true AS ?wildcard)
     }
   }
@@ -110,10 +110,10 @@ CONSTRUCT {
       ?policy sysml:ownedMember ?fromFeature .
       ?fromFeature sysml:ownedSubsetting/sysml:subsettedFeature/sysml:qualifiedName
         "OpenClawImport::MessagingPolicy::targets" ;
-        sysml:ownedMember/sysml:referent ?from .
+        sysml:value/sysml:referent ?from .
     }
   })
-  FILTER(STRSTARTS(STR(?build), "urn:ase:ape:openmbee:v1:build:"))
+  FILTER(STRSTARTS(STR(?build), "urn:ase:ape:openmbee:v2:build:"))
 }
 """ .
 
@@ -130,27 +130,27 @@ CONSTRUCT {
   GRAPH ?build {
     {
       ?entry a sysml:ConnectionUsage ;
-        sysml:definition/sysml:qualifiedName "OpenClawImport::AgentBinding" ;
+        sysml:type/sysml:qualifiedName "OpenClawImport::AgentBinding" ;
         sysml:sourceFeature ?agent .
     } UNION {
-      ?entry sysml:definition/sysml:qualifiedName "OpenClawImport::ScheduledCase" ;
+      ?entry sysml:type/sysml:qualifiedName "OpenClawImport::ScheduledCase" ;
         sysml:ownedMember ?targetFeature .
       ?targetFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName ?role ;
-        sysml:ownedMember/sysml:referent ?agent .
+        sysml:value/sysml:referent ?agent .
       VALUES ?role {
         "AssemblyCases::CaseType::owner"
         "OpenClawImport::ScheduledCase::targetAgent"
       }
     } UNION {
-      ?entry sysml:definition/sysml:qualifiedName "OpenClawImport::ExternalTrigger" ;
+      ?entry sysml:type/sysml:qualifiedName "OpenClawImport::ExternalTrigger" ;
         sysml:ownedMember ?targetFeature .
       ?targetFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
         "OpenClawImport::ExternalTrigger::targetAgent" ;
-        sysml:ownedMember/sysml:referent ?agent .
+        sysml:value/sysml:referent ?agent .
       BIND(?agent AS ?hookTarget)
     }
   }
-  FILTER(STRSTARTS(STR(?build), "urn:ase:ape:openmbee:v1:build:"))
+  FILTER(STRSTARTS(STR(?build), "urn:ase:ape:openmbee:v2:build:"))
 }
 """ .
 
@@ -167,40 +167,40 @@ CONSTRUCT {
     ?agent ape:agentId ?agentId ; ape:definition ?agentType .
   }
   GRAPH ?build {
-    ?agent sysml:definition ?agentType .
+    ?agent sysml:type ?agentType .
     OPTIONAL {
       ?agentType sysml:ownedMember ?grantReference .
-      ?grantReference sysml:definition/sysml:qualifiedName "OpenClawImport::ToolGrant" ;
-        sysml:ownedMember/sysml:referent ?grant .
+      ?grantReference sysml:type/sysml:qualifiedName "OpenClawImport::ToolGrant" ;
+        sysml:value/sysml:referent ?grant .
       ?grant sysml:ownedMember ?toolFeature .
       ?toolFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
         "OpenClawImport::ToolGrant::tool" ;
-        sysml:ownedMember/(sysml:referent|sysml:targetFeature) ?tool .
+        sysml:value/(sysml:referent|sysml:targetFeature) ?tool .
       ?tool sysml:ownedMember ?toolIdFeature, ?originFeature .
       ?toolIdFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
         "OpenClawImport::OpenClawTool::toolId" ;
-        sysml:ownedMember/sysml:value "exec" .
+        sysml:value/sysml:value "exec" .
       ?originFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
         "OpenClawImport::OpenClawTool::origin" ;
-        sysml:ownedMember/sysml:referent/sysml:qualifiedName
+        sysml:value/sysml:referent/sysml:qualifiedName
           "OpenClawImport::ToolOrigin::builtin" .
       OPTIONAL {
         ?grant sysml:ownedMember ?layerFeature .
         ?layerFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
           "OpenClawImport::ToolGrant::layer" ;
-          sysml:ownedMember/sysml:value ?layer .
+          sysml:value/sysml:value ?layer .
         ?agent sysml:ownedMember ?posture .
-        ?posture sysml:definition/sysml:qualifiedName "OpenClawImport::ExecutionPosture" ;
+        ?posture sysml:type/sysml:qualifiedName "OpenClawImport::ExecutionPosture" ;
           sysml:ownedMember ?hostFeature, ?securityFeature, ?askFeature .
         ?hostFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
           "OpenClawImport::ExecutionPosture::host" ;
-          sysml:ownedMember/sysml:value ?host .
+          sysml:value/sysml:value ?host .
         ?securityFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
           "OpenClawImport::ExecutionPosture::effectiveSecurity" ;
-          sysml:ownedMember/sysml:value ?security .
+          sysml:value/sysml:value ?security .
         ?askFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
           "OpenClawImport::ExecutionPosture::effectiveAsk" ;
-          sysml:ownedMember/sysml:value ?ask .
+          sysml:value/sysml:value ?ask .
         VALUES ?layer { "host" "sandbox" }
         VALUES ?host { "auto" "gateway" "sandbox" "node" }
         VALUES ?security { "deny" "allowlist" "full" }
@@ -210,7 +210,7 @@ CONSTRUCT {
       }
     }
   }
-  FILTER(STRSTARTS(STR(?build), "urn:ase:ape:openmbee:v1:build:"))
+  FILTER(STRSTARTS(STR(?build), "urn:ase:ape:openmbee:v2:build:"))
   FILTER(!BOUND(?grant) || BOUND(?knownUnsafe))
   BIND(IF(BOUND(?grant), ?knownUnsafe, false) AS ?unsafe)
   BIND(IF(BOUND(?grant), ?posture, ?agentType) AS ?source)

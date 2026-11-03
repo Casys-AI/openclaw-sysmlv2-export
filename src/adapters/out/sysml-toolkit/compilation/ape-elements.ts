@@ -71,6 +71,7 @@ const APE_METACLASSES = new Set([
   "Redefinition",
   "Subsetting",
   "Subclassification",
+  "FeatureTyping",
   "FeatureReferenceExpression",
   "FeatureChainExpression",
   "LiteralString",
@@ -86,7 +87,7 @@ const APE_PROPERTIES = new Set([
   "name",
   "qualifiedName",
   "owner",
-  "definition",
+  "type",
   "ownedSpecialization",
   "general",
   "ownedMember",
@@ -111,15 +112,65 @@ function selectProperties(element: Element): Element {
 }
 
 /** Apply the same slice to raw admitted or already catalog-completed elements.
- * Retained values are copied whole: omitted target nodes remain native-ID
- * references. Array values are kept for the unordered RDF projection. Empty
+ * Assigned values follow OpenSysML's direct feature-to-expression edge. Omitted
+ * target nodes remain native-ID references. Arrays remain unordered. Empty
  * top-level lists/nulls have no statements read by the views and are omitted.
  * The input and its nested values are never mutated.
  */
 export function selectApeElements(elements: readonly Element[]): Element[] {
+  // Toolkit represents assigned values as FeatureValue relationships. OpenSysML
+  // 0.11 projects the feature directly to its value expression.
+  const sourceIds = new Set(elements.map((element) => element["@id"]));
+  const assignments = new Map<
+    string,
+    { values: Element[]; ids: Set<string> }
+  >();
+  for (const element of elements) {
+    if (element["@type"] !== "FeatureValue") continue;
+    const feature = element.featureWithValue;
+    const value = element.value;
+    if (
+      !isRecord(feature) || !isRecord(value) ||
+      typeof feature["@id"] !== "string" || typeof value["@id"] !== "string"
+    ) {
+      invalidProjection("FeatureValue endpoints must be @id references", {
+        nativeId: element["@id"],
+      });
+    }
+    const id = feature["@id"];
+    if (!sourceIds.has(id)) {
+      invalidProjection("FeatureValue featureWithValue is absent from source", {
+        nativeId: element["@id"],
+        featureWithValue: id,
+      });
+    }
+    const assigned = assignments.get(id) ??
+      { values: [], ids: new Set<string>() };
+    assigned.values.push(value);
+    assigned.ids.add(value["@id"] as string);
+    assignments.set(id, assigned);
+  }
   return elements.filter((element) =>
     APE_METACLASSES.has(element["@type"] as string)
-  ).map(selectProperties);
+  ).map((element) => {
+    const selected = selectProperties(element);
+    const id = element["@id"] as string;
+    const assigned = assignments.get(id);
+    if (assigned) {
+      selected.value = assigned.values.length === 1
+        ? assigned.values[0]
+        : assigned.values;
+      if (Array.isArray(selected.ownedMember)) {
+        const structural = selected.ownedMember.filter((member) =>
+          !isRecord(member) ||
+          !assigned.ids.has(member["@id"] as string)
+        );
+        if (structural.length) selected.ownedMember = structural;
+        else delete selected.ownedMember;
+      }
+    }
+    return selected;
+  });
 }
 
 /** Complete native references before the pure RDF projection; never infer a

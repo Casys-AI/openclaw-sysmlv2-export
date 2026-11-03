@@ -22,7 +22,7 @@ Deno.test("APE slice preserves retained values for unordered projection while om
     owner: { "@id": "omitted" },
     ownedMember: ordered,
     ownedSpecialization: [{ "@id": "specialization" }],
-    definition: [{ "@id": "definition" }],
+    type: [{ "@id": "definition" }],
     redefinedFeature: { "@id": "old" },
     sourceFeature: [{ "@id": "source" }],
     targetFeature: [{ "@id": "target" }],
@@ -206,7 +206,7 @@ Deno.test("catalog owner identities pass the same native-ID admission boundary",
           "@id": "user",
           "@type": "PartUsage",
           isLibraryElement: false,
-          definition: [{ "@id": "library" }],
+          type: [{ "@id": "library" }],
         }]),
       rows: () =>
         JSON.stringify([{
@@ -256,4 +256,70 @@ Deno.test("preparation preserves the source exception and distinguishes malforme
     );
     return true;
   });
+});
+
+Deno.test("Toolkit FeatureValue normalizes to OpenSysML direct value without losing structural children", () => {
+  const feature = {
+    "@id": "feature",
+    "@type": "PartUsage",
+    isLibraryElement: false,
+    type: [{ "@id": "native-type" }],
+    definition: [{ "@id": "discarded-definition" }],
+    ownedMember: [{ "@id": "expression" }, { "@id": "child" }],
+  };
+  const expression = {
+    "@id": "expression",
+    "@type": "LiteralString",
+    value: "client",
+    isLibraryElement: false,
+  };
+  const source = [
+    feature,
+    {
+      "@id": "assignment",
+      "@type": "FeatureValue",
+      isLibraryElement: false,
+      featureWithValue: { "@id": "feature" },
+      value: { "@id": "expression" },
+    },
+    expression,
+    {
+      "@id": "child",
+      "@type": "PartUsage",
+      isLibraryElement: false,
+    },
+  ];
+  for (
+    const relationship of [
+      { ...source[1], featureWithValue: null },
+      { ...source[1], value: { "@id": "bad:id" } },
+      { ...source[1], featureWithValue: { "@id": "absent" } },
+    ]
+  ) {
+    assert.throws(
+      () =>
+        prepareApeElements({
+          toFullJson: () => JSON.stringify([feature, relationship, expression]),
+          rows: () => "[]",
+        }),
+      {
+        code: "RDF_PROJECTION_INVALID",
+      },
+    );
+  }
+  const before = structuredClone(source);
+  const selected = selectApeElements(source);
+  assert.deepEqual(selected[0], {
+    "@id": "feature",
+    "@type": "PartUsage",
+    isLibraryElement: false,
+    type: [{ "@id": "native-type" }],
+    ownedMember: [{ "@id": "child" }],
+    value: { "@id": "expression" },
+  });
+  assert.deepEqual(selected[1], expression);
+  assert.equal(selected.length, 3);
+  assert.deepEqual(source, before);
+  // Re-selecting an admitted slice preserves normalized values.
+  assert.deepEqual(selectApeElements(selected), selected);
 });

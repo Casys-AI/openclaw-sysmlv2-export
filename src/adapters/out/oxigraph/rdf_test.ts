@@ -33,7 +33,7 @@ Deno.test("RDF projection uses OpenMBEE vocabulary, native identity and typed re
         isLibraryElement: false,
         declaredName: "same name",
         qualifiedName: "Demo::one",
-        definition: [{ "@id": libraryId }, { "@id": libraryId }],
+        type: [{ "@id": libraryId }, { "@id": libraryId }],
         ownedMember: [{ "@id": "user-two" }, null, { "@id": "user-two" }],
         relatedFeature: [],
         owner: null,
@@ -63,8 +63,8 @@ Deno.test("RDF projection uses OpenMBEE vocabulary, native identity and typed re
   const original = structuredClone(input);
   const lines = linesOf(input);
   const output = lines.join("\n");
-  assert.equal(APE_PROJECTION_VERSION, "openmbee-v1");
-  assert.equal(BUILD_GRAPH_PREFIX, "urn:ase:ape:openmbee:v1:build:");
+  assert.equal(APE_PROJECTION_VERSION, "openmbee-v2");
+  assert.equal(BUILD_GRAPH_PREFIX, "urn:ase:ape:openmbee:v2:build:");
   assert.deepEqual(input, original);
   for (const item of input.elements) {
     const id = item["@id"] as string;
@@ -75,7 +75,7 @@ Deno.test("RDF projection uses OpenMBEE vocabulary, native identity and typed re
       ),
     );
   }
-  assert(lines.includes(quad("user_one", "definition", element(libraryId))));
+  assert(lines.includes(quad("user_one", "type", element(libraryId))));
   assert(lines.includes(quad(libraryId, "owner", element("native_scope"))));
   assert(
     lines.includes(
@@ -155,7 +155,7 @@ Deno.test("unordered arrays and property/element permutations yield the same det
       {
         "@id": "one",
         "@type": "PartUsage",
-        definition: [{ "@id": "two" }, { "@id": "lib" }, { "@id": "two" }],
+        type: [{ "@id": "two" }, { "@id": "lib" }, { "@id": "two" }],
         value: ["b", null, "a", "b"],
       },
       { "@id": "two", "@type": "PartUsage", declaredName: "target" },
@@ -189,7 +189,7 @@ Deno.test("complete-element batches load an identical graph and deduplicate enri
       {
         "@id": "one",
         "@type": "PartUsage",
-        definition: [{ "@id": "two" }, { "@id": "lib" }, { "@id": "two" }],
+        type: [{ "@id": "two" }, { "@id": "lib" }, { "@id": "two" }],
         referent: {
           "@id": "two",
           "@type": "PartUsage",
@@ -264,7 +264,7 @@ Deno.test("complete-element batches load an identical graph and deduplicate enri
     );
   assert.deepEqual(rows(batched), rows(single));
   const linked = batched.query(`SELECT ?target WHERE { GRAPH ?graph {
-    ${element("one")} <${SYSML}definition> ?target .
+    ${element("one")} <${SYSML}type> ?target .
     ?target <${SYSML}elementId> ?nativeId .
   } }`) as Map<string, { value: string }>[];
   assert.equal(linked.length, 2);
@@ -277,7 +277,7 @@ Deno.test("projection omits absent values and rejects unsupported compound and n
       "@id": "one",
       "@type": "PartUsage",
       owner: null,
-      definition: [],
+      type: [],
       value: [null, null],
     }],
   };

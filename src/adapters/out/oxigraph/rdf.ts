@@ -11,8 +11,8 @@ import {
 } from "../sysml-toolkit/compilation/ape-elements.ts";
 import { isRecord } from "../../../infrastructure/error.ts";
 
-export const APE_PROJECTION_VERSION = "openmbee-v1";
-export const BUILD_GRAPH_PREFIX = "urn:ase:ape:openmbee:v1:build:";
+export const APE_PROJECTION_VERSION = "openmbee-v2";
+export const BUILD_GRAPH_PREFIX = "urn:ase:ape:openmbee:v2:build:";
 
 const SYSML = "https://www.omg.org/spec/SysML#";
 const ELEMENT = "urn:sysmlv2:element:";

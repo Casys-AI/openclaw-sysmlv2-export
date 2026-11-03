@@ -50,7 +50,7 @@ Deno.test("actual views preserve unknown exec posture, scope wildcards and resol
       [subset ? "ownedSubsetting" : "ownedRedefinition"]: [
         ref(`${id}-relation`),
       ],
-      ownedMember: [ref(`${id}-value`)],
+      value: ref(`${id}-value`),
     });
     add(
       `${id}-value`,
@@ -79,7 +79,7 @@ Deno.test("actual views preserve unknown exec posture, scope wildcards and resol
     });
     field(`${id}-type`, "OpenClawAgent::id", id);
     add(id, "PartUsage", {
-      definition: [ref(`${id}-type`)],
+      type: [ref(`${id}-type`)],
       owner: ref(id === "remote" ? "other-scope" : "scope"),
     });
   }
@@ -101,8 +101,8 @@ Deno.test("actual views preserve unknown exec posture, scope wildcards and resol
     field(`${id}-grant`, "ToolGrant::tool", "tool", true);
     field(`${id}-grant`, "ToolGrant::layer", "host");
     add(`${id}-grant-ref`, "ReferenceUsage", {
-      definition: [ref("grant-type")],
-      ownedMember: [ref(`${id}-grant-expression`)],
+      type: [ref("grant-type")],
+      value: ref(`${id}-grant-expression`),
     });
     add(`${id}-grant-expression`, "FeatureReferenceExpression", {
       referent: ref(`${id}-grant`),
@@ -110,7 +110,7 @@ Deno.test("actual views preserve unknown exec posture, scope wildcards and resol
     (elements.get(`${id}-type`)!.ownedMember as unknown[]).push(
       ref(`${id}-grant-ref`),
     );
-    add(`${id}-posture`, "PartUsage", { definition: [ref("execution-type")] });
+    add(`${id}-posture`, "PartUsage", { type: [ref("execution-type")] });
     elements.get(id)!.ownedMember = [ref(`${id}-posture`)];
     field(`${id}-posture`, "ExecutionPosture::host", "gateway");
     field(`${id}-posture`, "ExecutionPosture::effectiveSecurity", "full");
@@ -125,7 +125,7 @@ Deno.test("actual views preserve unknown exec posture, scope wildcards and resol
     qualifiedName: "OpenClawImport::DelegationPolicy",
   });
   add("delegation", "PartUsage", {
-    definition: [ref("delegation-type")],
+    type: [ref("delegation-type")],
     owner: ref("scope"),
   });
   field("delegation", "DelegationPolicy::fromAgent", "known", true);
@@ -135,7 +135,7 @@ Deno.test("actual views preserve unknown exec posture, scope wildcards and resol
   });
   for (const policy of ["named", "wildcard"]) {
     add(policy, "PartUsage", {
-      definition: [ref("messaging-type")],
+      type: [ref("messaging-type")],
       owner: ref("scope"),
     });
     field(policy, "MessagingPolicy::enabled", true);
