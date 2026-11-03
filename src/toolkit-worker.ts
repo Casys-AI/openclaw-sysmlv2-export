@@ -2,12 +2,11 @@ import { Buffer } from "node:buffer";
 import { parentPort, workerData } from "node:worker_threads";
 import { gunzipSync } from "node:zlib";
 import { checkApe } from "./ape.ts";
-import type { ApeReport } from "./ape-rules.ts";
-import { ExportError } from "./error.ts";
+import { ExportError, recordDiagnosticError } from "./error.ts";
 import { readToolkit } from "./toolkit-install.ts";
 import type {
+  CompileDiagnostics,
   Diagnostic,
-  Diagnostics,
   ValidationRequest,
   ValidationResponse,
 } from "./validate.ts";
@@ -43,7 +42,7 @@ interface ToolkitModule {
   };
 }
 
-async function compile(request: ValidationRequest): Promise<Diagnostics> {
+async function compile(request: ValidationRequest): Promise<void> {
   const files = await readToolkit(request.stateDir);
   // Import and instantiate the bytes that passed the hashes, without rereading disk.
   const module: ToolkitModule = await import(
@@ -60,15 +59,37 @@ async function compile(request: ValidationRequest): Promise<Diagnostics> {
   );
   const sources = request.sources.filter((s) => !broken.has(s.name));
   let findings = syntax;
-  let ape: ApeReport = {
-    status: "skipped",
-    code: "APE_INVALID_MODEL",
-    findings: [],
-  };
   const isError = (finding: Finding) =>
     finding.severity === "error" ||
     finding.stage === "referential" &&
       request.sources.some((s) => s.name === finding.unit);
+  const report = async (
+    findings: Finding[],
+    session?: Parameters<typeof checkApe>[0],
+  ) => {
+    const diagnostics: CompileDiagnostics = { errors: [], warnings: [] };
+    for (const finding of findings) {
+      const diagnostic: Diagnostic = {
+        code: `TOOLKIT_${finding.stage.toUpperCase()}`,
+        message: finding.message,
+        file: finding.unit ?? null,
+        line: finding.line ?? null,
+        column: finding.col ?? null,
+      };
+      diagnostics[isError(finding) ? "errors" : "warnings"].push(diagnostic);
+    }
+    parentPort!.postMessage(
+      { phase: "compiled", diagnostics } satisfies ValidationResponse,
+    );
+    // APE starts only once the parent has retained compilation and armed its budget.
+    await new Promise<void>((resolve) =>
+      parentPort!.once("message", () => resolve())
+    );
+    const ape = diagnostics.errors.length || !session
+      ? { status: "skipped" as const, code: "APE_INVALID_MODEL", findings: [] }
+      : await checkApe(session);
+    parentPort!.postMessage({ phase: "ape", ape } satisfies ValidationResponse);
+  };
   if (sources.length) {
     const expand = (name: string) =>
       gunzipSync(files.get(`stdlib/sysml-library.${name}.gz`)!);
@@ -88,41 +109,37 @@ async function compile(request: ValidationRequest): Promise<Diagnostics> {
           ...syntax.filter((d) => d.stage === "parse"),
           ...JSON.parse(session.check()),
         ];
-        if (!findings.some(isError)) ape = await checkApe(session);
+        await report(findings, session);
       } finally {
         session.free();
       }
     } finally {
       library.free();
     }
-  }
-  const result: Diagnostics = { errors: [], warnings: [], ape };
-  for (const finding of findings) {
-    const diagnostic: Diagnostic = {
-      code: `TOOLKIT_${finding.stage.toUpperCase()}`,
-      message: finding.message,
-      file: finding.unit ?? null,
-      line: finding.line ?? null,
-      column: finding.col ?? null,
-    };
-    // Unresolved references in exported sources cannot count as a valid model.
-    const error = isError(finding);
-    result[error ? "errors" : "warnings"].push(diagnostic);
-  }
-  return result;
+  } else await report(findings);
 }
 
 try {
-  parentPort!.postMessage(
-    { diagnostics: await compile(workerData) } satisfies ValidationResponse,
-  );
-} catch (e) {
-  const error = e instanceof ExportError ? e : new ExportError(
+  await compile(workerData);
+} catch (cause) {
+  const error = cause instanceof ExportError ? cause : new ExportError(
     "TOOLKIT_VALIDATION_FAILED",
     "The Toolkit could not compile the supplied sources",
     "Check the Toolkit installation and the exported sources, then retry.",
   );
+  if (error !== cause) error.cause = cause;
+  const recorded = recordDiagnosticError(error);
   parentPort!.postMessage(
-    { error: error.toJSON() } satisfies ValidationResponse,
+    {
+      phase: "error",
+      error: {
+        code: error.code,
+        context: typeof recorded.context === "string"
+          ? recorded.context
+          : recorded.message,
+        recovery: error.recovery,
+        cause: recordDiagnosticError(cause).message,
+      },
+    } satisfies ValidationResponse,
   );
 }

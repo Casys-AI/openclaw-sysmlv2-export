@@ -16,6 +16,7 @@ import { initOxigraph, Store } from "./oxigraph.ts";
 export async function checkApe(session: ElementSession): Promise<ApeReport> {
   const started = performance.now();
   let stage: ApeStage = "projection";
+  let store: Store | undefined;
   try {
     const prepared = prepareApeElements(session);
     const preparationMs = performance.now() - started;
@@ -34,7 +35,7 @@ export async function checkApe(session: ElementSession): Promise<ApeReport> {
     stage = "loading";
     const loadStart = performance.now();
     await initOxigraph();
-    const store = new Store();
+    store = new Store();
     let loadMs = performance.now() - loadStart;
     let baseQuads = 0;
     let batchCount = 0;
@@ -62,7 +63,6 @@ export async function checkApe(session: ElementSession): Promise<ApeReport> {
       metrics: {
         elements: prepared.elements.length,
         sourceElements: prepared.sourceElementCount,
-        quads: baseQuads,
         baseQuads,
         derivedQuads: materialized.derivedQuads,
         batches: batchCount,
@@ -79,5 +79,8 @@ export async function checkApe(session: ElementSession): Promise<ApeReport> {
       ? error
       : new ApeStageError(stage, error);
     return { status: "failed", ...failure.toJSON(), findings: [] };
+  } finally {
+    // The pinned Oxigraph runtime exports free(), omitted from its .d.ts.
+    if (store) (store as Store & { free(): void }).free();
   }
 }

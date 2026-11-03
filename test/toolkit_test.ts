@@ -42,9 +42,9 @@ Deno.test({
       const started = performance.now();
       const base = await validate(files, fixture.home);
       assert.equal(base.errors.length, 0);
-      assert.equal(base.ape!.status, "completed");
+      assert.equal(base.ape.status, "completed");
       assert.deepEqual(
-        base.ape!.metrics!.queries.map((q) => [q.code, q.findings]),
+        base.ape.metrics!.queries.map((q) => [q.code, q.findings]),
         [
           ["GRANT_WIDENS_PARENT", 0],
           ["LINK_CYCLE", 6],
@@ -52,7 +52,7 @@ Deno.test({
         ],
       );
       assert.deepEqual(
-        base.ape!.findings.filter((f) => f.code === "APE_LINK_CYCLE").map((f) =>
+        base.ape.findings.filter((f) => f.code === "APE_LINK_CYCLE").map((f) =>
           f.subject
         ),
         [
@@ -123,7 +123,7 @@ Deno.test({
       const cases = await validate(trial, fixture.home);
       assert.equal(cases.errors.length, 0, JSON.stringify(cases.errors));
       const byCode = (code: string) =>
-        cases.ape!.findings.filter((f) => f.code === `APE_${code}`);
+        cases.ape.findings.filter((f) => f.code === `APE_${code}`);
       // Actual reachability finding: external entries reach parent; self does not.
       assert.deepEqual(byCode("UNREACHABLE_OPERATOR").map((f) => f.subject), [
         "agent:orphan",
@@ -147,6 +147,8 @@ Deno.test({
         fixture.home,
       );
       assert.ok(invalid.errors.length > 0);
+      assert.equal(invalid.ape.status, "skipped");
+      assert.equal(invalid.ape.code, "APE_INVALID_MODEL");
       assert.deepEqual(invalid.errors[0], {
         code: "TOOLKIT_PARSE",
         file: "invalid.sysml",
@@ -192,6 +194,11 @@ Deno.test({
       assert.deepEqual(published.validation, summary.validation);
       assert.deepEqual(published.errors, []);
       assert.deepEqual(published.warnings, []);
+      assert.doesNotMatch(
+        JSON.stringify(published),
+        /"(?:totalMs|preparationMs|projectionMs|loadMs|ms)":/,
+      );
+      assert.equal(Object.hasOwn(published.ape.metrics, "quads"), false);
       const publishedFindings = JSON.parse(
         await readFile(join(summary.outDir, "findings.json"), "utf8"),
       );

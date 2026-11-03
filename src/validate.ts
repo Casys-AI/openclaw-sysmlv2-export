@@ -1,5 +1,5 @@
 import { Worker } from "node:worker_threads";
-import { ExportError } from "./error.ts";
+import { ExportError, recordDiagnosticError } from "./error.ts";
 import type { ApeReport } from "./ape-rules.ts";
 
 export interface Diagnostic {
@@ -9,10 +9,12 @@ export interface Diagnostic {
   line: number | null;
   column: number | null;
 }
-export interface Diagnostics {
+export interface CompileDiagnostics {
   errors: Diagnostic[];
   warnings: Diagnostic[];
-  ape?: ApeReport;
+}
+export interface Diagnostics extends CompileDiagnostics {
+  ape: ApeReport;
 }
 export interface ValidationSummary {
   status: "passed" | "failed" | "skipped";
@@ -25,8 +27,12 @@ export interface ValidationRequest {
   sources: { name: string; text: string }[];
 }
 export type ValidationResponse =
-  | { diagnostics: Diagnostics }
-  | { error: { code: string; context: string; recovery: string } };
+  | { phase: "compiled"; diagnostics: CompileDiagnostics }
+  | { phase: "ape"; ape: ApeReport }
+  | {
+    phase: "error";
+    error: { code: string; context: string; recovery: string; cause: string };
+  };
 
 const workerUrl = new URL(
   import.meta.url.endsWith(".ts")
@@ -34,20 +40,26 @@ const workerUrl = new URL(
     : "./toolkit-worker.mjs",
   import.meta.url,
 );
-const toolkitFailure = () =>
-  new ExportError(
+const toolkitFailure = (cause: unknown) => {
+  const error = new ExportError(
     "TOOLKIT_VALIDATION_FAILED",
-    "The Toolkit worker could not complete validation",
+    `The Toolkit worker could not complete validation: ${
+      recordDiagnosticError(cause).message
+    }`,
     "Check the Toolkit installation and retry the export.",
   );
+  error.cause = cause;
+  return error;
+};
 
-/** Compile exactly these sources, including the export's own library files.
- * Every call owns a worker; even a synchronous WASM hang can be interrupted. */
+/** Each call owns a worker. Compilation has 60 seconds, then APE gets 10 seconds;
+ * even a synchronous WASM hang can be interrupted without losing a compile. */
 export async function validate(
   files: Map<string, string>,
   stateDir: string,
   options: {
     timeoutMs?: number;
+    apeTimeoutMs?: number;
     /** Allows the deadline test to observe a real worker's termination. */
     createWorker?: (url: URL, request: ValidationRequest) => Worker;
   } = {},
@@ -58,12 +70,31 @@ export async function validate(
       .map(([name, text]) => ({ name, text })),
   };
   const timeoutMs = options.timeoutMs ?? 60_000;
+  const apeTimeoutMs = options.apeTimeoutMs ?? 10_000;
   const worker = options.createWorker
     ? options.createWorker(workerUrl, request)
     : new Worker(workerUrl, { workerData: request });
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
     return await new Promise<Diagnostics>((resolve, reject) => {
+      let compiled: CompileDiagnostics | undefined;
+      const failApe = (code: string, message: string) => {
+        resolve({
+          ...compiled!,
+          ape: {
+            status: "failed",
+            code,
+            context: message,
+            cause: message,
+            findings: [],
+          },
+        });
+      };
+      const fail = (cause: unknown) => {
+        if (compiled) {
+          failApe("APE_WORKER_FAILED", recordDiagnosticError(cause).message);
+        } else reject(toolkitFailure(cause));
+      };
       timer = setTimeout(
         () =>
           reject(
@@ -75,14 +106,39 @@ export async function validate(
           ),
         timeoutMs,
       );
-      worker.once("message", (response: ValidationResponse) => {
-        if ("error" in response) {
-          const { code, context, recovery } = response.error;
-          reject(new ExportError(code, context, recovery));
-        } else resolve(response.diagnostics);
+      worker.on("message", (response: ValidationResponse) => {
+        switch (response.phase) {
+          case "compiled": {
+            compiled = response.diagnostics;
+            clearTimeout(timer);
+            timer = setTimeout(() => {
+              failApe(
+                "APE_TIMEOUT",
+                `APE analysis exceeded ${apeTimeoutMs} ms`,
+              );
+            }, apeTimeoutMs);
+            worker.postMessage({ phase: "run-ape" });
+            break;
+          }
+          case "ape":
+            resolve({ ...compiled!, ape: response.ape });
+            break;
+          case "error": {
+            const { code, context, recovery, cause } = response.error;
+            if (compiled) failApe("APE_WORKER_FAILED", cause);
+            else {
+              const error = new ExportError(code, context, recovery);
+              error.cause = new Error(cause);
+              reject(error);
+            }
+            break;
+          }
+        }
       });
-      worker.once("error", () => reject(toolkitFailure()));
-      worker.once("exit", () => reject(toolkitFailure()));
+      worker.once("error", fail);
+      worker.once("exit", (code) => {
+        fail(new Error(`The Toolkit worker exited with code ${code}`));
+      });
     });
   } finally {
     clearTimeout(timer);
@@ -95,11 +151,14 @@ export async function validationReport(
   files: Map<string, string>,
   stateDir: string,
 ): Promise<
-  { validation: ValidationSummary; diagnostics: Diagnostics; ape: ApeReport }
+  {
+    validation: ValidationSummary;
+    diagnostics: CompileDiagnostics;
+    ape: ApeReport;
+  }
 > {
   try {
     const { ape, ...diagnostics } = await validate(files, stateDir);
-    if (!ape) throw toolkitFailure();
     return {
       validation: {
         status: diagnostics.errors.length ? "failed" : "passed",
@@ -109,14 +168,10 @@ export async function validationReport(
       ape,
     };
   } catch (e) {
-    const error = e instanceof ExportError ? e : toolkitFailure();
+    const error = e instanceof ExportError ? e : toolkitFailure(e);
     const skipped = error.code === "TOOLKIT_NOT_INSTALLED";
     return {
-      ape: {
-        status: error.code.startsWith("APE_") ? "failed" : "skipped",
-        code: error.code,
-        findings: [],
-      },
+      ape: { status: "skipped", code: error.code, findings: [] },
       validation: {
         status: skipped ? "skipped" : "failed",
         errors: skipped ? 0 : 1,
