@@ -1,5 +1,7 @@
 import { structuredPatch } from "diff";
+import type { ApeFinding } from "./ape-rules.ts";
 import { doctor } from "./doctor.ts";
+import { ExportError } from "./error.ts";
 import type { Inference } from "./infer.ts";
 import { layoutView, METRICS, type Scene } from "./layout.ts";
 import { parseSnapshot, type Snapshot } from "./snapshot.ts";
@@ -66,6 +68,52 @@ function snapshotOf(files: Record<string, string>) {
     return null;
   }
 }
+/** Persisted APE findings belong to this version; doctor rows are recomputed. */
+function findingsOf(version: ViewerVersion, snapshot: Snapshot | null) {
+  let ape: ApeFinding[] = [];
+  if (Object.hasOwn(version.files, "findings.json")) {
+    try {
+      const value: unknown = JSON.parse(version.files["findings.json"]);
+      if (
+        !Array.isArray(value) ||
+        value.some((row) =>
+          !row || typeof row !== "object" || Array.isArray(row) ||
+          typeof row.code !== "string" ||
+          (row.code.startsWith("APE_") && (
+            !["error", "warning", "info"].includes(row.severity) ||
+            ["subject", "context", "recovery", "pattern"].some((field) =>
+              typeof row[field] !== "string" || !row[field]
+            ) ||
+            !["present", "absent", "indeterminate"].includes(row.finding)
+          ))
+        )
+      ) throw new Error("Expected an array of findings with valid APE fields");
+      ape = (value as ApeFinding[]).filter((row) =>
+        row.code.startsWith("APE_")
+      );
+    } catch (error) {
+      throw new ExportError(
+        "VIEWER_FINDINGS_INVALID",
+        `Version ${version.entry.id} findings.json: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+        "Restore this version's findings.json as a valid findings array, then rebuild the viewer.",
+      );
+    }
+  }
+  if (!snapshot && !ape.length) return null;
+  return [...snapshot ? doctor(snapshot) : [], ...ape].sort((a, b) =>
+    a.code < b.code
+      ? -1
+      : a.code > b.code
+      ? 1
+      : a.subject < b.subject
+      ? -1
+      : a.subject > b.subject
+      ? 1
+      : 0
+  );
+}
 function inferenceOf(files: Record<string, string>): Inference | null {
   try {
     const value = JSON.parse(files["inference.json"]);
@@ -84,7 +132,7 @@ interface VersionView {
 
 /** A version's views, laid out, each element located in the version's own
  * SysML files; null when this viewer cannot read its snapshot (an older
- * schema): the page then shows its files only. */
+ * schema): its files and persisted APE findings remain available. */
 async function versionViews(
   files: Record<string, string>,
   scenes: Map<string, Scene>,
@@ -205,6 +253,7 @@ export async function viewerPage(versions: ViewerVersion[]): Promise<string> {
   };
   const scenes = new Map<string, Scene>();
   const snapshots = versions.map((v) => snapshotOf(v.files));
+  const findings = versions.map((v, i) => findingsOf(v, snapshots[i]));
   const views: (VersionView[] | null)[] = [];
   for (const [i, v] of versions.entries()) {
     views.push(await versionViews(v.files, scenes, snapshots[i]));
@@ -216,7 +265,7 @@ export async function viewerPage(versions: ViewerVersion[]): Promise<string> {
       const previous = versions[i + 1], before = views[i + 1];
       return {
         ...v.entry,
-        findings: snapshots[i] ? doctor(snapshots[i]) : null,
+        findings: findings[i],
         files: Object.fromEntries(
           Object.entries(v.files).sort(([a], [b]) => a < b ? -1 : 1)
             .map(([name, text]) => [name, ref(text)]),

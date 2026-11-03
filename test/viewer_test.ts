@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import type { ApeFinding } from "../src/ape-rules.ts";
 import { doctor } from "../src/doctor.ts";
 import { emit } from "../src/emit.ts";
 import { emitInferred, type Inference } from "../src/infer.ts";
@@ -63,7 +64,7 @@ Deno.test("viewer findings are computed from each snapshot, including older entr
   next.messaging.enabled = false;
   const current = version("2026-11-02T10-20-00Z", next);
   current.entry.findings = { error: 99, warning: 99, info: 99 };
-  current.files["findings.json"] = "invalid JSON";
+  current.files["findings.json"] = canonical(doctor(snapshot));
   const data = dataOf(await viewerPage([current, previous]));
   assert.deepEqual(
     data.versions.map((v: { findings: unknown }) => v.findings),
@@ -72,6 +73,84 @@ Deno.test("viewer findings are computed from each snapshot, including older entr
       doctor(snapshot),
     ],
   );
+});
+
+Deno.test("each version merges its stored APE findings, even without a readable snapshot", async () => {
+  const ape = (
+    subject: string,
+    finding: ApeFinding["finding"] = "absent",
+  ): ApeFinding => ({
+    code: "APE_UNREACHABLE_OPERATOR",
+    severity: "warning",
+    subject,
+    context: "Synthetic persisted structural finding.",
+    recovery: "Review the modeled entry.",
+    pattern: "4.2",
+    finding,
+  });
+  const current = version("2026-11-02T10-25-00Z", snapshot);
+  const previous = version("2026-11-02T10-20-00Z", snapshot);
+  const legacy = version("2026-11-02T10-15-00Z", snapshot);
+  const currentApe = [ape("agent:z"), ape("agent:a")];
+  const previousApe = [ape("agent:previous")];
+  const legacyApe = [ape("agent:legacy", "indeterminate")];
+  current.files["findings.json"] = canonical([
+    ...currentApe,
+    {
+      ...doctor(snapshot)[0],
+      context: "Stale doctor context must be recomputed.",
+    },
+  ]);
+  previous.files["findings.json"] = canonical(previousApe);
+  legacy.files["snapshot.json"] = '{"schema":"openclaw-snapshot/4"}';
+  legacy.files["findings.json"] = canonical(legacyApe);
+  const data = dataOf(await viewerPage([current, previous, legacy]));
+  assert.deepEqual(
+    data.versions.map((v: { findings: ApeFinding[] }) =>
+      v.findings.filter((row) => row.code.startsWith("APE_"))
+    ),
+    [
+      [...currentApe].reverse(),
+      previousApe,
+      legacyApe,
+    ],
+  );
+  for (const v of data.versions.slice(0, 2)) {
+    assert.deepEqual(
+      v.findings.filter((row: ApeFinding) => !row.code.startsWith("APE_")),
+      doctor(snapshot),
+    );
+    const keys = v.findings.map((row: ApeFinding) =>
+      `${row.code}:${row.subject}`
+    );
+    assert.deepEqual(keys, [...keys].sort());
+  }
+  assert.equal(data.versions[2].views, null);
+});
+
+Deno.test("malformed present findings fail explicitly with their version id", async () => {
+  const v = version("2026-11-02T10-15-00Z", snapshot);
+  v.files["snapshot.json"] = '{"schema":"openclaw-snapshot/4"}';
+  for (
+    const text of [
+      "invalid JSON",
+      "{}",
+      '[{"code":"APE_UNREACHABLE_OPERATOR","severity":"high"}]',
+    ]
+  ) {
+    v.files["findings.json"] = text;
+    await assert.rejects(viewerPage([v]), (error: unknown) => {
+      assert.ok(
+        error instanceof Error && "code" in error && "context" in error,
+      );
+      assert.equal(error.code, "VIEWER_FINDINGS_INVALID");
+      assert.match(
+        String(error.context),
+        /2026-11-02T10-15-00Z.*findings.json/,
+      );
+      return true;
+    });
+  }
 });
 
 Deno.test("an element added since the previous version is highlighted", async () => {
