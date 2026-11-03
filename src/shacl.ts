@@ -24,6 +24,11 @@ const APE = "urn:ase:ape:v1:";
 const OWL = "http://www.w3.org/2002/07/owl#";
 type Row = Map<string, Term>;
 type Resource = Extract<Term, { termType: "NamedNode" | "BlankNode" }>;
+type Message = Extract<Term, { termType: "Literal" }>;
+interface DataOptions {
+  default_graph: (ReturnType<typeof defaultGraph> | Resource)[];
+  named_graphs: Resource[];
+}
 type Properties = Map<string, Term[]>;
 
 export class ShaclStageError extends Error {
@@ -40,7 +45,7 @@ export interface ShaclConstraint {
   sourceShape: Resource;
   sourceConstraint: Resource;
   severity: string;
-  messages: readonly Term[];
+  messages: readonly Message[];
   compiled: AdmittedSelect;
 }
 export interface ShaclShape {
@@ -56,7 +61,7 @@ export interface ShaclRule {
   query: string;
 }
 export interface ShaclProgram {
-  shapesGraph: string;
+  dataOptions: DataOptions;
   file?: string;
   shapes: ShaclShape[];
   rules: ShaclRule[];
@@ -105,14 +110,13 @@ function queryText(term: Term): string {
   }
   return term.value;
 }
-function messageText(term: Term): string {
+function messageText(term: Term): asserts term is Message {
   if (
     term.termType !== "Literal" ||
     ![XSD + "string", RDF + "langString", RDF + "dirLangString"].includes(
       term.datatype.value,
     )
   ) fail("sh:message must be a string or language-tagged literal");
-  return term.value;
 }
 function sourceFile(
   file: string | undefined,
@@ -134,20 +138,9 @@ function single(
   }
   return values[0];
 }
-function deactivated(properties: Properties): boolean {
-  const value = single(properties, SH + "deactivated");
-  if (!value) return false;
-  if (
-    value.termType !== "Literal" || value.datatype.value !== XSD + "boolean" ||
-    !["true", "false", "1", "0"].includes(value.value)
-  ) fail("sh:deactivated must be a literal boolean");
-  return value.value === "true" || value.value === "1";
-}
-
 /** Read and admit the bounded profile once; metadata never enters the data dataset. */
 export function readShaclProgram(
   store: Store,
-  shapesGraph = SHAPES_GRAPH,
   file?: string,
 ): ShaclProgram {
   let activeNode: Resource | undefined;
@@ -155,7 +148,7 @@ export function readShaclProgram(
     const nodes = new Map<string, { node: Resource; properties: Properties }>();
     for (
       const row of rows(store, "SELECT ?s ?p ?o WHERE { ?s ?p ?o }", {
-        default_graph: namedNode(shapesGraph),
+        default_graph: namedNode(SHAPES_GRAPH),
         named_graphs: [],
       })
     ) {
@@ -167,30 +160,6 @@ export function readShaclProgram(
       properties.set(predicate, [...get(properties, predicate), row.get("o")!]);
     }
     const propertiesOf = (node: Term) => nodes.get(node.toString())?.properties;
-    // Expected reports and unrelated RDF may share the Turtle fixture. Only
-    // schema subjects participate in profile admission; report links do not.
-    const reportProperties = new Set([
-      "conforms",
-      "result",
-      "focusNode",
-      "resultMessage",
-      "resultSeverity",
-      "sourceShape",
-      "sourceConstraint",
-      "sourceConstraintComponent",
-      "value",
-      "resultPath",
-      "detail",
-    ]);
-    const schemaNodes = [...nodes.values()].filter(({ properties }) =>
-      [...properties.keys()].some((p) =>
-        p.startsWith(SH) && !reportProperties.has(p.slice(SH.length))
-      ) ||
-      get(properties, RDF + "type").some((t) =>
-        t.value.startsWith(SH) &&
-        ![SH + "ValidationReport", SH + "ValidationResult"].includes(t.value)
-      )
-    );
     const allowed = new Set([
       "targetNode",
       "targetClass",
@@ -203,7 +172,6 @@ export function readShaclProgram(
       "prefix",
       "namespace",
       "select",
-      "deactivated",
       "construct",
       "runOnce",
       "order",
@@ -216,7 +184,7 @@ export function readShaclProgram(
       "SPARQLRule",
       "PrefixDeclaration",
     ]);
-    for (const { node, properties } of schemaNodes) {
+    for (const { node, properties } of nodes.values()) {
       activeNode = node;
       for (const name of ["select", "construct"]) {
         const value = single(properties, SH + name);
@@ -270,53 +238,19 @@ export function readShaclProgram(
       }
       return name;
     };
-    const messages = (constraint: Properties, shape: Properties): Term[] => {
+    const messages = (constraint: Properties, shape: Properties): Message[] => {
       const result = get(constraint, SH + "message").length
         ? get(constraint, SH + "message")
         : get(shape, SH + "message");
-      result.forEach(messageText);
-      return result;
+      return result as Message[];
     };
     const shapes: ShaclShape[] = [];
     const rules: ShaclRule[] = [];
-    const usedConstraints = new Set<string>();
-    for (const { node, properties } of schemaNodes) {
+    for (const { node, properties } of nodes.values()) {
       activeNode = node;
       const isRule = get(properties, RDF + "type").some((v) =>
         v.value === SH + "SPARQLRule"
       );
-      if (isRule) {
-        const once = single(properties, SH + "runOnce", true)!;
-        if (
-          once.termType !== "Literal" ||
-          once.datatype.value !== XSD + "boolean" ||
-          !["true", "1"].includes(once.value)
-        ) fail("Only global sh:runOnce true rules are supported");
-        const order = single(properties, SH + "order", true)!;
-        if (
-          order.termType !== "Literal" ||
-          !(order.datatype.value === XSD + "integer"
-            ? /^[+-]?[0-9]+$/.test(order.value)
-            : order.datatype.value === XSD + "decimal" &&
-              /^[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)$/.test(order.value))
-        ) fail("sh:order must be a valid xsd:integer or xsd:decimal");
-        const orderValue = Number(order.value);
-        if (!Number.isFinite(orderValue)) fail("sh:order must be finite");
-        const graph = iri(single(properties, APE + "graph", true)!);
-        if ([shapesGraph, REPORT_GRAPH].includes(graph)) {
-          fail("Rule cannot write the shapes or report graph");
-        }
-        rules.push({
-          node,
-          order: orderValue,
-          graph,
-          name: text(single(properties, APE + "name", true)!),
-          query: admitConstruct(
-            queryText(single(properties, SH + "construct", true)!),
-            prefixes(properties),
-          ),
-        });
-      }
       const targets = ["targetNode", "targetClass", "targetSubjectsOf"].flatMap(
         (name) =>
           get(properties, SH + name).map((value) => ({
@@ -327,76 +261,71 @@ export function readShaclProgram(
       const isShape = get(properties, RDF + "type").some((v) =>
         v.value === SH + "NodeShape"
       ) || targets.length > 0 || get(properties, SH + "sparql").length > 0;
+      if (
+        isRule || isShape ||
+        get(properties, RDF + "type").some((v) =>
+          v.value === SH + "SPARQLConstraint"
+        )
+      ) {
+        iri(node);
+      }
+      if (isRule) {
+        const once = single(properties, SH + "runOnce", true)!;
+        if (
+          once.termType !== "Literal" ||
+          once.datatype.value !== XSD + "boolean" ||
+          !["true", "1"].includes(once.value)
+        ) {
+          fail("Only global sh:runOnce true rules are supported");
+        }
+        const order = single(properties, SH + "order", true)!;
+        const orderValue = Number(order.value);
+        if (
+          order.termType !== "Literal" ||
+          order.datatype.value !== XSD + "integer" ||
+          !Number.isInteger(orderValue)
+        ) {
+          fail("sh:order must be an xsd:integer");
+        }
+        const graph = iri(single(properties, APE + "graph", true)!);
+        if ([SHAPES_GRAPH, REPORT_GRAPH].includes(graph)) {
+          fail("Rule cannot write the shapes or report graph");
+        }
+        rules.push({
+          node,
+          order: orderValue,
+          graph,
+          name: text(single(properties, APE + "name", true)!),
+          query: admitConstruct(
+            single(properties, SH + "construct", true)!.value,
+            prefixes(properties),
+          ),
+        });
+      }
       if (!isShape) {
         continue;
       }
-      if (
-        get(properties, RDF + "type").some((t) =>
-          t.value === "http://www.w3.org/2000/01/rdf-schema#Class"
-        )
-      ) {
-        fail("Implicit class targets are unsupported");
-      }
-      const skip = deactivated(properties);
       const constraints: ShaclConstraint[] = [];
       for (const ref of get(properties, SH + "sparql")) {
         activeNode = resource(ref);
-        usedConstraints.add(ref.toString());
         const c = propertiesOf(ref);
         if (!c) {
           fail("Missing SPARQL constraint definition");
         }
-        if (deactivated(c!) || skip) {
-          continue;
-        }
+        const compiled = admitSelect(
+          single(c, SH + "select", true)!.value,
+          prefixes(c!),
+        );
+        iri(ref);
         constraints.push({
           sourceShape: node,
           sourceConstraint: ref as Resource,
           severity: severity(c!, properties),
           messages: messages(c!, properties),
-          compiled: admitSelect(
-            queryText(single(c, SH + "select", true)!),
-            prefixes(c!),
-          ),
+          compiled,
         });
       }
-      if (!skip) {
-        shapes.push({ node, targets, constraints });
-      }
-    }
-    for (const { node, properties } of schemaNodes) {
-      activeNode = node;
-      const isRule = rules.some((r) => r.node.equals(node));
-      const isConstraint = usedConstraints.has(node.toString());
-      const isShape = get(properties, RDF + "type").some((v) =>
-        v.value === SH + "NodeShape"
-      ) || get(properties, SH + "sparql").length > 0 ||
-        ["targetNode", "targetClass", "targetSubjectsOf"].some((p) =>
-          get(properties, SH + p).length
-        );
-      for (const name of ["construct", "runOnce", "order"]) {
-        if (get(properties, SH + name).length && !isRule) {
-          fail(`${name} requires a global SPARQLRule`);
-        }
-      }
-      for (const name of ["select", "prefixes"]) {
-        if (
-          get(properties, SH + name).length &&
-          !(isConstraint || (name === "prefixes" && isRule))
-        ) {
-          fail(`${name} requires an attached constraint or global rule`);
-        }
-      }
-      for (const name of ["severity", "message", "deactivated"]) {
-        if (
-          get(properties, SH + name).length && !(isShape || isConstraint)
-        ) {
-          fail(`${name} requires a shape or constraint`);
-        }
-      }
-      if (isRule && (isShape || isConstraint)) {
-        fail("Global rules cannot also be shapes or constraints");
-      }
+      shapes.push({ node, targets, constraints });
     }
     rules.sort((a, b) => a.order - b.order);
     if (rules.some((r, i) => i > 0 && rules[i - 1].order === r.order)) {
@@ -408,23 +337,20 @@ export function readShaclProgram(
         ordinal(a.sourceConstraint.toString(), b.sourceConstraint.toString())
       );
     }
-    return { shapesGraph, file, shapes, rules };
+    return { dataOptions: dataOptions(store), file, shapes, rules };
   } catch (cause) {
     throw new ShaclStageError("loading", cause, sourceFile(file, activeNode));
   }
 }
 
 /** Explicitly restrict both sides of the dataset; GRAPH ?g cannot expose metadata. */
-export function shaclDataOptions(
-  store: Store,
-  shapesGraph = SHAPES_GRAPH,
-): NonNullable<Parameters<Store["query"]>[1]> {
+function dataOptions(store: Store): DataOptions {
   const graphs = rows(
     store,
     "SELECT DISTINCT ?g WHERE { GRAPH ?g { ?s ?p ?o } }",
   )
     .map((row) => row.get("g")!)
-    .filter((g) => g.value !== shapesGraph && g.value !== REPORT_GRAPH)
+    .filter((g) => g.value !== SHAPES_GRAPH && g.value !== REPORT_GRAPH)
     .map(resource);
   return { default_graph: [defaultGraph(), ...graphs], named_graphs: graphs };
 }
@@ -438,7 +364,7 @@ export function materializeShaclRules(store: Store, program: ShaclProgram) {
     try {
       const result = store.query(
         rule.query,
-        shaclDataOptions(store, program.shapesGraph),
+        program.dataOptions,
       );
       if (
         !Array.isArray(result) ||
@@ -456,6 +382,14 @@ export function materializeShaclRules(store: Store, program: ShaclProgram) {
         );
       }
       const quads = store.size - before;
+      if (
+        quads > 0 &&
+        !program.dataOptions.named_graphs.some((g) => g.value === rule.graph)
+      ) {
+        const graph = namedNode(rule.graph);
+        program.dataOptions.named_graphs.push(graph);
+        program.dataOptions.default_graph.push(graph);
+      }
       derivedQuads += quads;
       views.push({
         file: program.file ?? rule.name,
@@ -501,12 +435,11 @@ function focusNodes(
   }
   return [...found].sort();
 }
-function interpolate(message: Term, row: Row): Term {
-  const value = messageText(message).replace(
+function interpolate(message: Message, row: Row): Term {
+  const value = message.value.replace(
     /\{[?$]([A-Za-z_][A-Za-z0-9_]*)\}/g,
     (whole, variable: string) => row.get(variable)?.value ?? whole,
   );
-  if (message.termType !== "Literal") fail("Result message must be a literal");
   return literal(
     value,
     message.language
@@ -536,7 +469,7 @@ function resultKey(result: ShaclResult): string {
 export function validateShacl(store: Store, program: ShaclProgram) {
   let activeNode: Resource | undefined;
   try {
-    const options = shaclDataOptions(store, program.shapesGraph);
+    const options = program.dataOptions;
     const results: ShaclResult[] = [];
     const queries: {
       sourceShape: Resource;
@@ -547,6 +480,7 @@ export function validateShacl(store: Store, program: ShaclProgram) {
     for (const shape of program.shapes) {
       activeNode = shape.node;
       const focuses = focusNodes(store, shape, options);
+      const focusSet = new Set(focuses);
       for (const constraint of shape.constraints) {
         activeNode = constraint.sourceConstraint;
         const started = performance.now();
@@ -567,13 +501,14 @@ export function validateShacl(store: Store, program: ShaclProgram) {
           );
           if (
             focusNode.termType !== "NamedNode" ||
-            !focuses.includes(focusNode.value)
+            !focusSet.has(focusNode.value)
           ) fail("Constraint returned an unbound focus node");
           const path = row.get("path");
           if (path && path.termType !== "NamedNode") {
             fail("Result path must be an IRI");
           }
           const message = row.get("message");
+          if (message) messageText(message);
           results.push({
             focusNode,
             sourceShape: shape.node,
@@ -581,9 +516,8 @@ export function validateShacl(store: Store, program: ShaclProgram) {
             severity: constraint.severity,
             value: row.get("value") ?? focusNode,
             ...(path ? { path } : {}),
-            messages: (message ? [message] : constraint.messages).map((m) =>
-              interpolate(m, row)
-            ),
+            messages: (message ? [message as Message] : constraint.messages)
+              .map((m) => interpolate(m, row)),
           });
         }
         queries.push({
@@ -594,22 +528,21 @@ export function validateShacl(store: Store, program: ShaclProgram) {
         });
       }
     }
-    results.sort((a, b) => ordinal(resultKey(a), resultKey(b)));
+    const keys = new Map(results.map((result) => [result, resultKey(result)]));
+    results.sort((a, b) => ordinal(keys.get(a)!, keys.get(b)!));
     const graph = namedNode(REPORT_GRAPH);
     for (const old of store.match(null, null, null, graph)) store.delete(old);
     const report = namedNode(REPORT_NODE);
-    const triples: Quad[] = [];
+    const triples: string[] = [];
     const add = (subject: Resource, predicate: string, object: Term) => {
-      if (!["NamedNode", "BlankNode", "Literal"].includes(object.termType)) {
-        fail("Unsupported report RDF term");
+      if (!["NamedNode", "Literal"].includes(object.termType)) {
+        fail(
+          object.termType === "BlankNode"
+            ? "Blank-node report values are unsupported"
+            : "Unsupported report RDF term",
+        );
       }
-      triples.push(
-        quad(
-          subject,
-          namedNode(predicate),
-          object as Parameters<typeof quad>[2],
-        ),
-      );
+      triples.push(`${subject} ${namedNode(predicate)} ${object} .`);
     };
     add(report, RDF + "type", namedNode(SH + "ValidationReport"));
     add(
@@ -638,12 +571,11 @@ export function validateShacl(store: Store, program: ShaclProgram) {
         add(node, SH + "resultMessage", message);
       }
     });
-    for (const triple of triples) {
-      store.add(quad(triple.subject, triple.predicate, triple.object, graph));
-    }
-    const validationReport = [
-      ...new Set(triples.map((q) => `${q.toString()} .`)),
-    ].sort().join("\n") + "\n";
+    const validationReport = [...new Set(triples)].sort().join("\n") + "\n";
+    store.load(validationReport, {
+      format: "application/n-triples",
+      to_graph_name: graph,
+    });
     return { validationReport, results, queries };
   } catch (cause) {
     throw new ShaclStageError(

@@ -14,7 +14,7 @@ const SHT = "http://www.w3.org/ns/shacl-test#";
 const FIXTURES = new URL("./fixtures/shacl-w3c/", import.meta.url);
 
 // The unchanged W3C corpus predates SHACL 1.2. These cases are intentionally
-// inapplicable; ignored tests below keep them distinct from successful cases.
+// inapplicable; the asserted inventory keeps them distinct from successful cases.
 export const skippedW3cCases = [
   [
     "pre-binding/unsupported-sparql-002.ttl",
@@ -145,6 +145,29 @@ Deno.test("unchanged W3C SHACL corpus: 15 applicable cases, 8 explicitly skipped
         base_iri,
         to_graph_name: namedNode(SHAPES_GRAPH),
       });
+      // Expected reports are oracle data, not executable shape declarations.
+      // Strip only their subjects from the named shapes copy; the original
+      // default-graph fixture remains intact for all oracle comparisons.
+      for (
+        const row of select(
+          store,
+          `SELECT ?subject WHERE {
+        GRAPH <${SHAPES_GRAPH}> {
+          ?test <${MF}result> ?report .
+          ?report <${SH}result>* ?subject .
+        }
+      }`,
+        )
+      ) {
+        for (
+          const triple of store.match(
+            row.get("subject")! as Parameters<Store["match"]>[0],
+            null,
+            null,
+            namedNode(SHAPES_GRAPH),
+          )
+        ) store.delete(triple);
+      }
       const expected = select(
         store,
         `SELECT ?expected WHERE { ?test <${MF}result> ?expected }`,
@@ -152,7 +175,7 @@ Deno.test("unchanged W3C SHACL corpus: 15 applicable cases, 8 explicitly skipped
       assert.equal(expected.length, 1);
       if (expected[0].get("expected")!.value === SHT + "Failure") {
         assert.throws(() => {
-          const program = readShaclProgram(store, SHAPES_GRAPH, file);
+          const program = readShaclProgram(store, file);
           validateShacl(store, program);
         }, (error) => {
           // A forbidden SPARQL AST must cause the failure, rather than an
@@ -162,7 +185,7 @@ Deno.test("unchanged W3C SHACL corpus: 15 applicable cases, 8 explicitly skipped
         });
         return;
       }
-      const program = readShaclProgram(store, SHAPES_GRAPH, file);
+      const program = readShaclProgram(store, file);
       const actual = validateShacl(store, program);
       const report = new Store();
       report.load(actual.validationReport, { format: "text/turtle" });
@@ -236,7 +259,3 @@ Deno.test("unchanged W3C SHACL corpus: 15 applicable cases, 8 explicitly skipped
     });
   }
 });
-
-for (const [file, reason] of skippedW3cCases) {
-  Deno.test({ name: `W3C skipped ${file}: ${reason}`, ignore: true, fn() {} });
-}

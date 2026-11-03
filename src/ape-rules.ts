@@ -8,7 +8,6 @@ import {
   readShaclProgram,
   REPORT_GRAPH,
   SH,
-  shaclDataOptions,
   type ShaclProgram,
   ShaclStageError,
   SHAPES_GRAPH,
@@ -142,13 +141,12 @@ export class ApeStageError extends Error {
 
 const APE = "urn:ase:ape:v1:";
 const FILE = "rules/ape/ape.ttl";
-const shapeUrl = () =>
-  new URL(
-    import.meta.url.endsWith(".ts")
-      ? "../rules/ape/ape.ttl"
-      : "./rules/ape/ape.ttl",
-    import.meta.url,
-  );
+const SHAPE_URL = new URL(
+  import.meta.url.endsWith(".ts")
+    ? "../rules/ape/ape.ttl"
+    : "./rules/ape/ape.ttl",
+  import.meta.url,
+);
 export interface ApeAnnotation {
   code: string;
   pattern: string;
@@ -164,11 +162,7 @@ export function admitApeProgram(
   store: Store,
   program: ShaclProgram,
 ): ApeProgram {
-  try {
-    return { ...program, annotations: annotations(store, program) };
-  } catch (error) {
-    throw stageError(error, "loading", program.file);
-  }
+  return { ...program, annotations: annotations(store, program) };
 }
 function selected(
   store: Store,
@@ -188,15 +182,12 @@ function annotations(
   const result = new Map<string, ApeAnnotation>();
   const fields = ["code", "pattern", "finding", "recovery"];
   for (const shape of program.shapes) {
-    if (shape.node.termType !== "NamedNode") {
-      throw new Error("APE source shapes must have named IRIs");
-    }
     const values: Record<string, string> = {};
     for (
       const row of selected(
         store,
         `SELECT ?p ?o WHERE { ${shape.node} ?p ?o }`,
-        { default_graph: namedNode(program.shapesGraph), named_graphs: [] },
+        { default_graph: namedNode(SHAPES_GRAPH), named_graphs: [] },
       )
     ) {
       const predicate = row.get("p")!.value;
@@ -220,13 +211,9 @@ function annotations(
       throw new Error("Invalid APE shape annotation finding");
     }
     for (const constraint of shape.constraints) {
-      if (constraint.sourceConstraint.termType !== "NamedNode") {
-        throw new Error("APE source constraints must have named IRIs");
+      if (constraint.messages.length !== 1) {
+        throw new Error("APE constraints require one message");
       }
-      if (
-        constraint.messages.length !== 1 ||
-        constraint.messages[0].termType !== "Literal"
-      ) throw new Error("APE constraints require one message");
       result.set(
         JSON.stringify([shape.node.value, constraint.sourceConstraint.value]),
         {
@@ -253,15 +240,13 @@ function stageError(
 /** Shapes are the only runtime rule source, packaged beside the bundled worker. */
 export async function readApeProgram(
   store: Store,
-  url = shapeUrl(),
 ): Promise<ApeProgram> {
   try {
-    store.load(await readFile(url, "utf8"), {
+    store.load(await readFile(SHAPE_URL, "utf8"), {
       format: "text/turtle",
-      base_iri: url.href,
       to_graph_name: namedNode(SHAPES_GRAPH),
     });
-    const program = readShaclProgram(store, SHAPES_GRAPH, FILE);
+    const program = readShaclProgram(store, FILE);
     return admitApeProgram(store, program);
   } catch (error) {
     throw stageError(error, "loading");
@@ -286,7 +271,7 @@ export function evaluateApeRules(store: Store, program: ApeProgram) {
       const row of selected(
         store,
         `SELECT ?node ?id WHERE { ?node <${APE}agentId> ?id }`,
-        shaclDataOptions(store, program.shapesGraph),
+        program.dataOptions,
       )
     ) {
       const node = row.get("node")!;

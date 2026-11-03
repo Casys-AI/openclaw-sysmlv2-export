@@ -11,6 +11,8 @@ import { initOxigraph, namedNode, Store } from "../src/oxigraph.ts";
 import { checkApe } from "../src/ape.ts";
 import {
   readShaclProgram,
+  REPORT_GRAPH,
+  SH,
   ShaclStageError,
   SHAPES_GRAPH,
   validateShacl,
@@ -33,7 +35,7 @@ function load(store: Store, shapes: string) {
     format: "text/turtle",
     to_graph_name: namedNode(SHAPES_GRAPH),
   });
-  return readShaclProgram(store, SHAPES_GRAPH, "rules/ape/ape.ttl");
+  return readShaclProgram(store, "rules/ape/ape.ttl");
 }
 function dispose(store: Store) {
   (store as Store & { free(): void }).free();
@@ -91,8 +93,7 @@ Deno.test("APE annotations and agent IDs are required at the adapter boundary", 
       const program = load(store, broken);
       assert.throws(
         () => admitApeProgram(store, program),
-        (e) =>
-          e instanceof ApeStageError && /annotation/.test(e.toJSON().cause),
+        /annotation/,
       );
     } finally {
       dispose(store);
@@ -121,16 +122,19 @@ Deno.test("global rules follow only numeric order and expose prior views without
     const program = load(
       store,
       `${prefixes}
+ex:Empty a sh:SPARQLRule; sh:runOnce true; sh:order 5; ape:name "empty"; ape:graph ex:empty;
+  sh:construct "CONSTRUCT { <urn:test:a> <urn:test:p> <urn:test:unused> } WHERE { FILTER(false) }" .
 ex:Second a sh:SPARQLRule; sh:runOnce true; sh:order 20; ape:name "second"; ape:graph ex:second;
   sh:construct "CONSTRUCT { <urn:test:a> <urn:test:p> <urn:test:c> } WHERE { GRAPH <urn:test:first> { <urn:test:a> <urn:test:p> <urn:test:b> } }" .
 ex:First a sh:SPARQLRule; sh:runOnce true; sh:order 10; ape:name "first"; ape:graph ex:first;
-  sh:construct "CONSTRUCT { <urn:test:a> <urn:test:p> <urn:test:b> } WHERE { FILTER NOT EXISTS { GRAPH ?g { ?s a <http://www.w3.org/ns/shacl#SPARQLRule> } } }" .`,
+  sh:construct "CONSTRUCT { <urn:test:a> <urn:test:p> <urn:test:b> } WHERE { FILTER NOT EXISTS { GRAPH ?g { ?s a <http://www.w3.org/ns/shacl#SPARQLRule> } } FILTER NOT EXISTS { GRAPH <urn:test:empty> {} } }" .`,
     );
     const result = materializeApeViews(store, program);
-    assert.deepEqual(result.views.map((view) => [view.graph, view.quads]), [[
-      "urn:test:first",
-      1,
-    ], ["urn:test:second", 1]]);
+    assert.deepEqual(result.views.map((view) => [view.graph, view.quads]), [
+      ["urn:test:empty", 0],
+      ["urn:test:first", 1],
+      ["urn:test:second", 1],
+    ]);
     assert.equal(result.derivedQuads, 2);
   } finally {
     dispose(store);
@@ -143,9 +147,15 @@ Deno.test("bounded profile rejects unsupported Core instead of silently dropping
     const text of [
       `${prefixes} ex:S a sh:NodeShape; sh:targetNode ex:a; sh:class ex:C .`,
       `${prefixes} ex:S a sh:PropertyShape; sh:path ex:p .`,
+      `${prefixes} [] a sh:NodeShape; sh:targetNode ex:a .`,
+      `${prefixes} [] a sh:SPARQLConstraint; sh:select "SELECT $this WHERE {}" .`,
+      `${prefixes} ex:S sh:targetNode ex:a; sh:sparql [ sh:select "SELECT $this WHERE {}" ] .`,
+      `${prefixes} [] a sh:SPARQLRule; sh:runOnce true; sh:order 1; ape:name "blank rule"; ape:graph ex:g; sh:construct "CONSTRUCT {} WHERE {}" .`,
+      `${prefixes} ex:S a sh:NodeShape; sh:deactivated true .`,
       `${prefixes} ex:S a sh:NodeShape; sh:targetObjectsOf ex:p .`,
       `${prefixes} ex:S a sh:NodeShape; sh:sparql ex:C . ex:C sh:ask "ASK {}" .`,
       `${prefixes} ex:R a sh:SPARQLRule; sh:construct "CONSTRUCT {} WHERE {}" .`,
+      `${prefixes} ex:R a sh:SPARQLRule; sh:runOnce true; sh:order 1.5; ape:name "decimal order"; ape:graph ex:g; sh:construct "CONSTRUCT {} WHERE {}" .`,
     ]
   ) {
     const store = new Store();
@@ -157,7 +167,7 @@ Deno.test("bounded profile rejects unsupported Core instead of silently dropping
   }
 });
 
-Deno.test("schema admission ignores expected reports but validates query, message and order types", async () => {
+Deno.test("schema admission validates metadata and report value terms", async () => {
   await initOxigraph();
   const store = new Store();
   try {
@@ -165,9 +175,7 @@ Deno.test("schema admission ignores expected reports but validates query, messag
       store,
       `${prefixes}
       ex:S a sh:NodeShape; sh:targetNode ex:a; sh:sparql ex:C .
-      ex:C sh:select "SELECT $this WHERE {}"; sh:message "A message"@en .
-      ex:Report a sh:ValidationReport; sh:conforms false; sh:result ex:Result .
-      ex:Result a sh:ValidationResult; sh:focusNode ex:a; sh:resultSeverity sh:Violation; sh:sourceShape ex:S .`,
+      ex:C sh:select "SELECT $this WHERE {}"; sh:message "A message"@en .`,
     );
     assert.equal(validateShacl(store, program).results.length, 1);
   } finally {
@@ -175,7 +183,6 @@ Deno.test("schema admission ignores expected reports but validates query, messag
   }
   for (
     const broken of [
-      `${prefixes} ex:S a sh:NodeShape, <http://www.w3.org/2000/01/rdf-schema#Class>; sh:targetNode ex:a .`,
       `${prefixes} ex:S sh:targetNode ex:a; sh:sparql ex:C . ex:C sh:select "SELECT $this WHERE {}"@en .`,
       `${prefixes} ex:S sh:targetNode ex:a; sh:sparql ex:C . ex:C sh:select "SELECT $this WHERE {}"; sh:message 12 .`,
     ]
@@ -187,53 +194,26 @@ Deno.test("schema admission ignores expected reports but validates query, messag
       dispose(store);
     }
   }
-  const globalRule = (order: string) =>
-    `${prefixes}
-    @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
-    ex:R a sh:SPARQLRule; sh:runOnce true; sh:order ${order};
-      ape:name "synthetic"; ape:graph ex:view;
-      sh:construct "CONSTRUCT { <urn:a> <urn:p> <urn:b> } WHERE {}" .`;
-  for (
-    const [term, expected] of [
-      ['"+10"^^xsd:integer', 10],
-      ['"-1.5"^^xsd:decimal', -1.5],
-      ['".5"^^xsd:decimal', 0.5],
-      ['"10."^^xsd:decimal', 10],
-    ] as const
-  ) {
-    const store = new Store();
-    try {
-      assert.equal(load(store, globalRule(term)).rules[0].order, expected);
-    } finally {
-      dispose(store);
-    }
-  }
-  for (
-    const term of [
-      '"10"^^xsd:float',
-      '"10"^^xsd:double',
-      '""^^xsd:integer',
-      '" "^^xsd:decimal',
-      '" 10 "^^xsd:integer',
-      '"NaN"^^xsd:decimal',
-      '"INF"^^xsd:decimal',
-      '"1e1"^^xsd:decimal',
-      '"1.5"^^xsd:integer',
-      '"."^^xsd:decimal',
-      '"+"^^xsd:integer',
-      `"${"9".repeat(400)}"^^xsd:integer`,
-    ]
-  ) {
-    const store = new Store();
-    try {
-      assert.throws(() => load(store, globalRule(term)), (error) => {
-        assert(error instanceof ShaclStageError);
-        assert.match(String(error.cause), /sh:order/);
-        return true;
-      });
-    } finally {
-      dispose(store);
-    }
+  const blankValue = new Store();
+  try {
+    blankValue.load(`${prefixes} ex:a ex:p [] .`, { format: "text/turtle" });
+    const program = load(
+      blankValue,
+      `${prefixes}
+      ex:S sh:targetNode ex:a; sh:sparql ex:C .
+      ex:C sh:select "SELECT $this ?value WHERE { $this <urn:test:p> ?value }" .`,
+    );
+    assert.throws(() => validateShacl(blankValue, program), (error) => {
+      assert(error instanceof ShaclStageError);
+      assert.equal(error.stage, "rule");
+      assert.match(
+        String(error.cause),
+        /Blank-node report values are unsupported/,
+      );
+      return true;
+    });
+  } finally {
+    dispose(blankValue);
   }
 });
 
@@ -349,5 +329,67 @@ Deno.test("APE reports persist counts without timings or duplicated RDF and free
   } finally {
     prototype.free = free;
     prototype.query = query;
+  }
+});
+
+Deno.test("APE report construction scales to 150 fully meshed agents and 22,350 rows", async () => {
+  await initOxigraph();
+  const store = new Store();
+  const parsedReport = new Store();
+  try {
+    const count = 150;
+    const agents = Array.from(
+      { length: count },
+      (_, index) => `urn:mesh:agent:${index}`,
+    );
+    // A direct focus/related SELECT isolates complete report construction from
+    // transitive property-path evaluation while retaining every pair row.
+    store.load(
+      [
+        prefixes,
+        ...agents.map((agent, index) =>
+          `<${agent}> ape:agentId "agent-${index}" .`
+        ),
+        ...agents.flatMap((from) =>
+          agents.filter((to) => to !== from).map((to) =>
+            `<${from}> ape:related <${to}> .`
+          )
+        ),
+      ].join("\n"),
+      { format: "text/turtle" },
+    );
+    const admitted = admitApeProgram(store, load(store, shape));
+    const started = performance.now();
+    const report = evaluateApeRules(store, admitted);
+    const elapsed = performance.now() - started;
+    assert.equal(report.findings.length, count);
+    assert.equal(report.queries.length, 1);
+    assert.equal(report.queries[0].findings, count);
+    const graphRows = store.match(
+      null,
+      namedNode(SH + "focusNode"),
+      null,
+      namedNode(REPORT_GRAPH),
+    ).length;
+    assert.equal(graphRows, count * (count - 1));
+    parsedReport.load(report.validationReport, {
+      format: "application/n-triples",
+    });
+    assert.equal(
+      parsedReport.match(null, namedNode(SH + "focusNode"), null).length,
+      graphRows,
+    );
+    assert(
+      elapsed < 10_000,
+      `150-agent complete report exceeded 10 seconds: ${elapsed.toFixed(0)}ms`,
+    );
+    console.info(
+      `APE report scaling: ${count} agents, ${graphRows} report rows, ${report.findings.length} findings, ${
+        elapsed.toFixed(0)
+      }ms`,
+    );
+  } finally {
+    dispose(parsedReport);
+    dispose(store);
   }
 });
