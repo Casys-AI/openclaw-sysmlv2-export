@@ -94,6 +94,9 @@ main > section[hidden] { display: none; }
 .md-legend { position: absolute; left: 14px; bottom: 12px; z-index: 1; display: flex; flex-wrap: wrap; gap: 4px 14px; max-width: min(760px, calc(100% - 340px)); padding: 6px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); font-size: 11px; color: var(--muted); }
 .md-legend span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .md-legend svg { width: 26px; height: 14px; overflow: visible; }
+.md-legend.folded { padding: 3px 6px; }
+.md-legend-fold { all: unset; cursor: pointer; padding: 0 4px; border-radius: 6px; color: var(--muted); }
+.md-legend-fold:hover { color: var(--ink); background: var(--hover); }
 
 /* Elements */
 .md-node { cursor: pointer; transition: opacity .18s ease; }
@@ -235,7 +238,7 @@ svg.md-lod .md-edge:not(.hot) { opacity: .3; }
 .tb-bar button:hover { background: var(--hover); }
 .tb-bar button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--line-strong); }
 .tb-key { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
-.tb-note { margin-left: auto; font-style: italic; }
+.tb-note { margin-left: -6px; font-style: italic; }
 .tb-bar .tb-fold { margin-left: auto; border-color: transparent; color: var(--muted); }
 .tb-bar .tb-fold:hover { color: var(--ink); }
 .md-sheet.folded { flex: none; }
@@ -537,6 +540,17 @@ function sysml(text) {
   return pre;
 }
 
+// Per-viewer conveniences kept between visits: the sidebar's width, a folded
+// legend, a hint already seen. Storage may be unavailable.
+const WIDTH_KEY = "openclaw-sysmlv2-viewer:sidebar-width", LEGEND_KEY = "openclaw-sysmlv2-viewer:legend-folded",
+  HINT_KEY = "openclaw-sysmlv2-viewer:hint-seen";
+function stored(key) {
+  try { return localStorage.getItem(key); } catch { return null; }
+}
+function store(key, value) {
+  try { if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value); } catch { /* storage unavailable */ }
+}
+
 // ---- Header
 function renderHeader() {
   const select = document.getElementById("version");
@@ -815,7 +829,7 @@ function showChanges(cur) {
 function renderLegend(view) {
   const box = document.getElementById("legend");
   const items = view.scene ? LEGENDS[view.group] || [] : [];
-  box.replaceChildren(...items.map(([kind, text]) => {
+  const keys = items.map(([kind, text]) => {
     const s = el("span");
     const g = sv("svg", { viewBox: "0 0 26 14", "aria-hidden": "true" });
     const add = (tag, a) => g.append(sv(tag, a));
@@ -829,7 +843,14 @@ function renderLegend(view) {
     if (kind === "send") add("path", { d: "M2,1 H18 L24,7 L18,13 H2 Z", fill: "#fff", stroke: "#2b2b2d" });
     s.append(g, text);
     return s;
-  }));
+  });
+  // Folded, the legend is one button; the choice is kept between visits.
+  const folded = stored(LEGEND_KEY) === "1";
+  const fold = button(folded ? "Legend" : "‹", () => { store(LEGEND_KEY, folded ? null : "1"); renderLegend(view); }, "md-legend-fold");
+  fold.title = folded ? "Show the legend" : "Hide the legend";
+  fold.setAttribute("aria-expanded", String(!folded));
+  box.classList.toggle("folded", folded);
+  box.replaceChildren(...folded ? [] : keys, fold);
   box.hidden = !items.length;
 }
 function subtitle(view) {
@@ -1356,10 +1377,11 @@ function renderMatrix(box, t, mark) {
     k.append(glyph(g), text);
     bar.append(k);
   }
-  bar.append(el("span", "tb-note", "SysML allocation matrix: each cell is an agent's ToolGrant"));
   const table = el("table", "mx" + (t.columns.length > 8 ? " narrow" : ""));
   const head = el("tr");
-  head.append(el("th", "mx-corner", "tool ↓ · allocated to agent →"));
+  const corner = el("th", "mx-corner", "tool ↓ · allocated to agent →");
+  corner.title = "SysML allocation matrix: each cell is an agent's ToolGrant";
+  head.append(corner);
   t.columns.forEach((c, i) => {
     const th = el("th", "mx-col" + mark(c.id));
     th.dataset.id = c.id;
@@ -1530,8 +1552,9 @@ function renderWeek(box, t, mark) {
     k.append(g, text);
     return k;
   };
-  bar.append(el("strong", "tb-title", "Week"), key("wk-fire", "fires in that hour"), key("wk-band", "interval, all week"),
-    el("span", "tb-note", "Hours in each task's own time zone"));
+  const local = el("span", "tb-note", "local hours");
+  local.title = "Hours in each task's own time zone";
+  bar.append(el("strong", "tb-title", "Week"), local, key("wk-fire", "fires in that hour"), key("wk-band", "interval, all week"));
   const table = el("table", "wk"), head = el("tr"), axis = sv("svg", { class: "wk-strip", width: 7 * DAY - 4, height: 16, "aria-hidden": "true" });
   DAYS.forEach((name, d) => {
     axis.append(sv("text", { x: d * DAY + 12 * HOUR, y: 11, "text-anchor": "middle" }, name));
@@ -1681,11 +1704,10 @@ panelBox.addEventListener("scroll", () => { if (state.panelKey) state.scrolls.se
 // Dragging the sidebar's edge, or its arrow keys, sets its width, kept for the
 // next visit; a double click restores the default.
 const side = document.getElementById("side"), grip = document.getElementById("side-grip");
-const WIDTH_KEY = "openclaw-sysmlv2-viewer:sidebar-width";
 function sideWidth(w) {
   const md = document.getElementById("md");
   if (w) md.style.setProperty("--side-w", w + "px"); else md.style.removeProperty("--side-w");
-  try { if (w) localStorage.setItem(WIDTH_KEY, String(w)); else localStorage.removeItem(WIDTH_KEY); } catch { /* storage unavailable */ }
+  store(WIDTH_KEY, w ? String(w) : null);
 }
 const clampWidth = (w) => Math.round(Math.max(300, Math.min(document.getElementById("md").getBoundingClientRect().width * 0.6, w)));
 grip.addEventListener("pointerdown", (e) => { grip.setPointerCapture(e.pointerId); grip.dataset.drag = "1"; });
@@ -1697,10 +1719,7 @@ grip.addEventListener("keydown", (e) => {
   e.preventDefault();
   sideWidth(clampWidth(side.offsetWidth + (e.key === "ArrowLeft" ? 24 : -24)));
 });
-try {
-  const w = Number(localStorage.getItem(WIDTH_KEY));
-  if (w >= 300) document.getElementById("md").style.setProperty("--side-w", w + "px");
-} catch { /* storage unavailable */ }
+if (Number(stored(WIDTH_KEY)) >= 300) document.getElementById("md").style.setProperty("--side-w", stored(WIDTH_KEY) + "px");
 document.getElementById("fit").onclick = fit;
 // Frames the selection, or fits the whole scene when nothing drawn is selected.
 function frame() {
@@ -1710,8 +1729,15 @@ document.getElementById("fit-selection").onclick = frame;
 document.getElementById("zoom-in").onclick = () => zoom(1.25);
 document.getElementById("zoom-out").onclick = () => zoom(0.8);
 const canvas = document.getElementById("canvas");
+// The gestures' hint goes once the canvas has been used.
+const hint = document.querySelector(".md-hint");
+hint.hidden = stored(HINT_KEY) === "1";
+function used() {
+  if (!hint.hidden) { hint.hidden = true; store(HINT_KEY, "1"); }
+}
 canvas.addEventListener("wheel", (e) => {
   if (!state.viewport) return;
+  used();
   e.preventDefault();
   const box = canvas.getBoundingClientRect();
   if (e.ctrlKey || e.metaKey) zoom(Math.exp(-e.deltaY * 0.01), e.clientX - box.left, e.clientY - box.top);
@@ -1727,6 +1753,7 @@ function spread() {
 }
 canvas.addEventListener("pointerdown", (e) => {
   if (!state.viewport) return;
+  used();
   pointers.set(e.pointerId, [e.clientX, e.clientY]);
   if (pointers.size === 2) { pinch = spread(); press = null; }
   else press = { x: e.clientX, y: e.clientY, from: state.viewport, moved: false };
