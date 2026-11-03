@@ -199,6 +199,7 @@ svg.md-lod .md-edge:not(.hot) { opacity: .3; }
 .md-side-note { margin: 0 0 12px; font-size: 11px; color: var(--muted); }
 .md-inspector h3 { margin: 2px 0 0; font-size: 15px; font-weight: 600; word-break: break-word; }
 .md-inspector h3 span { font-weight: 400; color: var(--muted); }
+.md-declared { margin: 1px 0 0; font: 11px var(--mono); color: var(--muted); word-break: break-word; }
 .md-also { display: flex; flex-wrap: wrap; gap: 2px 12px; margin: 4px 0 0; font-size: 11.5px; }
 .md-also button { all: unset; cursor: pointer; color: var(--muted); text-decoration: underline; text-decoration-color: var(--line-strong); }
 .md-also button:hover { color: var(--ink); text-decoration-color: var(--ink); }
@@ -704,8 +705,8 @@ function drawNode(n, delta) {
     delta && delta.touched.includes(n.id) ? "touched" : ""];
   const doc = state.doc.get(n.id), status = delta && delta.added.includes(n.id) ? "added" : delta && delta.changed.includes(n.id) ? "changed" : "";
   const g = sv("g", { class: classes.filter(Boolean).join(" "), "data-id": n.id, tabindex: 0, role: "button",
-    "aria-label": [(n.kw || n.shape) + " " + nameOf(n), status, doc && "worst finding " + doc.worst].filter(Boolean).join(", ") });
-  g.append(sv("title", {}, n.name || (n.lines || []).join(" ") || (n.label ? n.label.lines.join(" ") : n.shape)));
+    "aria-label": [(n.kw || n.shape) + " " + labelOf(n), status, doc && "worst finding " + doc.worst].filter(Boolean).join(", ") });
+  g.append(sv("title", {}, labelOf(n)));
   const { x, y, w, h } = n, cx = x + w / 2, cy = y + h / 2;
   g.append(n.shape === "initial" || n.shape === "final" ? sv("circle", { class: "md-ring-select", cx, cy, r: w / 2 })
     : n.shape === "decision" ? sv("path", { class: "md-ring-select", d: "M" + cx + "," + y + " L" + (x + w) + "," + cy + " L" + cx + "," + (y + h) + " L" + x + "," + cy + " Z" })
@@ -830,6 +831,9 @@ function go(view, id, stay, ring) {
   navigate({ tab: "diagrams", view, focus: id, stay: Boolean(stay), ring: ring || null });
 }
 const nameOf = (n) => n.name || (n.lines || []).join(" ") || (n.label ? n.label.lines.join(" ") : n.shape);
+// An element's readable name: its scene title or row title, the version's
+// label for its id (viewer.ts's labels), else its declared name.
+const labelOf = (n) => n.title || (versions[state.version].labels || {})[n.id] || nameOf(n);
 function button(text, onclick, cls) {
   const b = el("button", cls || "", text);
   b.type = "button";
@@ -898,7 +902,7 @@ function showChanges(cur) {
     for (const id of ids) {
       const n = headOf(view, id), b = button("", () => open(id)), li = el("li");
       if (view === cur.view) li.dataset.subject = id;
-      b.append(el("span", "md-other", n.title || nameOf(n)), el("span", "md-kind", n.kw || n.shape || ""));
+      b.append(el("span", "md-other", labelOf(n)), el("span", "md-kind", n.kw || n.shape || ""));
       li.append(b);
       const dl = diff && attributes((view.elements[id] || { a: [] }).a, (before.elements[id] || { a: [] }).a, true);
       if (dl && dl.childElementCount) li.append(dl);
@@ -1141,7 +1145,7 @@ function zoomedOutLabels(scene, delta) {
       label.dataset.id = n.id;
       box.append(label);
     } else if (!n.parent) {
-      const label = el("div", "md-lod-leaf", nameOf(n));
+      const label = el("div", "md-lod-leaf", labelOf(n));
       label.dataset.id = n.id;
       box.append(label);
     }
@@ -1237,7 +1241,7 @@ function select(id, center, stay, ring) {
   const n = state.drawn.nodes && state.drawn.nodes.get(id), before = room().w;
   if (!stay) inspect(state.version, state.drawn.payload, id, status);
   const h = headOf(state.drawn.payload, id);
-  announce((stay ? "Selected " : "Inspector: ") + (h.title || nameOf(h)));
+  announce((stay ? "Selected " : "Inspector: ") + labelOf(h));
   const lit = ring && [...ring].filter((x) => state.drawn.nodes && state.drawn.nodes.has(x));
   if (center && lit && lit.length > 1) frameBox(boxOf(lit));
   else if (center && n) fitTo(id);
@@ -1317,9 +1321,10 @@ function inspect(vi, view, id, status) {
   const info = view.elements[id] || { a: [], s: [] };
   let refs = info.s.slice();
   if (!n) return;
-  const h = el("h3", "", nameOf(n));
-  if (n.type) h.append(el("span", "", n.type));
-  const parts = [el("p", "md-kicker", n.kw || n.shape), h];
+  // Its readable name, and its declared name and type when they differ.
+  const h = el("h3", "", labelOf(n)), declared = (n.name || "") + (n.type || "");
+  if (labelOf(n) === nameOf(n) && n.type) h.append(el("span", "", n.type));
+  const parts = [el("p", "md-kicker", n.kw || n.shape), h, ...labelOf(n) !== nameOf(n) && declared ? [el("p", "md-declared", declared)] : []];
   if (vi === state.version) parts.push(...alsoIn(view, id));
   if (status) {
     const line = el("div");
@@ -1348,7 +1353,7 @@ function inspect(vi, view, id, status) {
         const label = e.label ? e.label.lines.join(" ") : "";
         const b = button("", () => select(other, true));
         b.append(el("span", "md-kind", (out ? "→ " : "← ") + (e.kind === "connection" && label ? "connection · " + label : label || e.kind)),
-          el("span", "md-other", o ? nameOf(o) : other));
+          el("span", "md-other", o ? labelOf(o) : other));
         const li = el("li");
         li.append(b);
         ul.append(li);
