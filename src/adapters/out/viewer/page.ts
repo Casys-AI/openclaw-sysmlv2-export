@@ -86,7 +86,7 @@ main > section[hidden] { display: none; }
 .tb-bar .tb-tabs button { border: 0; border-radius: 7px; color: var(--muted); font-weight: 600; }
 .tb-bar .tb-tabs button[aria-pressed="true"] { color: var(--ink); background: var(--accent-soft); }
 .et td.et-num { text-align: right; font-variant-numeric: tabular-nums; }
-.et-tag { margin-left: 8px; padding: 0 6px; border-radius: 999px; font: 600 10.5px var(--font); color: var(--doc); background: var(--warn-bg); white-space: nowrap; }
+.et-name small.et-tag { margin-left: 8px; padding: 0 6px; border-radius: 999px; font: 600 10.5px var(--font); color: var(--doc); background: var(--warn-bg); white-space: nowrap; }
 .md-tools { display: flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
 .md-tools { margin-left: auto; }
 .md-tools[hidden] { display: none; }
@@ -263,7 +263,7 @@ svg.md-lod .md-edge:not(.hot) { opacity: .3; }
 .tb-bar .tb-fold { margin-left: auto; border-color: transparent; color: var(--muted); }
 .tb-bar .tb-fold:hover { color: var(--ink); }
 .md-sheet.folded { flex: none; }
-.md-sheet.folded > :not(.tb-bar), .md-sheet.folded .tb-bar > :not(.tb-title, .tb-fold) { display: none; }
+.md-sheet.folded > :not(.tb-bar), .md-sheet.folded .tb-bar > :not(.tb-title, .tb-tabs, .tb-fold) { display: none; }
 .md-sheet.folded .tb-bar { border-bottom: 0; }
 .hl tr.added > th, .hl tr.added > td { background: color-mix(in srgb, var(--add-bg) 60%, var(--card)); }
 .hl tr.changed > th, .hl tr.changed > td { background: color-mix(in srgb, var(--chg-bg) 60%, var(--card)); }
@@ -373,10 +373,7 @@ button.et-tile:hover { border-color: var(--line-strong); background: var(--card)
 .md-doc text { font-size: 10px; font-weight: 700; fill: #fff !important; text-anchor: middle; }
 .md-findings { list-style: none; margin: 4px 0 12px; padding: 0; }
 .md-inspector .md-findings li { padding: 6px 0 6px 10px; border-top: 1px solid var(--line); box-shadow: inset 2px 0 var(--doc); }
-.md-findings button.md-subject { display: inline; width: auto; padding: 0; border: 0; margin-right: 8px; font-weight: 600; }
 .md-inspector li.active { background: var(--accent-soft); }
-.md-inspector .md-findings li.active { box-shadow: inset 3px 0 var(--doc); }
-.md-findings button.md-subject:hover { text-decoration: underline; }
 .md-findings strong { margin-right: 8px; }
 .md-findings code { font: 10.5px var(--mono); color: var(--doc); }
 .md-findings p { margin: 2px 0 0; }
@@ -394,9 +391,9 @@ button.et-tile:hover { border-color: var(--line-strong); background: var(--card)
 .doc-chip { display: inline-flex; align-items: center; gap: 2px; padding: 1px 3px 1px 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); }
 .doc-chip.active { background: var(--accent-soft); border-color: var(--line-strong); }
 .md-inspector .doc-chip button { all: unset; cursor: pointer; }
-.doc-subject { font-weight: 600; padding-right: 4px; } button.doc-subject:hover { text-decoration: underline; }
-.doc-chip .doc-src { display: grid; place-items: center; width: 18px; height: 16px; border-radius: 5px; color: var(--muted); }
-.doc-chip .doc-src:hover { color: var(--ink); background: var(--hover); }
+.doc-subject, .md-inspector .doc-chip button.doc-subject { font-weight: 600; padding-right: 4px; } .md-inspector .doc-chip button.doc-subject:hover { text-decoration: underline; }
+.md-inspector .doc-chip button.doc-src { display: grid; place-items: center; width: 18px; height: 16px; border-radius: 5px; color: var(--muted); }
+.md-inspector .doc-chip button.doc-src:hover { color: var(--ink); background: var(--hover); }
 .doc-chip .doc-src svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 .doc-new { padding: 0 6px; border-radius: 999px; font-size: 10px; font-weight: 600; color: var(--chg); background: var(--chg-bg); }
 .doc-nested { display: flex; flex-wrap: wrap; align-items: center; gap: 0 6px; margin: 8px 0 0 10px; padding-left: 8px; border-left: 2px solid var(--line-strong); font-size: 11.5px; color: var(--muted); }
@@ -640,19 +637,22 @@ function verdict(v) {
   if (v.inputs === "same") return reemitted ? { glyph: "◆", words: "Same configuration · SysML re-emitted (" + (touched || v.changes.length) + ")" } : { glyph: "○", words: "Same configuration" };
   return { glyph: "", words: "First version" };
 }
-// The inference of a version, and whether its model checks ran.
+// The inference of a version: not run, or what it found, carried or failed.
 function inferenceWords(v) {
   if (!v.inferred) return "inference not run";
   const failed = v.inferred.failed ? " · inference failed: " + v.inferred.failed : "";
-  if (v.inferred.reused) return "inferred " + v.inferred.reused.from.map((id) => when(versions.find((x) => x.id === id) || { createdAt: id })).join(", ") + " · sources unchanged" + failed;
-  return "inferred " + plural(v.inferred.procedures, "procedure") + ", " + plural(v.inferred.rules, "rule") + failed;
+  // Agents whose sources did not change carry an earlier run's inference.
+  const reused = v.inferred.reused ? " · " + plural(v.inferred.reused.agents, "agent") + " carried from " +
+    v.inferred.reused.from.map((id) => when(versions.find((x) => x.id === id) || { createdAt: id })).join(", ") : "";
+  return "inferred " + plural(v.inferred.procedures, "procedure") + ", " + plural(v.inferred.rules, "rule") + reused + failed;
 }
 const CHECKS_WORDS = { "not-run": "checks not run", failed: "checks failed", unrecorded: "checks not recorded" };
 function renderHeader() {
   const select = document.getElementById("version");
   select.replaceChildren(...versions.map((v, i) => {
     const c = v.checks && v.checks.state !== "verified" ? " · not checked" : "", f = v.inferred && v.inferred.failed ? " · inference failed" : "";
-    const o = el("option", "", (verdict(v).glyph || " ") + " " + when(v) + " UTC" + (i === 0 ? " · latest" : "") + c + f);
+    const glyph = verdict(v).glyph;
+    const o = el("option", "", (glyph ? glyph + " " : "") + when(v) + " UTC" + (i === 0 ? " · latest" : "") + c + f);
     o.value = String(i);
     return o;
   }));
@@ -662,7 +662,7 @@ function renderHeader() {
   go.title = (said.detail ? said.detail + " " : "") + "Show the file diff";
   go.disabled = !v.changes;
   const checks = v.checks && CHECKS_WORDS[v.checks.state];
-  document.getElementById("meta").replaceChildren(go, " · " + inferenceWords(v), ...checks ? [" · ", button(checks, () => { navigate({ tab: "diagrams" }); openPanel("doctor"); }, "meta-verdict")] : []);
+  document.getElementById("meta").replaceChildren(go, " · " + inferenceWords(v), ...checks ? [" · ", button(checks, () => { navigate({ tab: "diagrams" }, true); openPanel("doctor"); }, "meta-verdict")] : []);
   for (const b of document.querySelectorAll(".tabs button")) {
     if (b.dataset.tab === state.tab) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
   }
@@ -1581,9 +1581,14 @@ function merged(groups) {
 function nested(rules) {
   const exec = rules.find((g) => g.code === "EXEC_WITHOUT_APPROVAL"), widens = rules.find((g) => g.code === "APE_GRANT_WIDENS_PARENT");
   if (!exec || !widens) return rules;
-  const under = (s) => widens.subjects.filter((w) => (w.related || []).includes(s.id));
+  // A widening grant sits under the first parent it reaches, once.
+  const placed = new Set();
+  const under = (s) => {
+    const mine = widens.subjects.filter((w) => !placed.has(w) && (w.related || []).includes(s.id));
+    for (const w of mine) placed.add(w);
+    return mine;
+  };
   exec.subjects = exec.subjects.map((s) => ({ ...s, widened: { ...widens, subjects: under(s) } }));
-  const placed = new Set(exec.subjects.flatMap((s) => s.widened.subjects));
   widens.subjects = widens.subjects.filter((w) => !placed.has(w));
   return rules.filter((g) => g.subjects.length);
 }
@@ -2028,7 +2033,7 @@ function summary(view, head, mark) {
 // A total's figure, large, and the rest of its value beside it.
 function tile(label, value, open) {
   const t = open ? button("", (e) => { e.stopPropagation(); open(); }, "et-tile") : el("div", "et-tile");
-  const [, figure, rest] = /^(\d+)(?: · )?(.*)$/.exec(value) || [null, value, ""];
+  const [, figure, rest] = /^(\d+|\?)(?: · )?(.*)$/.exec(value) || [null, value, ""];
   t.append(el("span", "", label), el("strong", "", figure), el("small", "", rest));
   return t;
 }
@@ -2050,6 +2055,11 @@ function openCount(view, group) {
 }
 
 // ---- Files and changes
+// A JSON file indented; one that does not parse (an unreadable findings.json)
+// shows as written.
+function indented(text) {
+  try { return JSON.stringify(JSON.parse(text), null, 2); } catch { return text; }
+}
 function renderFiles() {
   const v = versions[state.version], names = Object.keys(v.files), box = document.getElementById("files");
   if (!names.includes(state.file)) state.file = names[0];
@@ -2061,7 +2071,7 @@ function renderFiles() {
   }
   const text = data.texts[v.files[state.file]];
   let body;
-  if (state.file.endsWith(".json")) body = el("pre", "", JSON.stringify(JSON.parse(text), null, 2));
+  if (state.file.endsWith(".json")) body = el("pre", "", indented(text));
   else {
     body = el("div", "code");
     const count = text.split("\n").length - (text.endsWith("\n") ? 1 : 0);
@@ -2114,13 +2124,12 @@ function bullet(b) {
 }
 const GROUP_TITLES = { instance: "Instance", inferred: "Inferred behaviour", library: "Library", data: "Data", diagnostics: "Diagnostics" };
 function fileGroups(v) {
-  const groups = v.diff ? v.diff.groups : [{ group: "files", files: v.changes.map((c) => c.file) }];
-  return groups.map((g) => {
+  return v.diff.groups.map((g) => {
     const files = g.files.map((name) => v.changes.find((c) => c.file === name)).filter(Boolean);
     const size = files.reduce((n, c) => n + c.hunks.reduce((k, h) => k + h.lines.length, 0), 0);
     const d = el("details", "chg-files");
     d.open = (g.group === "instance" || g.group === "inferred") && size <= 400;
-    d.append(el("summary", "", (GROUP_TITLES[g.group] || "Files") + " · " + files.map(fileLine).join(", ")), ...files.map(fileDiff));
+    d.append(el("summary", "", GROUP_TITLES[g.group] + " · " + files.map(fileLine).join(", ")), ...files.map(fileDiff));
     return d;
   });
 }
