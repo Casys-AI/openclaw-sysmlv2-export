@@ -324,6 +324,8 @@ th[data-doc]::before, tr[data-doc] > .et-name:not(:has(span))::before, tr[data-d
 .md-findings { list-style: none; margin: 4px 0 12px; padding: 0; }
 .md-inspector .md-findings li { padding: 6px 0 6px 10px; border-top: 1px solid var(--line); box-shadow: inset 2px 0 var(--doc); }
 .md-findings button.md-subject { display: inline; width: auto; padding: 0; border: 0; margin-right: 8px; font-weight: 600; }
+.md-inspector li.active { background: var(--accent-soft); }
+.md-inspector .md-findings li.active { box-shadow: inset 3px 0 var(--doc); }
 .md-findings button.md-subject:hover { text-decoration: underline; }
 .md-findings strong { margin-right: 8px; }
 .md-findings code { font: 10.5px var(--mono); color: var(--doc); }
@@ -419,7 +421,10 @@ const state = { version: 0, tab: "diagrams", view: "overview", file: "OpenClawIn
   // and the height a table under a diagram was dragged to.
   filter: "", folded: new Set(), facet: null, sort: null, sheetH: null, sheetFolded: false,
   // What the last link named that the page lacks (see follow).
-  note: null };
+  note: null,
+  // Panels: where each was scrolled to (see showPanel), whether the Doctor's
+  // notes are open, and whether a selection keeps the open panel.
+  scrolls: new Map(), panelKey: null, notesOpen: false, stay: false };
 
 function el(tag, cls, text) {
   const e = document.createElement(tag);
@@ -723,9 +728,10 @@ function headOf(view, id) {
   }
   return t.rows.find((r) => r.id === id) || (t.summary && t.summary.id === id ? t.summary : null);
 }
-// Opens a view of this version and selects one of its elements, if it has it.
-function go(view, id) {
-  navigate({ tab: "diagrams", view, focus: id });
+// Opens a view of this version and selects one of its elements, if it has
+// it; the open panel stays when asked.
+function go(view, id, stay) {
+  navigate({ tab: "diagrams", view, focus: id, stay: Boolean(stay) });
 }
 const nameOf = (n) => n.name || (n.lines || []).join(" ") || (n.label ? n.label.lines.join(" ") : n.shape);
 function button(text, onclick, cls) {
@@ -773,6 +779,7 @@ function showChanges(cur) {
     let sysmlOnly = 0;
     for (const id of ids) {
       const n = headOf(view, id), b = button("", () => open(id)), li = el("li");
+      if (view === cur.view) li.dataset.subject = id;
       b.append(el("span", "md-other", n.title || nameOf(n)), el("span", "md-kind", n.kw || n.shape || ""));
       li.append(b);
       const dl = diff && attributes((view.elements[id] || { a: [] }).a, (before.elements[id] || { a: [] }).a, true);
@@ -783,8 +790,8 @@ function showChanges(cur) {
     parts.push(el("p", "md-kicker", label + " · " + ids.length), ul);
     if (sysmlOnly) parts.push(button(sysmlOnly + " changed in their SysML only: show the file diff", () => navigate({ tab: "changes" }), "md-back"));
   };
-  group("Added", shown(d.added, cur.view), cur.view, (id) => select(id, true), false);
-  group("Changed", shown(d.changed, cur.view), cur.view, (id) => select(id, true), true);
+  group("Added", shown(d.added, cur.view), cur.view, (id) => stayOn(cur.view.id, id), false);
+  group("Changed", shown(d.changed, cur.view), cur.view, (id) => stayOn(cur.view.id, id), true);
   group("Removed", shown(d.removed, before), before, (id) => inspect(state.version + 1, before, id, "removed"), false);
   if (parts.length === 1) parts.push(el("p", "md-side-empty", "No change in this view."));
   const highlight = button("Highlight", () => {
@@ -875,12 +882,12 @@ function renderDiagram(keepViewport) {
   else canvas.replaceChildren(...view.table ? [] : [el("p", "md-empty", "Nothing to show in this view for this version.")]);
   // An element opened from elsewhere shows in the inspector; otherwise the
   // open panel follows the version and the view.
-  const focus = state.focus && headOf(view, state.focus) ? state.focus : null;
+  const focus = state.focus && headOf(view, state.focus) ? state.focus : null, stay = state.stay;
   state.focus = null;
-  if (focus) { select(focus, true); return; }
+  state.stay = false;
   if (state.selected && !headOf(view, state.selected)) state.selected = null;
-  applyFocus();
-  if (state.panel) openPanel(state.panel);
+  if (focus) select(focus, true, stay); else applyFocus();
+  if (state.panel && (!focus || stay)) openPanel(state.panel);
 }
 function drawScene(view, delta, keep) {
   const canvas = document.getElementById("canvas"), scene = view.scene;
@@ -1065,11 +1072,15 @@ function applyFocus() {
     const doc = state.doc.get(e.dataset.id);
     if (doc) e.dataset.doc = doc; else delete e.dataset.doc;
   }
+  // A panel's entries mark the selection.
+  for (const e of document.querySelectorAll("#inspector [data-subject]")) e.classList.toggle("active", e.dataset.subject === state.selected);
   // A selected matrix column marks its cells.
   const column = sheet.querySelector("th.mx-col.selected"), c = column ? column.dataset.col : null;
   for (const e of sheet.querySelectorAll("td[data-col]")) e.classList.toggle("on", e.dataset.col === c);
 }
-function select(id, center) {
+// Selects an element, shows it in the inspector unless the open panel stays
+// (a Doctor or Changes entry), and frames or reveals it when asked.
+function select(id, center, stay) {
   state.selected = id;
   applyFocus();
   writeHash();
@@ -1078,7 +1089,7 @@ function select(id, center) {
   const status = d && d.added.includes(id) ? "added" : d && d.changed.includes(id) ? "changed" : null;
   // The inspector opens first: framing uses the room it leaves.
   const n = state.drawn.nodes && state.drawn.nodes.get(id), before = room().w;
-  inspect(state.version, state.drawn.payload, id, status);
+  if (!stay) inspect(state.version, state.drawn.payload, id, status);
   if (center && n) fitTo(id);
   else if (center) reveal(id);
   else if (n && room().w < before) keepInView(n);
@@ -1108,13 +1119,16 @@ function openPanel(name) {
   else showPanel("inspector", [el("p", "md-side-empty", "Select an element in the diagram or the table.")]);
 }
 // Fills the sidebar with one panel and opens it if it was collapsed.
+// Each panel, for a version and view (and the inspector, for an element),
+// opens again where it was scrolled to.
 function showPanel(name, parts, tools) {
   const box = document.getElementById("inspector");
   document.getElementById("side-title").textContent = PANELS[name];
   document.getElementById("side-tools").replaceChildren(...tools || []);
   box.replaceChildren(...parts);
-  box.scrollTop = 0;
   document.getElementById("side").hidden = false;
+  state.panelKey = [name, state.version, name === "doctor" ? "" : shownView(), name === "inspector" ? state.selected : ""].join("|");
+  box.scrollTop = state.scrolls.get(state.panelKey) || 0;
   state.panel = name;
   for (const b of document.querySelectorAll(".md-rail [data-panel]")) b.setAttribute("aria-pressed", String(b.dataset.panel === name));
 }
@@ -1236,13 +1250,22 @@ function findingList(findings, vi, withSubject) {
   for (const f of findings) {
     const li = el("li", "doc-" + f.severity), top = el("div");
     const v = withSubject && viewOf(vi, f.subject), n = v && headOf(v, f.subject);
-    if (n) top.append(button(n.title || nameOf(n), () => v.id === shownView() ? select(f.subject, true) : go(v.id, f.subject), "md-subject"));
+    if (n) {
+      li.dataset.subject = f.subject;
+      top.append(button(n.title || nameOf(n), () => stayOn(v.id, f.subject), "md-subject"));
+    }
     else if (withSubject) top.append(el("strong", "", f.subject));
     top.append(el("code", "", f.code));
     li.append(top, el("p", "", f.context), el("p", "fix", f.recovery));
     ul.append(li);
   }
   return ul;
+}
+// Shows a panel entry's element without leaving the panel; a narrow window,
+// where the sidebar covers the diagram, folds the sidebar away.
+function stayOn(view, id) {
+  if (view === shownView()) select(id, true, true); else go(view, id, true);
+  if (matchMedia("(max-width: 760px)").matches) collapse();
 }
 // Every finding of this version, errors first; notes fold away.
 function showDoctor() {
@@ -1256,6 +1279,8 @@ function showDoctor() {
   }
   if (notes.length) {
     const d = el("details", "md-notes");
+    d.open = state.notesOpen;
+    d.ontoggle = () => { state.notesOpen = d.open; };
     d.append(el("summary", "", plural(notes.length, "note")), findingList(notes, state.version, true));
     parts.push(d);
   }
@@ -1588,6 +1613,8 @@ for (const b of document.querySelectorAll(".md-rail [data-panel]")) {
   b.onclick = () => state.panel === b.dataset.panel ? collapse() : openPanel(b.dataset.panel);
 }
 document.getElementById("side-collapse").onclick = collapse;
+const panelBox = document.getElementById("inspector");
+panelBox.addEventListener("scroll", () => { if (state.panelKey) state.scrolls.set(state.panelKey, panelBox.scrollTop); });
 // Dragging the sidebar's edge, or its arrow keys, sets its width, kept for the
 // next visit; a double click restores the default.
 const side = document.getElementById("side"), grip = document.getElementById("side-grip");
