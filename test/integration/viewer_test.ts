@@ -346,6 +346,20 @@ Deno.test("an Overview row changes with what it shows, not with inference", asyn
   assert.equal(data.versions[0].inputs, "changed");
 });
 
+Deno.test("a task's last run is not a change of the task", async () => {
+  const next = structuredClone(snapshot);
+  next.cron[0].runtime.lastRunStatus = "ok";
+  const data = dataOf(
+    await viewerPage([
+      version("2026-11-02T10-20-00Z", next),
+      version("2026-11-02T10-15-00Z", snapshot),
+    ]),
+  );
+  const { delta } = viewOf(data, data.versions[0], "schedules");
+  assert.deepEqual([delta.changed, delta.count], [[], 0]);
+  assert.equal(data.versions[0].inputs, "same");
+});
+
 Deno.test("a version whose snapshot this viewer cannot read keeps its files", async () => {
   const old = version("2026-11-02T10-15-00Z", snapshot);
   old.files["snapshot.json"] = JSON.stringify({

@@ -43,7 +43,9 @@ import { groupFiles } from "../../../domain/export/file-groups.ts";
 import type { VersionEntry } from "../../../domain/export/versions.ts";
 import {
   declarations,
+  type DiagramView,
   diagramViews,
+  RUNTIME_ATTRIBUTES,
   type SysmlRef,
 } from "../../../domain/model/views.ts";
 
@@ -70,6 +72,8 @@ export function createViewer(
       string,
       { a: [string, string][]; s: [string, number, number][] }
     >;
+    procedures?: DiagramView["procedures"];
+    authority?: DiagramView["authority"];
   }
 
   function snapshotOf(files: Record<string, string>) {
@@ -210,9 +214,11 @@ export function createViewer(
 
   /** The attributes the inference fills in (`inferred…`) do not mark the
    * element that shows them: the version's inputs verdict says the inference
-   * changed. */
+   * changed. Runtime state (a task's last run) is not configuration either. */
   const configured = (attributes: [string, string][]) =>
-    attributes.filter(([name]) => !name.startsWith("inferred"));
+    attributes.filter(([name]) =>
+      !name.startsWith("inferred") && !RUNTIME_ATTRIBUTES.includes(name)
+    );
 
   /** A version's views, laid out, each element located in the version's own
    * SysML files; null when this viewer cannot read its snapshot (an older
@@ -284,6 +290,8 @@ export function createViewer(
           scene: scenes.get(key) ?? null,
           table: tableData(view),
           elements,
+          ...(view.procedures ? { procedures: view.procedures } : {}),
+          ...(view.authority ? { authority: view.authority } : {}),
         },
         signatures: new Map(
           Object.entries(elements).map(([id, e]) => [id, {
