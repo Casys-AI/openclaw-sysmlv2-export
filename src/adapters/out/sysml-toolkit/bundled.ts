@@ -1,20 +1,20 @@
 import { createHash } from "node:crypto";
 import { lstat, readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ExportError } from "../../../infrastructure/error.ts";
 import { TOOLKIT_FILES, TOOLKIT_VERSION } from "../../sysml-toolkit-pin.ts";
 
 /** The Toolkit ships in the plugin package, next to the bundle (`toolkit/`);
  * a source checkout reads the `plugin/toolkit/` that `plugin:build` writes. */
-export const bundledToolkit = fileURLToPath(
+export const bundledToolkit = resolve(fileURLToPath(
   new URL(
     import.meta.url.endsWith(".ts")
       ? "../../../../plugin/toolkit/"
       : "./toolkit/",
     import.meta.url,
   ),
-);
+));
 
 export interface ToolkitStatus {
   version: string;
