@@ -35,6 +35,47 @@ package. Sources under `src/` or `sysml/` describe this adapter's limits or
 projection choices. The complete contract is in
 [SPEC §7](../SPEC.md#7-findings).
 
+## Model rules (APE)
+
+With the Toolkit installed, every export also checks APE good practices on the
+graph of the exported SysML model, with SPARQL on Oxigraph. These rules follow
+links between agents, which the configuration checks below do not. Their codes
+start with `APE_`. Rules and views are in [`rules/ape/`](../rules/ape/).
+
+### `APE_GRANT_WIDENS_PARENT`
+
+Severity: warning. Subject: agent. Pattern: S3, attenuated redelegation.
+
+The agent has no unapproved host exec itself, but can delegate, directly or
+through other agents, to an agent whose built-in exec runs on the host with
+effective security `full` and ask `off`. A sandboxed agent can then reach the
+host through delegation. The finding names the agents it reaches.
+
+Review or recovery: Attenuate the delegate's grants, require approval on the
+host, or remove the delegation.
+
+### `APE_LINK_CYCLE`
+
+Severity: warning. Subject: agent. Pattern: 4.2, centralized supervision.
+
+The agent is in a directed delegation cycle with at least one other agent; the
+finding names them. Delegating to oneself alone is not a cycle.
+
+Review or recovery: Make the cycle's termination and supervision explicit, or
+keep delegation flowing one way.
+
+### `APE_UNREACHABLE_OPERATOR`
+
+Severity: warning. Subject: agent. Pattern: 4.2, centralized supervision.
+
+Nothing in the model reaches the agent: no channel binding, no scheduled task or
+heartbeat it owns or targets, no hook, no delegation from another agent and no
+enabled agent-to-agent target. This is a structural check, not proof that the
+agent never runs.
+
+Review or recovery: Model the agent's intended entry or supervision path, or
+remove the agent.
+
 ## Configuration checks
 
 ### `PLAINTEXT_CREDENTIAL`

@@ -5,6 +5,20 @@
 The snapshot schema stays `openclaw-snapshot/5`, with one optional field,
 `plaintextCredentialPaths`; the inference contract is unchanged.
 
+- **APE rules on the model graph.** With the Toolkit installed, every export
+  checks APE good practices on the graph of its SysML model: the Toolkit's
+  element graph, projected with Assembly's RDF vocabulary, is queried with
+  SPARQL on Oxigraph in WebAssembly. Three rules: an agent that can reach
+  unapproved host exec through delegation, delegation cycles, unreachable
+  agents; each names the agents involved. Views and rules are SPARQL files under
+  `rules/ape/`. Findings start with `APE_` and join the others.
+- **Agent links are SysML references.** Delegation is a `DelegationRule`
+  connection between two agents, with a `DelegationPolicy` keeping the literal
+  targets and wildcards; messaging targets, hook targets and scheduled-task
+  targets refer to agents. Unknown targets stay explicit (`unresolvedTarget`,
+  `unresolvedTargets`). Consumers of the former String attributes must follow
+  the new form.
+
 - **Diagnostics.** Every export runs the doctor and writes `findings.json`; the
   summary, the reply and `versions.json` count its errors, warnings and notes.
   In the viewer, the Doctor panel lists the findings and the elements concerned

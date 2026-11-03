@@ -78,6 +78,12 @@ The summary and `versions.json` count them. In the viewer, the Doctor panel of
 the sidebar lists them, and the elements concerned carry a mark. Findings never
 block an export or change the instance.
 
+With the Toolkit installed, the export also checks APE good practices on the
+graph of the model itself, with SPARQL on Oxigraph: an agent that can reach
+unapproved host exec through delegation, delegation cycles, agents that nothing
+reaches. These rules follow links between agents; the configuration checks do
+not.
+
 ![The Doctor panel: each finding with the element it concerns and its fix](docs/screenshots/doctor.png)
 
 [Diagnostics](docs/diagnostics.md) lists every code, its source in OpenClaw and

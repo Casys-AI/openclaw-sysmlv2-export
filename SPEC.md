@@ -300,10 +300,10 @@ package holds the instance-wide entries.
 
 ### 5.5 Cases
 
-| OpenClaw  | SysML                                                                                                                                                                                                                             |
-| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Cron job  | `ScheduledCase` with envelope `deterministic`, its owner agent when it exists, and a schedule: `CronSchedule` (expression, time zone), `MillisecondEvery` for `every`, or `AtSchedule` (instant). Prompt as an `InstructionFile`. |
-| Heartbeat | `ScheduledCase` with envelope `reassessment`, its agent as owner, and a `MillisecondEvery` schedule. Prompt as an `InstructionFile`.                                                                                              |
+| OpenClaw  | SysML                                                                                                                                                                                                                                                                                                   |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cron job  | `ScheduledCase` with envelope `deterministic`, its owner and target agent as references when the agent exists (else the literal `unresolvedTarget`), and a schedule: `CronSchedule` (expression, time zone), `MillisecondEvery` for `every`, or `AtSchedule` (instant). Prompt as an `InstructionFile`. |
+| Heartbeat | `ScheduledCase` with envelope `reassessment`, its agent as owner and target, and a `MillisecondEvery` schedule. Prompt as an `InstructionFile`.                                                                                                                                                         |
 
 `MillisecondEvery` keeps the exact interval in `durationMs`; whole minutes also
 set the inherited `count` and `unit = minute`, since
@@ -311,11 +311,11 @@ set the inherited `count` and `unit = minute`, since
 
 ### 5.6 Entries
 
-| OpenClaw        | SysML                                                                                       |
-| --------------- | ------------------------------------------------------------------------------------------- |
-| Channel account | `ChannelAccount` (channel, account id, enabled, DM and group policies).                     |
-| Binding         | `AgentBinding` connection agent ↔ account with the peer kind, when both ends exist.         |
-| Hook mapping    | `ExternalTrigger` (name, target agent, delivery channel), template as an `InstructionFile`. |
+| OpenClaw        | SysML                                                                                                                               |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| Channel account | `ChannelAccount` (channel, account id, enabled, DM and group policies).                                                             |
+| Binding         | `AgentBinding` connection agent ↔ account with the peer kind, when both ends exist.                                                 |
+| Hook mapping    | `ExternalTrigger` (name, target agent as a reference, else `unresolvedTarget`, delivery channel), template as an `InstructionFile`. |
 
 ### 5.7 Authority
 
@@ -328,8 +328,8 @@ grants, approvals, delegation and messaging are in the `Authority` package.
 | `tools.exec`, `tools.elevated`, approvals | `ExecutionPosture` per agent: host, configured mode/security/ask, approval security/ask, effective security/ask, elevated flag and channel count, safe bins and profile names, trusted-directory and path-prepend counts, strict inline evaluation. |
 | Sandbox                                   | `Sandbox` per agent: mode, scope, workspace access, image, read-only root, network, memory, CPUs, bind count and modes, environment names.                                                                                                          |
 | Host approval defaults and `*` allowlist  | One `ExecApprovals` (default security/ask, ask fallback, auto-allow skills, wildcard commands), only when stored.                                                                                                                                   |
-| `subagents.allowAgents`                   | `DelegationRule` (from, to).                                                                                                                                                                                                                        |
-| `tools.agentToAgent`                      | `MessagingPolicy` (enabled, allowed targets).                                                                                                                                                                                                       |
+| `subagents.allowAgents`                   | Per agent, a `DelegationPolicy` (the agent as a reference, literal targets, wildcard flag, unresolved targets), and one `DelegationRule` connection agent → agent for each known target.                                                            |
+| `tools.agentToAgent`                      | `MessagingPolicy` (enabled, literal targets, wildcard flag, unresolved targets, and a reference to each known target agent).                                                                                                                        |
 
 For 2026.10, agent-to-agent access is enabled unless explicitly false
 (`dist/session-visibility-c_9BAYYO.mjs`, `createAgentToAgentPolicy`); the legacy
@@ -603,7 +603,8 @@ summary and each new `versions.json` entry have
 `findings: {error, warning, info}` counts, including zeroes. Older entries
 without counts remain valid. Chat and tool replies render nonzero counts as
 errors, warnings and notes. The viewer payload instead uses
-`findings: Finding[]` recomputed from each readable snapshot, or `null` if the
+`findings: Finding[]` recomputed from each readable snapshot, plus that
+version's APE findings read from its `findings.json` (§10.6), or `null` if the
 snapshot cannot be read; `[]` means a check ran with no findings.
 
 ## 8. Diff
@@ -833,6 +834,23 @@ Missing Toolkit skips validation with `TOOLKIT_NOT_INSTALLED` and recovery
 exactly `openclaw sysmlv2-toolkit install`. Compilation errors, tampering and
 timeouts fail validation without discarding the export. These diagnostics are
 informational to the export result.
+
+**APE rules on the model graph.** After a passing check, the same worker takes
+the compiled element graph (`toFullJson`), projects a subset of it to RDF with
+Assembly's vocabulary (`urn:ase:vocab:`, one named graph per build), loads it in
+batches into Oxigraph 0.5.12 (WebAssembly), materializes five SPARQL `CONSTRUCT`
+views and runs the rules. Views, rules and the derived vocabulary
+(`urn:ase:ape:v1:`) are data under `rules/ape/`, documented in
+[`rules/ape/README.md`](rules/ape/README.md); queries are SPARQL 1.1 only. Each
+rule file starts with six header fields (`code`, `severity`, APE `pattern`,
+`finding`, `context`, `recovery`) and returns `?agentId`, plus `?relatedAgentId`
+when its context names `{related}`. Findings are prefixed `APE_`, keep `pattern`
+and `finding`, and join the doctor's in `findings.json` and its counts.
+`validation.json` adds `ape`: `{status, findings, metrics}`, where `status` is
+`completed`, `skipped` (no Toolkit or a failed check) or `failed`; a failure
+carries `code`, `stage` (projection, loading, view or rule), `file` and `cause`,
+separate from the Toolkit diagnostics. The rules read only the compiled model,
+never the snapshot.
 
 ### 10.7 Deno CLI
 
