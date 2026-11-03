@@ -146,7 +146,7 @@ Deno.test("admission rejects forbidden AST constructs at every nesting depth", (
     "SELECT ?this WHERE {} LIMIT 0",
     "SELECT ?this WHERE { { SELECT ?this WHERE {} OFFSET 1 } }",
     "SELECT ?this (COUNT(?v) AS ?count) WHERE { ?this <urn:p> ?v } GROUP BY ?this",
-    "SELECT ?this WHERE {} GROUP BY ?this HAVING (true)",
+    "SELECT ?this WHERE { ?this <urn:p> ?v } GROUP BY ?this HAVING (COUNT(?v) > 0)",
     "SELECT ?this WHERE { BIND(RAND() AS ?v) }",
     "SELECT ?this WHERE { BIND(UUID() AS ?v) }",
     "SELECT ?this WHERE { BIND(STRUUID() AS ?v) }",
@@ -164,6 +164,16 @@ Deno.test("admission rejects forbidden AST constructs at every nesting depth", (
     assert(error.message.includes(error.cause.message));
     return true;
   });
+});
+
+Deno.test("admission allows GROUP BY and HAVING without aggregates", () => {
+  for (
+    const source of [
+      "SELECT ?this WHERE {} GROUP BY ?this",
+      "SELECT ?this WHERE {} HAVING (true)",
+      "SELECT ?this WHERE {} GROUP BY ?this HAVING (true)",
+    ]
+  ) assert.doesNotThrow(() => admitSelect(source));
 });
 
 Deno.test("unrelated VALUES is allowed under SHACL 1.2 despite legacy unsupported002", async () => {
@@ -187,7 +197,6 @@ Deno.test("AST admission ignores forbidden words in literals, IRIs and comments"
       FILTER (?this = <urn:SERVICE:MINUS>)
     } ORDER BY ?this
   `);
-  assert.deepEqual(compiled.projectedVariables, ["this", "text"]);
   assert.equal(
     rows(new Store(), bindFocus(compiled, ["urn:SERVICE:MINUS"])).length,
     1,
@@ -225,13 +234,6 @@ Deno.test("focus serialization rejects injection and unsupported RDF term kinds"
     () => admitSelect("SELECT ?this WHERE { ?this <urn:x\\u003E> ?v }"),
     ShaclQueryError,
   );
-  assert.throws(
-    () =>
-      bindFocus({ queryType: "SELECT", projectedVariables: ["this"] }, [
-        "urn:a",
-      ]),
-    ShaclQueryError,
-  );
 });
 
 Deno.test("global CONSTRUCT admission parses once without prebinding or projection rules", async () => {
@@ -253,6 +255,7 @@ Deno.test("global CONSTRUCT admission parses once without prebinding or projecti
       "CONSTRUCT { ?s ?p ?o } FROM <urn:data> WHERE { ?s ?p ?o }",
       "CONSTRUCT { ?s ?p ?o } WHERE { SERVICE <https://example.com/> { ?s ?p ?o } }",
       "CONSTRUCT { <urn:a> <urn:p> ?v } WHERE { BIND(RAND() AS ?v) }",
+      "CONSTRUCT { <urn:a> <urn:p> ?v } WHERE { BIND(<urn:custom>(1) AS ?v) }",
       "CONSTRUCT { _:created <urn:p> ?v } WHERE { VALUES ?v { 1 } }",
       "CONSTRUCT { <urn:a> <urn:p> [] } WHERE {}",
       "CONSTRUCT { <urn:a> <urn:p> [ <urn:q> 1 ] } WHERE {}",

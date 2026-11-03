@@ -26,12 +26,7 @@ export class ShaclQueryError extends Error {
   }
 }
 
-export interface AdmittedSelect {
-  readonly queryType: "SELECT";
-  readonly projectedVariables: readonly string[];
-}
-
-const admitted = new WeakMap<AdmittedSelect, SelectQuery>();
+export type AdmittedSelect = SelectQuery;
 const nondeterministic = new Set(["rand", "uuid", "struuid", "now", "bnode"]);
 
 function unsupported(message: string): never {
@@ -102,9 +97,6 @@ function checkAst(value: unknown, focusBound: boolean): void {
     if (query.limit !== undefined || query.offset !== undefined) {
       unsupported("LIMIT and OFFSET are unsupported in batched constraints");
     }
-    if (query.group || query.having) {
-      unsupported("GROUP BY and HAVING are unsupported in batched constraints");
-    }
     if (query.values) checkValues(query.values, focusBound);
     for (const iri of Object.values(query.prefixes ?? {})) {
       if (!safeIri(iri)) unsupported("Unsafe or non-absolute prefix IRI");
@@ -128,7 +120,7 @@ function checkAst(value: unknown, focusBound: boolean): void {
   }
   if (node.type === "aggregate") unsupported("Aggregates are unsupported");
   if (node.type === "functionCall") {
-    unsupported("IRI function calls are unsupported in batched constraints");
+    unsupported("IRI function calls are unsupported");
   }
   if (
     node.type === "operation" &&
@@ -172,14 +164,7 @@ export function admitSelect(
     unsupported("Expected a SELECT query");
   }
   checkAst(parsed, true);
-  const result: AdmittedSelect = Object.freeze({
-    queryType: "SELECT",
-    projectedVariables: Object.freeze(
-      parsed.variables.map((v) => "variable" in v ? v.variable.value : v.value),
-    ),
-  });
-  admitted.set(result, parsed);
-  return result;
+  return parsed;
 }
 
 /** Admit and normalize a global run-once view; no focus prebinding is applied. */
@@ -257,13 +242,6 @@ export function bindFocus(
   compiled: AdmittedSelect,
   focusIris: readonly string[],
 ): string {
-  const ast = admitted.get(compiled);
-  if (!ast) {
-    throw new ShaclQueryError(
-      "SHACL_QUERY_UNSUPPORTED",
-      "Unrecognized admitted query",
-    );
-  }
   const values = [...new Set(focusIris)].map((value) => {
     if (typeof value !== "string" || !safeIri(value)) {
       throw new ShaclQueryError(
@@ -279,9 +257,9 @@ export function bindFocus(
     };
     return { "?this": term };
   });
-  // The admitted AST remains private and unchanged across batches. RDF/JS term
+  // The admitted AST remains unchanged across batches. RDF/JS term
   // prototypes are not required by the generator; undefined VALUES survive.
-  const query = structuredClone(ast);
+  const query = structuredClone(compiled);
   bindQuery(query, { type: "values", values });
   return new Sparql.Generator().stringify(query);
 }
