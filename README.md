@@ -134,10 +134,21 @@ and its diagrams are laid out when the export runs. Pick a version, then a view.
 
 The icon rail on the right opens three panels in a sidebar that you can collapse
 and resize. The Inspector shows the attributes and exact SysML text of the
-element, row or cell you click. Changes lists what was added, changed and
-removed since the previous version, each changed value before and after, and the
-diagram and table highlight it. Doctor lists the findings. The Files and Changes
-tabs show each file and its diff against the previous version.
+element, row or cell you click, and an agent's other views. Changes lists what
+was added, changed and removed since the previous version, each changed value
+before and after, and the diagram and table mark it in blue. Doctor lists the
+findings. An entry of Changes or Doctor selects and frames its element without
+leaving the panel. The Files and Changes tabs show each file and its diff
+against the previous version.
+
+Drag or scroll to pan, pinch or Command/Control and scroll to zoom. F, Enter or
+the Fit selection button frame the selected element; a step frames its
+procedure. Zoomed out, a Behaviour view shows each procedure as a titled frame,
+and a click frames it. The table under a diagram folds away to give the diagram
+the room. The Overview's tiles open what they count, and its Doctor tile the
+Doctor. The address names the version, the view and the selected element (or the
+file and lines shown): Back returns to the place you left, a link reopens it,
+and the inspector's Copy link copies it.
 
 ![Overview: one row per agent under the instance's totals](docs/screenshots/overview.png)
 

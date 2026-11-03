@@ -772,13 +772,15 @@ unified diff of each file since the previous version.
 - **Layout at export time.** `elkjs` 0.9.3 (pinned, layered algorithm,
   deterministic options) places System, Scheduled tasks and Behaviour's
   procedures; many procedures go into as many even rows (ELK partitions, the
-  parties below) as make the view show largest on a 16:9 screen. Text is
-  measured with Helvetica's metrics, the font the diagrams use (or its metric
-  twins Arial and Liberation Sans); rows that do not fit end with an ellipsis,
-  and the page squeezes any text that still overflows. Tables are shaped at
-  export time too: rows in order with their headers, matrix cells by row and
-  column. The page draws SVG and renders HTML tables, with sorting, a filter and
-  folding but no layout.
+  parties below) as make the view show largest on a 16:9 screen; Scheduled tasks
+  puts its cases above the agent they wake and packs each agent's cluster into
+  rows of aspect 3.5, the strip the week table leaves. Text is measured with
+  Helvetica's metrics, the font the diagrams use (or its metric twins Arial and
+  Liberation Sans); rows that do not fit end with an ellipsis, and the page
+  squeezes any text that still overflows. Tables are shaped at export time too:
+  rows in order with their headers, matrix cells by row and column. The page
+  draws SVG and renders HTML tables, with sorting, a filter and folding but no
+  layout.
 - **Tables.** A view lists the elements it shows as a table instead of drawing
   them (a matrix's columns, rows and cells; an element table's rows with some
   attributes as columns, filtered by a facet such as a rule's kind or where an
@@ -797,6 +799,22 @@ unified diff of each file since the previous version.
   its tool's row as changed. A view the previous version lacked is new.
 - **Unreadable snapshots.** A version whose snapshot fails this viewer's schema
   check keeps its files and diffs, without diagrams.
+- **Address.** `#<version>/<view>[/<element>]`,
+  `#<version>/files[/<file>[:<from>-<to>]]` or `#<version>/changes`, each
+  segment URI-encoded; a segment that does not decode names nothing. Opening
+  another version, view, tab or file adds a history entry; a selection, the
+  first render and a rewritten address replace it. A version keeps the view
+  asked for: one without it shows its first view. What an address names and the
+  page lacks is a note with a code, `VERSION_NOT_FOUND`, `VIEW_NOT_FOUND` (with
+  the nearest version that has the view) or `ELEMENT_NOT_FOUND`, its sentence in
+  the tooltip.
+- **Fit and framing.** Fit shows the whole scene, or the width of a scene taller
+  than wide whose whole would read under 0.5; zooming out stops at 0.15 or at
+  Fit, whichever is smaller. Framing an element fits it in the room the sidebar
+  leaves, at most 1:1, a step its procedure, a frame taller than the room from
+  its top at 0.75. Under 0.4 (back above 0.46) a view with procedure frames
+  hides their steps and all diagram text and labels each procedure and party at
+  screen size.
 - **Determinism and size.** Same versions, same bytes. File texts and view
   payloads shared by several versions are stored once, and the embedded data
   cannot close its script element.

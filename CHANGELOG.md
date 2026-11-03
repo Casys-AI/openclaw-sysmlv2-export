@@ -1,5 +1,33 @@
 # Changelog
 
+## Unreleased
+
+- **Viewer: navigation.** Back and Forward follow the versions, views, tabs and
+  files opened; the address names the selected element or the lines shown in
+  Files, and the inspector copies it. An address to a version, view or element
+  the page lacks shows a coded note (`VERSION_NOT_FOUND`, `VIEW_NOT_FOUND`,
+  `ELEMENT_NOT_FOUND`). Fixed: zoom out could zoom in after Fit, a hash that
+  does not decode left the page empty, and another version lost the view asked
+  for.
+- **Viewer: reading at scale.** Fit uses the space under the toolbar, and
+  Scheduled tasks is laid out for the strip above its week (Fit 0.18 to 0.41 on
+  a real instance). F, Enter or Fit selection frame an element in the room the
+  sidebar leaves; a click no longer leaves its node under the sidebar. Zoomed
+  out, Behaviour shows titled procedures. Drag pans from anywhere, two fingers
+  pinch, and the table under a diagram folds away.
+- **Viewer: marks.** Changes have their own blue, apart from the Doctor's amber;
+  the selection has a halo that keeps the change colour; hovering marks an
+  element and its edges without dimming the rest; a Behaviour selection dims
+  only the other procedures.
+- **Viewer: panels and Overview.** Doctor and Changes entries select and frame
+  their element without leaving the panel, and each panel keeps its scroll. An
+  agent's inspector links its other views. The Overview's tiles open what they
+  count, with a Doctor tile first; severity marks name their codes in a tooltip.
+- **Viewer: less text, more access.** The gestures' hint goes after first use,
+  the legend folds, and two notes became tooltips. Every button shows its focus
+  ring, focus survives re-renders, diagram elements and matrix cells have full
+  accessible names, and a live region reports selections.
+
 ## 0.2.0 — 2026-11-03
 
 The snapshot schema stays `openclaw-snapshot/5`, with one optional field,
