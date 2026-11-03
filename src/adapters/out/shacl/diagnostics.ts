@@ -15,6 +15,7 @@ import {
   SHAPES_GRAPH,
   validateShacl,
 } from "./engine.ts";
+import { APE_SHAPE, SHAPE_FILES, shapeUrl } from "./shape-files.ts";
 import type { Finding } from "../../../domain/model/snapshot.ts";
 
 import type {
@@ -77,8 +78,6 @@ export class ApeStageError extends Error {
 }
 
 const APE = "urn:ase:ape:v1:";
-const FILE = "rules/ape/ape.ttl";
-const FILES = [FILE, "rules/openclaw/openclaw.ttl"];
 export interface ApeAnnotation {
   code: string;
   pattern?: string;
@@ -174,7 +173,7 @@ function annotations(
 function stageError(
   error: unknown,
   fallback: ApeStage = "rule",
-  file = FILE,
+  file = APE_SHAPE,
 ): ApeStageError {
   return error instanceof ApeStageError
     ? error
@@ -188,13 +187,9 @@ export async function readApeProgram(
   store: Store,
 ): Promise<ApeProgram> {
   const sourceFiles = new Map<string, string>();
-  for (const file of FILES) {
+  for (const file of SHAPE_FILES) {
     try {
-      const url = new URL(
-        import.meta.url.endsWith(".ts") ? `../../../../${file}` : `./${file}`,
-        import.meta.url,
-      );
-      store.load(await readFile(url, "utf8"), {
+      store.load(await readFile(shapeUrl(file), "utf8"), {
         format: "text/turtle",
         to_graph_name: namedNode(SHAPES_GRAPH),
       });
@@ -378,7 +373,8 @@ export function evaluateApeRules(store: Store, program: ApeProgram) {
     throw stageError(
       error,
       "rule",
-      program.sourceFiles?.get(activeConstraint ?? "") ?? program.file ?? FILE,
+      program.sourceFiles?.get(activeConstraint ?? "") ?? program.file ??
+        APE_SHAPE,
     );
   }
 }
