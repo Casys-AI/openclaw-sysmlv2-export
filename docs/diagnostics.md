@@ -22,19 +22,19 @@ Review the context before changing settings.
 
 The export summary and `versions.json` store `findings: {error, warning, info}`
 counts. The viewer's Doctor panel displays the findings available for each
-version; model-check status distinguishes skipped checks from an empty result.
+version and says whether the checks ran.
 
 ### Whether the checks ran
 
 An empty list of findings is clean only when the checks ran. The viewer reads
 `validation.json` and gives each version one of four states:
 
-| State        | Meaning                                                                                                      |
-| ------------ | ------------------------------------------------------------------------------------------------------------ |
-| `verified`   | The APE analysis completed (or, in an archive older than it, the findings were recorded).                    |
-| `not-run`    | It was skipped: only versions exported before the Toolkit shipped with the plugin (`TOOLKIT_NOT_INSTALLED`). |
-| `failed`     | It started and failed (`APE_TIMEOUT`, `APE_WORKER_FAILED`…).                                                 |
-| `unrecorded` | The archive holds no findings, or a `findings.json` the viewer cannot read.                                  |
+| State        | Meaning                                                                                                                                                     |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `verified`   | The APE analysis completed (or, in an archive older than it, the findings were recorded).                                                                   |
+| `not-run`    | It was skipped; `code` says why: `APE_INVALID_MODEL`, `TOOLKIT_INTEGRITY`, or `TOOLKIT_NOT_INSTALLED` in a version exported before the Toolkit was bundled. |
+| `failed`     | It started and failed (`APE_TIMEOUT`, `APE_WORKER_FAILED`…).                                                                                                |
+| `unrecorded` | The archive holds no findings, or a `findings.json` the viewer cannot read.                                                                                 |
 
 A version also gives the number of failed inferences and, when the analysis
 completed, how many rules ran (`ape.metrics.queries`).

@@ -138,16 +138,20 @@ and its diagrams are laid out when the export runs. Pick a version, then a view.
 - **Tools**: a SysML allocation matrix of the tool catalog, by origin and
   provider, against the agents; built-in tools sit in OpenClaw's capability
   groups for the recorded version. Each cell is a grant, on the host, in the
-  sandbox or both. Groups fold, and a filter narrows the tools.
+  sandbox or both. Groups fold, and a filter or the number of agents that hold a
+  tool (all, shared, one, none) narrows the tools; a group over a tool granted
+  on the host is marked.
 - **Scheduled tasks**: cron jobs and heartbeats linked to the agent they wake,
-  above a week strip of the hours each one fires in; a task shows its model,
-  delivery and last run in the inspector.
+  above a week strip of the hours each one fires in, which selects its task; a
+  task shows its model, delivery and last run in the inspector.
 - **Behaviour**, with inference: an agent's proposed procedures as action flows,
   with decisions, hand-offs and escalations, and its rules in a requirements
   table with the lines they come from, read beside what the agent's
-  configuration lets it do. An exec rule that the configuration does not enforce
-  raises `PROSE_NOT_ENFORCED`. A new export reuses an agent's inference when
-  what the model is sent has not changed.
+  configuration lets it do: a chip says where exec runs and what the agent may
+  send through. The table switches between rules and procedures (a procedure's
+  row frames it). An exec rule that the configuration does not enforce raises
+  `PROSE_NOT_ENFORCED` and is tagged. A new export reuses an agent's inference
+  when what the model is sent has not changed.
 
 The header says what went into the version against the previous one: its
 configuration changed, only its inference, the same configuration (with how many
@@ -170,15 +174,9 @@ limits folded; against the last checked version it says what is new and what is
 resolved. A finding about a delegation cycle opens Reach with the cycle lit. An
 entry of Changes or Doctor selects and frames its element without leaving the
 panel. Severity has a shape as well as a colour: a diamond for an error, a
-triangle for a warning.
-
-The Changes tab lists, per element, what changed in its configuration, then the
-files by group with their diffs. In Tools, the matrix filters tools by how many
-agents hold them, and marks the groups under which a tool runs on the host. In
-Scheduled tasks, a task's strip selects it. In Behaviour, a chip says where exec
-runs and what the agent may send through, the table switches between rules and
-procedures (a procedure's row frames it), and a rule that the configuration does
-not enforce is tagged.
+triangle for a warning. The Files tab shows each file; the Changes tab lists,
+per element, what changed in its configuration, then the files by group with
+their diffs against the previous version.
 
 Drag or scroll to pan, pinch or Command/Control and scroll to zoom. F, Enter or
 the Fit selection button frame the selected element; a step frames its
