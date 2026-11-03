@@ -283,6 +283,7 @@ svg.md-lod .md-edge:not(.hot) { opacity: .3; }
 .mx-type { color: var(--muted); }
 .mx-fold { all: unset; cursor: pointer; display: inline-block; width: 14px; margin-left: -16px; color: var(--muted); text-align: center; }
 .mx-count { font-size: 10.5px; color: var(--muted); }
+.g.mx-host { width: 7px; height: 7px; margin-left: 8px; border-width: 1px; vertical-align: 1px; }
 .mx tr.muted > th { color: var(--muted); }
 .mx tr.dashed .mx-name { color: var(--muted); border-bottom: 1px dashed var(--line-strong); }
 .mx tbody tr:hover > th, .mx tbody tr:hover > td, .mx .hc { background-image: linear-gradient(var(--hover), var(--hover)); }
@@ -1641,6 +1642,17 @@ function renderMatrix(box, t, mark) {
   const groups = t.rows.filter((r) => r.shape !== "tool").map((r) => r.id);
   const bar = el("div", "tb-bar");
   bar.append(input, button("Expand all", () => { state.folded.clear(); rows(); }), button("Collapse all", () => { groups.forEach((g) => state.folded.add(g)); rows(); }));
+  // Tools by how many agents hold them (tables.ts's held); a second click clears.
+  const held = el("span", "tb-key", "held by");
+  bar.append(held, ...["all", "shared", "one", "none"].map((h) => {
+    const n = t.rows.filter((r) => r.held === h).length;
+    const b = button(h + " " + n, () => keepFocus(() => { state.facet = state.facet === h ? null : h; rows(); }));
+    b.dataset.key = "held:" + h;
+    b.setAttribute("aria-pressed", String(state.facet === h));
+    b.title = { all: "Tools every agent holds", shared: "Tools some agents hold", one: "Tools one agent holds", none: "Declared tools no agent holds" }[h];
+    b.disabled = !n;
+    return b;
+  }));
   for (const [g, text] of [["h", "host"], ["s", "sandbox"], ["b", "both"]]) {
     const k = el("span", "tb-key");
     k.append(glyph(g), text);
@@ -1664,12 +1676,15 @@ function renderMatrix(box, t, mark) {
   thead.append(head);
   table.append(thead, tbody);
   const rows = () => {
-    const q = state.filter.trim().toLowerCase();
-    const hit = t.rows.map((r) => !q || [r, ...up(r).map((a) => t.rows[a])].some((x) => x.name.toLowerCase().includes(q)));
+    const q = state.filter.trim().toLowerCase(), h = state.facet;
+    for (const b of bar.querySelectorAll("[data-key^='held:']")) b.setAttribute("aria-pressed", String(b.dataset.key === "held:" + h));
+    // A filter or a holders facet shows the matching tools with their groups, unfolded.
+    const hit = t.rows.map((r) => (!q || [r, ...up(r).map((a) => t.rows[a])].some((x) => x.name.toLowerCase().includes(q))) &&
+      (!h || r.held === h));
     const show = hit.slice();
     t.rows.forEach((r, i) => { if (hit[i]) for (const a of up(r)) show[a] = true; });
     tbody.replaceChildren(...t.rows.flatMap((r, i) => {
-      if (!show[i] || !q && up(r).some((a) => state.folded.has(t.rows[a].id))) return [];
+      if (!show[i] || !q && !h && up(r).some((a) => state.folded.has(t.rows[a].id))) return [];
       const tr = el("tr", (r.shape === "tool" ? "mx-tool" : "mx-group") + " d" + r.depth + (r.muted ? " muted" : "") + (r.dashed ? " dashed" : "") + mark(r.id));
       const th = el("th");
       th.dataset.id = r.id;
@@ -1685,6 +1700,12 @@ function renderMatrix(box, t, mark) {
       }
       th.append(el("span", "mx-name", r.name));
       if (r.type && r.shape !== "tool") th.append(el("span", "mx-type", r.type));
+      if (r.host) {
+        const host = glyph("h");
+        host.classList.add("mx-host");
+        host.title = "Granted on the host to some agent";
+        th.append(host);
+      }
       tr.append(th);
       t.columns.forEach((c, j) => {
         const td = el("td");
