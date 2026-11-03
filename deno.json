@@ -17,9 +17,6 @@
   },
   "fmt": {
     "exclude": [
-      ".codex-brief-ape.md",
-      ".codex-brief-ape-2.md",
-      ".codex-brief-ape-2b.md",
       "test/fixtures",
       "test/golden",
       "plugin/core.mjs",

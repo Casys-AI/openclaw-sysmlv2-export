@@ -818,7 +818,7 @@ including inferred SysML and the local `core.sysml`, `cases.sysml` and
 `skills.sysml`, using the Toolkit's standard library. The standalone Deno export
 remains the separate emitter; tests call validation on its exact output files.
 It checks installed file hashes and uses `initSync` inside
-`node:worker_threads`, with a 60-second timeout.
+`node:worker_threads`, with a 60-second compile timeout.
 
 The validation summary is `{status, errors, code?, recovery?}`, where `status`
 is `passed`, `failed` or `skipped` and `errors` is a number. `validation.json`
@@ -845,12 +845,15 @@ views and runs the rules. Views, rules and the derived vocabulary
 rule file starts with six header fields (`code`, `severity`, APE `pattern`,
 `finding`, `context`, `recovery`) and returns `?agentId`, plus `?relatedAgentId`
 when its context names `{related}`. Findings are prefixed `APE_`, keep `pattern`
-and `finding`, and join the doctor's in `findings.json` and its counts.
+and `finding`, and join the doctor's in `findings.json` and its counts. The view
+dependency order is declared by [`APE_VIEW_ORDER`](src/ape-rules.ts).
 `validation.json` adds `ape`: `{status, findings, metrics}`, where `status` is
 `completed`, `skipped` (no Toolkit or a failed check) or `failed`; a failure
 carries `code`, `stage` (projection, loading, view or rule), `file` and `cause`,
-separate from the Toolkit diagnostics. The rules read only the compiled model,
-never the snapshot.
+separate from the Toolkit diagnostics. APE has its own default 10-second
+deadline; `APE_TIMEOUT` fails APE alone and preserves the settled compile
+result. Persisted metrics contain counts, not timings. The rules read only the
+compiled model, never the snapshot.
 
 ### 10.7 Deno CLI
 

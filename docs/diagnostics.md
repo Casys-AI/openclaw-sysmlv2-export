@@ -70,8 +70,9 @@ Severity: warning. Subject: agent. Pattern: 4.2, centralized supervision.
 
 Nothing in the model reaches the agent: no channel binding, no scheduled task or
 heartbeat it owns or targets, no hook, no delegation from another agent and no
-enabled agent-to-agent target. This is a structural check, not proof that the
-agent never runs.
+enabled messaging from another agent. A policy targeting only the agent itself
+does not reach it. This is a structural check, not proof that the agent never
+runs.
 
 Review or recovery: Model the agent's intended entry or supervision path, or
 remove the agent.

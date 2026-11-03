@@ -63,10 +63,11 @@ openclaw sysmlv2-toolkit status
 
 `install` fetches the pinned public sysml-wasm 0.10.10 release (about 21 MB), or
 reads a local copy, and checks it against its pinned SHA-256. Every export is
-then compiled; the result says whether validation `passed`, `failed` or was
-`skipped`, and `validation.json` lists the diagnostics. The Toolkit is under the
-Apache License 2.0 and its standard library under the EPL 2.0; their licenses
-are installed with it.
+then compiled with a 60-second deadline. APE runs under its own default
+10-second deadline; `APE_TIMEOUT` preserves the compile result. The result says
+whether validation `passed`, `failed` or was `skipped`, and `validation.json`
+lists the diagnostics. The Toolkit is under the Apache License 2.0 and its
+standard library under the EPL 2.0; their licenses are installed with it.
 
 ## Privacy
 

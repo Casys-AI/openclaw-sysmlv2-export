@@ -110,11 +110,12 @@ and installs it under `<state dir>/sysmlv2-export-toolkit/0.10.10/`, licenses
 included. Both commands print JSON.
 
 Once the Toolkit is installed, every export is compiled, inferred behaviour
-included, in a worker stopped after 60 seconds. The run's summary and
-`versions.json` say whether validation `passed`, `failed` or was `skipped`;
-`validation.json` lists the diagnostics with their file and line. A failed
-validation never loses the export. Without the Toolkit, validation is skipped,
-with the command that installs it.
+included, with a 60-second compile deadline. APE then has its own default
+10-second deadline; an `APE_TIMEOUT` leaves the compile result intact. The run's
+summary and `versions.json` say whether validation `passed`, `failed` or was
+`skipped`; `validation.json` lists the diagnostics with their file and line. A
+failed validation never loses the export. Without the Toolkit, validation is
+skipped, with the command that installs it.
 
 ## Viewer
 
