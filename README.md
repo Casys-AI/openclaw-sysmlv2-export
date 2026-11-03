@@ -149,18 +149,37 @@ and its diagrams are laid out when the export runs. Pick a version, then a view.
   raises `PROSE_NOT_ENFORCED`. A new export reuses an agent's inference when
   what the model is sent has not changed.
 
+The header says what went into the version against the previous one: its
+configuration changed, only its inference, the same configuration (with how many
+elements the export re-emitted), or not comparable (an older format), and
+whether its checks ran; each version of the picker carries the same as a glyph
+(● changed, ○ same, ◆ re-emitted or inference only, ◇ not comparable). Only a
+real change is marked: with the same configuration nothing is, with another
+inference only Behaviour is, and an element whose SysML alone changed is marked
+fainter.
+
 The icon rail on the right opens three panels in a sidebar that you can collapse
-and resize. The Inspector shows the attributes and exact SysML text of the
-element, row or cell you click, and an agent's other views. Changes lists what
-was added, changed and removed since the previous version, each changed value
-before and after, and the diagram and table mark it in blue. Doctor lists the
-findings, grouped, and says when the model checks did not run instead of showing
-a clean list; against the last version that was checked, it also says which
-findings are new and which are resolved. Each version knows whether its
-configuration or only the export changed since the previous one, so a re-emitted
-export does not read as a change of your instance. An entry of Changes or Doctor
-selects and frames its element without leaving the panel. The Files and Changes
-tabs show each file and its diff against the previous version.
+and resize. The Inspector shows the readable name, attributes and exact SysML
+text of the element, row or cell you click, its findings worst first, and an
+agent's other views. Changes lists what was added, changed and removed since the
+previous version, each changed value before and after, marked in blue in the
+diagram and the table. Doctor says first whether the model checks ran ("Checks
+not run", "failed" or "not recorded", with what to do), then its findings, one
+entry per code: the subjects as chips (each one's own text in its tooltip, a
+link to its SysML lines), errors and warnings open, notes and the export's
+limits folded; against the last checked version it says what is new and what is
+resolved. A finding about a delegation cycle opens Reach with the cycle lit. An
+entry of Changes or Doctor selects and frames its element without leaving the
+panel. Severity has a shape as well as a colour: a diamond for an error, a
+triangle for a warning.
+
+The Changes tab lists, per element, what changed in its configuration, then the
+files by group with their diffs. In Tools, the matrix filters tools by how many
+agents hold them, and marks the groups under which a tool runs on the host. In
+Scheduled tasks, a task's strip selects it. In Behaviour, a chip says where exec
+runs and what the agent may send through, the table switches between rules and
+procedures (a procedure's row frames it), and a rule that the configuration does
+not enforce is tagged.
 
 Drag or scroll to pan, pinch or Command/Control and scroll to zoom. F, Enter or
 the Fit selection button frame the selected element; a step frames its

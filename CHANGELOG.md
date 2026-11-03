@@ -49,6 +49,16 @@ and `versions.json` entries still read.
   their element without leaving the panel, and each panel keeps its scroll. An
   agent's inspector links its other views. The Overview's tiles open what they
   count, with a Doctor tile first; severity marks name their codes in a tooltip.
+- **Viewer: what the data now says, shown.** The header and the version picker
+  say what went into each version and whether it was checked; only real changes
+  are marked, and the picker, rail and panel share one count. The Doctor says
+  when its checks did not run, groups findings by code with readable subject
+  chips, says what is new or resolved, lights a delegation cycle in Reach and
+  nests widened grants under the exec they reach; severity has a shape. The
+  Changes tab leads with per-element changes. Overview rows show figures, Tools
+  filters by holders, a week strip selects its task, Reach and hook edges are
+  drawn with a legend per view, and Behaviour lists its procedures and states
+  its authority. A diagram is laid out for the canvas its table leaves.
 - **Viewer: less text, more access.** The gestures' hint goes after first use,
   the legend folds, and two notes became tooltips. Every button shows its focus
   ring, focus survives re-renders, diagram elements and matrix cells have full
