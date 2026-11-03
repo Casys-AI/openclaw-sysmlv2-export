@@ -31,6 +31,19 @@ const version = (id: string, s: Snapshot): ViewerVersion => ({
   },
   files: Object.fromEntries([["snapshot.json", canonical(s)], ...emit(s)]),
 });
+const inference: Inference = JSON.parse(
+  await readFile(
+    new URL("../fixtures/inference.json", import.meta.url),
+    "utf8",
+  ),
+);
+/** A version of `s` that holds the inference `i` and the SysML it emits. */
+const inferred = (id: string, s: Snapshot, i: Inference): ViewerVersion => {
+  const v = version(id, s);
+  v.files["inference.json"] = JSON.stringify(i);
+  Object.assign(v.files, Object.fromEntries(emitInferred(s, i)));
+  return v;
+};
 const dataOf = (page: string) =>
   JSON.parse(
     page.match(
@@ -327,19 +340,13 @@ Deno.test("an element added since the previous version is highlighted", async ()
 });
 
 Deno.test("an Overview row changes with what it shows, not with inference", async () => {
-  const inference: Inference = JSON.parse(
-    await readFile(
-      new URL("../fixtures/inference.json", import.meta.url),
-      "utf8",
-    ),
-  );
   const next = structuredClone(snapshot);
   next.accounts.find((a) => a.id === "telegram:lead")!.enabled = false;
-  const later = version("2026-11-02T10-20-00Z", next);
-  later.files["inference.json"] = JSON.stringify(inference);
-  Object.assign(later.files, Object.fromEntries(emitInferred(next, inference)));
   const data = dataOf(
-    await viewerPage([later, version("2026-11-02T10-15-00Z", snapshot)]),
+    await viewerPage([
+      inferred("2026-11-02T10-20-00Z", next, inference),
+      version("2026-11-02T10-15-00Z", snapshot),
+    ]),
   );
   const { delta } = viewOf(data, data.versions[0], "overview");
   // The lead's row and the instance's totals show the disabled account.
@@ -351,20 +358,8 @@ Deno.test("an Overview row changes with what it shows, not with inference", asyn
 });
 
 Deno.test("a diagram is laid out again when its table has another number of rows", async () => {
-  const inference: Inference = JSON.parse(
-    await readFile(
-      new URL("../fixtures/inference.json", import.meta.url),
-      "utf8",
-    ),
-  );
   const fewer = structuredClone(inference);
   fewer.agents[0].rules = fewer.agents[0].rules.slice(0, 1);
-  const inferred = (id: string, i: Inference) => {
-    const v = version(id, snapshot);
-    v.files["inference.json"] = JSON.stringify(i);
-    Object.assign(v.files, Object.fromEntries(emitInferred(snapshot, i)));
-    return v;
-  };
   const calls: [string, number][] = [];
   const { viewerPage } = createViewer({
     layoutView: (view, rows) => {
@@ -377,8 +372,8 @@ Deno.test("a diagram is laid out again when its table has another number of rows
     renderPage,
   });
   await viewerPage([
-    inferred("2026-11-02T10-20-00Z", inference),
-    inferred("2026-11-02T10-15-00Z", fewer),
+    inferred("2026-11-02T10-20-00Z", snapshot, inference),
+    inferred("2026-11-02T10-15-00Z", snapshot, fewer),
   ]);
   const id = `behaviour:${inference.agents[0].agentId}`;
   assert.deepEqual(calls.filter(([v]) => v === id).map(([, rows]) => rows), [
@@ -571,28 +566,16 @@ Deno.test("a version says what its inputs are against the previous one, and what
 });
 
 Deno.test("an inferred step added since the previous version is listed, its start and end are not", async () => {
-  const inference: Inference = JSON.parse(
-    await readFile(
-      new URL("../fixtures/inference.json", import.meta.url),
-      "utf8",
-    ),
-  );
   const next = structuredClone(inference);
   const lead = next.agents.find((a) => a.agentId === "lead")!;
   const copy = structuredClone(lead.procedures[0]);
   copy.id = "second-flow";
   for (const step of copy.steps) step.id = `second-${step.id}`;
   lead.procedures.push(copy);
-  const infer = (id: string, i: Inference) => {
-    const v = version(id, snapshot);
-    v.files["inference.json"] = JSON.stringify(i);
-    Object.assign(v.files, Object.fromEntries(emitInferred(snapshot, i)));
-    return v;
-  };
   const data = dataOf(
     await viewerPage([
-      infer("2026-11-02T10-20-00Z", next),
-      infer("2026-11-02T10-15-00Z", inference),
+      inferred("2026-11-02T10-20-00Z", snapshot, next),
+      inferred("2026-11-02T10-15-00Z", snapshot, inference),
     ]),
   );
   const { delta } = viewOf(data, data.versions[0], "behaviour:lead");

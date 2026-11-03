@@ -158,9 +158,7 @@ Deno.test("an inference can be reused exactly when what the model is sent is unc
       f.file === "cron:job-10" && f.enabled === false && f.schedule
     ),
   );
-  assert.ok(
-    input.roster.includes("lead (Lead)") || input.roster.includes("lead"),
-  );
+  assert.ok(input.roster.includes("lead (Lead)"));
   const edited = structuredClone(s);
   edited.agents.find((a) => a.id === "lead")!.workspace.instructions.find((f) =>
     f.path === "AGENTS.md"
