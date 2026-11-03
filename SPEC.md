@@ -242,6 +242,12 @@ reference whose path is a JSON pointer, such as
 
 ## 5. SysML mapping by Assembly category
 
+The optional APE analysis projects a selected compiled element graph to RDF
+using the OpenMBEE SysML namespace `https://www.omg.org/spec/SysML#` and native
+`urn:sysmlv2:element:<nativeId>` IRIs. Its versioned projection and graph
+boundaries are documented in [the APE rules profile](rules/ape/README.md). This
+does not change the SysML source mapping below.
+
 ### 5.1 Packages
 
 - `OpenClawImport.sysml` defines the import vocabulary. It specializes
@@ -835,25 +841,24 @@ exactly `openclaw sysmlv2-toolkit install`. Compilation errors, tampering and
 timeouts fail validation without discarding the export. These diagnostics are
 informational to the export result.
 
-**APE rules on the model graph.** After a passing check, the same worker takes
-the compiled element graph (`toFullJson`), projects a subset of it to RDF with
-Assembly's vocabulary (`urn:ase:vocab:`, one named graph per build), loads it in
-batches into Oxigraph 0.5.12 (WebAssembly), materializes five SPARQL `CONSTRUCT`
-views and runs the rules. Views, rules and the derived vocabulary
-(`urn:ase:ape:v1:`) are data under `rules/ape/`, documented in
-[`rules/ape/README.md`](rules/ape/README.md); queries are SPARQL 1.1 only. Each
-rule file starts with six header fields (`code`, `severity`, APE `pattern`,
-`finding`, `context`, `recovery`) and returns `?agentId`, plus `?relatedAgentId`
-when its context names `{related}`. Findings are prefixed `APE_`, keep `pattern`
-and `finding`, and join the doctor's in `findings.json` and its counts. The view
-dependency order is declared by [`APE_VIEW_ORDER`](src/ape-rules.ts).
-`validation.json` adds `ape`: `{status, findings, metrics}`, where `status` is
-`completed`, `skipped` (no Toolkit or a failed check) or `failed`; a failure
-carries `code`, `stage` (projection, loading, view or rule), `file` and `cause`,
-separate from the Toolkit diagnostics. APE has its own default 10-second
-deadline; `APE_TIMEOUT` fails APE alone and preserves the settled compile
-result. Persisted metrics contain counts, not timings. The rules read only the
-compiled model, never the snapshot.
+**APE rules on the model graph.** After a passing check, the worker projects the
+compiled Toolkit element graph (`toFullJson`) to the `openmbee-v1` RDF subset
+and loads it in batches into Oxigraph 0.5.12 (WebAssembly). Five ordered, global
+run-once SPARQL rules materialize views; three SELECT constraints produce
+standard SHACL validation results, which the APE adapter maps to findings. The
+[profile and graph contract](rules/ape/README.md) describe the named build,
+shapes, view and report graphs, supported targets and restricted SPARQL forms.
+This is not a full SHACL implementation. Findings start with `APE_`, retain
+`pattern` and `finding`, and join the doctor's findings and counts.
+
+A completed analysis writes `ape-report.ttl` once as a SHACL validation report.
+`validation.json` adds an `ape` summary with status, findings and count metrics;
+it omits the report RDF. Status is `completed`, `skipped` (no Toolkit or a
+failed check), or `failed`; a failure carries `code`, `stage` (projection,
+loading, view or rule), `file` and `cause`, separate from Toolkit diagnostics.
+APE has its own default 10-second deadline; `APE_TIMEOUT` fails APE alone and
+preserves the settled compile result. Persisted metrics contain counts, not
+timings. The rules read only the compiled model, never the snapshot.
 
 ### 10.7 Deno CLI
 

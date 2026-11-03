@@ -1,55 +1,37 @@
 # APE RDF views and rules
 
-This directory defines the APE trial's versioned derived vocabulary. The
-projector selects native Toolkit data; the five SPARQL `CONSTRUCT` views derive
-all facts below. TypeScript does not derive these facts. Rules query the
-materialized views and return agent IDs; their six header fields supply the
-finding metadata.
+[`ape.ttl`](ape.ttl) is the single source for five global SHACL SPARQL rules and
+three SPARQL constraints. The Toolkit supplies the compiled element graph; the
+rules materialize the derived views below. The APE adapter maps standard
+validation results and shape annotations to findings.
 
 ## Native graph and selection
 
-The projection keeps Assembly's native identity and vocabulary: user elements
-are `urn:ase:model:{encoded repositoryId}:{encoded nativeId}`, library elements
-are `urn:ase:library:{encoded nativeId}`, and the named build graph is
-`urn:ase:build:{artifactDigest}`. Metaclasses use
-`urn:ase:metaclass:{encoded
-metaclass}`; Toolkit properties use
-`urn:ase:vocab:prop:{encoded property}`. Metadata includes
-`urn:ase:vocab:metaclass`, `nativeId`, `name`, and `qualifiedName`. Occurrence
-lists use `urn:ase:vocab:list:{encoded property}` and
-`urn:ase:vocab:OccurrenceList`, `length`, `occurrence`, `index`, and `value`;
-this encoding and the native IRIs are unchanged from Assembly.
+Projection `openmbee-v1` uses `sysml: <https://www.omg.org/spec/SysML#>` for
+metaclasses and retained properties, and `urn:sysmlv2:element:<nativeId>` for
+both user and library elements. Every retained element has an explicit
+`sysml:isLibraryElement` boolean. The build graph is
+`urn:ase:ape:openmbee:v1:build:<artifactDigest>`; `openmbee-v1` identifies this
+project's projection, not a claim of identical output to another exporter.
+References to omitted elements retain their native IDs; catalog completion uses
+explicit library classification. No property defaults are inferred.
 
-The syntactic selection retains these metaclasses:
-
-- `Package`, `Namespace`, `PartUsage`, `PartDefinition`, `ItemUsage`,
-  `ItemDefinition`, `ConnectionUsage`, `ConnectionDefinition`, `AttributeUsage`,
-  `ReferenceUsage`, `Redefinition`, `Subsetting`, `Subclassification`,
-  `FeatureReferenceExpression`, `FeatureChainExpression`, `LiteralString`,
-  `LiteralBoolean`, `EnumerationUsage`, and `EnumerationDefinition`.
-
-The retained properties are `@id`, `@type`, `isLibraryElement`, `declaredName`,
-`name`, `qualifiedName`, `owner`, `definition`, `ownedSpecialization`,
-`general`, `ownedMember`, `ownedRedefinition`, `redefinedFeature`,
-`ownedSubsetting`, `subsettedFeature`, `value`, `referent`, `sourceFeature`,
-`targetFeature`, and `relatedFeature`. Top-level nulls and empty lists are
-omitted. Nonempty lists are retained whole, preserving their indices, order, and
-duplicates. References to omitted nodes retain their native identities; catalog
-completion uses explicit library classification.
-
-For example, a feature's role is resolved through its redefinition and its
-literal value through its owned member:
+The syntactic slice retains the metaclasses and properties enumerated in
+[`src/ape-elements.ts`](../../src/ape-elements.ts), including compiled derived
+properties when supplied by the Toolkit. Nulls and empty lists are omitted. RDF
+values are unordered; the views do not require collection order and the
+projection emits no JSON collection annotations. For example:
 
 ```sparql
-?feature prop:ownedRedefinition/prop:redefinedFeature/ase:qualifiedName ?role ;
-         prop:ownedMember/prop:value ?value .
+?feature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName ?role ;
+         sysml:ownedMember/sysml:value ?value .
 ```
 
 ## Derived vocabulary
 
-All predicates in this section use the prefix `ape: <urn:ase:ape:v1:>`. The view
-dependency order is declared in [`APE_VIEW_ORDER`](../../src/ape-rules.ts). Each
-view is materialized in its own named graph. Their `ape:source` objects and
+All predicates in this section use `ape: <urn:ase:ape:v1:>`. The five global
+rules have unique ascending `sh:order` values and `sh:runOnce true`; they
+materialize views in their own named graphs. Their `ape:source` objects and
 other source properties are native element IRIs, not copied identifiers.
 
 | Graph `urn:ase:ape:v1:view:` | Facts and provenance                                                                                                                                 |
@@ -80,14 +62,39 @@ of a delegation cycle involving at least two distinct agents.
 non-self delegation, or enabled messaging from another agent. These are
 structural findings, not assertions of runtime liveness or isolation.
 
-## Portability
+## Execution profile and portability
 
-The `.rq` files are SPARQL 1.1 and can run unchanged on Oxigraph 0.4.11 when the
-same build and named view graphs are loaded. Assembly's current native
-`loadBuild` accepts one named build graph; an adapter must materialize these
-views in an isolated build store with named-graph support. This is not a claim
-that the current end-to-end Assembly integration runs unchanged.
+This is a scoped runner informed by the W3C Working Drafts for
+[SHACL 1.2 SPARQL (22 October 2026)](https://www.w3.org/TR/2026/WD-shacl12-sparql-20261022/)
+and
+[Inference Rules (28 October 2026)](https://www.w3.org/TR/2026/WD-shacl12-inference-rules-20261028/),
+not a complete SHACL Core or SHACL 1.2 implementation. It supports global
+run-once SPARQL rules and SELECT node constraints with `sh:targetNode`,
+`sh:targetClass` (including subclass traversal), or `sh:targetSubjectsOf`. APE
+shapes use the last target and annotate code, pattern, finding and recovery;
+constraints carry severity and message. The runner uses SPARQL 1.1 syntax for
+its supported subset of draft forms. Unsupported or non-partitionable features
+are rejected explicitly. Active focus nodes must be IRIs. Property shapes,
+custom constraint components, ASK constraints, PATH substitution, and general
+fixpoint inference are outside this profile. To keep results deterministic,
+CONSTRUCT templates that create blank nodes are rejected. A global rule’s
+`sh:order` must be a valid finite `xsd:integer` or `xsd:decimal`.
 
-A future shared package can contain the pure projector and selection contract,
-views and rules, vocabulary, and metadata parser. Engine-specific WASM and
-native loading remain separate.
+Shapes occupy `urn:ase:ape:v1:shapes`; views use the named graphs above; results
+use `urn:ase:ape:v1:report`, with report node
+`urn:ase:ape:v1:validation-report`. Evaluation sees the union of build and view
+graphs as its default graph and can address them by name; shapes and report
+graphs are excluded. Each constraint executes once for all focus nodes with
+scoped `VALUES` bindings. An outer-only binding fails the W3C pre-binding 002,
+003, 005 and 007 cases in Oxigraph. Prefix declarations are read from the shapes
+graph without fetching imports over the network. The canonical
+[W3C test inventory](../../test/shacl_w3c_test.ts) records the 15 applicable
+cases and the eight individual skips with reasons.
+
+A local synthetic comparison with OpenSysML 0.11.0 found seven common standard
+library UUIDs matching. By default OpenSysML used qualified-name-derived IDs for
+user elements, whereas the Toolkit supplied UUIDs. Its output had no
+`sysml:definition` triples in the comparison and used `sysml:type`; ownership
+and expression structures also differed. Consequently these views are not
+claimed to run unchanged on raw OpenSysML Turtle. Neither OpenSysML nor rudof is
+a runtime dependency.
