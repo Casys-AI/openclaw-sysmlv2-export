@@ -147,6 +147,8 @@ main > section[hidden] { display: none; }
 .md-edge.escalation .md-line { stroke: var(--warn); }
 .md-edge.owner .md-line { --w: 1; }
 .md-edge.target .md-line { stroke-dasharray: 2 3; stroke: var(--md-soft); }
+.md-edge.delegation .md-line { --w: 1.4; }
+.md-edge.trigger .md-line { stroke-dasharray: 0.1 4; stroke-linecap: round; --w: 1.6; }
 .md-edge text, .md-label { font-size: 10.5px; fill: var(--muted); paint-order: stroke; stroke: var(--md-halo); stroke-width: 4px; stroke-linejoin: round; }
 .md-edge.escalation text { fill: var(--warn); }
 .md-mark-line { fill: none; stroke: var(--md-edge); stroke-width: 1.25; stroke-linejoin: round; }
@@ -472,9 +474,11 @@ const KEYWORDS = new Set(("about abstract accept action alias attribute bind cal
   " perform port private protected public redefines ref require requirement return satisfy" +
   " send specializes state subject subsets succession then to transition true use verify via").split(" "));
 const TOKEN = /(\/\*[\s\S]*?\*\/|\/\/[^\n]*)|("(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*')|([A-Za-z_]\w*)/g;
+// A legend per view (Behaviour's for all its views): what its shapes and edges mean.
 const LEGENDS = {
-  Structure: [["usage", "part usage"], ["connection", "connection : AgentBinding"], ["dashed", "disabled"]],
-  Cases: [["usage", "scheduled case"], ["owner", "owner"], ["target", "unresolved targetAgent"], ["dashed", "disabled"]],
+  system: [["usage", "part usage"], ["connection", "connection : AgentBinding"], ["trigger", "hook starts agent"], ["dashed", "disabled"]],
+  reach: [["usage", "agent"], ["delegation", "may delegate to"], ["mutual", "both ways"], ["trigger", "hook starts agent"], ["dashed", "absent agent"]],
+  schedules: [["usage", "scheduled case"], ["owner", "owner"], ["target", "unresolved targetAgent"], ["dashed", "disabled"]],
   Behaviour: [["initial", "start"], ["decision", "decision"], ["send", "hand-off or escalation"], ["final", "done"],
     ["succession", "succession"]],
 };
@@ -781,7 +785,9 @@ function drawEdge(e, delta, inner) {
   const cls = ["md-edge", e.kind, inner ? "inner" : "", delta && delta.added.includes(e.id) ? "added" : "", delta && delta.changed.includes(e.id) ? "changed" : ""];
   const g = sv("g", { class: cls.filter(Boolean).join(" "), "data-id": e.id });
   const arrow = e.kind === "connection" ? null : e.kind === "escalation" ? "md-arrow-warn" : "md-arrow";
-  for (const p of e.pts) g.append(sv("path", { class: "md-line", d: rounded(p), "marker-end": arrow ? "url(#" + arrow + ")" : undefined }));
+  // A pair that delegates both ways is one edge with an arrowhead at each end.
+  e.pts.forEach((p, i) => g.append(sv("path", { class: "md-line", d: rounded(p), "marker-end": arrow ? "url(#" + arrow + ")" : undefined,
+    "marker-start": e.mutual && i === 0 ? "url(#" + arrow + ")" : undefined })));
   if (e.label) e.label.lines.forEach((l, i) => g.append(txt(e.label.x + 3, e.label.y + 11 + i * 13, l)));
   return g;
 }
@@ -938,14 +944,16 @@ function showChanges(cur) {
 }
 function renderLegend(view) {
   const box = document.getElementById("legend");
-  const items = view.scene ? LEGENDS[view.group] || [] : [];
+  const items = view.scene ? LEGENDS[view.id] || LEGENDS[view.group] || [] : [];
   const keys = items.map(([kind, text]) => {
     const s = el("span");
     const g = sv("svg", { viewBox: "0 0 26 14", "aria-hidden": "true" });
     const add = (tag, a) => g.append(sv(tag, a));
     if (kind === "usage" || kind === "dashed") add("rect", { x: 1, y: 1, width: 24, height: 12, rx: 4, fill: "#fff", stroke: kind === "dashed" ? "#8e8b85" : "#2b2b2d", "stroke-dasharray": kind === "dashed" ? "3 2" : null });
     if (kind === "connection") add("path", { d: "M1,7 H25", stroke: "#4b4b4f", "stroke-width": 1.3 });
-    if (kind === "owner" || kind === "succession") add("path", { d: "M1,7 H24 M19,3 L24,7 L19,11", stroke: "#4b4b4f", fill: "none", "stroke-width": 1.3 });
+    if (kind === "owner" || kind === "succession" || kind === "delegation") add("path", { d: "M1,7 H24 M19,3 L24,7 L19,11", stroke: "#4b4b4f", fill: "none", "stroke-width": 1.3 });
+    if (kind === "mutual") add("path", { d: "M2,7 H24 M19,3 L24,7 L19,11 M7,3 L2,7 L7,11", stroke: "#4b4b4f", fill: "none", "stroke-width": 1.3 });
+    if (kind === "trigger") add("path", { d: "M1,7 H22 M19,3 L24,7 L19,11", stroke: "#4b4b4f", fill: "none", "stroke-width": 1.4, "stroke-dasharray": "0.1 3.2", "stroke-linecap": "round" });
     if (kind === "target") add("path", { d: "M1,7 H24 M19,3 L24,7 L19,11", stroke: "#8e8b85", fill: "none", "stroke-dasharray": "2 2" });
     if (kind === "initial") add("circle", { cx: 13, cy: 7, r: 5, fill: "#2b2b2d" });
     if (kind === "final") { add("circle", { cx: 13, cy: 7, r: 6, fill: "#fff", stroke: "#2b2b2d" }); add("circle", { cx: 13, cy: 7, r: 3, fill: "#2b2b2d" }); }
