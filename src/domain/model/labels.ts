@@ -18,7 +18,7 @@ export function elementLabels(s: Snapshot): Record<string, string> {
   }
   for (const j of s.cron) labels[elementId("cron", j.id)] = j.name;
   for (const a of s.accounts) labels[elementId("account", a.id)] = a.id;
-  for (const h of s.hooks) labels[`hook:${h.id}`] = h.name;
+  for (const h of s.hooks) labels[elementId("hook", h.id)] = h.name;
   for (const b of s.bindings) {
     labels[elementId("binding", b.id)] = `${
       agent.get(b.agentId) ?? b.agentId

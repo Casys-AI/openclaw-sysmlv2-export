@@ -6,20 +6,21 @@ import { FINDINGS_INVALID } from "./checks.ts";
  * while collecting (the snapshot's `ambiguities`, or the viewer's own note). */
 export type FindingSource = "rule" | "note" | "collector";
 
-const identity = (f: ApeFinding) =>
+/** What makes two findings the same one: its code, subject and context. */
+export const findingIdentity = (f: ApeFinding) =>
   JSON.stringify([f.code, f.subject, f.context]);
 
 /** The collector's notes of a snapshot, to tell them from the checks that
  * the same findings.json holds. */
 export function collectorNotes(ambiguities: ApeFinding[]): Set<string> {
-  return new Set(ambiguities.map(identity));
+  return new Set(ambiguities.map(findingIdentity));
 }
 
 export function sourceOf(
   f: ApeFinding,
   collector: ReadonlySet<string>,
 ): FindingSource {
-  return collector.has(identity(f)) || f.code === FINDINGS_INVALID
+  return collector.has(findingIdentity(f)) || f.code === FINDINGS_INVALID
     ? "collector"
     : f.severity === "info"
     ? "note"

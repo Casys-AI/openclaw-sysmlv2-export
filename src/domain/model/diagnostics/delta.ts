@@ -1,6 +1,6 @@
 import type { ApeFinding } from "./ape.ts";
 import { ruleName } from "./checks.ts";
-import { sourceOf } from "./groups.ts";
+import { findingIdentity, sourceOf } from "./groups.ts";
 import type { InputsVerdict } from "../inputs.ts";
 
 /** A version's findings with what lets them be compared: the rules that ran
@@ -33,19 +33,17 @@ export interface FindingsDelta {
   notComparable: DeltaFinding[];
 }
 
-const identity = (f: ApeFinding) =>
-  JSON.stringify([f.code, f.subject, f.context]);
-
 /** Findings of `from` that `other` lacks, as a multiset on (code, subject,
  * context). */
 function absentFrom(from: ApeFinding[], other: ApeFinding[]): ApeFinding[] {
   const left = new Map<string, number>();
   for (const f of other) {
-    left.set(identity(f), (left.get(identity(f)) ?? 0) + 1);
+    const key = findingIdentity(f);
+    left.set(key, (left.get(key) ?? 0) + 1);
   }
   return from.filter((f) => {
-    const n = left.get(identity(f)) ?? 0;
-    if (n) left.set(identity(f), n - 1);
+    const key = findingIdentity(f), n = left.get(key) ?? 0;
+    if (n) left.set(key, n - 1);
     return !n;
   });
 }

@@ -3,7 +3,7 @@ import { INFERRED_FILE, INSTANCE_FILE } from "../model/views.ts";
 /** The files of a version by what they are, in the order the Changes tab
  * shows them: the model of the instance, the inferred behaviour, the library
  * the model imports, the data the model is built from, the diagnostics. */
-export const FILE_GROUPS = [
+const FILE_GROUPS = [
   "instance",
   "inferred",
   "library",
@@ -18,7 +18,7 @@ const DIAGNOSTICS = new Set([
   "ape-report.ttl",
 ]);
 
-export function fileGroup(file: string): FileGroup {
+function fileGroup(file: string): FileGroup {
   return file === INSTANCE_FILE
     ? "instance"
     : file === INFERRED_FILE

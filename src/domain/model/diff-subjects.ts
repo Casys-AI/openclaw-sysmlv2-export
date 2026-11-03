@@ -72,7 +72,7 @@ function leaves(
     const kept = [...now.keys()].filter((k) =>
       was.has(k) && isObject(now.get(k))
     )
-      .flatMap((k) => leaves(`${join(k)}`, was.get(k), now.get(k), canonical));
+      .flatMap((k) => leaves(join(k), was.get(k), now.get(k), canonical));
     if (!added.length && !removed.length && !kept.length) {
       return [{ ...at, before: show(before), after: show(after) }];
     }
@@ -114,9 +114,12 @@ function bulletsOf(
   }
   switch (family) {
     case "agent":
+    case "cron": {
+      const id = elementId(family, c.subject);
       return status === "added" || status === "removed"
-        ? whole(c.kind, elementId("agent", c.subject))
-        : withLeaves(elementId("agent", c.subject), c.kind);
+        ? whole(c.kind, id)
+        : withLeaves(id, c.kind);
+    }
     case "skill":
     case "instruction": {
       // `digest`: the subject is `agent:file`.
@@ -137,16 +140,8 @@ function bulletsOf(
     case "hook":
     case "plugin":
     case "mcp": {
-      const id = family === "hook"
-        ? `hook:${entity!.id}`
-        : elementId(family, entity!.id);
+      const id = elementId(family, entity!.id);
       return status === "changed" ? withLeaves(id, c.kind) : whole(c.kind, id);
-    }
-    case "cron": {
-      const id = elementId("cron", c.subject);
-      return status === "added" || status === "removed"
-        ? whole(c.kind, id)
-        : withLeaves(id, c.kind);
     }
     case "provider":
     case "bundledSkill":

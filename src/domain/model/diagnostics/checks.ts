@@ -5,8 +5,10 @@ import type { PersistedApeReport } from "./ape.ts";
  * for a clean one:
  * - `verified`: the checks ran (the APE analysis completed, or, in an archive
  *   written before it existed, the findings were recorded);
- * - `not-run`: the APE analysis was skipped (`code` says why, for example
- *   `TOOLKIT_NOT_INSTALLED`);
+ * - `not-run`: the APE analysis was skipped (`code` says why: `APE_INVALID_MODEL`
+ *   when the model does not compile, `TOOLKIT_INTEGRITY` for a damaged
+ *   Toolkit, `TOOLKIT_NOT_INSTALLED` in versions exported before it was
+ *   bundled);
  * - `failed`: it started and failed (`APE_TIMEOUT`, `APE_WORKER_FAILED`…);
  * - `unrecorded`: the archive holds no result, or one this viewer cannot read. */
 export interface Checks {

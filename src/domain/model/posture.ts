@@ -15,7 +15,7 @@ const RUNS_ON = {
 /** Where the agent's exec tool runs: the exec host decides, and `auto` follows
  * the layer of each exec grant (docs/tools/exec.md). Empty without an exec
  * grant. */
-export function execPlaces(a: Agent): ExecPlace[] {
+function execPlaces(a: Agent): ExecPlace[] {
   const layers = new Set(
     a.grants.filter((g) => g.tool === "exec").map((g) => g.layer),
   );
@@ -70,7 +70,7 @@ export function postureAttributes(a: Agent): [string, string][] {
 }
 
 /** Tools that send to someone else: another session or agent, or a channel. */
-export const OUTBOUND_TOOLS = [
+const OUTBOUND_TOOLS = [
   "message",
   "sessions_send",
   "sessions_spawn",
