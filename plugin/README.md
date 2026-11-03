@@ -34,8 +34,21 @@ openclaw sysmlv2-export --infer --open  # also infer behaviour, then open the vi
   and needs `plugins.entries.sysmlv2-export.llm.allowAgentIdOverride: true`;
   `--model <provider/model>` also needs `allowModelOverride: true`.
 
-Each run writes `<state dir>/sysmlv2-export/<UTC time>/` with the snapshot and
-the SysML files, and updates `versions.json` and the viewer, `index.html`.
+Each run writes `<state dir>/sysmlv2-export/<UTC time>/` with `snapshot.json`,
+`findings.json`, `validation.json` and the SysML files, and updates
+`versions.json` and the viewer, `index.html`.
+
+## Check the system
+
+Every export checks its snapshot with the doctor and writes `findings.json`. The
+export summary and `versions.json` include `{error, warning, info}` counts; chat
+and tool replies show nonzero counts. Each finding names the affected element
+and gives a review or recovery step. Findings never block the export or change
+the instance.
+
+See the
+[diagnostics guide](https://github.com/Casys-AI/openclaw-sysmlv2-export/blob/main/docs/diagnostics.md)
+for all codes and their sources.
 
 ## Validate the model
 

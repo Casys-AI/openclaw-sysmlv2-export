@@ -22,10 +22,10 @@ The export reads an OpenClaw instance without changing it and turns it into:
 Each plugin run is kept as a version, browsable and comparable in an offline
 viewer.
 
-An experimental **doctor** (§7.2) reads the same snapshot and reports coded
-findings about the configuration. The plugin does not expose it in 0.1.0: its
-rules need Assembly's theory to be interpreted, and are available only through
-the Deno CLI.
+The **doctor** (§7.2) reads the same snapshot and reports coded configuration
+findings. Every plugin export writes them to `findings.json`; the Deno CLI can
+also check an existing snapshot. Findings do not change the instance or block
+export.
 
 **Targets.** OpenClaw 2026.10.x, following the 2026.10.9 documentation. The
 collector also reads 2026.6.10 configurations (`agents.list`, legacy memory
@@ -44,7 +44,7 @@ calls the next.
 | -------- | -------------------------------------- | ----------------------------------------------------------------------------- |
 | collect  | `collect(home, pluginList) → Snapshot` | The only step that reads the instance. Read-only.                             |
 | emit     | `emit(snapshot) → Map<path, text>`     | Deterministic SysML text: `OpenClawImport.sysml`, `OpenClawInstance.sysml`.   |
-| doctor   | `doctor(snapshot) → Finding[]`         | Experimental: collector findings plus the doctor rules (§7.2). Deno CLI only. |
+| doctor   | `doctor(snapshot) → Finding[]`         | Collector findings plus configuration rules (§7.2); plugin and Deno CLI.      |
 | diff     | `diff(a, b) → Change[]`                | Structural changes between two snapshots (§8).                                |
 | validate | `validate(files) → Diagnostics`        | Compiles written files with the explicitly installed pinned WASM Toolkit.     |
 | views    | `diagramViews(snapshot, inference)`    | The viewer's model: nodes and edges per view, each with its SysML; its table. |
@@ -54,7 +54,7 @@ calls the next.
 | infer    | `parseAgentInference`, `emitInferred`  | Validates a model's answer and emits `OpenClawInferred.sysml` (§9).           |
 
 A plugin run is: list plugins (`openclaw plugins list --json`) → collect → emit
-→ optionally infer → write a new version directory → validate → update
+→ doctor → optionally infer → write a new version directory → validate → update
 `versions.json` → regenerate `index.html`. The Deno CLI exposes collect, export
 (emit plus library), doctor and diff separately (§10.7).
 
@@ -116,7 +116,8 @@ plugin code.
 - Inner symlinks are followed once; links that resolve outside the workspace are
   skipped with `SKILL_SYMLINK_OUTSIDE_ROOT`; broken links and a
   `skills/SKILL.md` at the root are recorded as malformed. Dot-directories and
-  `node_modules` are skipped.
+  `node_modules` are skipped. This legacy metadata does not establish invalid
+  skills; the doctor ignores the root `SKILL.md` entry.
 
 ### 3.4 Memory
 
@@ -220,6 +221,9 @@ reference whose path is a JSON pointer, such as
   `secret`, `token`, `apiKey`, `privateKey` or `credential`, and every value
   under `env`, `vars` or `headers`, count toward `plaintextSecretCount`.
   `${NAME}` references and secret-reference objects (`{ source, id }`) do not.
+  This legacy `/5` counter includes arbitrary environment and header strings and
+  retains no field paths. It cannot establish a supported credential surface and
+  does not produce a doctor finding (§7.2).
 - **Coded errors** never echo input values, native messages or absolute paths.
 
 ## 5. SysML mapping by Assembly category
@@ -312,6 +316,11 @@ grants, approvals, delegation and messaging are in the `Authority` package.
 | Host approval defaults and `*` allowlist  | One `ExecApprovals` (default security/ask, ask fallback, auto-allow skills, wildcard commands), only when stored.                                                                                                                                   |
 | `subagents.allowAgents`                   | `DelegationRule` (from, to).                                                                                                                                                                                                                        |
 | `tools.agentToAgent`                      | `MessagingPolicy` (enabled, allowed targets).                                                                                                                                                                                                       |
+
+For 2026.10, agent-to-agent access is enabled unless explicitly false
+(`dist/session-visibility-c_9BAYYO.mjs`, `createAgentToAgentPolicy`); the legacy
+collector interpretation defaults it to false. The wildcard rule still requires
+that access to be enabled (§7.2).
 
 ## 6. Tool grant resolution
 
@@ -458,8 +467,16 @@ runtime sandbox routing are not inferred.
 ## 7. Findings
 
 A finding has a `code`, a `severity` (`error`, `warning` or `info`), a
-`subject`, a `context` and a `recovery`. The subject is an agent id, `instance`,
-a cron job id or a binding id. Findings are sorted by `code` then `subject`.
+`subject`, a `context` and a `recovery`. Subjects use the shared view element
+IDs: `agent:<id>`, `cron:<id>`, `heartbeat:<agentId>`, `account:<id>`,
+`grant:<agentId>:<tool>` or `instance`. Identifier parts are preserved verbatim.
+Collector findings in snapshots taken before these IDs keep raw entity IDs; the
+viewer lists them without selecting an element. A binding finding points to its
+account when present, otherwise its configured agent when present, otherwise
+`instance`: the nearest available drawn element. Findings are sorted by `code`
+then `subject`. `error` identifies a failure or unrestricted approval posture;
+`warning` calls for review; `info` records a limit or context. Severity does not
+affect export completion.
 
 ### 7.1 Collector findings
 
@@ -480,7 +497,6 @@ export cannot settle, instead of guessing.
 | `SANDBOX_DEFAULT_TOOLS_UNRESOLVED` | agent    | An active sandbox whose tool policy lacks `allow` or `deny`; no sandbox grant is emitted.                                  |
 | `CONTEXT_DEPENDENT_TOOLS`          | agent    | `toolsBySender` (global or agent) or a subagent tool policy is set.                                                        |
 | `FALLBACK_TOOL_POLICY_UNRESOLVED`  | agent    | The agent has fallback models; grants describe the primary one.                                                            |
-| `SAFE_BINS_DEFAULT_UNRESOLVED`     | agent    | Safe bins are unset and the agent holds `exec`; no default commands are inferred.                                          |
 | `EXEC_APPROVALS_UNRESOLVED`        | agent    | The effective exec security or ask is `unknown` (non-`node` host).                                                         |
 | `NODE_EXEC_APPROVALS_UNRESOLVED`   | agent    | Exec host `node`: approvals live on the remote node.                                                                       |
 | `ELEVATED_CONTEXT_REQUIRED`        | agent    | Elevated exec is configured and the sandbox is active; it depends on senders and session directives.                       |
@@ -493,35 +509,74 @@ export cannot settle, instead of guessing.
 | `CRON_TIMEZONE_UNRESOLVED`         | cron job | A cron expression without a time zone runs in the host's, which is not collected.                                          |
 | `SUBMINUTE_SCHEDULE`               | cron job | An `every` interval that is not a whole number of minutes; kept in `durationMs` only.                                      |
 | `CRON_AGENT_UNRESOLVED`            | cron job | The job names no agent; OpenClaw resolves it at run time (memory-core's dreaming sweep, for one).                          |
-| `UNRESOLVED_AGENT_REFERENCE`       | cron job | The job names an agent that is not configured.                                                                             |
-| `UNRESOLVED_BINDING_REFERENCE`     | binding  | The binding names an absent agent or channel account; no connection is emitted.                                            |
 
-### 7.2 Doctor rules (experimental)
+### 7.2 Doctor rules
 
-`doctor(snapshot)` returns the collector findings plus the rules below. It is an
-experimental diagnostic: the plugin neither runs it nor writes `findings.json`
-in 0.1.0, and its rules may change once they can be read against Assembly's
-theory. It runs through `deno task doctor` (§10.7).
+`doctor(snapshot)` returns the collector infos above plus the configuration
+checks below. Legacy collector copies of `UNRESOLVED_AGENT_REFERENCE`,
+`UNRESOLVED_BINDING_REFERENCE` and `SAFE_BINS_DEFAULT_UNRESOLVED` are recomputed
+here, so old `/5` snapshots follow the same rules. This table is the full
+current code catalog, including collector infos. Sources beginning `docs/` or
+`dist/` refer to OpenClaw 2026.10.9; `src/` and `sysml/` name this adapter's own
+projection choices, not OpenClaw faults. [Diagnostics](docs/diagnostics.md)
+explains the meaning and recovery of every code.
 
-| Code                              | Severity | Subject           | Condition                                                                                                                                                                                |
-| --------------------------------- | -------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `EXEC_WITHOUT_APPROVAL`           | error    | agent             | The agent holds `exec` and its effective security is `full` with ask `off`.                                                                                                              |
-| `PLAINTEXT_SECRET_IN_CONFIG`      | error    | instance          | `plaintextSecretCount > 0`.                                                                                                                                                              |
-| `AGENT_WITHOUT_SANDBOX`           | warning  | agent             | The agent holds `exec` and its sandbox mode is not `all`: some session runs it without a sandbox.                                                                                        |
-| `EXTERNAL_BIND_SOURCES`           | warning  | agent             | The sandbox sets `dangerouslyAllowExternalBindSources: true`.                                                                                                                            |
-| `AGENT_TO_AGENT_WILDCARD`         | warning  | instance          | `tools.agentToAgent.allow` contains `*`.                                                                                                                                                 |
-| `SAFE_BIN_INTERPRETER_UNPROFILED` | warning  | agent             | `safeBins` holds an interpreter or runtime (shells, `node`, `python3`, `perl`…, versioned names included) without a `safeBinProfiles` entry (`dist/exec-safe-bin-runtime-policy-*.mjs`). |
-| `EXEC_ALLOWLIST_WILDCARD`         | warning  | agent or instance | An agent's commands or the `*` allowlist contain the command `*`.                                                                                                                        |
-| `MEMORY_SESSIONS_INDEXED`         | warning  | agent             | Memory search is enabled and either `sources` includes `sessions` or `rememberAcrossConversations` is true (`docs/reference/memory-config.md`).                                          |
-| `CRON_FAILING`                    | warning  | cron job          | At least 3 consecutive errors.                                                                                                                                                           |
-| `WORKSPACE_UNVERSIONED`           | warning  | agent             | The workspace has no `.git` entry.                                                                                                                                                       |
-| `MALFORMED_SKILLS_DIR`            | warning  | agent             | `skills/SKILL.md` at the root of `skills/`, or a broken skill link.                                                                                                                      |
-| `MCP_SANDBOX_GATE`                | info     | agent             | Sandbox mode is not `off`, an MCP server is enabled, and the agent has no MCP grant on its sandbox layer (`docs/gateway/config-tools/tool-policy.md`).                                   |
-| `MEMORY_REMOTE_EMBEDDINGS`        | info     | agent             | Memory search is enabled with a provider set to anything but `local` or `none`. Actual transmission is not verified.                                                                     |
-| `MANUAL_CONFIG_BACKUPS`           | info     | instance          | At least one `openclaw.json.*` file; `openclaw doctor` creates some itself.                                                                                                              |
+| Code                               | Severity                                    | Subject                    | Condition                                                                                                                                                                             | Source                                                                                                   |
+| ---------------------------------- | ------------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `EXEC_WITHOUT_APPROVAL`            | error                                       | agent                      | Exec is policy-reachable on the gateway host with effective security `full` and ask `off`.                                                                                            | `docs/tools/exec-approvals.md`                                                                           |
+| `AGENT_WITHOUT_SANDBOX`            | warning; info if security unresolved        | agent                      | Exec can run on the gateway host and effective security is not `deny`. Explicit `host: gateway` reaches the host even with a sandbox-layer grant; `auto` requires a host-layer grant. | `docs/gateway/sandboxing.md`; `docs/tools/exec.md`                                                       |
+| `EXTERNAL_BIND_SOURCES`            | warning                                     | agent                      | An active sandbox permits bind sources outside workspace roots. Other path checks still apply.                                                                                        | `docs/gateway/sandboxing/multiple-folders-for-one-agent.md`                                              |
+| `AGENT_TO_AGENT_WILDCARD`          | warning                                     | instance                   | Agent-to-agent access is enabled and its allowlist contains `*`, allowing every requester and target pair.                                                                            | `dist/session-visibility-c_9BAYYO.mjs, createAgentToAgentPolicy`                                         |
+| `SAFE_BIN_INTERPRETER_UNPROFILED`  | warning                                     | agent                      | An interpreter or runtime in `safeBins` has no explicit argv profile. Paths, executable suffixes and versioned interpreter names are normalized.                                      | `dist/exec-safe-bin-runtime-policy-CgvU47MQ.mjs`; `dist/exec-safe-bin-trust-tdUplWO7.mjs`                |
+| `EXEC_ALLOWLIST_WILDCARD`          | warning                                     | agent or instance          | An agent command or instance wildcard-approval command has basename `*`; any directory restriction is omitted.                                                                        | `docs/tools/exec-approvals.md`                                                                           |
+| `MEMORY_SESSIONS_INDEXED`          | warning                                     | agent                      | Memory search is enabled and either `sources` includes `sessions` or `rememberAcrossConversations` is true.                                                                           | `docs/reference/memory-config.md`                                                                        |
+| `CRON_FAILING`                     | warning                                     | cron                       | An enabled job has at least three consecutive errors. Disabled jobs do not trigger this rule.                                                                                         | `dist/cron-2TRTJPLC.mjs, CHRONIC_FAILURE_MIN_CONSECUTIVE_ERRORS and inspectCronJobHealth`                |
+| `BINDING_ACCOUNT_UNAVAILABLE`      | warning                                     | account, agent or instance | A binding has no matching enabled channel account. `channel:*` matches any account on that channel.                                                                                   | `docs/channels/channel-routing.md`; `dist/server-channels-eZDWbzoS.mjs, startChannelProcessOwned`        |
+| `UNRESOLVED_AGENT_REFERENCE`       | error if enabled on 2026.10; info otherwise | cron                       | A job explicitly targets an absent agent. OpenClaw 2026.10 fails the run; older behavior is unverified. A missing agentId is CRON_AGENT_UNRESOLVED.                                   | `dist/server-cron-DmxBCDVE.mjs, resolveCronAgent`                                                        |
+| `UNRESOLVED_BINDING_REFERENCE`     | info                                        | account, agent or instance | A binding names an absent agent, so no exported connection is drawn. Account availability is checked separately.                                                                      | `docs/concepts/multi-agent.md`; `src/doctor.ts (export endpoint check)`                                  |
+| `WORKSPACE_UNVERSIONED`            | info                                        | agent                      | No `.git` entry was recorded at the workspace root. Parent repositories are not checked; this does not establish that the workspace lacks version control.                            | `docs/gateway/doctor/workspace-and-dreams.md, section 19`; `src/collect.ts (root marker only)`           |
+| `MALFORMED_SKILLS_DIR`             | info                                        | agent                      | Entries under `skills/` could not be resolved by the collector. The accepted root `skills/SKILL.md` is excluded; this does not establish invalid skills.                              | `dist/skill-root-discovery-B5Jg-4aX.mjs, discoverSkillCandidates`; `src/collect.ts (unresolved entries)` |
+| `MCP_SANDBOX_GATE`                 | info                                        | agent                      | A sandbox is active and MCP servers are enabled, but no enabled-server MCP tool has a sandbox-layer grant.                                                                            | `docs/gateway/config-tools/tool-policy.md`                                                               |
+| `MEMORY_REMOTE_EMBEDDINGS`         | info                                        | agent                      | Memory search is enabled with a provider other than `local` or `none`. Endpoint location and transmission are not verified.                                                           | `docs/reference/memory-config.md`                                                                        |
+| `MANUAL_CONFIG_BACKUPS`            | info                                        | instance                   | Files named openclaw.json.* were recorded. This does not establish manual edits or a fault; OpenClaw doctor creates backups too.                                                      | `docs/gateway/doctor/config-migrations.md, rewrite rules`                                                |
+| `STATIC_TOOL_AVAILABILITY`         | info                                        | instance                   | Always: grants describe static policy reachability. Credentials, plugin loading, model-native tools and session approvals are not runtime-verified.                                   | `docs/gateway/config-tools.md`; `docs/tools/exec.md`                                                     |
+| `OPENCLAW_VERSION_UNVERIFIED`      | info                                        | instance                   | The recorded version is neither `2026.6.10` nor `2026.10.x`; the adapter uses its 2026.6.10 catalog.                                                                                  | `src/collect.ts`; `src/policy.ts (adapter catalog selection)`                                            |
+| `PLUGIN_INVENTORY_ABSENT`          | info                                        | instance                   | No plugin inventory was supplied; plugin-only tools receive no grants.                                                                                                                | `docs/cli/plugins/list.md`                                                                               |
+| `TOOL_PROFILE_PARTIAL`             | info                                        | agent                      | A restricted 2026.10 profile includes update-only gateway access that tool-level grants cannot express; that automatic grant is withheld.                                             | `docs/gateway/config-tools/tool-policy.md`                                                               |
+| `TOOL_CATALOG_INCOMPLETE`          | info                                        | agent                      | Policy names tools that no documented built-in entry, supplied plugin or MCP server declares; they receive no grants.                                                                 | `docs/gateway/config-tools/tool-policy.md`                                                               |
+| `MCP_TOOL_SUBSET_UNRESOLVED`       | info                                        | agent                      | Policy names a subset of a server runtime tool catalog; subset entries grant no whole server.                                                                                         | `docs/gateway/config-tools/tool-policy.md`; `docs/plugins/bundles.md`                                    |
+| `EMPTY_ALLOWLIST_UNRESOLVED`       | info                                        | agent                      | An empty `allow` is treated conservatively as granting nothing because the documentation disagrees.                                                                                   | `docs/gateway/sandbox-vs-tool-policy-vs-elevated.md`; `docs/tools/multi-agent-sandbox-tools.md`          |
+| `SESSION_DEPENDENT_SANDBOX`        | info                                        | agent                      | Sandbox mode `non-main` yields separate host and sandbox session contexts.                                                                                                            | `docs/tools/multi-agent-sandbox-tools.md`                                                                |
+| `SANDBOX_DEFAULT_TOOLS_UNRESOLVED` | info                                        | agent                      | An active sandbox policy omits `allow` or `deny`; unresolved defaults cause sandbox grants to be withheld.                                                                            | `docs/gateway/config-agents.md`                                                                          |
+| `CONTEXT_DEPENDENT_TOOLS`          | info                                        | agent                      | Sender or subagent tool policies require runtime context that is not resolved.                                                                                                        | `docs/gateway/config-tools.md`                                                                           |
+| `FALLBACK_TOOL_POLICY_UNRESOLVED`  | info                                        | agent                      | Fallback models are configured; exported grants describe the primary model.                                                                                                           | `docs/tools/multi-agent-sandbox-tools.md`; `docs/tools/exec.md`                                          |
+| `SAFE_BINS_DEFAULT_UNRESOLVED`     | info                                        | agent                      | Safe bins are unset while the agent holds exec; no default command grants are inferred.                                                                                               | `docs/tools/exec.md`; `docs/tools/exec-approvals-advanced.md`                                            |
+| `EXEC_APPROVALS_UNRESOLVED`        | info                                        | agent                      | Effective exec security or ask remains unknown for a non-node host.                                                                                                                   | `docs/tools/exec.md`                                                                                     |
+| `NODE_EXEC_APPROVALS_UNRESOLVED`   | info                                        | agent                      | Exec host is `node`; local state cannot establish the remote node approvals posture.                                                                                                  | `docs/tools/exec-approvals.md`                                                                           |
+| `ELEVATED_CONTEXT_REQUIRED`        | info                                        | agent                      | Elevated exec is configured with an active sandbox; sender and session gates remain unresolved.                                                                                       | `docs/tools/elevated.md`                                                                                 |
+| `SANDBOX_SCOPE_UNRESOLVED`         | info                                        | agent                      | An active sandbox has no explicit scope and the reference documentation disagrees on the default.                                                                                     | `docs/gateway/sandboxing.md`; `docs/tools/multi-agent-sandbox-tools.md`                                  |
+| `SANDBOX_BACKEND_UNRESOLVED`       | info                                        | agent                      | The configured backend is not Docker; only Docker isolation settings are mapped.                                                                                                      | `docs/gateway/sandboxing.md`                                                                             |
+| `HEARTBEAT_DEFAULT_UNRESOLVED`     | info                                        | agent                      | A heartbeat applies without `every`; its default cadence depends on uncollected authentication mode.                                                                                  | `docs/gateway/heartbeat.md`                                                                              |
+| `WORKSPACE_MISSING`                | info                                        | agent                      | The configured workspace cannot be resolved because it does not exist.                                                                                                                | `src/collect.ts, workspace (adapter filesystem check)`                                                   |
+| `INSTRUCTION_OUTSIDE_ROOT`         | info                                        | agent                      | A top-level Markdown entry is a broken link or resolves outside the workspace and is not collected.                                                                                   | `src/collect.ts, workspace (adapter collection boundary)`                                                |
+| `SKILL_SYMLINK_OUTSIDE_ROOT`       | info                                        | agent                      | A skill link resolves outside the workspace; OpenClaw requires explicit trust for such targets.                                                                                       | `docs/tools/skills.md`; `src/collect.ts (adapter collection boundary)`                                   |
+| `CRON_TIMEZONE_UNRESOLVED`         | info                                        | cron                       | A cron expression has no explicit timezone and uses the uncollected gateway host timezone.                                                                                            | `docs/automation/cron-jobs.md`                                                                           |
+| `SUBMINUTE_SCHEDULE`               | info                                        | cron                       | An every interval is not a whole number of minutes; its exact value is preserved in durationMs.                                                                                       | `sysml/cases.sysml (adapter MillisecondEvery)`; `src/collect.ts`                                         |
+| `CRON_AGENT_UNRESOLVED`            | info                                        | cron                       | The job names no agent and OpenClaw resolves its execution agent at run time, including plugin-managed jobs.                                                                          | `docs/automation/cron-jobs/troubleshooting.md`; `docs/concepts/dreaming.md`                              |
 
-The exec, sandbox and wildcard rules mirror OpenClaw's own security audit
-(`docs/gateway/security/audit-checks.md`).
+The `/5` `plaintextSecretCount` remains a legacy count, including arbitrary
+`env`, `vars` and header strings without their paths. It does not prove a
+credential covered by OpenClaw's
+`docs/reference/secretref-credential-surface.md`; `PLAINTEXT_SECRET_IN_CONFIG`
+is not a current rule.
+
+The plugin writes the canonical sorted array to `findings.json`. Its export
+summary and each new `versions.json` entry have
+`findings: {error, warning, info}` counts, including zeroes. Older entries
+without counts remain valid. Chat and tool replies render nonzero counts as
+errors, warnings and notes. The viewer payload instead uses
+`findings: Finding[]` recomputed from each readable snapshot, or `null` if the
+snapshot cannot be read; `[]` means a check ran with no findings.
 
 ## 8. Diff
 
@@ -649,17 +704,18 @@ Each run writes a new directory `<outDir>/<UTC time>/`, named to the second
 (`2026-11-02T10-15-00Z`):
 
 ```text
-snapshot.json  OpenClawImport.sysml  OpenClawInstance.sysml
+snapshot.json  findings.json  OpenClawImport.sysml  OpenClawInstance.sysml
 core.sysml  cases.sysml  skills.sysml  validation.json
 inference.json  OpenClawInferred.sysml      (with inference)
 ```
 
 `<outDir>/versions.json` lists the runs, newest first: id, creation time, agent
-count, inference counts (or null), and an optional validation summary. Older
-entries without validation remain valid. `<outDir>/index.html` is regenerated
-after each run: one self-contained page (no network, opens from `file://`) that
-shows each version as SysML v2 views (diagrams and tables), shows each file, and
-shows the unified diff of each file since the previous version.
+count, inference counts (or null), an optional validation summary and optional
+`findings: {error, warning, info}` counts. Older entries without validation or
+finding counts remain valid. `<outDir>/index.html` is regenerated after each
+run: one self-contained page (no network, opens from `file://`) that shows each
+version as SysML v2 views (diagrams and tables), shows each file, and shows the
+unified diff of each file since the previous version.
 
 | View            | Content                                                                                                                                                                                                                                                 |
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -755,7 +811,7 @@ informational to the export result.
 ```text
 deno task collect --home <dir> [--plugins <file>] --out <file>
 deno task export  --snapshot <file> --out <dir>
-deno task doctor  --snapshot <file>     # experimental (§7.2)
+deno task doctor  --snapshot <file>     # configuration findings (§7.2)
 deno task diff    <a> <b>
 ```
 
@@ -809,8 +865,9 @@ Failures are `{ code, context, recovery }` errors, never findings.
   catalog. Empty allowlists are treated as granting nothing.
 - **Inference** reads behaviour files and scheduled-task prompts, and depends on
   the model; its output is a proposal.
-- **Diagnostics.** The plugin reports no doctor findings in 0.1.0; collector
-  findings stay in the snapshot.
+- **Diagnostics.** Static configuration checks do not establish runtime
+  execution, actual embedding transmission, parent Git repositories or skill
+  validity. Findings do not repair the configuration or block export.
 - **Diff** does not compare agent names, raw policies, channel accounts, hooks,
   providers, bundled skills, the messaging policy or secret counts.
 
@@ -858,10 +915,10 @@ Failures are `{ code, context, recovery }` errors, never findings.
 12. **Immutable schema versions.** A snapshot schema is never extended in place,
     and older ones are rejected. Why: a snapshot's meaning must not depend on
     the code that reads it.
-13. **Export first, diagnostics later.** The plugin ships the export, inference
-    and versions; the doctor stays experimental and out of the plugin. Why: a
-    diagnostic is only meaningful when read against Assembly's theory of the
-    system, which the export does not carry yet.
+13. **Diagnostics from the exported snapshot.** Plugin exports and the Deno CLI
+    share the same read-only doctor. Why: findings can name the model's exact
+    elements, expose static limits and point to OpenClaw sources without
+    changing the instance or preventing an export.
 14. **Diagrams laid out at export time.** The plugin lays the views out with
     elkjs and embeds their geometry. Why: the page stays small and works from
     `file://` without a 1.6 MB layout engine in every page, and the same input
@@ -879,7 +936,7 @@ Failures are `{ code, context, recovery }` errors, never findings.
   `CANARY-*` marker; no snapshot, SysML, finding or change may contain one.
 - **Determinism and goldens.** Collecting and emitting twice gives identical
   bytes, equal to the reviewed goldens in `test/golden/`.
-- **Doctor.** Each experimental rule has a positive and a negative case.
+- **Doctor.** Each rule has a positive and a negative case.
 - **Toolkit.** An export directory of the fixture, with an inferred package,
   compiles alone with the pinned public sysml-wasm 0.10.10 archive, without an
   Assembly checkout. CI downloads it and checks its SHA-256 before running

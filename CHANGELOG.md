@@ -4,6 +4,18 @@
 
 The snapshot schema and the inference contract are unchanged.
 
+- **System diagnostics.** Every plugin export runs the doctor, writes
+  `findings.json`, and includes `{error, warning, info}` counts in its summary
+  and `versions.json`. Chat and tool replies show nonzero counts; the offline
+  viewer payload recomputes findings for readable snapshots. Rules follow the
+  OpenClaw 2026.10.9 sources, with
+  [meaning and recovery per code](docs/diagnostics.md). Reference checks
+  distinguish enabled and disabled jobs, unavailable binding accounts and
+  missing agents. Workspace backup and unresolved skill entries are
+  informational; a root `skills/SKILL.md` no longer triggers a warning. The
+  legacy broad secret counter remains in the snapshot without producing a doctor
+  error. Diagnostics are read-only and do not block export.
+
 - **Model validation.** `openclaw sysmlv2-toolkit install` installs the pinned
   sysml-toolkit 0.10.10 WebAssembly release, downloaded or from a local copy
   with `--from`, and `status` checks it. Once it is installed, every export is

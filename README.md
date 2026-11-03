@@ -61,7 +61,7 @@ openclaw sysmlv2-export --out ./exports  # write to another directory
 Each run writes a folder `<state dir>/sysmlv2-export/<UTC time>/`:
 
 ```text
-snapshot.json  OpenClawImport.sysml  OpenClawInstance.sysml
+snapshot.json  findings.json  OpenClawImport.sysml  OpenClawInstance.sysml
 core.sysml  cases.sysml  skills.sysml
 inference.json  OpenClawInferred.sysml   (with --infer)
 ```
@@ -69,6 +69,18 @@ inference.json  OpenClawInferred.sysml   (with --infer)
 Beside the run folders, `versions.json` lists the runs, newest first, and
 `index.html` is the viewer. To write elsewhere by default, set
 `plugins.entries.sysmlv2-export.config.outDir`.
+
+## Check the system
+
+Every plugin export runs the doctor on its snapshot and writes `findings.json`.
+The export summary and `versions.json` give counts as `{error, warning, info}`;
+chat and tool replies show nonzero counts. Findings identify the affected system
+element and explain what to review or fix. They never block the export or change
+the instance.
+
+See [Diagnostics](docs/diagnostics.md) for every code, its source and recovery.
+To check an existing snapshot separately, run
+`deno task doctor --snapshot snapshot.json`.
 
 ## Validate the model
 
@@ -195,12 +207,11 @@ openclaw plugins list --json > plugins.json             # optional inventory
 deno task collect --home ~/.openclaw --plugins plugins.json --out snapshot.json
 deno task export --snapshot snapshot.json --out exported
 deno task diff before.json after.json
-deno task doctor --snapshot snapshot.json               # experimental
+deno task doctor --snapshot snapshot.json
 ```
 
-`doctor` is an experimental configuration diagnostic that the plugin does not
-run. Snapshots use the `openclaw-snapshot/5` schema; older schemas are rejected,
-so collect again after upgrading.
+Snapshots use the `openclaw-snapshot/5` schema; older schemas are rejected, so
+collect again after upgrading. The doctor also runs on every plugin export.
 
 The test fixture is an anonymized, generic OpenClaw instance in which every
 secret is a `CANARY-*` marker that no output may contain. CI runs the checks,
