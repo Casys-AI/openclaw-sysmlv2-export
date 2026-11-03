@@ -65,7 +65,7 @@ Deno.test({
           base.ape.metrics!.queries.map((q) => q.code)
             .filter((code) => !code.startsWith("APE_")),
         ).size,
-        16,
+        17,
       );
       assert.deepEqual(
         base.ape.findings.filter((f) => f.code === "APE_LINK_CYCLE").map((f) =>
@@ -115,6 +115,7 @@ Deno.test({
               id: "no-payments",
               text: "Never change a payment method",
               kind: "prohibition",
+              concern: "exec",
               source,
             }],
           }],
