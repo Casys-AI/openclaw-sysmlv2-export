@@ -2,6 +2,7 @@ import { flags, keyword } from "./presentation.ts";
 import type {
   DiagramNode,
   DiagramView,
+  Figure,
   Shape,
   ViewTable,
   WeekRow,
@@ -22,11 +23,22 @@ export interface Head {
   muted?: true;
   dashed?: true;
 }
+/** How many of a matrix's columns hold a tool: all of them, several, one, or
+ * none (a tool declared but granted to no agent). */
+export type Held = "all" | "shared" | "one" | "none";
+
 export type TableData =
   | {
     kind: "matrix";
     columns: (Head & { title: string })[];
-    rows: (Head & { depth: number })[];
+    /** A tool row has its holders; a group or provider row is `host` when a
+     * tool under it is granted on the host layer. */
+    rows: (Head & {
+      depth: number;
+      holders?: number;
+      held?: Held;
+      host?: true;
+    })[];
     /** [row, column, glyph, cell id]; the glyph is h(ost), s(andbox) or b(oth). */
     cells: [number, number, string, string][];
   }
@@ -37,7 +49,13 @@ export type TableData =
     facet: string | null;
     /** Each row's values, column by column ("—" for an attribute it lacks),
      * its display name, and the other views that show it. */
-    rows: (Head & { values: string[]; title?: string; views?: string[] })[];
+    rows: (Head & {
+      values: string[];
+      /** The counts behind the values that state some, by column. */
+      figures?: Record<string, Figure>;
+      title?: string;
+      views?: string[];
+    })[];
     summary: Head | null;
   }
   | { kind: "week"; rows: WeekRow[] };
@@ -78,6 +96,15 @@ export function drawing(view: DiagramView): DiagramView {
   };
 }
 
+const held = (holders: number, columns: number): Held =>
+  holders === 0
+    ? "none"
+    : holders === columns
+    ? "all"
+    : holders === 1
+    ? "one"
+    : "shared";
+
 const GLYPH: Record<string, string> = {
   host: "h",
   sandbox: "s",
@@ -101,6 +128,7 @@ export function tableData(view: DiagramView): TableData | null {
         return {
           ...head(n),
           values: t.columns.map((c) => values.get(c) ?? "—"),
+          ...(n.figures ? { figures: n.figures } : {}),
           ...(n.text ? { title: n.text } : {}),
           ...(t.views ? { views: t.views[id] } : {}),
         };
@@ -113,19 +141,39 @@ export function tableData(view: DiagramView): TableData | null {
     n.parent ? 1 + depth(nodes.get(n.parent)!) : 0;
   const row = new Map(t.rows.map((id, i) => [id, i]));
   const column = new Map(t.columns.map((id, i) => [id, i]));
+  const cells = t.cells.map((id): [number, number, string, string] => {
+    const e = edges.get(id)!;
+    return [row.get(e.target)!, column.get(e.source)!, GLYPH[e.label!], id];
+  });
+  const holders = new Array<number>(t.rows.length).fill(0);
+  const host = new Set<number>();
+  for (const [r, , glyph] of cells) {
+    holders[r]++;
+    if (glyph !== "s") {
+      for (
+        let n: DiagramNode | undefined = nodes.get(t.rows[r])!;
+        n?.parent;
+        n = nodes.get(n.parent)
+      ) host.add(row.get(n.parent)!);
+    }
+  }
   return {
     kind: "matrix",
     columns: t.columns.map((id) => {
       const n = nodes.get(id)!;
       return { ...head(n), title: n.text ?? n.name };
     }),
-    rows: t.rows.map((id) => {
+    rows: t.rows.map((id, i) => {
       const n = nodes.get(id)!;
-      return { ...head(n), depth: depth(n) };
+      return {
+        ...head(n),
+        depth: depth(n),
+        ...(n.shape === "tool"
+          ? { holders: holders[i], held: held(holders[i], t.columns.length) }
+          : {}),
+        ...(host.has(i) ? { host: true as const } : {}),
+      };
     }),
-    cells: t.cells.map((id) => {
-      const e = edges.get(id)!;
-      return [row.get(e.target)!, column.get(e.source)!, GLYPH[e.label!], id];
-    }),
+    cells,
   };
 }

@@ -2,7 +2,7 @@
  * Parts are preserved verbatim, including any colons in source identifiers. */
 export function elementId(
   ...parts:
-    | [kind: "instance"]
+    | [kind: "instance" | "hooks" | "messaging"]
     | [
       kind:
         | "agent"
@@ -14,10 +14,12 @@ export function elementId(
         | "tool"
         | "origin"
         | "plugin"
-        | "mcp",
+        | "mcp"
+        | "hook"
+        | "capability",
       id: string,
     ]
-    | [kind: "grant", agentId: string, tool: string]
+    | [kind: "grant" | "delegation", from: string, to: string]
 ): string {
   return parts.join(":");
 }
