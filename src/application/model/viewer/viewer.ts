@@ -251,8 +251,7 @@ export function createViewer(
           { a: e.attributes, s: locate(e.sysml) },
         ]),
       ]);
-      // What an element shows is what its node or edge draws and lists. A
-      // drawn container's SysML spans its contents, so it has none of its own.
+      // What an element shows is what its node or edge draws and lists.
       const shown = new Map<string, string>([
         ...view.nodes.map((n): [string, string] => [
           n.id,
@@ -272,6 +271,7 @@ export function createViewer(
           JSON.stringify([e.label, configured(e.attributes)]),
         ]),
       ]);
+      // A drawn container's SysML spans its contents: it has none of its own.
       const containers = new Set(
         drawn.nodes.filter((n) => n.shape === "frame" || n.shape === "group")
           .map((n) => n.id),
@@ -334,21 +334,16 @@ export function createViewer(
       return ids(v).filter((id) => !drawn.has(id));
     };
     const earlier = new Set(ids(before)), current = ids(now);
-    const drawn = new Set(lines(now.data));
-    const both = current.filter((id) =>
-      earlier.has(id) && now.signatures.has(id) && before.signatures.has(id)
-    );
-    const differs = (field: keyof Signature) =>
-      both.filter((id) =>
-        now.signatures.get(id)![field] !== before.signatures.get(id)![field]
-      );
+    const drawn = new Set(lines(now.data)), present = new Set(current);
     const added = current.filter((id) => !earlier.has(id));
-    const changed = differs("shown");
-    const touched = differs("sysml").filter((id) =>
-      !changed.includes(id) && !drawn.has(id)
-    );
-    const now_ = new Set(current);
-    const removed = shown(before).filter((id) => !now_.has(id));
+    const changed: string[] = [], touched: string[] = [];
+    for (const id of current) {
+      const [a, b] = [now.signatures.get(id), before.signatures.get(id)];
+      if (!earlier.has(id) || !a || !b) continue;
+      if (a.shown !== b.shown) changed.push(id);
+      else if (a.sysml !== b.sysml && !drawn.has(id)) touched.push(id);
+    }
+    const removed = shown(before).filter((id) => !present.has(id));
     return {
       isNew: false,
       added,
