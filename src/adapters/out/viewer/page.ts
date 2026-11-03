@@ -1767,7 +1767,9 @@ function renderMatrix(box, t, mark) {
   const bar = el("div", "tb-bar");
   bar.append(input, button("Expand all", () => { state.folded.clear(); rows(); }), button("Collapse all", () => { groups.forEach((g) => state.folded.add(g)); rows(); }));
   bar.append(...heldFacets(t, () => rows()));
-  for (const [g, text] of [["h", "host"], ["s", "sandbox"], ["b", "both"]]) {
+  // The legend names only the glyphs the cells use.
+  const used = new Set(t.cells.map((c) => c[2]));
+  for (const [g, text] of [["h", "host"], ["s", "sandbox"], ["b", "both"]].filter(([g]) => used.has(g))) {
     const k = el("span", "tb-key");
     k.append(glyph(g), text);
     bar.append(k);
