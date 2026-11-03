@@ -1721,6 +1721,37 @@ function search(label) {
 }
 const GLYPH_WORDS = { h: "on the host", s: "in the sandbox", b: "on the host and in the sandbox" };
 function glyph(g) { return el("i", "g " + g); }
+// Tools by how many agents hold them (tables.ts's held); a second click clears.
+function heldFacets(t, redraw) {
+  const held = el("span", "tb-key", "held by");
+  return [held, ...["all", "shared", "one", "none"].map((h) => {
+    const n = t.rows.filter((r) => r.held === h).length;
+    const b = button(h + " " + n, () => keepFocus(() => { state.facet = state.facet === h ? null : h; redraw(); }));
+    b.dataset.key = "held:" + h;
+    b.setAttribute("aria-pressed", String(state.facet === h));
+    b.title = { all: "Tools every agent holds", shared: "Tools some agents hold", one: "Tools one agent holds", none: "Declared tools no agent holds" }[h];
+    b.disabled = !n;
+    return b;
+  })];
+}
+// The matrix's header row: its corner, and a column per agent.
+function matrixHead(t, mark) {
+  const head = el("tr"), corner = el("th", "mx-corner", "tool ↓ · allocated to agent →");
+  corner.title = "SysML allocation matrix: each cell is an agent's ToolGrant";
+  head.append(corner);
+  t.columns.forEach((c, i) => {
+    const th = el("th", "mx-col" + mark(c.id));
+    th.dataset.id = c.id;
+    th.dataset.col = String(i);
+    th.tabIndex = 0;
+    th.title = c.title + " · " + c.name + c.type;
+    th.append(el("span", "", c.title), el("small", "", c.name.replace(/^agent_/, "")));
+    head.append(th);
+  });
+  const thead = el("thead");
+  thead.append(head);
+  return thead;
+}
 // Tools × agents. Group and provider rows count the tools each agent holds
 // under them; a filter shows the matching tools with their groups.
 function renderMatrix(box, t, mark) {
@@ -1735,39 +1766,14 @@ function renderMatrix(box, t, mark) {
   const groups = t.rows.filter((r) => r.shape !== "tool").map((r) => r.id);
   const bar = el("div", "tb-bar");
   bar.append(input, button("Expand all", () => { state.folded.clear(); rows(); }), button("Collapse all", () => { groups.forEach((g) => state.folded.add(g)); rows(); }));
-  // Tools by how many agents hold them (tables.ts's held); a second click clears.
-  const held = el("span", "tb-key", "held by");
-  bar.append(held, ...["all", "shared", "one", "none"].map((h) => {
-    const n = t.rows.filter((r) => r.held === h).length;
-    const b = button(h + " " + n, () => keepFocus(() => { state.facet = state.facet === h ? null : h; rows(); }));
-    b.dataset.key = "held:" + h;
-    b.setAttribute("aria-pressed", String(state.facet === h));
-    b.title = { all: "Tools every agent holds", shared: "Tools some agents hold", one: "Tools one agent holds", none: "Declared tools no agent holds" }[h];
-    b.disabled = !n;
-    return b;
-  }));
+  bar.append(...heldFacets(t, () => rows()));
   for (const [g, text] of [["h", "host"], ["s", "sandbox"], ["b", "both"]]) {
     const k = el("span", "tb-key");
     k.append(glyph(g), text);
     bar.append(k);
   }
-  const table = el("table", "mx" + (t.columns.length > 8 ? " narrow" : ""));
-  const head = el("tr");
-  const corner = el("th", "mx-corner", "tool ↓ · allocated to agent →");
-  corner.title = "SysML allocation matrix: each cell is an agent's ToolGrant";
-  head.append(corner);
-  t.columns.forEach((c, i) => {
-    const th = el("th", "mx-col" + mark(c.id));
-    th.dataset.id = c.id;
-    th.dataset.col = String(i);
-    th.tabIndex = 0;
-    th.title = c.title + " · " + c.name + c.type;
-    th.append(el("span", "", c.title), el("small", "", c.name.replace(/^agent_/, "")));
-    head.append(th);
-  });
-  const thead = el("thead"), tbody = el("tbody");
-  thead.append(head);
-  table.append(thead, tbody);
+  const table = el("table", "mx" + (t.columns.length > 8 ? " narrow" : "")), tbody = el("tbody");
+  table.append(matrixHead(t, mark), tbody);
   const rows = () => {
     const q = state.filter.trim().toLowerCase(), h = state.facet;
     for (const b of bar.querySelectorAll("[data-key^='held:']")) b.setAttribute("aria-pressed", String(b.dataset.key === "held:" + h));
