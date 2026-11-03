@@ -11,6 +11,7 @@ import { emit } from "../src/emit.ts";
 import { ASSEMBLY_LIBRARY } from "../src/library.ts";
 import { emitInferred } from "../src/infer.ts";
 import { parseSnapshot } from "../src/snapshot.ts";
+import { initOxigraph, namedNode, Store } from "../src/oxigraph.ts";
 import { createFixture } from "./support/fixture.ts";
 
 const archive = Deno.env.get("SYSML_TOOLKIT_WASM_ARCHIVE");
@@ -64,7 +65,7 @@ Deno.test({
           "agent:secretary",
         ],
       );
-      console.log("APE base fixture:", JSON.stringify(base.ape));
+      console.log("APE base fixture counts:", JSON.stringify(base.ape.metrics));
       console.log(
         `Fixture validation (worker, hashes, init, library, check): ${
           (performance.now() - started).toFixed(1)
@@ -141,7 +142,10 @@ Deno.test({
         "agent:lead",
         "agent:secretary",
       ]);
-      console.log("APE extended fixture:", JSON.stringify(cases.ape));
+      console.log(
+        "APE extended fixture counts:",
+        JSON.stringify(cases.ape.metrics),
+      );
       const invalid = await validate(
         new Map([["invalid.sysml", "package Broken { part def ]"]]),
         fixture.home,
@@ -199,6 +203,43 @@ Deno.test({
         /"(?:totalMs|preparationMs|projectionMs|loadMs|ms)":/,
       );
       assert.equal(Object.hasOwn(published.ape.metrics, "quads"), false);
+      assert.equal(Object.hasOwn(published.ape, "validationReport"), false);
+      await initOxigraph();
+      const reportStore = new Store();
+      try {
+        reportStore.load(
+          await readFile(join(summary.outDir, "ape-report.ttl"), "utf8"),
+          { format: "text/turtle" },
+        );
+        const sh = "http://www.w3.org/ns/shacl#";
+        assert.equal(
+          reportStore.query(
+            `ASK { ?report a <${sh}ValidationReport>; <${sh}conforms> false }`,
+          ),
+          true,
+        );
+        const results = reportStore.query(
+          `SELECT ?result WHERE { ?report <${sh}result> ?result . ?result a <${sh}ValidationResult>; <${sh}sourceShape> <urn:ase:ape:v1:LINK_CYCLE> }`,
+        );
+        assert.ok(Array.isArray(results));
+        assert.ok(results.length >= published.ape.findings.length);
+        assert.equal(
+          reportStore.match(
+            null,
+            namedNode(sh + "sourceConstraintComponent"),
+            namedNode(sh + "SPARQLConstraintComponent"),
+          ).length,
+          results.length,
+        );
+        // RDF reports one result per solution; APE JSON groups related values by agent.
+        const focuses = reportStore.query(
+          `SELECT DISTINCT ?focus WHERE { ?result <${sh}focusNode> ?focus }`,
+        );
+        assert.ok(Array.isArray(focuses));
+        assert.equal(focuses.length, published.ape.findings.length);
+      } finally {
+        (reportStore as Store & { free(): void }).free();
+      }
       const publishedFindings = JSON.parse(
         await readFile(join(summary.outDir, "findings.json"), "utf8"),
       );

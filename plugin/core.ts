@@ -324,6 +324,9 @@ export async function runExport(
   findings.push(...ape.findings);
   findings.sort(compareFindings);
   for (const finding of findings) findingSummary[finding.severity]++;
+  if (ape.validationReport !== undefined) {
+    await writeFile(join(dir, "ape-report.ttl"), ape.validationReport);
+  }
   await writeFile(join(dir, "findings.json"), canonical(findings));
   await writeFile(
     join(dir, "validation.json"),
