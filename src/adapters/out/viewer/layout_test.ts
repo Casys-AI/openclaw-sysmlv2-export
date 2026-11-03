@@ -93,3 +93,26 @@ Deno.test("Scheduled tasks lays its cases out above the agents they wake, wider 
   }
   assert.ok(scene.w > 2 * scene.h, `${scene.w} × ${scene.h}`);
 });
+
+Deno.test("a Behaviour view under a long table is laid out for a wider canvas", async () => {
+  const [field] = inference.agents;
+  const procedures = Array.from({ length: 8 }, (_, i) => {
+    const p = field.procedures[i % 2];
+    return {
+      ...p,
+      id: `${p.id}-${i}`,
+      steps: p.steps.map((s) => ({ ...s, id: `${s.id}-${i}` })),
+    };
+  });
+  const view = drawing(
+    diagramViews(snapshot, {
+      ...inference,
+      agents: [{ ...field, procedures }],
+    }).find((v) => v.id === "behaviour:field")!,
+  );
+  const alone = await layoutView(view), under = await layoutView(view, 30);
+  assert.ok(
+    under.w / under.h > alone.w / alone.h,
+    `${under.w} × ${under.h} vs ${alone.w} × ${alone.h}`,
+  );
+});

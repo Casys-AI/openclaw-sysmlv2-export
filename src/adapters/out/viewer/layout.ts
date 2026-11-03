@@ -763,10 +763,16 @@ async function laidOut(
   return sceneOf(view, scenes, await elk.layout(graph));
 }
 
-/** The aspect ratio a view is fitted into: a common screen. */
-const SCREEN = 16 / 9;
-/** The scale at which a scene fits a SCREEN-shaped viewport of height 1. */
-const shown = (s: Scene) => Math.min(SCREEN / s.w, 1 / s.h);
+/** The aspect of the canvas a diagram gets on a 1600 × 1000 window: 1528 ×
+ * 880 px, less the table under it, which takes a bar and a header (80 px) and
+ * 28 px a row, up to 42% of the height (page.ts). With no table this is about
+ * a 16:9 screen; a table of ten rows or more leaves 3:1. */
+export function canvasAspect(tableRows: number): number {
+  const table = tableRows ? Math.min(0.42 * 880, 80 + 28 * tableRows) : 0;
+  return 1528 / (880 - table);
+}
+/** The scale at which a scene fits a viewport of that aspect and height 1. */
+const shown = (s: Scene, aspect: number) => Math.min(aspect / s.w, 1 / s.h);
 /** Top-level frames in `count` rows, in order and as even as can be, the
  * other top-level nodes in a row below them. */
 function rowsOf(view: DiagramView, count: number): Map<string, number> {
@@ -782,17 +788,20 @@ function rowsOf(view: DiagramView, count: number): Map<string, number> {
 
 /** Places a view's drawn elements (see tables.ts) as a layered graph: System,
  * Scheduled tasks, and a Behaviour view's procedures as flows above the
- * parties they hand work to, in as many rows as make it show largest on a
- * screen. */
-export async function layoutView(view: DiagramView): Promise<Scene> {
-  const s = settings(view);
+ * parties they hand work to, in as many rows as make it show largest in the
+ * canvas that the `tableRows` rows of its table leave. */
+export async function layoutView(
+  view: DiagramView,
+  tableRows = 0,
+): Promise<Scene> {
+  const s = settings(view), aspect = canvasAspect(tableRows);
   let scene = await laidOut(view, s);
   const frames = s.wrap
     ? view.nodes.filter((n) => n.parent === null && n.shape === "frame").length
     : 0;
   for (let rows = 2; rows <= frames; rows++) {
     const next = await laidOut(view, s, rowsOf(view, rows));
-    if (shown(next) <= shown(scene)) break;
+    if (shown(next, aspect) <= shown(scene, aspect)) break;
     scene = next;
   }
   return { ...moved(scene, 24, 24), w: r1(scene.w + 48), h: r1(scene.h + 48) };

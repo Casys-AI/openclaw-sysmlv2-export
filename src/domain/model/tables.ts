@@ -85,6 +85,13 @@ function tabled(table: ViewTable | null): Set<string> {
   }
 }
 
+/** How many rows a view's table lists (a matrix has no diagram above it). */
+export function tableRows(table: ViewTable | null): number {
+  return table?.kind === "elements" || table?.kind === "week"
+    ? table.rows.length
+    : 0;
+}
+
 /** The view without the elements its table shows: what layout.ts draws. */
 export function drawing(view: DiagramView): DiagramView {
   const shown = tabled(view.table);

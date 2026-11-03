@@ -9,9 +9,13 @@ import { type Snapshot } from "../../src/domain/model/snapshot.ts";
 import { canonical } from "../../src/infrastructure/canonical-json.ts";
 import { parseSnapshot } from "../../src/infrastructure/snapshot-codec.ts";
 import {
+  changes,
   viewerPage,
   type ViewerVersion,
 } from "../../src/composition/viewer.ts";
+import { createViewer } from "../../src/application/model/viewer/viewer.ts";
+import { layoutView } from "../../src/adapters/out/viewer/layout.ts";
+import { renderPage } from "../../src/adapters/out/viewer/render.ts";
 
 const snapshot: Snapshot = parseSnapshot(
   JSON.parse(
@@ -344,6 +348,43 @@ Deno.test("an Overview row changes with what it shows, not with inference", asyn
     "instance",
   ]]);
   assert.equal(data.versions[0].inputs, "changed");
+});
+
+Deno.test("a diagram is laid out again when its table has another number of rows", async () => {
+  const inference: Inference = JSON.parse(
+    await readFile(
+      new URL("../fixtures/inference.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  const fewer = structuredClone(inference);
+  fewer.agents[0].rules = fewer.agents[0].rules.slice(0, 1);
+  const inferred = (id: string, i: Inference) => {
+    const v = version(id, snapshot);
+    v.files["inference.json"] = JSON.stringify(i);
+    Object.assign(v.files, Object.fromEntries(emitInferred(snapshot, i)));
+    return v;
+  };
+  const calls: [string, number][] = [];
+  const { viewerPage } = createViewer({
+    layoutView: (view, rows) => {
+      calls.push([view.id, rows]);
+      return layoutView(view, rows);
+    },
+    changes,
+    canonical,
+    parseSnapshot,
+    renderPage,
+  });
+  await viewerPage([
+    inferred("2026-11-02T10-20-00Z", inference),
+    inferred("2026-11-02T10-15-00Z", fewer),
+  ]);
+  const id = `behaviour:${inference.agents[0].agentId}`;
+  assert.deepEqual(calls.filter(([v]) => v === id).map(([, rows]) => rows), [
+    inference.agents[0].rules.length,
+    1,
+  ]);
 });
 
 Deno.test("a task's last run is not a change of the task", async () => {

@@ -38,6 +38,7 @@ import {
   drawing,
   type TableData,
   tableData,
+  tableRows,
 } from "../../../domain/model/tables.ts";
 import { groupFiles } from "../../../domain/export/file-groups.ts";
 import type { VersionEntry } from "../../../domain/export/versions.ts";
@@ -244,9 +245,11 @@ export function createViewer(
     };
     const out: VersionView[] = [];
     for (const view of diagramViews(snapshot, inferenceOf(files))) {
-      const drawn = drawing(view), key = JSON.stringify(drawn);
+      // The table under a diagram shapes the canvas it is laid out for.
+      const drawn = drawing(view), rows = tableRows(view.table);
+      const key = JSON.stringify([drawn, rows]);
       if (drawn.nodes.length && !scenes.has(key)) {
-        scenes.set(key, await layoutView(drawn));
+        scenes.set(key, await layoutView(drawn, rows));
       }
       const elements: ViewData["elements"] = Object.fromEntries([
         ...view.nodes.map((
