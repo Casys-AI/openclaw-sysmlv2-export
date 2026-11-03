@@ -12,6 +12,7 @@ import {
   type DiagramView,
   diagramViews,
   RUNTIME_ATTRIBUTES,
+  zoneOffset,
 } from "./views.ts";
 
 const read = (path: string) =>
@@ -209,11 +210,43 @@ Deno.test("the week shows when each scheduled task fires", () => {
     when: "Tue, Fri at 01:00",
     enabled: false,
     zone: "UTC",
+    offset: null,
     model: "anthropic/claude-opus-4-6",
+    delivery: "announce · discord",
     lastRun: "ok",
+    errors: 0,
     fires: [[25, 1], [4 * 24 + 1, 1]],
     everyMs: null,
   });
+});
+
+Deno.test("the week places cron hours in UTC by each time zone's offset at the version's instant", () => {
+  const week = (at: Date) => {
+    const { table } = view(diagramViews(snapshot, null, at), "schedules");
+    assert.ok(table?.kind === "week");
+    return (node: string) => table.rows.find((r) => r.node === node)!;
+  };
+  // Daily at 07:30 in New York: 12:30 UTC in November, 11:30 in July.
+  const winter = week(new Date("2026-11-02T10:20:00Z"));
+  assert.deepEqual(
+    [winter("cron:job-1").offset, winter("cron:job-1").fires?.[0]],
+    [-300, [12, 1]],
+  );
+  assert.equal(
+    week(new Date("2026-07-01T00:00:00Z"))("cron:job-1").offset,
+    -240,
+  );
+  // The gateway's time zone is not collected: its own hours stay.
+  assert.deepEqual(
+    [winter("cron:job-10").offset, winter("cron:job-10").fires],
+    [null, [[3 * 24 + 12, 1]]],
+  );
+});
+
+Deno.test("zone offsets recognise fractional zones and reject invalid instants", () => {
+  assert.equal(zoneOffset("Asia/Kolkata", new Date(0)), 330);
+  assert.equal(zoneOffset("Mars/Olympus_Mons", new Date(0)), null);
+  assert.throws(() => zoneOffset("UTC", new Date(NaN)), RangeError);
 });
 
 Deno.test("cron expressions repeat weekly only with any day of month and month", () => {
@@ -225,6 +258,10 @@ Deno.test("cron expressions repeat weekly only with any day of month and month",
     6 * 24 + 9,
   ]);
   assert.deepEqual(cronWeek("30 0 9 * * ?")?.length, 7);
+  // Offset minutes can cross an hour or wrap into the previous week.
+  assert.deepEqual(cronWeek("30 9 * * MON", 330), [[4, 1]]);
+  assert.deepEqual(cronWeek("0 1 * * MON", 120), [[6 * 24 + 23, 1]]);
+  assert.deepEqual(cronWeek("0,30 9 * * MON", 330), [[3, 1], [4, 1]]);
   for (
     const e of ["0 0 1 * *", "0 0 * 1 *", "0 24 * * *", "0 9 * * L", "@daily"]
   ) {

@@ -110,23 +110,34 @@ export interface DiagramEdge {
   attributes: [string, string][];
   sysml: SysmlRef[];
 }
-/** When a scheduled case fires in a week, in its schedule's own time zone. */
+/** When a scheduled case fires in a week: in UTC when its time zone's offset
+ * is known, else in its own hours. */
 export interface WeekRow {
   /** The scheduled case's node. */
   node: string;
   /** The agent it wakes, or null. */
   agent: string | null;
   label: string;
+  /** Its schedule in words (or as written), in its own time zone. */
   when: string;
   enabled: boolean;
-  /** A cron schedule's time zone; null for the gateway host's. */
+  /** A cron schedule's time zone; null for the gateway host's, which is not
+   * collected. */
   zone: string | null;
+  /** Minutes `zone` is ahead of UTC at the version's instant; null when its
+   * hours cannot be placed in UTC (no zone, an unknown one, or no instant). */
+  offset: number | null;
   /** The task's own model, or null. */
   model: string | null;
+  /** Where its result goes, or null. */
+  delivery: string | null;
   /** Status of its last run (runtime state, not configuration), or null. */
   lastRun: string | null;
-  /** [hour of the week from Monday 00:00, times it fires in that hour], or
-   * null unless it repeats weekly (see `cronWeek`). */
+  /** Failed runs in a row (runtime state). */
+  errors: number;
+  /** [hour of the week from Monday 00:00, times it fires in that hour], in
+   * UTC when `offset` is known, or null unless it repeats weekly (see
+   * `cronWeek`). */
   fires: [number, number][] | null;
   /** An interval's period; its start is unknown. */
   everyMs: number | null;
@@ -360,10 +371,14 @@ function toolCount(granted: Grant[]): string {
 }
 
 /** When a cron expression fires in a week: [hour of the week from Monday
- * 00:00, times in that hour], in the expression's own time zone. Null unless
- * it repeats weekly: five fields (or six, seconds first), day of month and
- * month `*` or `?`, the others numbers, ranges, steps, lists or day names. */
-export function cronWeek(expression: string): [number, number][] | null {
+ * 00:00, times in that hour], in its own time zone or, given that zone's
+ * offset from UTC in minutes, in UTC. Null unless it repeats weekly: five
+ * fields (or six, seconds first), day of month and month `*` or `?`, the
+ * others numbers, ranges, steps, lists or day names. */
+export function cronWeek(
+  expression: string,
+  offset = 0,
+): [number, number][] | null {
   const f = expression.trim().toUpperCase().split(/\s+/);
   if (f.length === 5) f.unshift("0");
   if (f.length !== 6 || ![f[3], f[4]].every((x) => x === "*" || x === "?")) {
@@ -377,12 +392,18 @@ export function cronWeek(expression: string): [number, number][] | null {
     cronField(days, 7),
   ];
   if (!seconds || !minutes || !hours || !weekdays) return null;
-  const times = seconds.length * minutes.length;
-  // Sunday is 0 or 7; the week starts on Monday.
-  return [...new Set(weekdays.map((d) => (d + 6) % 7))].sort((a, b) => a - b)
-    .flatMap((day) =>
-      hours.map((h): [number, number] => [day * 24 + h, times])
-    );
+  // Sunday is 0 or 7; the week starts on Monday and wraps around.
+  const week = 7 * 24 * 60, count = new Map<number, number>();
+  for (const day of new Set(weekdays.map((d) => (d + 6) % 7))) {
+    for (const h of hours) {
+      for (const m of minutes) {
+        const at = ((day * 1440 + h * 60 + m - offset) % week + week) % week;
+        const hour = Math.floor(at / 60);
+        count.set(hour, (count.get(hour) ?? 0) + seconds.length);
+      }
+    }
+  }
+  return [...count].sort(([a], [b]) => a - b);
 }
 
 function agentBlock(a: Agent, granted: Grant[]): DiagramNode {
@@ -1067,7 +1088,37 @@ function deliveryText(d: Cron["delivery"]): string {
   return [d.mode, channel].filter(Boolean).join(" · ") || "—";
 }
 
-function schedulesView(s: Snapshot): DiagramView | null {
+/** A time zone's offset from UTC in minutes at an instant (Europe/Paris in
+ * winter: 60), or null when the runtime knows no such IANA zone. */
+export function zoneOffset(zone: string, at: Date): number | null {
+  let format: Intl.DateTimeFormat;
+  try {
+    format = new Intl.DateTimeFormat("en-US", {
+      timeZone: zone,
+      hourCycle: "h23",
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+    });
+  } catch (error) {
+    if (error instanceof RangeError) return null;
+    throw error;
+  }
+  const parts = format.formatToParts(at);
+  const part = (type: string) => +parts.find((p) => p.type === type)!.value;
+  const local = Date.UTC(
+    part("year"),
+    part("month") - 1,
+    part("day"),
+    part("hour"),
+    part("minute"),
+  );
+  return (local - Math.floor(at.getTime() / 60000) * 60000) / 60000;
+}
+
+function schedulesView(s: Snapshot, at: Date | undefined): DiagramView | null {
   const agents = byId(s.agents);
   const known = new Set(agents.map((a) => a.id));
   const nodes: DiagramNode[] = [], edges: DiagramEdge[] = [];
@@ -1119,8 +1170,11 @@ function schedulesView(s: Snapshot): DiagramView | null {
       when: scheduleText("every", null, a.heartbeat.everyMs) ?? "never",
       enabled: a.heartbeat.everyMs > 0,
       zone: null,
+      offset: null,
       model: null,
+      delivery: null,
       lastRun: null,
+      errors: 0,
       fires: null,
       everyMs: a.heartbeat.everyMs > 0 ? a.heartbeat.everyMs : null,
     });
@@ -1132,6 +1186,8 @@ function schedulesView(s: Snapshot): DiagramView | null {
       ? `every ${sc.everyMs} ms`
       : `${sc.kind} ${quoted(sc.expression ?? "")}`;
     const words = scheduleText(sc.kind, sc.expression, sc.everyMs);
+    const zone = sc.kind === "cron" ? sc.timezone : null;
+    const offset = zone && at ? zoneOffset(zone, at) : null;
     nodes.push(node({
       id,
       shape: "block",
@@ -1171,10 +1227,17 @@ function schedulesView(s: Snapshot): DiagramView | null {
       label: j.name,
       when: words ?? raw,
       enabled: j.enabled,
-      zone: sc.kind === "cron" ? sc.timezone : null,
+      zone,
+      offset,
       model: j.model,
+      delivery: j.delivery.mode || j.delivery.channel
+        ? deliveryText(j.delivery)
+        : null,
       lastRun: j.runtime.lastRunStatus,
-      fires: sc.kind === "cron" ? cronWeek(sc.expression ?? "") : null,
+      errors: j.runtime.consecutiveErrors,
+      fires: sc.kind === "cron"
+        ? cronWeek(sc.expression ?? "", offset ?? 0)
+        : null,
       everyMs: sc.kind === "every" ? sc.everyMs : null,
     });
     wake(id, j.agentId);
@@ -1496,10 +1559,12 @@ function reachView(s: Snapshot): DiagramView | null {
 
 /** The views of one version, in picker order, the Overview first. Behaviour
  * views exist only with inference, one per agent with at least one procedure
- * or rule. */
+ * or rule. `at`, the version's instant, places scheduled hours in UTC; without
+ * it they stay in each task's own time zone. */
 export function diagramViews(
   snapshot: Snapshot,
   inference: Inference | null,
+  at?: Date,
 ): DiagramView[] {
   const granted = new Map(
     snapshot.agents.map((a) => [a.id, grants(snapshot, a)]),
@@ -1508,7 +1573,7 @@ export function diagramViews(
   const reach = reachView(snapshot);
   if (reach) views.push(reach);
   views.push(toolsView(snapshot, granted));
-  const cases = schedulesView(snapshot);
+  const cases = schedulesView(snapshot, at);
   if (cases) views.push(cases);
   const inferred = [...inference?.agents ?? []].sort((a, b) =>
     a.agentId < b.agentId ? -1 : 1

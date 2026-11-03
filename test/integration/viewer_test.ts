@@ -396,6 +396,19 @@ Deno.test("a task's last run is not a change of the task", async () => {
   assert.equal(data.versions[0].inputs, "same");
 });
 
+Deno.test("a version's week is placed in UTC at the instant it was created", async () => {
+  const data = dataOf(
+    await viewerPage([version("2026-07-01T10-00-00Z", snapshot)]),
+  );
+  const { table } =
+    data.views[viewOf(data, data.versions[0], "schedules").view];
+  // New York is UTC−4 in July.
+  assert.equal(
+    table.rows.find((r: { node: string }) => r.node === "cron:job-1").offset,
+    -240,
+  );
+});
+
 Deno.test("a version whose snapshot this viewer cannot read keeps its files", async () => {
   const old = version("2026-11-02T10-15-00Z", snapshot);
   old.files["snapshot.json"] = JSON.stringify({

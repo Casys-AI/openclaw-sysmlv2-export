@@ -223,11 +223,13 @@ export function createViewer(
 
   /** A version's views, laid out, each element located in the version's own
    * SysML files; null when this viewer cannot read its snapshot (an older
-   * schema): its files and persisted findings remain available. */
+   * schema): its files and persisted findings remain available. Its week is
+   * placed at its creation instant. */
   async function versionViews(
     files: Record<string, string>,
     scenes: Map<string, Scene>,
     snapshot: Snapshot | null,
+    at: Date,
   ): Promise<VersionView[] | null> {
     if (!snapshot) return null;
     const index = new Map<string, Map<string, [number, number]>>();
@@ -244,7 +246,7 @@ export function createViewer(
       return lines.get(file)!.slice(from - 1, to).join("\n");
     };
     const out: VersionView[] = [];
-    for (const view of diagramViews(snapshot, inferenceOf(files))) {
+    for (const view of diagramViews(snapshot, inferenceOf(files), at)) {
       // The table under a diagram shapes the canvas it is laid out for.
       const drawn = drawing(view), rows = tableRows(view.table);
       const key = JSON.stringify([drawn, rows]);
@@ -444,7 +446,14 @@ export function createViewer(
     };
     const views: (VersionView[] | null)[] = [];
     for (const [i, v] of versions.entries()) {
-      views.push(await versionViews(v.files, scenes, snapshots[i]));
+      views.push(
+        await versionViews(
+          v.files,
+          scenes,
+          snapshots[i],
+          new Date(v.entry.createdAt),
+        ),
+      );
     }
     const data = {
       texts,
