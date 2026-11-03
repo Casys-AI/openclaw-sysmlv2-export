@@ -40,11 +40,10 @@ Each run writes `<state dir>/sysmlv2-export/<UTC time>/` with `snapshot.json`,
 
 ## Check the system
 
-Every export checks its snapshot with the doctor and writes `findings.json`. The
-export summary and `versions.json` include `{error, warning, info}` counts; chat
-and tool replies show nonzero counts. Each finding names the affected element
-and gives a review or recovery step. Findings never block the export or change
-the instance.
+Every export checks its snapshot with the doctor and writes `findings.json`:
+errors, warnings and notes, each naming the element concerned and how to fix it.
+The summary counts them, and the viewer's Doctor chip lists them. Findings never
+block an export or change the instance.
 
 See the
 [diagnostics guide](https://github.com/Casys-AI/openclaw-sysmlv2-export/blob/main/docs/diagnostics.md)

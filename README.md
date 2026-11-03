@@ -72,14 +72,14 @@ Beside the run folders, `versions.json` lists the runs, newest first, and
 
 ## Check the system
 
-Every plugin export runs the doctor on its snapshot and writes `findings.json`.
-The export summary and `versions.json` give counts as `{error, warning, info}`;
-chat and tool replies show nonzero counts. Findings identify the affected system
-element and explain what to review or fix. They never block the export or change
-the instance.
+Every export runs the doctor on its snapshot and writes `findings.json`: errors,
+warnings and notes, each with a code, the element concerned and how to fix it.
+The summary and `versions.json` count them. In the viewer, the Doctor chip in
+the header lists them, and the elements concerned carry a mark. Findings never
+block an export or change the instance.
 
-See [Diagnostics](docs/diagnostics.md) for every code, its source and recovery.
-To check an existing snapshot separately, run
+[Diagnostics](docs/diagnostics.md) lists every code, its source in OpenClaw and
+its fix. To check a snapshot on its own, run
 `deno task doctor --snapshot snapshot.json`.
 
 ## Validate the model
