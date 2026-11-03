@@ -1,20 +1,45 @@
 import type { ViewerPresentation } from "./ports/out/viewer.port.ts";
 export type { FileChange } from "../../../domain/model/presentation.ts";
 import {
+  type ApeFinding,
   type PersistedApeReport,
   persistedApeReport,
 } from "../../../domain/model/diagnostics/ape.ts";
+import {
+  type Checks,
+  checksOf,
+  FINDINGS_INVALID,
+  FINDINGS_INVALID_RECOVERY,
+  rulesRan,
+} from "../../../domain/model/diagnostics/checks.ts";
+import {
+  type FindingsDelta,
+  findingsDelta,
+} from "../../../domain/model/diagnostics/delta.ts";
 import { compareFindings } from "../../../domain/model/diagnostics/findings.ts";
+import {
+  collectorNotes,
+  type DoctorGroup,
+  doctorGroups,
+} from "../../../domain/model/diagnostics/groups.ts";
+import { diff } from "../../../domain/model/diff.ts";
+import { diffSubjects } from "../../../domain/model/diff-subjects.ts";
 import { elementId } from "../../../domain/model/element-id.ts";
 import { isRecord } from "../../../domain/primitives/error.ts";
 import type { Inference } from "../../../domain/model/inference.ts";
+import {
+  type InputsVerdict,
+  inputsVerdict,
+} from "../../../domain/model/inputs.ts";
+import { elementLabels } from "../../../domain/model/labels.ts";
 import type { Scene } from "../../../domain/model/presentation.ts";
-import type { Finding, Snapshot } from "../../../domain/model/snapshot.ts";
+import type { Snapshot } from "../../../domain/model/snapshot.ts";
 import {
   drawing,
   type TableData,
   tableData,
 } from "../../../domain/model/tables.ts";
+import { groupFiles } from "../../../domain/export/file-groups.ts";
 import type { VersionEntry } from "../../../domain/export/versions.ts";
 import {
   declarations,
@@ -54,52 +79,60 @@ export function createViewer(
       return null;
     }
   }
-  /** Findings belong to their saved version; missing archives retain collector notes only. */
+  /** Findings belong to their saved version; missing archives retain collector
+   * notes only. A findings.json this viewer cannot read gives one note of
+   * its own, and `unreadable`. */
   function findingsOf(version: ViewerVersion, snapshot: Snapshot | null) {
-    let persisted: Finding[] = [];
-    if (Object.hasOwn(version.files, "findings.json")) {
-      try {
-        const value: unknown = JSON.parse(version.files["findings.json"]);
-        if (
-          !Array.isArray(value) || value.some((row) => {
-            if (
-              !isRecord(row) ||
-              !["error", "warning", "info"].includes(String(row.severity)) ||
-              ["code", "subject", "context", "recovery"].some((field) =>
-                typeof row[field] !== "string" || !row[field]
-              )
-            ) return true;
-            const metadata = row.pattern !== undefined ||
-              row.finding !== undefined;
-            return ((row.code as string).startsWith("APE_") || metadata) && (
-              typeof row.pattern !== "string" || !row.pattern ||
-              !["present", "absent", "indeterminate"].includes(
-                String(row.finding),
-              )
-            );
-          })
-        ) throw new Error("Expected an array of valid findings");
-        persisted = value as Finding[];
-      } catch {
-        persisted = [{
-          code: "VIEWER_FINDINGS_INVALID",
-          severity: "warning",
+    if (!Object.hasOwn(version.files, "findings.json")) {
+      return {
+        rows: snapshot
+          ? snapshot.ambiguities.map((finding) => ({ ...finding })).sort(
+            compareFindings,
+          )
+          : null,
+        unreadable: false,
+      };
+    }
+    try {
+      const value: unknown = JSON.parse(version.files["findings.json"]);
+      if (
+        !Array.isArray(value) || value.some((row) => {
+          if (
+            !isRecord(row) ||
+            !["error", "warning", "info"].includes(String(row.severity)) ||
+            ["code", "subject", "context", "recovery"].some((field) =>
+              typeof row[field] !== "string" || !row[field]
+            ) ||
+            row.related !== undefined && (!Array.isArray(row.related) ||
+                row.related.some((id) => typeof id !== "string" || !id))
+          ) return true;
+          const metadata = row.pattern !== undefined ||
+            row.finding !== undefined;
+          return ((row.code as string).startsWith("APE_") || metadata) && (
+            typeof row.pattern !== "string" || !row.pattern ||
+            !["present", "absent", "indeterminate"].includes(
+              String(row.finding),
+            )
+          );
+        })
+      ) throw new Error("Expected an array of valid findings");
+      return {
+        rows: (value as ApeFinding[]).sort(compareFindings),
+        unreadable: false,
+      };
+    } catch {
+      return {
+        rows: [{
+          code: FINDINGS_INVALID,
+          severity: "warning" as const,
           subject: elementId("instance"),
           context:
             `Version ${version.entry.id}: Findings in findings.json are unreadable.`,
-          recovery:
-            "Restore this version's findings.json as a valid findings array, then rebuild the viewer.",
-        }];
-      }
+          recovery: FINDINGS_INVALID_RECOVERY,
+        }],
+        unreadable: true,
+      };
     }
-    if (Object.hasOwn(version.files, "findings.json")) {
-      return persisted.sort(compareFindings);
-    }
-    return snapshot
-      ? snapshot.ambiguities.map((finding) => ({ ...finding })).sort(
-        compareFindings,
-      )
-      : null;
   }
 
   /** Admit only the APE fields consumed by the counts-only archival normalizer. */
@@ -127,21 +160,29 @@ export function createViewer(
         );
   }
 
-  /** Normalize legacy APE timings only in page data; archived files stay intact. */
-  function viewerFiles(files: Record<string, string>): Record<string, string> {
+  /** The APE report of validation.json, or null when it is missing, unreadable
+   * or not an APE report. */
+  function apeOf(files: Record<string, string>): PersistedApeReport | null {
     try {
       const report: unknown = JSON.parse(files["validation.json"]);
-      if (!isRecord(report) || !archivedApe(report.ape)) return files;
-      return {
+      return isRecord(report) && archivedApe(report.ape) ? report.ape : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /** Normalize legacy APE timings only in page data; archived files stay intact. */
+  function viewerFiles(files: Record<string, string>): Record<string, string> {
+    const ape = apeOf(files);
+    return ape
+      ? {
         ...files,
         "validation.json": canonical({
-          ...report,
-          ape: persistedApeReport(report.ape),
+          ...JSON.parse(files["validation.json"]),
+          ape: persistedApeReport(ape),
         }),
-      };
-    } catch {
-      return files;
-    }
+      }
+      : files;
   }
 
   function inferenceOf(files: Record<string, string>): Inference | null {
@@ -153,12 +194,25 @@ export function createViewer(
     }
   }
 
+  /** What a view's element shows, and what its SysML says. */
+  interface Signature {
+    shown: string;
+    sysml: string;
+  }
   /** A view of a version as the page shows it, and what each of its elements is
    * compared by against the previous version. */
   interface VersionView {
     data: ViewData;
-    signatures: Map<string, string>;
+    signatures: Map<string, Signature>;
+    /** Elements that mark a position, not a thing: never listed. */
+    unlisted: Set<string>;
   }
+
+  /** The attributes the inference fills in (`inferred…`) do not mark the
+   * element that shows them: the version's inputs verdict says the inference
+   * changed. */
+  const configured = (attributes: [string, string][]) =>
+    attributes.filter(([name]) => !name.startsWith("inferred"));
 
   /** A version's views, laid out, each element located in the version's own
    * SysML files; null when this viewer cannot read its snapshot (an older
@@ -197,18 +251,30 @@ export function createViewer(
           { a: e.attributes, s: locate(e.sysml) },
         ]),
       ]);
-      // A drawn container compares by its attributes, as its SysML spans its
-      // contents; a row that sums declarations up, by their SysML, as its
-      // figures follow from them; any other element, by both.
+      // What an element shows is what its node or edge draws and lists. A
+      // drawn container's SysML spans its contents, so it has none of its own.
+      const shown = new Map<string, string>([
+        ...view.nodes.map((n): [string, string] => [
+          n.id,
+          JSON.stringify([
+            n.keyword,
+            n.name,
+            n.type,
+            n.text,
+            n.muted,
+            n.dashed,
+            n.compartments,
+            configured(n.attributes),
+          ]),
+        ]),
+        ...view.edges.map((e): [string, string] => [
+          e.id,
+          JSON.stringify([e.label, configured(e.attributes)]),
+        ]),
+      ]);
       const containers = new Set(
         drawn.nodes.filter((n) => n.shape === "frame" || n.shape === "group")
           .map((n) => n.id),
-      );
-      const t = view.table;
-      const derived = new Set(
-        t?.kind === "elements" && t.derived
-          ? [...t.rows, ...t.summary ? [t.summary] : []]
-          : [],
       );
       out.push({
         data: {
@@ -220,48 +286,77 @@ export function createViewer(
           elements,
         },
         signatures: new Map(
-          Object.entries(elements).map(([id, e]) => [
-            id,
-            JSON.stringify(
-              containers.has(id)
-                ? e.a
-                : derived.has(id)
-                ? e.s.map(text)
-                : [e.a, e.s.map(text)],
-            ),
-          ]),
+          Object.entries(elements).map(([id, e]) => [id, {
+            shown: shown.get(id)!,
+            sysml: containers.has(id) ? "" : JSON.stringify(e.s.map(text)),
+          }]),
+        ),
+        unlisted: new Set(
+          view.nodes.filter((n) => n.shape === "initial" || n.shape === "final")
+            .map((n) => n.id),
         ),
       });
     }
     return out;
   }
 
-  /** What changed in a view since the previous version: the elements added, the
-   * elements whose signature changed (see versionViews: a change inside a frame
-   * marks that element and not the frame), and the elements removed, drawn or in
-   * its table. A view the previous version did not have is new. */
+  /** What changed in a view since the previous version, as lists of element
+   * ids:
+   * - `added` and `removed`: the id is new or gone;
+   * - `changed`: a value the element shows differs (its name, attributes or
+   *   compartments, an Overview row's name included);
+   * - `touched`: only the SysML text differs (a drawn container, whose SysML
+   *   spans its contents, never is).
+   * Drawn edges are listed for the diagram to mark (never as removed, never as
+   * touched); `count` leaves them out, as the panel does, and so counts what
+   * the picker and the rail show: added, changed and removed. Initial and
+   * final nodes are in no list. A view the previous version did not have is
+   * new. */
   function viewChanges(now: VersionView, before: VersionView | undefined) {
-    if (!before) return { isNew: true, added: [], changed: [], removed: [] };
-    const view = now.data, previous = before.data;
+    if (!before) {
+      return {
+        isNew: true,
+        added: [],
+        changed: [],
+        touched: [],
+        removed: [],
+        count: 0,
+      };
+    }
+    const lines = (v: ViewData) => v.scene?.edges.map((e) => e.id) ?? [];
+    const ids = (v: VersionView) =>
+      [...new Set([...Object.keys(v.data.elements), ...lines(v.data)])]
+        .filter((id) => !v.unlisted.has(id));
     // Every node is drawn or in the table, and so is every edge with SysML;
     // drawn edges are never listed as removed.
-    const lines = (v: ViewData) => v.scene?.edges.map((e) => e.id) ?? [];
-    const ids = (v: ViewData) => [
-      ...new Set([...Object.keys(v.elements), ...lines(v)]),
-    ];
-    const shown = (v: ViewData) => {
-      const drawn = new Set(lines(v));
-      return Object.keys(v.elements).filter((id) => !drawn.has(id));
+    const shown = (v: VersionView) => {
+      const drawn = new Set(lines(v.data));
+      return ids(v).filter((id) => !drawn.has(id));
     };
-    const earlier = new Set(ids(previous)), current = new Set(ids(view));
+    const earlier = new Set(ids(before)), current = ids(now);
+    const drawn = new Set(lines(now.data));
+    const both = current.filter((id) =>
+      earlier.has(id) && now.signatures.has(id) && before.signatures.has(id)
+    );
+    const differs = (field: keyof Signature) =>
+      both.filter((id) =>
+        now.signatures.get(id)![field] !== before.signatures.get(id)![field]
+      );
+    const added = current.filter((id) => !earlier.has(id));
+    const changed = differs("shown");
+    const touched = differs("sysml").filter((id) =>
+      !changed.includes(id) && !drawn.has(id)
+    );
+    const now_ = new Set(current);
+    const removed = shown(before).filter((id) => !now_.has(id));
     return {
       isNew: false,
-      added: [...current].filter((id) => !earlier.has(id)),
-      changed: [...current].filter((id) => {
-        const a = now.signatures.get(id), b = before.signatures.get(id);
-        return a !== undefined && b !== undefined && a !== b;
-      }),
-      removed: shown(previous).filter((id) => !current.has(id)),
+      added,
+      changed,
+      touched,
+      removed,
+      count: [...added, ...changed].filter((id) => !drawn.has(id)).length +
+        removed.length,
     };
   }
 
@@ -287,7 +382,57 @@ export function createViewer(
     };
     const scenes = new Map<string, Scene>();
     const snapshots = versions.map((v) => snapshotOf(v.files));
+    const inferences = versions.map((v) => inferenceOf(v.files));
     const findings = versions.map((v, i) => findingsOf(v, snapshots[i]));
+    const apes = versions.map((v) => apeOf(v.files));
+    const labels = snapshots.map((s) => s ? elementLabels(s) : {});
+    const checks: Checks[] = versions.map((v, i) =>
+      checksOf({
+        ape: apes[i],
+        findings: findings[i].unreadable
+          ? "unreadable"
+          : Object.hasOwn(v.files, "findings.json")
+          ? "recorded"
+          : "missing",
+        validation: v.entry.validation,
+        inferenceFailed: v.entry.inferred?.failed ?? 0,
+      })
+    );
+    const collectors = snapshots.map((s) =>
+      collectorNotes(s?.ambiguities ?? [])
+    );
+    // The version a delta of findings is set against: the last one whose
+    // checks ran and whose findings are readable (older than `i`).
+    const comparable = (i: number) =>
+      !findings[i].unreadable && rulesRan(apes[i]) !== null;
+    const verdict = (now: number, before: number): InputsVerdict =>
+      inputsVerdict(
+        { snapshot: snapshots[before], inference: inferences[before] },
+        { snapshot: snapshots[now], inference: inferences[now] },
+        canonical,
+      );
+    const doctor = (i: number): {
+      groups: DoctorGroup[];
+      delta: FindingsDelta | null;
+    } => {
+      const rows = findings[i].rows;
+      const j = comparable(i)
+        ? versions.findIndex((_, k) => k > i && comparable(k))
+        : -1;
+      const judged = (k: number) => ({
+        findings: findings[k].rows!,
+        ran: rulesRan(apes[k])!,
+        collector: collectors[k],
+      });
+      return {
+        groups: rows ? doctorGroups(rows, labels[i], collectors[i]) : [],
+        delta: j < 0 ? null : findingsDelta(judged(i), judged(j), {
+          against: versions[j].entry.id,
+          inputs: verdict(i, j),
+          labels: { ...labels[j], ...labels[i] },
+        }),
+      };
+    };
     const views: (VersionView[] | null)[] = [];
     for (const [i, v] of versions.entries()) {
       views.push(await versionViews(v.files, scenes, snapshots[i]));
@@ -297,14 +442,29 @@ export function createViewer(
       views: payloads,
       versions: versions.map((v, i) => {
         const previous = versions[i + 1], before = views[i + 1];
+        const fileChanges = previous ? changes(previous.files, v.files) : null;
         return {
           ...v.entry,
-          findings: findings[i],
+          findings: findings[i].rows,
+          checks: checks[i],
+          inputs: previous ? verdict(i, i + 1) : null,
+          labels: labels[i],
+          doctor: doctor(i),
           files: Object.fromEntries(
             Object.entries(v.files).sort(([a], [b]) => a < b ? -1 : 1)
               .map(([name, text]) => [name, ref(text)]),
           ),
-          changes: previous ? changes(previous.files, v.files) : null,
+          changes: fileChanges,
+          diff: fileChanges && {
+            subjects: snapshots[i] && snapshots[i + 1]
+              ? diffSubjects(
+                diff(snapshots[i + 1]!, snapshots[i]!, canonical),
+                { before: labels[i + 1], after: labels[i] },
+                canonical,
+              )
+              : null,
+            groups: groupFiles(fileChanges.map((c) => c.file)),
+          },
           views: views[i]?.map((view) => ({
             view: keep(view.data),
             delta: before
