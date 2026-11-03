@@ -128,29 +128,120 @@ Deno.test("each version merges its stored APE findings, even without a readable 
   assert.equal(data.versions[2].views, null);
 });
 
-Deno.test("malformed present findings fail explicitly with their version id", async () => {
-  const v = version("2026-11-02T10-15-00Z", snapshot);
-  v.files["snapshot.json"] = '{"schema":"openclaw-snapshot/4"}';
+Deno.test("unreadable findings remain local to their version", async () => {
+  const good = version("2026-11-02T10-25-00Z", snapshot);
+  const bad = version("2026-11-02T10-20-00Z", snapshot);
+  const legacy = version("2026-11-02T10-15-00Z", snapshot);
+  const ape: ApeFinding = {
+    code: "APE_UNREACHABLE_OPERATOR",
+    severity: "warning",
+    subject: "agent:good",
+    context: "Synthetic persisted structural finding.",
+    recovery: "Review the modeled entry.",
+    pattern: "4.2",
+    finding: "absent",
+  };
+  good.files["findings.json"] = canonical([ape]);
+  legacy.files["snapshot.json"] = '{"schema":"openclaw-snapshot/4"}';
+  legacy.files["findings.json"] = canonical([{
+    ...ape,
+    subject: "agent:legacy",
+  }]);
   for (
     const text of [
-      "invalid JSON",
+      "invalid JSON with private parser input",
       "{}",
       '[{"code":"APE_UNREACHABLE_OPERATOR","severity":"high"}]',
     ]
   ) {
-    v.files["findings.json"] = text;
-    await assert.rejects(viewerPage([v]), (error: unknown) => {
-      assert.ok(
-        error instanceof Error && "code" in error && "context" in error,
-      );
-      assert.equal(error.code, "VIEWER_FINDINGS_INVALID");
-      assert.match(
-        String(error.context),
-        /2026-11-02T10-15-00Z.*findings.json/,
-      );
-      return true;
-    });
+    bad.files["findings.json"] = text;
+    const data = dataOf(await viewerPage([good, bad, legacy]));
+    assert.deepEqual(
+      data.versions.map((v: { findings: { code: string }[] }) =>
+        v.findings.filter((finding) =>
+          finding.code === "VIEWER_FINDINGS_INVALID"
+        ).length
+      ),
+      [0, 1, 0],
+    );
+    const warning = data.versions[1].findings.find((f: { code: string }) =>
+      f.code === "VIEWER_FINDINGS_INVALID"
+    );
+    assert.equal(warning.severity, "warning");
+    assert.equal(warning.subject, "instance");
+    assert.match(warning.context, /2026-11-02T10-20-00Z.*APE.*unreadable/);
+    assert.doesNotMatch(
+      warning.context,
+      /private parser input|Unexpected|severity/,
+    );
+    assert.deepEqual(
+      data.versions[0].findings.filter((f: ApeFinding) =>
+        f.code.startsWith("APE_")
+      ),
+      [ape],
+    );
+    assert.deepEqual(
+      data.versions[1].findings.filter((f: { code: string }) =>
+        f.code !== warning.code
+      ),
+      doctor(snapshot),
+    );
+    assert.equal(data.versions[2].findings[0].subject, "agent:legacy");
+    assert.equal(data.versions[2].views, null);
   }
+});
+
+Deno.test("legacy APE timings do not enter page texts or diffs and archives stay intact", async () => {
+  const report = (ms: number) =>
+    canonical({
+      validation: { status: "passed", errors: 0 },
+      errors: [],
+      warnings: [],
+      ape: {
+        status: "completed",
+        findings: [],
+        metrics: {
+          elements: 2,
+          sourceElements: 3,
+          quads: 4,
+          baseQuads: 4,
+          derivedQuads: 1,
+          batches: 1,
+          totalMs: ms,
+          preparationMs: ms,
+          projectionMs: ms,
+          loadMs: ms,
+          views: [{ file: "agents.rq", graph: "urn:agents", quads: 1, ms }],
+          queries: [{ code: "UNREACHABLE_OPERATOR", findings: 0, ms }],
+        },
+      },
+    });
+  const newer = version("2026-11-02T10-20-00Z", snapshot);
+  const older = version("2026-11-02T10-15-00Z", snapshot);
+  newer.files["validation.json"] = report(111);
+  older.files["validation.json"] = report(222);
+  const page = await viewerPage([newer, older]);
+  assert.equal(newer.files["validation.json"], report(111));
+  assert.equal(older.files["validation.json"], report(222));
+  const data = dataOf(page);
+  assert.deepEqual(data.versions[0].changes, []);
+  const archived = JSON.parse(
+    data.texts[data.versions[0].files["validation.json"]],
+  );
+  assert.deepEqual(archived.ape.metrics, {
+    elements: 2,
+    sourceElements: 3,
+    baseQuads: 4,
+    derivedQuads: 1,
+    batches: 1,
+    views: [{ file: "agents.rq", graph: "urn:agents", quads: 1 }],
+    queries: [{ code: "UNREACHABLE_OPERATOR", findings: 0 }],
+  });
+  newer.files["validation.json"] = report(333);
+  older.files["validation.json"] = report(444);
+  assert.equal(await viewerPage([newer, older]), page);
+  older.files["validation.json"] = "invalid JSON";
+  assert.ok(dataOf(await viewerPage([older])).texts.includes("invalid JSON"));
 });
 
 Deno.test("an element added since the previous version is highlighted", async () => {

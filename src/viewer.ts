@@ -1,10 +1,16 @@
 import { structuredPatch } from "diff";
-import type { ApeFinding } from "./ape-rules.ts";
-import { doctor } from "./doctor.ts";
-import { ExportError } from "./error.ts";
+import { type PersistedApeReport, persistedApeReport } from "./ape-rules.ts";
+import { compareFindings, doctor } from "./doctor.ts";
+import { elementId } from "./element-id.ts";
+import { isRecord } from "./error.ts";
 import type { Inference } from "./infer.ts";
 import { layoutView, METRICS, type Scene } from "./layout.ts";
-import { parseSnapshot, type Snapshot } from "./snapshot.ts";
+import {
+  canonical,
+  type Finding,
+  parseSnapshot,
+  type Snapshot,
+} from "./snapshot.ts";
 import { drawing, type TableData, tableData } from "./tables.ts";
 import type { VersionEntry } from "./versions.ts";
 import { PAGE } from "./viewer_page.ts";
@@ -70,7 +76,7 @@ function snapshotOf(files: Record<string, string>) {
 }
 /** Persisted APE findings belong to this version; doctor rows are recomputed. */
 function findingsOf(version: ViewerVersion, snapshot: Snapshot | null) {
-  let ape: ApeFinding[] = [];
+  let persisted: Finding[] = [];
   if (Object.hasOwn(version.files, "findings.json")) {
     try {
       const value: unknown = JSON.parse(version.files["findings.json"]);
@@ -88,32 +94,69 @@ function findingsOf(version: ViewerVersion, snapshot: Snapshot | null) {
           ))
         )
       ) throw new Error("Expected an array of findings with valid APE fields");
-      ape = (value as ApeFinding[]).filter((row) =>
+      persisted = (value as Finding[]).filter((row) =>
         row.code.startsWith("APE_")
       );
-    } catch (error) {
-      throw new ExportError(
-        "VIEWER_FINDINGS_INVALID",
-        `Version ${version.entry.id} findings.json: ${
-          error instanceof Error ? error.message : String(error)
-        }`,
-        "Restore this version's findings.json as a valid findings array, then rebuild the viewer.",
-      );
+    } catch {
+      persisted = [{
+        code: "VIEWER_FINDINGS_INVALID",
+        severity: "warning",
+        subject: elementId("instance"),
+        context:
+          `Version ${version.entry.id}: APE findings in findings.json are unreadable.`,
+        recovery:
+          "Restore this version's findings.json as a valid findings array, then rebuild the viewer.",
+      }];
     }
   }
-  if (!snapshot && !ape.length) return null;
-  return [...snapshot ? doctor(snapshot) : [], ...ape].sort((a, b) =>
-    a.code < b.code
-      ? -1
-      : a.code > b.code
-      ? 1
-      : a.subject < b.subject
-      ? -1
-      : a.subject > b.subject
-      ? 1
-      : 0
+  if (!snapshot && !persisted.length) return null;
+  return [...snapshot ? doctor(snapshot) : [], ...persisted].sort(
+    compareFindings,
   );
 }
+
+/** Admit only the APE fields consumed by the counts-only archival normalizer. */
+function archivedApe(value: unknown): value is PersistedApeReport {
+  if (
+    !isRecord(value) ||
+    !["completed", "failed", "skipped"].includes(String(value.status)) ||
+    !Array.isArray(value.findings)
+  ) return false;
+  const metrics = value.metrics;
+  return metrics === undefined || isRecord(metrics) &&
+      ["elements", "baseQuads", "derivedQuads", "batches"].every((key) =>
+        typeof metrics[key] === "number"
+      ) &&
+      (metrics.sourceElements === undefined ||
+        typeof metrics.sourceElements === "number") &&
+      Array.isArray(metrics.views) && metrics.views.every((view) =>
+        isRecord(view) && typeof view.file === "string" &&
+        typeof view.graph === "string" &&
+        typeof view.quads === "number"
+      ) &&
+      Array.isArray(metrics.queries) && metrics.queries.every((query) =>
+        isRecord(query) && typeof query.code === "string" &&
+        typeof query.findings === "number"
+      );
+}
+
+/** Normalize legacy APE timings only in page data; archived files stay intact. */
+function viewerFiles(files: Record<string, string>): Record<string, string> {
+  try {
+    const report: unknown = JSON.parse(files["validation.json"]);
+    if (!isRecord(report) || !archivedApe(report.ape)) return files;
+    return {
+      ...files,
+      "validation.json": canonical({
+        ...report,
+        ape: persistedApeReport(report.ape),
+      }),
+    };
+  } catch {
+    return files;
+  }
+}
+
 function inferenceOf(files: Record<string, string>): Inference | null {
   try {
     const value = JSON.parse(files["inference.json"]);
@@ -240,6 +283,10 @@ function viewChanges(now: VersionView, before: VersionView | undefined) {
  * changed since the previous version, and lists the version's files and their
  * diffs. File texts and views shared by several versions are stored once. */
 export async function viewerPage(versions: ViewerVersion[]): Promise<string> {
+  versions = versions.map((version) => ({
+    ...version,
+    files: viewerFiles(version.files),
+  }));
   const texts: string[] = [], seen = new Map<string, number>();
   const ref = (text: string) => {
     if (!seen.has(text)) seen.set(text, texts.push(text) - 1);

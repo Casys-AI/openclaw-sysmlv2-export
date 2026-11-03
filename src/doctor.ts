@@ -58,6 +58,18 @@ function unprofiledInterpreter(
   });
 }
 
+export function compareFindings(a: Finding, b: Finding): number {
+  return a.code < b.code
+    ? -1
+    : a.code > b.code
+    ? 1
+    : a.subject < b.subject
+    ? -1
+    : a.subject > b.subject
+    ? 1
+    : 0;
+}
+
 export function doctor(snapshot: Snapshot): Finding[] {
   // Older /5 snapshots keep reference diagnostics in ambiguities. Recompute
   // these concepts here, once, using the same rules as newly collected input.
@@ -355,8 +367,5 @@ export function doctor(snapshot: Snapshot): Finding[] {
       "Review backup retention and protect any credentials they contain.",
     );
   }
-  return findings.sort((a, b) => {
-    const x = `${a.code}:${a.subject}`, y = `${b.code}:${b.subject}`;
-    return x < y ? -1 : x > y ? 1 : 0;
-  });
+  return findings.sort(compareFindings);
 }

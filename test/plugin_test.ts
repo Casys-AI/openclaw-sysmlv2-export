@@ -199,8 +199,16 @@ Deno.test("the plugin summary names combined counts and the APE execution status
     viewer: "index.html",
     inferred: null,
     validation: { status: "skipped", errors: 0 },
-    ape: { status: "partial", count: 12 },
+    ape: { status: "completed", count: 12 },
   };
+  assert.match(
+    summarize({
+      ...summary,
+      findings: { error: 0, warning: 0, info: 0 },
+      ape: { status: "completed", count: 1 },
+    }),
+    /APE: completed \(1 finding\)/,
+  );
   for (
     const [findings, expected] of [
       [
@@ -220,7 +228,7 @@ Deno.test("the plugin summary names combined counts and the APE execution status
     );
     assert.match(
       summarize({ ...summary, findings }),
-      /APE: partial \(12 findings\)/,
+      /APE: completed \(12 findings\)/,
     );
   }
 });

@@ -96,9 +96,9 @@ function summarize(s) {
     `Findings: ${findings.length ? findings.join(", ") : "no finding"}`,
   );
   lines.push(
-    `APE: ${s.ape.status} (${s.ape.count} findings)${
-      s.ape.code ? ` — ${s.ape.code}` : ""
-    }; details in validation.json`,
+    `APE: ${s.ape.status} (${s.ape.count} ${
+      s.ape.count === 1 ? "finding" : "findings"
+    })${s.ape.code ? ` — ${s.ape.code}` : ""}; details in validation.json`,
   );
   if (s.inferred) {
     lines.push(

@@ -10,8 +10,8 @@ import {
 import { join, resolve, sep } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { collect } from "../src/collect.ts";
-import { doctor } from "../src/doctor.ts";
-import type { ApeSummary } from "../src/ape-rules.ts";
+import { compareFindings, doctor } from "../src/doctor.ts";
+import { type ApeSummary, persistedApeReport } from "../src/ape-rules.ts";
 import { emit } from "../src/emit.ts";
 import { ExportError } from "../src/error.ts";
 import {
@@ -248,7 +248,6 @@ export async function runExport(
   const findingSummary: FindingSummary = { error: 0, warning: 0, info: 0 };
   const files = new Map([
     ["snapshot.json", canonical(snapshot)],
-    ["findings.json", canonical(findings)],
     ...emit(snapshot),
     ...ASSEMBLY_LIBRARY,
   ]);
@@ -323,22 +322,12 @@ export async function runExport(
     stateDir,
   );
   findings.push(...ape.findings);
-  findings.sort((a, b) =>
-    a.code < b.code
-      ? -1
-      : a.code > b.code
-      ? 1
-      : a.subject < b.subject
-      ? -1
-      : a.subject > b.subject
-      ? 1
-      : 0
-  );
+  findings.sort(compareFindings);
   for (const finding of findings) findingSummary[finding.severity]++;
   await writeFile(join(dir, "findings.json"), canonical(findings));
   await writeFile(
     join(dir, "validation.json"),
-    canonical({ validation, ...diagnostics, ape }),
+    canonical({ validation, ...diagnostics, ape: persistedApeReport(ape) }),
   );
   const versions = withVersion(await readVersions(outDir), {
     id: version,
