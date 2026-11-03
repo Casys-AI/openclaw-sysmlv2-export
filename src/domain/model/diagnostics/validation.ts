@@ -15,6 +15,7 @@ export interface Diagnostics extends CompileDiagnostics {
   ape: ApeReport;
 }
 export interface ValidationSummary {
+  /** `skipped` only appears in exports made before the Toolkit was bundled. */
   status: "passed" | "failed" | "skipped";
   errors: number;
   code?: string;

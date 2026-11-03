@@ -161,6 +161,7 @@ Deno.test("unreadable findings remain local to their version", async () => {
       "invalid JSON with private parser input",
       "{}",
       '[{"code":"APE_UNREACHABLE_OPERATOR","severity":"high"}]',
+      canonical([{ ...ape, related: [""] }]),
     ]
   ) {
     bad.files["findings.json"] = text;
@@ -178,6 +179,7 @@ Deno.test("unreadable findings remain local to their version", async () => {
     );
     assert.equal(warning.severity, "warning");
     assert.equal(warning.subject, "instance");
+    assert.equal(data.versions[1].checks.state, "unrecorded");
     assert.match(
       warning.context,
       /2026-11-02T10-20-00Z.*findings.*unreadable/i,
@@ -295,6 +297,9 @@ Deno.test("an element added since the previous version is highlighted", async ()
     [],
     false,
   ]);
+  // The count is what the panel lists: the drawn binding edge is marked on
+  // the diagram and not counted.
+  assert.equal(delta.count, 2);
   assert.equal(first.views[0].delta, null);
   // The new element's SysML is located in its own version's text.
   const system = data.views[viewOf(data, latest, "system").view];
@@ -317,7 +322,7 @@ Deno.test("an element added since the previous version is highlighted", async ()
   );
 });
 
-Deno.test("an Overview row changes with the declarations it sums up, not with inference", async () => {
+Deno.test("an Overview row changes with what it shows, not with inference", async () => {
   const inference: Inference = JSON.parse(
     await readFile(
       new URL("../fixtures/inference.json", import.meta.url),
@@ -333,7 +338,26 @@ Deno.test("an Overview row changes with the declarations it sums up, not with in
     await viewerPage([later, version("2026-11-02T10-15-00Z", snapshot)]),
   );
   const { delta } = viewOf(data, data.versions[0], "overview");
-  assert.deepEqual([delta.added, delta.changed], [[], ["agent:lead"]]);
+  // The lead's row and the instance's totals show the disabled account.
+  assert.deepEqual([delta.added, delta.changed], [[], [
+    "agent:lead",
+    "instance",
+  ]]);
+  assert.equal(data.versions[0].inputs, "changed");
+});
+
+Deno.test("a task's last run is not a change of the task", async () => {
+  const next = structuredClone(snapshot);
+  next.cron[0].runtime.lastRunStatus = "ok";
+  const data = dataOf(
+    await viewerPage([
+      version("2026-11-02T10-20-00Z", next),
+      version("2026-11-02T10-15-00Z", snapshot),
+    ]),
+  );
+  const { delta } = viewOf(data, data.versions[0], "schedules");
+  assert.deepEqual([delta.changed, delta.count], [[], 0]);
+  assert.equal(data.versions[0].inputs, "same");
 });
 
 Deno.test("a version whose snapshot this viewer cannot read keeps its files", async () => {
@@ -345,4 +369,223 @@ Deno.test("a version whose snapshot this viewer cannot read keeps its files", as
   assert.equal(data.versions[0].views, null);
   assert.equal(data.versions[0].findings, null);
   assert.ok(data.versions[0].files["OpenClawInstance.sysml"] >= 0);
+});
+
+const validationOf = (ape: unknown) =>
+  canonical({ validation: { status: "passed", errors: 0 }, ape });
+const ranApe = (...codes: string[]) =>
+  validationOf({
+    status: "completed",
+    findings: [],
+    metrics: {
+      elements: 1,
+      baseQuads: 1,
+      derivedQuads: 0,
+      batches: 1,
+      views: [],
+      queries: codes.map((code) => ({ code, findings: 0 })),
+    },
+  });
+const row = (code: string, subject: string, extra = {}) => ({
+  code,
+  severity: "warning",
+  subject,
+  context: `${code} on ${subject}`,
+  recovery: `Fix ${code}.`,
+  ...extra,
+});
+
+Deno.test("a version says whether its checks ran", () => {
+  const verified = version("2026-11-02T10-25-00Z", snapshot);
+  verified.files["findings.json"] = canonical([]);
+  verified.files["validation.json"] = ranApe("APE_A", "B");
+  const skipped = version("2026-11-02T10-20-00Z", snapshot);
+  skipped.entry.validation = {
+    status: "skipped",
+    errors: 0,
+    code: "TOOLKIT_NOT_INSTALLED",
+    recovery: "openclaw sysmlv2-toolkit install",
+  };
+  skipped.entry.inferred = { procedures: 0, rules: 0, failed: 3 };
+  skipped.files["findings.json"] = canonical(snapshot.ambiguities);
+  skipped.files["validation.json"] = validationOf({
+    status: "skipped",
+    code: "TOOLKIT_NOT_INSTALLED",
+    findings: [],
+  });
+  const legacy = version("2026-11-02T10-15-00Z", snapshot);
+  return viewerPage([verified, skipped, legacy]).then((page) => {
+    const data = dataOf(page);
+    assert.deepEqual(
+      data.versions.map((v: { checks: unknown }) => v.checks),
+      [
+        { state: "verified", rules: 2, inferenceFailed: 0 },
+        {
+          state: "not-run",
+          code: "TOOLKIT_NOT_INSTALLED",
+          recovery: "openclaw sysmlv2-toolkit install",
+          inferenceFailed: 3,
+        },
+        { state: "unrecorded", inferenceFailed: 0 },
+      ],
+    );
+    // The fallback to the collector's notes stays.
+    assert.equal(data.versions[2].findings.length, snapshot.ambiguities.length);
+  });
+});
+
+Deno.test("the Doctor groups findings and sets them against the last version whose checks ran", async () => {
+  const ape = { pattern: "4.2", finding: "present" };
+  const note = snapshot.ambiguities[0];
+  const now = version("2026-11-02T10-25-00Z", snapshot);
+  now.files["findings.json"] = canonical([
+    note,
+    row("B", "agent:lead"),
+    row("B", "agent:field"),
+    row("C", "agent:lead"),
+    row("APE_A", "agent:field", { ...ape, related: ["agent:lead"] }),
+  ]);
+  now.files["validation.json"] = ranApe("APE_A", "B", "C");
+  const skipped = version("2026-11-02T10-20-00Z", snapshot);
+  skipped.files["validation.json"] = validationOf({
+    status: "skipped",
+    findings: [],
+  });
+  // The first exports named the APE rules without their prefix.
+  const before = version("2026-11-02T10-15-00Z", snapshot);
+  before.files["findings.json"] = canonical([
+    note,
+    row("APE_A", "agent:lead", ape),
+    row("B", "agent:lead"),
+  ]);
+  before.files["validation.json"] = ranApe("A", "B");
+  const data = dataOf(await viewerPage([now, skipped, before]));
+  const [latest, middle, oldest] = data.versions;
+  const lead = snapshot.agents.find((a) => a.id === "lead")!.name;
+  assert.deepEqual(
+    latest.doctor.groups.map((
+      g: { code: string; source: string; subjects: unknown[] },
+    ) => [g.code, g.source, g.subjects.length]),
+    [
+      ["APE_A", "rule", 1],
+      ["B", "rule", 2],
+      ["C", "rule", 1],
+      [note.code, "collector", 1],
+    ],
+  );
+  assert.deepEqual(latest.doctor.groups[0].subjects[0], {
+    id: "agent:field",
+    label: snapshot.agents.find((a) => a.id === "field")!.name,
+    context: "APE_A on agent:field",
+    related: ["agent:lead"],
+  });
+  // `APE_A` of the lead is resolved; the rule `C` did not run before.
+  const keys = (list: { code: string; subject: string }[]) =>
+    list.map((f) => `${f.code} ${f.subject}`);
+  assert.equal(latest.doctor.delta.against, oldest.id);
+  assert.equal(latest.doctor.delta.inputs, "same");
+  assert.deepEqual(keys(latest.doctor.delta.new), [
+    "APE_A agent:field",
+    "B agent:field",
+  ]);
+  assert.deepEqual(keys(latest.doctor.delta.resolved), ["APE_A agent:lead"]);
+  assert.equal(latest.doctor.delta.resolved[0].label, lead);
+  assert.deepEqual(keys(latest.doctor.delta.newRule), ["C agent:lead"]);
+  assert.deepEqual([middle.doctor.delta, oldest.doctor.delta], [null, null]);
+});
+
+Deno.test("a version says what its inputs are against the previous one, and what the export only re-stated", async () => {
+  const restated = version("2026-11-02T10-25-00Z", snapshot);
+  restated.files["OpenClawInstance.sysml"] = restated.files[
+    "OpenClawInstance.sysml"
+  ].replace(
+    'attribute :>> network = "fixture-net";',
+    'attribute :>> network = "fixture-net"; // restated',
+  );
+  const changed = structuredClone(snapshot);
+  changed.agents[0].sandbox.memory = "2g";
+  const older = [
+    version("2026-11-02T10-20-00Z", snapshot),
+    version("2026-11-02T10-15-00Z", snapshot),
+  ];
+  older[1].files["snapshot.json"] = '{"schema":"openclaw-snapshot/4"}';
+  const data = dataOf(
+    await viewerPage([
+      version("2026-11-02T10-30-00Z", changed),
+      restated,
+      ...older,
+    ]),
+  );
+  assert.deepEqual(
+    data.versions.map((v: { inputs: string | null }) => v.inputs),
+    ["changed", "same", "schema", null],
+  );
+  // The configuration is the same: nothing it shows changed, and the agent
+  // whose SysML was re-stated is only touched.
+  const { delta } = viewOf(data, data.versions[1], "system");
+  assert.deepEqual(
+    [delta.added, delta.changed, delta.touched, delta.count],
+    [[], [], ["agent:client"], 0],
+  );
+});
+
+Deno.test("an inferred step added since the previous version is listed, its start and end are not", async () => {
+  const inference: Inference = JSON.parse(
+    await readFile(
+      new URL("../fixtures/inference.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  const next = structuredClone(inference);
+  const lead = next.agents.find((a) => a.agentId === "lead")!;
+  const copy = structuredClone(lead.procedures[0]);
+  copy.id = "second-flow";
+  for (const step of copy.steps) step.id = `second-${step.id}`;
+  lead.procedures.push(copy);
+  const infer = (id: string, i: Inference) => {
+    const v = version(id, snapshot);
+    v.files["inference.json"] = JSON.stringify(i);
+    Object.assign(v.files, Object.fromEntries(emitInferred(snapshot, i)));
+    return v;
+  };
+  const data = dataOf(
+    await viewerPage([
+      infer("2026-11-02T10-20-00Z", next),
+      infer("2026-11-02T10-15-00Z", inference),
+    ]),
+  );
+  const { delta } = viewOf(data, data.versions[0], "behaviour:lead");
+  assert.ok(delta.added.includes("procedure:second-flow"));
+  assert.ok(!delta.added.includes("procedure:second-flow:start"));
+  assert.ok(!delta.added.includes("procedure:second-flow:end"));
+  assert.equal(data.versions[0].inputs, "inference");
+});
+
+Deno.test("a version lists what changed per element and per kind of file", async () => {
+  const next = structuredClone(snapshot);
+  next.agents[0].name = "Renamed";
+  next.accounts.find((a) => a.id === "telegram:lead")!.enabled = false;
+  const old = version("2026-11-02T10-10-00Z", snapshot);
+  old.files["snapshot.json"] = '{"schema":"openclaw-snapshot/4"}';
+  const data = dataOf(
+    await viewerPage([
+      version("2026-11-02T10-20-00Z", next),
+      version("2026-11-02T10-15-00Z", snapshot),
+      old,
+    ]),
+  );
+  const [latest, middle, oldest] = data.versions;
+  assert.deepEqual(
+    latest.diff.subjects.map((s: { id: string }) => s.id),
+    ["account:telegram:lead", `agent:${next.agents[0].id}`],
+  );
+  assert.equal(latest.diff.subjects[1].label, "Renamed");
+  assert.deepEqual(
+    latest.diff.groups.map((g: { group: string }) => g.group),
+    ["instance", "data"],
+  );
+  // Not comparable: the files are grouped, with no bullets.
+  assert.equal(middle.diff.subjects, null);
+  assert.ok(middle.diff.groups.length);
+  assert.equal(oldest.diff, null);
 });

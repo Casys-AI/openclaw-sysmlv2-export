@@ -11,6 +11,7 @@ import {
   declarations,
   type DiagramView,
   diagramViews,
+  RUNTIME_ATTRIBUTES,
 } from "./views.ts";
 
 const read = (path: string) =>
@@ -34,6 +35,7 @@ Deno.test("the fixture's views hold its agents, tools, schedules and procedures"
   assert.deepEqual(views.map((v) => v.id), [
     "overview",
     "system",
+    "reach",
     "tools",
     "schedules",
     "behaviour:field",
@@ -48,8 +50,9 @@ Deno.test("the fixture's views hold its agents, tools, schedules and procedures"
     "channel:whatsapp",
   ]);
   assert.equal(ids(system, "account:").length, 10);
-  // The disabled account is drawn; the absent account has no endpoint.
-  assert.equal(system.edges.length, 9);
+  // The disabled account is drawn; the absent account has no endpoint. The
+  // hook's trigger edge is the tenth.
+  assert.equal(system.edges.length, 10);
   assert.ok(
     edges(system, "connection").includes("agent:lead account:telegram:lead"),
   );
@@ -148,11 +151,12 @@ Deno.test("the Overview sums each agent up and links it to its views", () => {
   });
   assert.deepEqual(row("agent:lead").views, [
     "system",
+    "reach",
     "tools",
     "schedules",
     "behaviour:lead",
   ]);
-  assert.deepEqual(row("agent:client").views, ["system", "tools"]);
+  assert.deepEqual(row("agent:client").views, ["system", "reach", "tools"]);
   // Tasks the instance runs for no agent of its own still count.
   const totals = new Map(
     overview.nodes.find((n) => n.id === table.summary!.id)!.attributes,
@@ -205,6 +209,8 @@ Deno.test("the week shows when each scheduled task fires", () => {
     when: "Tue, Fri at 01:00",
     enabled: false,
     zone: "UTC",
+    model: "anthropic/claude-opus-4-6",
+    lastRun: "ok",
     fires: [[25, 1], [4 * 24 + 1, 1]],
     everyMs: null,
   });
@@ -265,5 +271,214 @@ Deno.test("every element names a declaration of the emitted files", () => {
   assert.match(
     lines[span[0] - 1],
     /connection .* : DelegationRule connect .*;$/,
+  );
+});
+
+const attrs = (v: DiagramView, id: string) =>
+  new Map(v.nodes.find((n) => n.id === id)!.attributes);
+
+Deno.test("posture states a host policy only for an exec that runs on the host", () => {
+  const full = structuredClone(snapshot);
+  for (const a of full.agents) {
+    a.execution.effective = { security: "full", ask: "off" };
+  }
+  const nonMain = full.agents.find((a) => a.id === "devbox")!;
+  nonMain.sandbox.mode = "non-main";
+  nonMain.grants = [
+    { id: "host:exec", tool: "exec", layer: "host" },
+    { id: "sandbox:exec", tool: "exec", layer: "sandbox" },
+  ];
+  const views = diagramViews(full, null);
+  const system = view(views, "system");
+  assert.equal(attrs(system, "agent:client").get("exec"), "in sandbox");
+  assert.equal(
+    attrs(system, "agent:lead").get("exec"),
+    "on host · full, ask off",
+  );
+  assert.equal(
+    attrs(system, "agent:devbox").get("exec"),
+    "on host · full, ask off + in sandbox",
+  );
+  assert.equal(attrs(system, "agent:client").get("network"), "fixture-net");
+  assert.equal(
+    attrs(system, "agent:client").get("elevated"),
+    "sender-gated · 1 channel",
+  );
+  assert.equal(attrs(system, "agent:client").get("external binds"), "allowed");
+  assert.ok(!attrs(system, "agent:lead").has("network"));
+  // Overview and Tools say the same, and the facet reads the qualified cell.
+  const table = tableData(view(views, "overview"));
+  assert.ok(table?.kind === "elements");
+  const runsOn = (id: string) =>
+    table.rows.find((r) => r.id === id)!
+      .values[table.columns.indexOf("runs on")];
+  assert.deepEqual(
+    ["lead", "client", "devbox"].map((id) => runsOn(`agent:${id}`)),
+    [
+      "host",
+      "sandbox · elevated",
+      "sandbox, except the main session · elevated",
+    ],
+  );
+  assert.equal(
+    attrs(view(views, "tools"), "agent:client").get("exec"),
+    "in sandbox",
+  );
+  const totals = attrs(view(views, "overview"), table.summary!.id);
+  assert.equal(totals.get("elevated exec"), "5 of 5 sandboxed");
+});
+
+Deno.test("a hook is drawn in its own group, with an edge to the agent it starts", () => {
+  const system = view(diagramViews(snapshot, inference), "system");
+  assert.equal(
+    system.nodes.find((n) => n.id === "hook:hook-0")!.parent,
+    "hooks",
+  );
+  assert.deepEqual(edges(system, "trigger"), ["hook:hook-0 agent:lead"]);
+  const lost = structuredClone(snapshot);
+  lost.hooks[0].agentId = "ghost";
+  const missing = view(diagramViews(lost, null), "system");
+  assert.deepEqual(edges(missing, "target"), ["hook:hook-0 agent:ghost"]);
+  assert.ok(missing.nodes.find((n) => n.id === "agent:ghost")!.dashed);
+});
+
+Deno.test("Reach draws one edge per delegating pair and leaves out what has no endpoint", () => {
+  const reach = view(diagramViews(snapshot, inference), "reach");
+  const rules = reach.edges.filter((e) => e.kind === "delegation");
+  assert.deepEqual(
+    rules.filter((e) => !e.mutual).map((e) => `${e.source} ${e.target}`),
+    [
+      "agent:lead agent:client",
+      "agent:lead agent:coach",
+    ],
+  );
+  const pair = rules.find((e) => e.id === "delegation:client:coach")!;
+  assert.ok(pair.mutual && pair.sysml.length === 2);
+  assert.equal(rules.filter((e) => e.mutual).length, 4);
+  assert.deepEqual(edges(reach, "trigger"), ["hook:hook-0 agent:lead"]);
+  assert.ok(reach.nodes.some((n) => n.id === "messaging"));
+  const loop = structuredClone(snapshot);
+  loop.agents.find((a) => a.id === "client")!.delegation = [
+    "client",
+    "*",
+    "gone",
+  ];
+  const client = view(diagramViews(loop, null), "reach").nodes.find((n) =>
+    n.id === "agent:client"
+  )!;
+  assert.deepEqual(client.compartments.at(-1), {
+    title: "delegates to",
+    rows: ["any agent (*)", "unknown: gone"],
+  });
+  const alone = structuredClone(snapshot);
+  for (const a of alone.agents) a.delegation = [];
+  alone.hooks = [];
+  alone.messaging.enabled = false;
+  assert.ok(!diagramViews(alone, null).some((v) => v.id === "reach"));
+});
+
+Deno.test("built-in tools sit in their version's capability groups, with holder counts", () => {
+  const tools = view(diagramViews(snapshot, inference), "tools");
+  const parent = (v: DiagramView, id: string) =>
+    v.nodes.find((n) => n.id === id)!.parent;
+  assert.equal(parent(tools, "tool:exec"), "capability:runtime");
+  assert.equal(parent(tools, "capability:runtime"), "origin:builtin");
+  assert.equal(parent(tools, "tool:pdf"), "capability:other");
+  const modern = structuredClone(snapshot);
+  modern.openclawVersion = "2026.10.9";
+  assert.equal(
+    parent(view(diagramViews(modern, null), "tools"), "tool:read"),
+    "capability:fs",
+  );
+  const table = tableData(tools);
+  assert.ok(table?.kind === "matrix");
+  const row = (id: string) => table.rows.find((r) => r.id === id)!;
+  assert.deepEqual(
+    ["tool:cli:git", "tool:browser", "tool:exec", "plugin:workboard:board_list"]
+      .map((id) => row(id).held),
+    ["one", "all", "all", "none"],
+  );
+  assert.equal(row("tool:cli:git").holders, 1);
+  // Lead's exec is on the host layer: the group and its origin say so.
+  assert.ok(row("capability:runtime").host && row("origin:builtin").host);
+  assert.equal(row("origin:cli").host, true);
+  assert.equal(row("plugin:browser").host, true);
+  assert.equal(row("capability:fs").host, true);
+});
+
+Deno.test("an MCP server and a plugin state their filters and profiles as attributes", () => {
+  const tools = view(diagramViews(snapshot, inference), "tools");
+  assert.equal(attrs(tools, "mcp:docs").get("toolInclude"), "search_*");
+  assert.equal(attrs(tools, "mcp:Outlook Graph").get("oauth"), "true");
+  assert.equal(attrs(tools, "tool:docs__*").get("exposed"), "docs__search_*");
+  assert.equal(
+    attrs(tools, "plugin:stock-quotes").get("toolProfiles"),
+    "stock_quote: coding",
+  );
+});
+
+Deno.test("an Overview row has its figures, and the totals name the declarations they rest on", () => {
+  const overview = view(diagramViews(snapshot, inference), "overview");
+  const table = tableData(overview);
+  assert.ok(table?.kind === "elements");
+  const lead = table.rows.find((r) => r.id === "agent:lead")!;
+  assert.deepEqual(lead.figures, {
+    model: { n: 1, names: ["openai/gpt-5.5"] },
+    tools: {
+      n: 42,
+      parts: [["built-in", 31], ["plugin", 5], ["MCP", 2], ["CLI", 4]],
+    },
+    channels: { n: 2, of: 2, parts: [["telegram", 1], ["discord", 1]] },
+    "scheduled tasks": { n: 1, of: 5 },
+    context: {
+      parts: [["instructions", 9], ["skills", 32], ["daily notes", 2]],
+      flags: ["search", "curated", "daily"],
+    },
+  });
+  assert.equal(lead.title, "Lead");
+  assert.equal(
+    attrs(overview, "agent:lead").get("inferred role"),
+    "Coordinates the other agents and reports to the owner.",
+  );
+  const totals = overview.nodes.find((n) => n.id === table.summary!.id)!;
+  assert.deepEqual(
+    totals.sysml.map((r) => r.qname.replace("OpenClawInstance::", "")),
+    [
+      "inventory",
+      "Authority::messaging",
+      "Authority::execApprovals",
+      "Context::memoryBackend",
+      "Operators::provider_google",
+      "Operators::provider_ollama",
+    ],
+  );
+});
+
+Deno.test("a scheduled task states its model and delivery, and its last run is runtime state", () => {
+  const schedules = view(diagramViews(snapshot, inference), "schedules");
+  const job = attrs(schedules, "cron:job-1");
+  assert.equal(job.get("primaryModel"), "anthropic/claude-opus-4-6");
+  assert.equal(job.get("delivery"), "announce · discord");
+  assert.ok(RUNTIME_ATTRIBUTES.every((name) => job.has(name)));
+  assert.equal(
+    schedules.nodes.find((n) => n.id === "cron:job-1")!.text,
+    "Daily digest",
+  );
+});
+
+Deno.test("a Behaviour view lists its procedures and the authority its rules stand under", () => {
+  const field = view(diagramViews(snapshot, inference), "behaviour:field");
+  assert.deepEqual(field.procedures?.map((p) => [p.id, p.steps]), [
+    ["procedure:handle-request", 5],
+    ["procedure:report-incident", 4],
+  ]);
+  assert.equal(field.authority?.exec.join(), "sandbox");
+  assert.equal(field.authority?.ask, null);
+  const rule = attrs(field, "rule:no-payments");
+  assert.equal(rule.get("exec runs"), "sandbox");
+  assert.ok(!rule.has("exec ask"));
+  assert.equal(
+    rule.get("outbound tools"),
+    field.authority!.outbound.join(", "),
   );
 });

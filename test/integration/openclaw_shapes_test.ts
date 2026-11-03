@@ -1,8 +1,6 @@
 import assert from "node:assert/strict";
 import { parseSnapshot } from "../../src/infrastructure/snapshot-codec.ts";
-import { installToolkit } from "../../src/adapters/out/sysml-toolkit/install.ts";
-import { emit } from "../../src/adapters/out/sysml/emitter.ts";
-import { ASSEMBLY_LIBRARY } from "../../src/adapters/out/sysml/library.ts";
+import { extractToolkit } from "../../src/adapters/out/sysml-toolkit/extract.ts";
 import { prepareApeElements } from "../../src/adapters/out/sysml-toolkit/compilation/ape-elements.ts";
 import {
   BUILD_GRAPH_PREFIX,
@@ -23,6 +21,7 @@ import { compileOpenSysml } from "../support/opensysml.ts";
 import {
   MIGRATED_CODES,
   openclawShapesCases,
+  openclawShapesSources,
 } from "../support/openclaw-shapes-fixture.ts";
 const archive = Deno.env.get("SYSML_TOOLKIT_WASM_ARCHIVE");
 const oracle = Deno.env.get("OPENSYSML_ARCHIVE");
@@ -42,12 +41,12 @@ const rows = (
   );
 Deno.test({
   name:
-    "compiled OpenClaw shapes match reviewed golden findings for all sixteen migrated codes",
+    "compiled OpenClaw shapes match reviewed golden findings for all seventeen check codes",
   ignore: !archive,
   async fn(t) {
     const dir = await Deno.makeTempDir({ prefix: "openclaw-shapes-" });
     try {
-      await installToolkit(dir, { from: archive });
+      await extractToolkit(archive, dir);
       await initOxigraph();
       const baseline = parseSnapshot(
         JSON.parse(
@@ -61,9 +60,9 @@ Deno.test({
           new URL("../golden/openclaw-findings.json", import.meta.url),
         ),
       );
-      for (const [name, snapshot] of openclawShapesCases(baseline)) {
+      for (const [name, snapshot, inferred] of openclawShapesCases(baseline)) {
         await t.step(name, async () => {
-          const sources = new Map([...emit(snapshot), ...ASSEMBLY_LIBRARY]);
+          const sources = openclawShapesSources(snapshot, inferred);
           const expected = rows(expectedCases[name]);
           if (name === "extended") {
             assert.deepEqual(

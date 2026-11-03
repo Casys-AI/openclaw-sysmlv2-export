@@ -9,6 +9,16 @@ Deno.test("diff reports structural mutations and additions/removals deterministi
   try {
     const before = await collect(fixture.home, fixture.plugins);
     assert.deepEqual(diff(before, structuredClone(before)), []);
+    // The instance running, the collector's notes and a binding's position are
+    // not configuration.
+    const ran = structuredClone(before);
+    ran.cron[0].runtime.lastRunStatus = "error";
+    ran.agents[0].memory.daily.count += 1;
+    ran.agents[0].memory.otherCount += 1;
+    ran.backupCount += 1;
+    ran.ambiguities.pop();
+    ran.bindings.reverse().forEach((b, i) => b.id = `binding-moved-${i}`);
+    assert.deepEqual(diff(before, ran), []);
     const after = structuredClone(before);
     const agent = after.agents.find((a) =>
       a.workspace.skills.length && a.workspace.instructions.length
@@ -28,6 +38,13 @@ Deno.test("diff reports structural mutations and additions/removals deterministi
     const removedSkill = agent.workspace.skills.pop()!;
     agent.workspace.skills.push({ ...removedSkill, id: "new-skill" });
     after.bindings[0].peerKind = "group";
+    after.accounts[0].dmPolicy = "open";
+    after.hooks[0].agentId = "elsewhere";
+    after.providers[0].models.push("new-model");
+    after.messaging.enabled = !after.messaging.enabled;
+    agent.name = "Renamed";
+    agent.policy.agent.deny.push("exec");
+    after.openclawVersion = "2099.1.1";
     after.plugins![0].enabled = false;
     after.mcpServers[0].enabled = !after.mcpServers[0].enabled;
     const removedMcp = after.mcpServers.pop()!;
@@ -49,7 +66,15 @@ Deno.test("diff reports structural mutations and additions/removals deterministi
         "agent.sandbox",
         "agent.execution",
         "agent.memory",
-        "binding.changed",
+        "binding.added",
+        "binding.removed",
+        "account.changed",
+        "hook.changed",
+        "provider.changed",
+        "messaging",
+        "agent.name",
+        "agent.policy",
+        "instance.version",
         "plugin.changed",
         "mcp.changed",
         "mcp.added",

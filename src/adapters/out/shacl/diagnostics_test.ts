@@ -62,6 +62,7 @@ Deno.test("APE report mapping groups sorted related IDs and preserves replacemen
       finding: "absent",
       context: "Cycle with $$, $&, $'; again $$, $&, $'.",
       recovery: "Review the modeled entry.",
+      related: ["agent:$$", "agent:$&", "agent:$'"],
     }]);
     assert.equal(report.queries[0].findings, 1);
     assert.match(report.validationReport, /ValidationReport/);

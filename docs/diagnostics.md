@@ -1,14 +1,17 @@
 # Diagnostics
 
-With the Toolkit installed, each plugin export compiles its SysML model and runs
-the OpenClaw and APE SHACL rules. The sorted findings and collector notes are
-written to `findings.json`; export continues even if checks fail. Without the
-Toolkit, model checks are skipped and snapshot `ambiguities` remain as collector
-notes. No TypeScript fallback runs. The standalone command checks an existing
-export without writing files or updating the model:
+Each plugin export compiles its SysML model with the Toolkit bundled in the
+plugin package and runs the OpenClaw and APE SHACL rules; nothing is installed
+or downloaded. The sorted findings and collector notes are written to
+`findings.json`; export continues even if checks fail. If the bundled Toolkit is
+missing or damaged, validation fails with `TOOLKIT_INTEGRITY`, model checks do
+not run and snapshot `ambiguities` remain as collector notes. No TypeScript
+fallback runs. The standalone command checks an existing export without writing
+files or updating the model, with the Toolkit directory that `plugin:build`
+writes:
 
 ```sh
-deno task diagnose --export <version-dir> --state-dir <Toolkit-install-state-dir>
+deno task diagnose --export <version-dir> --toolkit plugin/toolkit
 ```
 
 Each finding has `code`, `severity`, `subject`, `context` and `recovery`. Errors
@@ -20,6 +23,45 @@ Review the context before changing settings.
 The export summary and `versions.json` store `findings: {error, warning, info}`
 counts. The viewer's Doctor panel displays the findings available for each
 version; model-check status distinguishes skipped checks from an empty result.
+
+### Whether the checks ran
+
+An empty list of findings is clean only when the checks ran. The viewer reads
+`validation.json` and gives each version one of four states:
+
+| State        | Meaning                                                                                                      |
+| ------------ | ------------------------------------------------------------------------------------------------------------ |
+| `verified`   | The APE analysis completed (or, in an archive older than it, the findings were recorded).                    |
+| `not-run`    | It was skipped: only versions exported before the Toolkit shipped with the plugin (`TOOLKIT_NOT_INSTALLED`). |
+| `failed`     | It started and failed (`APE_TIMEOUT`, `APE_WORKER_FAILED`…).                                                 |
+| `unrecorded` | The archive holds no findings, or a `findings.json` the viewer cannot read.                                  |
+
+A version also gives the number of failed inferences and, when the analysis
+completed, how many rules ran (`ape.metrics.queries`).
+
+### Reading findings
+
+The viewer groups findings by severity, code and recovery, each subject with its
+own context. A group's source is `rule` (an error or warning from a model
+check), `note` (an informative model check) or `collector` (a limit noted while
+collecting, found in the snapshot's `ambiguities`). An APE finding that names
+other agents in its context lists them in `related` (`agent:<id>`, sorted), so a
+cycle can be lit and the delegation findings can sit under the exec finding they
+widen; `related` is optional and absent from older versions.
+
+### New and resolved
+
+A version's findings are also compared with those of the last older version
+whose APE analysis completed and whose findings were recorded, as a multiset of
+code, subject and context. A finding absent now is `resolved`, and one absent
+before is `new`, only when its rule ran on both sides (`ape.metrics.queries`,
+with the `APE_` prefix ignored: the first exports wrote none). When the rule did
+not run in the earlier version a present finding is `newRule`, and when it did
+not run now an earlier one is `notComparable`. Collector notes always count as
+run. With no such earlier version there is no comparison. The comparison also
+says whether the configuration and inference were the same between the two
+versions (`inputs`), because a rule can change with the plugin and not with the
+configuration.
 
 Subjects match the model's stable element IDs: `agent:<id>`, `cron:<id>`,
 `heartbeat:<agentId>`, `account:<id>`, `grant:<agentId>:<tool>` and `instance`.
@@ -37,10 +79,9 @@ projection choices. The complete contract is in
 
 ## Model rules (APE)
 
-With the Toolkit installed, every export checks APE good practices on the graph
-of the exported SysML model, with SPARQL on Oxigraph. These rules follow links
-between agents. Their codes start with `APE_`. Rules and views are in
-[`rules/ape/`](../rules/ape/).
+Every export checks APE good practices on the graph of the exported SysML model,
+with SPARQL on Oxigraph. These rules follow links between agents. Their codes
+start with `APE_`. Rules and views are in [`rules/ape/`](../rules/ape/).
 
 ### `APE_GRANT_WIDENS_PARENT`
 
@@ -79,7 +120,7 @@ remove the agent.
 
 ## Configuration checks
 
-These 16 checks are defined in
+These 17 checks are defined in
 [`rules/openclaw/openclaw.ttl`](../rules/openclaw/openclaw.ttl). The former
 `CRON_FAILING` check is deliberately dropped: runtime job health is not emitted
 into the model.
@@ -133,6 +174,25 @@ Review or recovery: Use exec mode `ask` or `auto`, or tighten the execution host
 approvals policy.
 
 Source: `docs/tools/exec-approvals.md`.
+
+### `PROSE_NOT_ENFORCED`
+
+Severity: warning. Subject: agent. Only in an export with inference.
+
+The model inferred a prohibition or constraint about running commands (a rule
+with concern `exec`) from the agent's instructions, but exec can run on the host
+with effective security `full` and ask `off`: the configuration does not enforce
+what the prose says. The context names the rule's id. It reuses the reachability
+join of `EXEC_WITHOUT_APPROVAL`, so it only fires for an agent that rule also
+flags. The finding rests on an inferred proposal, which is never admitted; the
+viewer labels it "not enforced by config", not as a contradiction, since the
+agent may still follow its instructions.
+
+Review or recovery: Use exec mode `ask` or `auto`, or tighten the execution host
+approvals policy, so the configuration holds what the instructions say; or
+reword the rule.
+
+Source: `docs/tools/exec-approvals.md`; rules inferred into `OpenClawInferred`.
 
 ### `AGENT_WITHOUT_SANDBOX`
 
@@ -226,9 +286,9 @@ Source: `docs/channels/channel-routing.md`;
 
 Severity: error if enabled on OpenClaw 2026.10; info otherwise. Subject: cron.
 
-A job explicitly targets an absent agent. OpenClaw 2026.10 fails the run. Older
-runtime behavior is unverified. A missing agentId is instead
-`CRON_AGENT_UNRESOLVED`.
+A job explicitly targets an absent agent, which the context names. OpenClaw
+2026.10 fails the run. Older runtime behavior is unverified. A missing agentId
+is instead `CRON_AGENT_UNRESOLVED`.
 
 Review or recovery: Set `agentId` to an existing agent, restore that agent, or
 delete the obsolete task.

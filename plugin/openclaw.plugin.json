@@ -15,7 +15,7 @@
     },
     {
       "name": "sysmlv2-toolkit",
-      "description": "Install or verify the SysML WebAssembly Toolkit",
+      "description": "Verify the SysML WebAssembly Toolkit bundled with the plugin",
       "hasSubcommands": true
     }
   ],

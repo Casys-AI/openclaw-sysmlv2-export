@@ -17,7 +17,8 @@ export type {
 } from "../../../domain/model/diagnostics/validation.ts";
 
 export interface ValidationRequest {
-  stateDir: string;
+  /** Directory holding the pinned Toolkit files. */
+  toolkit: string;
   sources: { name: string; text: string }[];
 }
 export type ValidationResponse =
@@ -38,7 +39,7 @@ export const toolkitFailure = (cause: unknown) => {
     `The Toolkit worker could not complete validation: ${
       recordDiagnosticError(cause).message
     }`,
-    "Check the Toolkit installation and retry the export.",
+    "Check the bundled Toolkit and retry the export.",
   );
   error.cause = cause;
   return error;
@@ -48,7 +49,7 @@ export const toolkitFailure = (cause: unknown) => {
  * even a synchronous WASM hang can be interrupted without losing a compile. */
 export async function validate(
   files: Map<string, string>,
-  stateDir: string,
+  toolkit: string,
   options: {
     timeoutMs?: number;
     apeTimeoutMs?: number;
@@ -57,7 +58,7 @@ export async function validate(
   } = {},
 ): Promise<Diagnostics> {
   const request = {
-    stateDir,
+    toolkit,
     sources: [...files].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0)
       .map(([name, text]) => ({ name, text })),
   };

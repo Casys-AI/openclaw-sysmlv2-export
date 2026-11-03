@@ -1,93 +1,72 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ExportError } from "../../src/infrastructure/error.ts";
+import { TOOLKIT_FILES } from "../../src/adapters/sysml-toolkit-pin.ts";
 import {
-  installToolkit,
   readToolkit,
-  toolkitPath,
   toolkitStatus,
-} from "../../src/adapters/out/sysml-toolkit/install.ts";
+} from "../../src/adapters/out/sysml-toolkit/bundled.ts";
+import { extractToolkit } from "../../src/adapters/out/sysml-toolkit/extract.ts";
 
 const code = (expected: string) => (e: unknown) =>
   e instanceof ExportError && e.code === expected;
 async function fixture(run: (dir: string) => Promise<void>) {
-  const dir = await mkdtemp(join(tmpdir(), "toolkit-install-"));
+  const dir = await mkdtemp(join(tmpdir(), "toolkit-bundle-"));
   try {
     await run(dir);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
 }
-Deno.test("missing toolkit reports status and actionable error", () =>
+Deno.test("a missing bundled Toolkit is an integrity error that says to reinstall", () =>
   fixture(async (dir) => {
-    assert.equal((await toolkitStatus(dir)).installed, false);
     await assert.rejects(
-      readToolkit(dir),
+      toolkitStatus(join(dir, "toolkit")),
       (e: unknown) =>
-        e instanceof ExportError && e.code === "TOOLKIT_NOT_INSTALLED" &&
-        e.recovery === "openclaw sysmlv2-toolkit install",
+        e instanceof ExportError && e.code === "TOOLKIT_INTEGRITY" &&
+        /^Reinstall the plugin/.test(e.recovery),
     );
   }));
-Deno.test("an archive that is not the pinned release is refused before decompression", () =>
+Deno.test("packaging needs the archive and refuses one that is not the pinned release", () =>
   fixture(async (dir) => {
-    const archive = join(dir, "bad.tgz");
+    const toolkit = join(dir, "toolkit"), archive = join(dir, "bad.tgz");
     await writeFile(archive, "not gzip");
-    await assert.rejects(
-      installToolkit(dir, { from: archive }),
-      code("TOOLKIT_INTEGRITY"),
-    );
-  }));
-Deno.test("download request, HTTP and body failures are classified", () =>
-  fixture(async (dir) => {
     for (
-      const fetcher of [
-        () => Promise.reject(new Error("offline")),
-        () => Promise.resolve(new Response("missing", { status: 404 })),
-        () =>
-          Promise.resolve(
-            new Response(
-              new ReadableStream({
-                start(c) {
-                  c.error(new Error("body"));
-                },
-              }),
-            ),
-          ),
-      ]
+      const [given, expected] of [
+        [undefined, "TOOLKIT_ARCHIVE_MISSING"],
+        [join(dir, "absent.tgz"), "TOOLKIT_ARCHIVE_MISSING"],
+        [archive, "TOOLKIT_INTEGRITY"],
+      ] as const
     ) {
-      await assert.rejects(
-        installToolkit(dir, { fetch: fetcher as typeof fetch }),
-        code("TOOLKIT_DOWNLOAD_FAILED"),
-      );
+      await assert.rejects(extractToolkit(given, toolkit), code(expected));
     }
+    assert.deepEqual(await readdir(dir), ["bad.tgz"]);
   }));
 const archive = Deno.env.get("SYSML_TOOLKIT_WASM_ARCHIVE");
 Deno.test({
   name:
-    "real pinned archive installs, verifies, no-ops and detects file tampering",
+    "real pinned archive packages exactly the pinned files and tampering is detected",
   ignore: !archive,
   fn: () =>
     fixture(async (dir) => {
-      assert.equal(
-        (await installToolkit(dir, { from: archive })).changed,
-        true,
+      const toolkit = join(dir, "toolkit");
+      await mkdir(toolkit);
+      await writeFile(join(toolkit, "stale.txt"), "left over");
+      await extractToolkit(archive, toolkit);
+      const names = Object.keys(TOOLKIT_FILES).sort();
+      assert.deepEqual(
+        (await readdir(toolkit, { recursive: true, withFileTypes: true }))
+          .filter((entry) => entry.isFile())
+          .map((entry) =>
+            join(entry.parentPath, entry.name).slice(toolkit.length + 1)
+          ).sort(),
+        names,
       );
-      assert.equal((await readToolkit(dir)).size, 9);
-      assert.equal(
-        (await installToolkit(dir, {
-          fetch: (() => {
-            throw new Error("must not fetch");
-          }) as typeof fetch,
-        })).changed,
-        false,
-      );
-      await writeFile(join(toolkitPath(dir), "sysmlv2.js"), "tampered");
-      await assert.rejects(toolkitStatus(dir), code("TOOLKIT_INTEGRITY"));
-      await assert.rejects(
-        installToolkit(dir, { from: archive }),
-        code("TOOLKIT_INTEGRITY"),
-      );
+      assert.deepEqual([...(await readToolkit(toolkit)).keys()].sort(), names);
+      assert.equal((await toolkitStatus(toolkit)).verified, true);
+      await writeFile(join(toolkit, "sysmlv2.js"), "tampered");
+      await assert.rejects(toolkitStatus(toolkit), code("TOOLKIT_INTEGRITY"));
     }),
 });

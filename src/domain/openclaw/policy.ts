@@ -198,6 +198,14 @@ const profiles202610: Profiles = {
 export function is202610(version: string | null): boolean {
   return /^2026\.10\.\d+(?:[-+].*)?$/.test(version ?? "");
 }
+/** The capability groups (`group:fs`, `group:runtime`…) of the tool catalog an
+ * OpenClaw version documents, without the `group:openclaw` superset. */
+export function capabilityGroups(
+  version: string | null,
+): [string, string[]][] {
+  return Object.entries(is202610(version) ? groups202610 : groups202606)
+    .filter(([name]) => name !== "group:openclaw");
+}
 export function policy(raw: unknown): Policy {
   const p = obj(raw);
   return {

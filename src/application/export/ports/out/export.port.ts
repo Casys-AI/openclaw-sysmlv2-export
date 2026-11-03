@@ -13,7 +13,10 @@ import type {
   CompileDiagnostics,
   ValidationSummary,
 } from "../../../../domain/model/diagnostics/validation.ts";
-import type { VersionEntry } from "../../../../domain/export/versions.ts";
+import type {
+  Producer,
+  VersionEntry,
+} from "../../../../domain/export/versions.ts";
 
 interface InstructionSource {
   path: string;
@@ -55,19 +58,22 @@ export interface ExportFiles {
   mkdir(path: string, options?: { recursive: boolean }): Promise<unknown>;
   writeFile(path: string, text: string): Promise<void>;
   readVersions(outDir: string): Promise<VersionEntry[]>;
+  /** A kept version's inference.json, parsed; null when it has none or cannot
+   * be read (an inference is then asked again). */
+  readInference(dir: string): Promise<unknown>;
   versionFiles(dir: string): Promise<Record<string, string>>;
 }
 
 export interface ExportPorts extends OpenClawStateReader {
   serialize(value: unknown): string;
   modelError(error: unknown): string;
+  producer(): Promise<Producer>;
   instructions: OpenClawInstructionReader;
   inference: ModelInferenceParser;
   sysml: SysmlArtifacts;
   output: ExportFiles;
   validationReport(
     files: Map<string, string>,
-    stateDir: string,
   ): Promise<
     {
       validation: ValidationSummary;

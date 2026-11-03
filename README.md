@@ -30,12 +30,16 @@ From ClawHub:
 openclaw plugins install clawhub:@casys/openclaw-sysmlv2-export
 ```
 
-From source, with [Deno](https://deno.com) 2.9.7 or later to build the bundle:
+From source, with [Deno](https://deno.com) 2.9.7 or later to build the bundle.
+The build writes the Toolkit into the package from its pinned release archive,
+which you download once and name; it never downloads anything itself:
 
 ```sh
 git clone https://github.com/Casys-AI/openclaw-sysmlv2-export.git
 cd openclaw-sysmlv2-export
-deno task plugin:build
+curl --fail --location --output sysml-wasm-0.10.10.tgz \
+  https://github.com/Open-MBEE/sysml-toolkit/releases/download/v0.10.10/sysml-wasm-0.10.10.tgz
+SYSML_TOOLKIT_WASM_ARCHIVE="$(pwd)/sysml-wasm-0.10.10.tgz" deno task plugin:build
 openclaw plugins install --link "$(pwd)/plugin" --force --accept-capabilities
 ```
 
@@ -72,45 +76,47 @@ Beside the run folders, `versions.json` lists the runs, newest first, and
 
 ## Check the system
 
-With the Toolkit installed, each export checks its SysML model with OpenClaw
-configuration rules and portable APE rules using SHACL SPARQL on Oxigraph. It
-writes findings with codes, affected elements and recovery advice; the Doctor
-panel lists them. Findings do not block an export or change the instance.
-Without the Toolkit, model checks are skipped and collector notes from the
-snapshot remain available.
+Each export checks its SysML model with OpenClaw configuration rules and
+portable APE rules using SHACL SPARQL on Oxigraph, with the
+[Toolkit](#validate-the-model) that ships inside the plugin: there is nothing to
+install and nothing is downloaded. It writes findings with codes, affected
+elements and recovery advice; the Doctor panel lists them. Findings do not block
+an export or change the instance. If the bundled Toolkit is missing or damaged,
+validation fails with `TOOLKIT_INTEGRITY`, model checks do not run, and the
+collector notes from the snapshot remain available.
 
 ![The Doctor panel: each finding with the element it concerns and its fix](docs/screenshots/doctor.png)
 
 [Diagnostics](docs/diagnostics.md) lists every code, its source in OpenClaw and
 its fix. To check an exported model without changing it, run
-`deno task diagnose --export <version-dir> --state-dir <Toolkit-install-state-dir>`.
+`deno task diagnose --export <version-dir> --toolkit plugin/toolkit`, after a
+`plugin:build` has written that directory.
 
 ## Validate the model
 
-Each export can be compiled with
+Each export is compiled with
 [sysml-toolkit](https://github.com/Open-MBEE/sysml-toolkit), an open-source
-SysML v2 compiler, to check that the model is valid SysML v2. Install it once,
-explicitly (about 21 MB); exporting never downloads anything.
+SysML v2 compiler, to check that the model is valid SysML v2. The plugin package
+carries the pinned
+[sysml-wasm 0.10.10](https://github.com/Open-MBEE/sysml-toolkit/releases/tag/v0.10.10)
+files in `toolkit/` (about 20 MB), licenses included. Installing the plugin is
+the whole setup; neither the install nor an export downloads anything.
 
 ```sh
-openclaw sysmlv2-toolkit install                       # download the pinned release
-openclaw sysmlv2-toolkit install --from <archive.tgz>  # or install a local copy
 openclaw sysmlv2-toolkit status
 ```
 
-`install` fetches the public
-[sysml-wasm 0.10.10 release](https://github.com/Open-MBEE/sysml-toolkit/releases/tag/v0.10.10),
-or reads the archive given with `--from`, checks it against its pinned SHA-256
-and installs it under `<state dir>/sysmlv2-export-toolkit/0.10.10/`, licenses
-included. Both commands print JSON.
+`status` prints JSON: the bundled version, its directory and `verified: true`.
+Each export checks every file against its pinned SHA-256 before using it; a
+missing or modified file is a `TOOLKIT_INTEGRITY` error whose recovery is to
+reinstall the plugin.
 
-Once the Toolkit is installed, every export is compiled, inferred behaviour
-included, with a 60-second compile deadline. APE then has its own default
-10-second deadline; an `APE_TIMEOUT` leaves the compile result intact. The run's
-summary and `versions.json` say whether validation `passed`, `failed` or was
-`skipped`; `validation.json` lists the diagnostics with their file and line. A
-failed validation never loses the export. Without the Toolkit, validation is
-skipped, with the command that installs it.
+Every export is compiled, inferred behaviour included, with a 60-second compile
+deadline. APE then has its own default 10-second deadline; an `APE_TIMEOUT`
+leaves the compile result intact. The run's summary and `versions.json` say
+whether validation `passed` or `failed`; `validation.json` lists the diagnostics
+with their file and line. A failed validation never loses the export. Earlier
+exports made without the Toolkit installed stay marked `skipped`.
 
 ## Viewer
 
@@ -118,28 +124,43 @@ skipped, with the command that installs it.
 and its diagrams are laid out when the export runs. Pick a version, then a view.
 
 - **Overview**, the landing view: one row per agent, with its model, where it
-  runs (host or sandbox), its tools by origin, channel accounts, scheduled
-  tasks, context and inferred behaviour, under the instance's totals. Each row
-  links to the agent in the other views.
+  runs (host or sandbox, and whether elevated exec is configured), its tools by
+  origin, channel accounts, scheduled tasks, context and inferred behaviour,
+  under the instance's totals. Each row links to the agent in the other views.
 - **System**: each agent as a part with its context and granted tools, connected
-  to its channel accounts through its bindings.
+  to its channel accounts through its bindings; hook mappings sit in a group of
+  their own, with an edge to the agent each one starts. An agent's inspector
+  states its isolation: where exec runs, network, workspace access, external
+  binds and elevated.
+- **Reach**: who can reach whom. The agents with their posture, delegation as
+  one edge per pair (a double arrow when both ways), the hooks that start them,
+  and the instance-wide messaging policy.
 - **Tools**: a SysML allocation matrix of the tool catalog, by origin and
-  provider, against the agents. Each cell is a grant, on the host, in the
+  provider, against the agents; built-in tools sit in OpenClaw's capability
+  groups for the recorded version. Each cell is a grant, on the host, in the
   sandbox or both. Groups fold, and a filter narrows the tools.
 - **Scheduled tasks**: cron jobs and heartbeats linked to the agent they wake,
-  above a week strip of the hours each one fires in.
+  above a week strip of the hours each one fires in; a task shows its model,
+  delivery and last run in the inspector.
 - **Behaviour**, with inference: an agent's proposed procedures as action flows,
   with decisions, hand-offs and escalations, and its rules in a requirements
-  table with the lines they come from.
+  table with the lines they come from, read beside what the agent's
+  configuration lets it do. An exec rule that the configuration does not enforce
+  raises `PROSE_NOT_ENFORCED`. A new export reuses an agent's inference when
+  what the model is sent has not changed.
 
 The icon rail on the right opens three panels in a sidebar that you can collapse
 and resize. The Inspector shows the attributes and exact SysML text of the
 element, row or cell you click, and an agent's other views. Changes lists what
 was added, changed and removed since the previous version, each changed value
 before and after, and the diagram and table mark it in blue. Doctor lists the
-findings. An entry of Changes or Doctor selects and frames its element without
-leaving the panel. The Files and Changes tabs show each file and its diff
-against the previous version.
+findings, grouped, and says when the model checks did not run instead of showing
+a clean list; against the last version that was checked, it also says which
+findings are new and which are resolved. Each version knows whether its
+configuration or only the export changed since the previous one, so a re-emitted
+export does not read as a change of your instance. An entry of Changes or Doctor
+selects and frames its element without leaving the panel. The Files and Changes
+tabs show each file and its diff against the previous version.
 
 Drag or scroll to pan, pinch or Command/Control and scroll to zoom. F, Enter or
 the Fit selection button frame the selected element; a step frames its
@@ -223,18 +244,22 @@ openclaw plugins list --json > plugins.json             # optional inventory
 deno task collect --home ~/.openclaw --plugins plugins.json --out snapshot.json
 deno task export --snapshot snapshot.json --out exported
 deno task diff before.json after.json
-deno task diagnose --export <version-dir> --state-dir <Toolkit-install-state-dir>
+deno task diagnose --export <version-dir> --toolkit plugin/toolkit
 ```
 
 Snapshots use the `openclaw-snapshot/5` schema; older schemas are rejected, so
-collect again after upgrading. Model checks require the installed Toolkit.
+collect again after upgrading. `plugin:build` needs `SYSML_TOOLKIT_WASM_ARCHIVE`
+(see [Install](#install)) and writes the Toolkit into `plugin/toolkit/`, where
+the built plugin reads it. The Deno commands never look for it implicitly:
+`diagnose` takes `--toolkit <dir>`, and the tests that need it extract the
+archive into a temporary directory.
 
 The test fixture is an anonymized, generic OpenClaw instance in which every
 secret is a `CANARY-*` marker that no output may contain. CI runs the checks,
-the tests, the plugin build and the Toolkit test, which compiles exports with
-the pinned archive. To run that test locally, set `SYSML_TOOLKIT_WASM_ARCHIVE`
-to the archive's path and run `deno task test:toolkit`; without it, the test is
-skipped.
+the tests, the plugin build with the pinned archive and the Toolkit test, which
+compiles exports with it. To run that test locally, set
+`SYSML_TOOLKIT_WASM_ARCHIVE` to the archive's path and run
+`deno task test:toolkit`; without it, the test is skipped.
 
 [SPEC.md](SPEC.md) specifies the behaviour, the mapping and the limits;
 [CHANGELOG.md](CHANGELOG.md) lists the changes.
@@ -250,6 +275,7 @@ Eclipse Public License 2.0, to lay the diagrams out;
 [plugin/THIRD_PARTY_NOTICES.md](plugin/THIRD_PARTY_NOTICES.md) holds the notices
 of every bundled package.
 
-The Toolkit, installed separately, is under the Apache License 2.0 and its SysML
-v2 standard library under the Eclipse Public License 2.0; their license files
-and notices are installed with it.
+The Toolkit, bundled in `plugin/toolkit/`, is under the Apache License 2.0 and
+its SysML v2 standard library under the Eclipse Public License 2.0; their
+license files and notices ship with it, and
+[plugin/THIRD_PARTY_NOTICES.md](plugin/THIRD_PARTY_NOTICES.md) names its source.

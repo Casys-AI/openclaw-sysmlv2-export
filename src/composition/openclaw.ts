@@ -3,6 +3,7 @@ import type { Complete } from "../application/export/export-instance.ts";
 import { collect } from "../adapters/out/openclaw/collector.ts";
 import * as instructions from "../adapters/out/openclaw/instruction-reader.ts";
 import { exportFiles } from "../adapters/out/filesystem/export-files.ts";
+import { producer } from "../adapters/out/filesystem/producer.ts";
 import { emit } from "../adapters/out/sysml/emitter.ts";
 import { ASSEMBLY_LIBRARY } from "../adapters/out/sysml/library.ts";
 import { emitInferred } from "../adapters/out/sysml/inferred.ts";
@@ -18,28 +19,32 @@ export type {
   ExportSummary,
 } from "../application/export/export-instance.ts";
 import {
-  installToolkit,
-  toolkitStatus,
-} from "../adapters/out/sysml-toolkit/install.ts";
-export { installToolkit, toolkitStatus };
+  bundledToolkit,
+  toolkitStatus as status,
+} from "../adapters/out/sysml-toolkit/bundled.ts";
+export const toolkitStatus = () => status(bundledToolkit);
 
+/** `toolkit` is the Toolkit directory: the one bundled with the plugin, unless
+ * a test supplies another. */
 export function runExport(
   stateDir: string,
   plugins: unknown,
   outDir: string,
   complete: Complete | null,
   now: Date,
+  toolkit = bundledToolkit,
 ) {
   return run(
     {
       collect,
       serialize: canonical,
       modelError,
+      producer,
       instructions,
       inference: { parse: parseAgentInference },
       sysml: { emit, library: ASSEMBLY_LIBRARY, emitInferred },
       output: exportFiles,
-      validationReport,
+      validationReport: (files) => validationReport(files, toolkit),
       viewerPage,
     },
     stateDir,
@@ -57,7 +62,6 @@ export function createPluginEntry(
   definePluginEntry: Parameters<typeof createEntry>[0],
 ) {
   return createEntry(definePluginEntry, {
-    installToolkit,
     pluginList,
     runExport,
     toolkitStatus,

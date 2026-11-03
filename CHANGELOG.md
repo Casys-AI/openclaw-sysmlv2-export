@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+The snapshot schema and the inference contract (`openclaw-inference/1`) are
+unchanged: every new field is optional, so older exports, `inference.json` files
+and `versions.json` entries still read.
+
+- **The Toolkit ships inside the plugin.** The package carries the pinned
+  sysml-toolkit 0.10.10 files in `toolkit/` (about 20 MB, licenses included), so
+  installing the plugin gives model validation and diagnostics with no further
+  step, and nothing is downloaded at install or export time. Every export still
+  checks each file against its pinned SHA-256; a missing or modified file is a
+  `TOOLKIT_INTEGRITY` error whose recovery is to reinstall the plugin, and the
+  export is kept with a failed validation. `plugin/THIRD_PARTY_NOTICES.md` now
+  names the Toolkit, its licenses and its upstream release.
+- **Removed:** `openclaw sysmlv2-toolkit install` and `--from`, the install into
+  `<state dir>/sysmlv2-export-toolkit/`, and the `TOOLKIT_NOT_INSTALLED` and
+  `TOOLKIT_DOWNLOAD_FAILED` errors. `openclaw sysmlv2-toolkit status` stays and
+  verifies the bundled files. An export no longer ends with validation
+  `skipped`; the status remains only on earlier versions. A
+  `<state dir>/sysmlv2-export-toolkit/` folder left by an earlier install is no
+  longer read and can be deleted.
+- **Build.** `deno task plugin:build` writes `plugin/toolkit/` from the archive
+  that `SYSML_TOOLKIT_WASM_ARCHIVE` names, after checking it against the pinned
+  hash. It never downloads: without the variable it fails with
+  `TOOLKIT_ARCHIVE_MISSING`. CI downloads and verifies the archive before the
+  build.
+- **Deno CLI.** `diagnose` takes `--toolkit <dir>` (for instance
+  `plugin/toolkit`) in place of `--state-dir`.
 - **Viewer: navigation.** Back and Forward follow the versions, views, tabs and
   files opened; the address names the selected element or the lines shown in
   Files, and the inspector copies it. An address to a version, view or element
@@ -27,6 +53,50 @@
   the legend folds, and two notes became tooltips. Every button shows its focus
   ring, focus survives re-renders, diagram elements and matrix cells have full
   accessible names, and a live region reports selections.
+- **Viewer data tells the truth.** Each version says whether its model checks
+  ran (`verified`, `not-run`, `failed`, `unrecorded`, with the export's recovery
+  and the failed inferences), whether its configuration, its inference or only
+  the export changed since the previous version (`same`, `inference`, `changed`,
+  `schema`), and gives readable labels, the Doctor's findings grouped by
+  severity, code and recovery, and the new and resolved findings against the
+  last version whose APE analysis completed. A view's delta splits `changed` (a
+  shown value) from `touched` (only the SysML), counts once what the panel lists
+  and leaves initial and final nodes out. The Changes tab can list, per element,
+  what changed, and the changed files by group.
+- **`diff` covers more and ignores the instance running.** It compares accounts,
+  hooks, agent names, policy, providers, bundled skills, messaging and
+  environment, and leaves out a task's last run, the memory notes and backups
+  that pile up, and a binding's position in its id. A binding is known by its
+  agent, account and peer, so a peer kind change is a removal and an addition.
+- **APE findings name their related agents.** `findings.json` rows of
+  `APE_LINK_CYCLE` and `APE_GRANT_WIDENS_PARENT` carry an optional sorted
+  `related` list of `agent:<id>`; older versions read as before.
+- **Reach view.** Who can reach whom: agents with their posture, delegation as
+  one edge per pair (double-ended when both ways), hooks as nodes, the messaging
+  policy as a block. It has its own layout; System keeps its first layer.
+- **Hook mappings in System**, in a group of their own with an edge to the agent
+  each starts, dashed when the agent is absent.
+- **Posture.** One helper states where exec runs, network, workspace access,
+  external binds and elevated, in System, Overview, Tools and Reach. A host exec
+  policy is never attached to an exec that runs in the sandbox.
+- **Exported facts shown.** The Overview totals name the SysML they rest on;
+  fallback models, inferred role, task model and delivery are attributes;
+  `ScheduledCase` emits `primaryModel`; Overview rows carry `figures`; display
+  names are the readable names on blocks.
+- **Tools matrix data.** Built-in tools sit in the capability groups of the
+  recorded OpenClaw version, rows state their holder count and groups a host
+  marker; plugin profiles and MCP OAuth and filters are attributes.
+- **Behaviour.** A list of procedures with trigger and step count; the agent's
+  authority (where exec runs, ask policy, outbound tools) on each rule.
+- **`PROSE_NOT_ENFORCED`.** A new warning: an inferred exec prohibition or
+  constraint that the configuration does not enforce. It needs inference; a rule
+  now carries an optional `concern` (`exec`), and `OpenClawInferred` gains an
+  `InferredConcern` part for it.
+- **Stable inference.** An agent keeps its earlier inference when what the model
+  is sent is unchanged; `versions.json` says how many agents (`inferred.reused`)
+  and each version records the plugin version and a digest of the shipped
+  shapes.
+- `UNRESOLVED_AGENT_REFERENCE` messages name the absent agent.
 
 ## 0.2.0 — 2026-11-03
 

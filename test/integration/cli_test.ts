@@ -38,12 +38,12 @@ Deno.test("CLI collect/export/diagnose/diff compose with deterministic sanitized
       "diagnose",
       "--export",
       exported,
-      "--state-dir",
-      output,
-    ]);
-    assert.equal(
-      (diagnosis as { validation: { status: string } }).validation.status,
-      "skipped",
+      "--toolkit",
+      join(output, "absent-toolkit"),
+    ]) as { validation: { status: string; code: string } };
+    assert.deepEqual(
+      [diagnosis.validation.status, diagnosis.validation.code],
+      ["failed", "TOOLKIT_INTEGRITY"],
     );
     assert.deepEqual((await readdir(exported)).sort(), beforeDiagnosis);
     const files = await readdir(exported);

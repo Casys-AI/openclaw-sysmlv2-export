@@ -310,6 +310,7 @@ function block(n: DiagramNode, max: number): Sized {
     [c.title, c.rows.map((r) => fit(r, "row", inner))] as [string, string[]]
   );
   const name = fit(n.name, "name", inner);
+  const full = n.text ?? n.name;
   const split = measure(name, "name") + measure(type, "type") > inner;
   const head = split
     ? Math.max(measure(name, "name"), measure(type.trim(), "type"))
@@ -338,6 +339,7 @@ function block(n: DiagramNode, max: number): Sized {
       shape: n.shape,
       kw,
       name,
+      ...(full === name ? {} : { title: full }),
       ...(type ? { type: fit(split ? type.trim() : type, "type", inner) } : {}),
       ...(split ? { split: true as const } : {}),
       comps,
@@ -705,6 +707,7 @@ function sceneOf(
         kind: edge.kind,
         s: edge.source,
         t: edge.target,
+        ...(edge.mutual ? { mutual: true as const } : {}),
         pts,
         ...(label
           ? {
