@@ -35,6 +35,12 @@ button, select { font: inherit; color: inherit; }
 .brand h1 span { color: var(--muted); font-weight: 400; }
 .top select { max-width: 330px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
 .meta { min-width: 0; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.note { display: inline-flex; align-items: center; gap: 8px; min-width: 0; padding: 2px 4px 2px 10px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--card); font-size: 12px; white-space: nowrap; }
+.note[hidden] { display: none; }
+.note span { overflow: hidden; text-overflow: ellipsis; }
+.note button { all: unset; cursor: pointer; padding: 1px 8px; border-radius: 999px; background: var(--accent-soft); font-weight: 500; }
+.note button:hover { background: var(--line); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .tabs { margin-left: auto; display: flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
 .tabs button { all: unset; cursor: pointer; padding: 3px 10px; border-radius: 7px; font-size: 12px; font-weight: 500; color: var(--muted); }
 .tabs button:hover { color: var(--ink); }
@@ -148,6 +154,9 @@ svg.md-focus .md-edge.lit .md-line { stroke-width: 1.8; }
 .md-side-head button { all: unset; cursor: pointer; padding: 3px 8px; border-radius: 7px; font-size: 12px; color: var(--muted); }
 .md-side-head button:hover { color: var(--ink); background: var(--hover); }
 .md-side-head button[aria-pressed="true"] { color: var(--ink); background: var(--accent-soft); }
+.md-copy { display: inline-flex; align-items: center; gap: 4px; }
+.md-copy svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
+.md-copy[data-flash]::after { content: attr(data-flash); font-size: 11.5px; }
 .md-side-grip { position: absolute; z-index: 2; left: -4px; top: 0; bottom: 0; width: 8px; cursor: col-resize; touch-action: none; outline-offset: -2px; }
 .md-side-grip:hover, .md-side-grip[data-drag] { background: linear-gradient(to right, transparent 3px, var(--line-strong) 3px 5px, transparent 5px); }
 .md-rail { grid-area: rail; display: flex; flex-direction: column; align-items: center; gap: 4px; width: 46px; padding: 8px 0; border-left: 1px solid var(--line); background: var(--card); }
@@ -319,6 +328,7 @@ pre { padding: 8px 10px; }
 <div class="brand"><i aria-hidden="true"></i><h1>OpenClaw <span>→ SysML v2</span></h1></div>
 <select id="version" aria-label="Version"></select>
 <span class="meta" id="meta"></span>
+<span class="note" id="note" role="status" hidden></span>
 <nav class="tabs" aria-label="Pages"><button data-tab="diagrams">Diagrams</button><button data-tab="files">Files</button><button data-tab="changes">Changes</button></nav>
 </header>
 <main>
@@ -351,6 +361,7 @@ pre { padding: 8px 10px; }
 <section id="files" class="sheet" hidden></section>
 <section id="changes" class="sheet" hidden></section>
 </main>
+<div id="live" class="sr" aria-live="polite"></div>
 <script id="data" type="application/json">__DATA__</script>
 <script>
 "use strict";
@@ -378,7 +389,9 @@ const state = { version: 0, tab: "diagrams", view: "overview", file: "OpenClawIn
   fitK: 1,
   // Tables: the text filter, folded groups, the facet value shown, the sort,
   // and the height a table under a diagram was dragged to.
-  filter: "", folded: new Set(), facet: null, sort: null, sheetH: null };
+  filter: "", folded: new Set(), facet: null, sort: null, sheetH: null,
+  // What the last link named that the page lacks (see follow).
+  note: null };
 
 function el(tag, cls, text) {
   const e = document.createElement(tag);
@@ -398,21 +411,76 @@ const payload = (entry) => data.views[entry.view];
 const entryOf = (i, id) => (viewsOf(i) || []).find((e) => payload(e).id === id);
 const fileText = (i, name) => data.texts[versions[i].files[name]];
 
-// Routing: #<version>[/<view>|/files|/changes]. A segment that does not
-// decode is kept as written, and so names nothing.
+// Routing: #<version>[/<view>[/<element>]], #<version>/files[/<file>[:<from>-<to>]]
+// or #<version>/changes. A segment that does not decode is kept as written,
+// and so names nothing. Opening another place adds a history entry (see
+// navigate); a selection, the first render and a rewritten link replace it.
 function decoded(segment) {
   try { return decodeURIComponent(segment); } catch { return segment; }
 }
+// Reads the place a link names; returns the version and element it asked for.
 function readHash() {
-  const parts = location.hash.slice(1).split("/").map(decoded);
-  const i = versions.findIndex((v) => v.id === parts[0]);
-  state.version = Math.max(0, i);
-  if (parts[1] === "files" || parts[1] === "changes") state.tab = parts[1];
-  else if (parts[1]) { state.tab = "diagrams"; state.view = parts[1]; }
+  const [version, place, ...rest] = location.hash.slice(1).split("/").map(decoded);
+  const target = rest.join("/");
+  state.version = Math.max(0, versions.findIndex((v) => v.id === version));
+  state.focus = null;
+  if (place === "files") {
+    const [, file, from, to] = /^(.*?)(?::(\d+)(?:-(\d+))?)?$/.exec(target);
+    state.tab = "files";
+    state.file = file || state.file;
+    state.range = from ? [+from, +(to || from)] : null;
+  } else if (place === "changes") state.tab = "changes";
+  else {
+    state.tab = "diagrams";
+    if (place) state.view = place;
+    state.focus = target || null;
+  }
+  return { version: version || null, element: state.focus };
 }
+let pushNext = false;
 function writeHash() {
-  const tail = state.tab === "diagrams" ? state.view : state.tab;
-  history.replaceState(null, "", "#" + encodeURIComponent(versions[state.version].id) + "/" + encodeURIComponent(tail));
+  const tail = state.tab === "files" ? ["files", state.file + (state.range ? ":" + state.range[0] + "-" + state.range[1] : "")]
+    : state.tab === "changes" ? ["changes"]
+    : [state.view, ...state.selected && shownView() === state.view ? [state.selected] : []];
+  const hash = "#" + [versions[state.version].id, ...tail].map(encodeURIComponent).join("/");
+  if (hash !== location.hash) history[pushNext ? "pushState" : "replaceState"](null, "", hash);
+  pushNext = false;
+}
+// Opens another place: a version, a view, a tab or a file.
+function navigate(change, keepViewport) {
+  Object.assign(state, change);
+  state.note = null;
+  pushNext = true;
+  render(keepViewport);
+}
+// Shows the place a link names, and notes what it names that this page lacks.
+function follow() {
+  const asked = readHash();
+  render();
+  state.note = asked.version && versions[state.version].id !== asked.version ? missing("VERSION_NOT_FOUND", asked.version)
+    : asked.element && state.selected !== asked.element ? missing("ELEMENT_NOT_FOUND", asked.element) : null;
+  renderNote();
+}
+// What a link named and this page does not show, by code; the text on screen
+// stays short, the exact sentence is the tooltip.
+function missing(code, id) {
+  if (code === "VERSION_NOT_FOUND") return { code, text: "No version " + id, detail: "This page has no version " + id + "; it shows the latest one." };
+  if (code === "ELEMENT_NOT_FOUND") return { code, text: id + " is not in this view", detail: "No element " + id + " in this view of this version." };
+  // The asked-for view: the nearest version that has it opens it.
+  const has = versions.map((_, i) => i).filter((i) => entryOf(i, id)).sort((a, b) => Math.abs(a - state.version) - Math.abs(b - state.version));
+  const title = has.length ? payload(entryOf(has[0], id)).title : id;
+  return { code, text: title + " is not in this version", detail: "No view " + id + " in this version" + (has.length ? "; " + plural(has.length, "version") + " of this page have it." : " nor in any other."),
+    recovery: has.length ? { label: when(versions[has[0]]), go: () => navigate({ version: has[0] }, true) } : null };
+}
+function renderNote() {
+  const box = document.getElementById("note");
+  const entries = state.tab === "diagrams" && viewsOf(state.version);
+  const n = entries && entries.length && shownView() !== state.view ? missing("VIEW_NOT_FOUND", state.view) : state.note;
+  box.hidden = !n;
+  if (!n) { box.replaceChildren(); delete box.dataset.code; return; }
+  box.dataset.code = n.code;
+  box.title = n.code + ": " + n.detail;
+  box.replaceChildren(el("span", "", n.text), ...n.recovery ? [button(n.recovery.label + " →", n.recovery.go)] : []);
 }
 
 function sysml(text) {
@@ -626,10 +694,7 @@ function headOf(view, id) {
 }
 // Opens a view of this version and selects one of its elements, if it has it.
 function go(view, id) {
-  state.tab = "diagrams";
-  state.view = view;
-  state.focus = id;
-  render();
+  navigate({ tab: "diagrams", view, focus: id });
 }
 const nameOf = (n) => n.name || (n.lines || []).join(" ") || (n.label ? n.label.lines.join(" ") : n.shape);
 function button(text, onclick, cls) {
@@ -685,7 +750,7 @@ function showChanges(cur) {
       ul.append(li);
     }
     parts.push(el("p", "md-kicker", label + " · " + ids.length), ul);
-    if (sysmlOnly) parts.push(button(sysmlOnly + " changed in their SysML only: show the file diff", () => { state.tab = "changes"; render(); }, "md-back"));
+    if (sysmlOnly) parts.push(button(sysmlOnly + " changed in their SysML only: show the file diff", () => navigate({ tab: "changes" }), "md-back"));
   };
   group("Added", shown(d.added, cur.view), cur.view, (id) => select(id, true), false);
   group("Changed", shown(d.changed, cur.view), cur.view, (id) => select(id, true), true);
@@ -862,6 +927,7 @@ function applyFocus() {
 function select(id, center) {
   state.selected = id;
   applyFocus();
+  writeHash();
   if (!id) { if (state.panel === "inspector") openPanel("inspector"); return; }
   const d = currentView().delta;
   const status = d && d.added.includes(id) ? "added" : d && d.changed.includes(id) ? "changed" : null;
@@ -981,7 +1047,29 @@ function inspect(vi, view, id, status) {
       parts.push(src);
     }
   }
-  showPanel("inspector", parts);
+  showPanel("inspector", parts, vi === state.version && id === state.selected ? [copyLink()] : []);
+}
+// Copies the link to the selection: this version, view and element.
+function copyLink() {
+  const b = button("", () => Promise.resolve().then(() => navigator.clipboard.writeText(location.href))
+    .then(() => flash(b, "Copied"), () => flash(b, "Not copied")), "md-copy");
+  b.title = "Copy link";
+  b.setAttribute("aria-label", "Copy link");
+  const g = sv("svg", { viewBox: "0 0 20 20", "aria-hidden": "true" });
+  g.append(sv("path", { d: "M8.5 11.5a3 3 0 0 0 4.2 0l2.6-2.6a3 3 0 0 0-4.2-4.2l-1 1M11.5 8.5a3 3 0 0 0-4.2 0l-2.6 2.6a3 3 0 0 0 4.2 4.2l1-1" }));
+  b.append(g);
+  return b;
+}
+function flash(b, text) {
+  b.dataset.flash = text;
+  announce(text);
+  setTimeout(() => delete b.dataset.flash, 1600);
+}
+// Says what an action did to assistive technologies.
+function announce(text) {
+  const live = document.getElementById("live");
+  live.textContent = "";
+  requestAnimationFrame(() => { live.textContent = text; });
 }
 // ---- Doctor
 const SEVERITIES = ["error", "warning", "info"];
@@ -1032,11 +1120,7 @@ function showDoctor() {
   showPanel("doctor", parts);
 }
 function showLines(vi, file, from, to) {
-  state.version = vi;
-  state.tab = "files";
-  state.file = file;
-  state.range = [from, to];
-  render();
+  navigate({ version: vi, tab: "files", file, range: [from, to] });
 }
 
 // ---- Tables
@@ -1300,7 +1384,7 @@ function renderFiles() {
   const nav = el("nav", "files");
   for (const n of names) {
     const b = el("button", n === state.file ? "on" : "", n);
-    b.onclick = () => { state.file = n; state.range = null; render(); };
+    b.onclick = () => navigate({ file: n, range: null });
     nav.append(b);
   }
   const text = data.texts[v.files[state.file]];
@@ -1346,14 +1430,17 @@ function render(keepViewport) {
   if (state.tab === "diagrams") renderDiagram(keepViewport);
   else if (state.tab === "files") renderFiles();
   else renderChanges();
+  renderNote();
+  const place = state.tab === "files" ? "Files" : state.tab === "changes" ? "Changes" : state.drawn ? state.drawn.payload.title : "Diagrams";
+  document.title = place + " · " + when(versions[state.version]) + " · OpenClaw SysML v2";
   writeHash();
 }
 
 // ---- Events
 // Another version keeps the view, but its table may have other columns.
-document.getElementById("version").onchange = (e) => { state.version = +e.target.value; state.range = null; state.sort = null; state.facet = null; render(true); };
-document.getElementById("view").onchange = (e) => { state.view = e.target.value; render(); };
-for (const b of document.querySelectorAll(".tabs button")) b.onclick = () => { state.tab = b.dataset.tab; render(true); };
+document.getElementById("version").onchange = (e) => navigate({ version: +e.target.value, range: null, sort: null, facet: null }, true);
+document.getElementById("view").onchange = (e) => navigate({ view: e.target.value });
+for (const b of document.querySelectorAll(".tabs button")) b.onclick = () => navigate({ tab: b.dataset.tab }, true);
 // The rail opens a panel, or collapses the sidebar when it is already open.
 for (const b of document.querySelectorAll(".md-rail [data-panel]")) {
   b.onclick = () => state.panel === b.dataset.panel ? collapse() : openPanel(b.dataset.panel);
@@ -1459,9 +1546,8 @@ for (const type of ["pointerup", "pointercancel", "lostpointercapture"]) {
   split.addEventListener(type, () => { if (split.dataset.drag) { delete split.dataset.drag; fit(); } });
 }
 window.addEventListener("resize", () => { if (state.tab === "diagrams") fit(); });
-window.addEventListener("hashchange", () => { readHash(); render(); });
-readHash();
-render();
+window.addEventListener("hashchange", follow);
+follow();
 </script>
 </body>
 </html>
