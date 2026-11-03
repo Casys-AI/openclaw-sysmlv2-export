@@ -45,6 +45,11 @@ Deno.test("plugin runs are kept as versions", async (t) => {
       recovery: "openclaw sysmlv2-toolkit install",
     };
     assert.deepEqual(first.validation, skipped);
+    assert.deepEqual(first.ape, {
+      status: "skipped",
+      count: 0,
+      code: "TOOLKIT_NOT_INSTALLED",
+    });
     const findings = doctor(parseSnapshot(
       JSON.parse(await readFile(join(first.outDir, "snapshot.json"), "utf8")),
     ));
@@ -59,6 +64,7 @@ Deno.test("plugin runs are kept as versions", async (t) => {
         validation: skipped,
         errors: [],
         warnings: [],
+        ape: { status: "skipped", code: "TOOLKIT_NOT_INSTALLED", findings: [] },
       },
     );
     const config = join(fixture.home, "openclaw.json");
@@ -174,7 +180,7 @@ Deno.test("the plugin inventory command must succeed and print JSON", () => {
   }
 });
 
-Deno.test("the plugin Doctor summary names counts and an empty result", async () => {
+Deno.test("the plugin summary names combined counts and the APE execution status", async () => {
   const source = await readFile(
     new URL("../plugin/index.mjs", import.meta.url),
     "utf8",
@@ -193,23 +199,28 @@ Deno.test("the plugin Doctor summary names counts and an empty result", async ()
     viewer: "index.html",
     inferred: null,
     validation: { status: "skipped", errors: 0 },
+    ape: { status: "partial", count: 12 },
   };
   for (
     const [findings, expected] of [
       [
         { error: 1, warning: 4, info: 30 },
-        "Doctor: 1 error, 4 warnings, 30 notes",
+        "Findings: 1 error, 4 warnings, 30 notes",
       ],
-      [{ error: 0, warning: 1, info: 0 }, "Doctor: 1 warning"],
-      [{ error: 0, warning: 0, info: 1 }, "Doctor: 1 note"],
-      [{ error: 0, warning: 0, info: 0 }, "Doctor: no finding"],
+      [{ error: 0, warning: 1, info: 0 }, "Findings: 1 warning"],
+      [{ error: 0, warning: 0, info: 1 }, "Findings: 1 note"],
+      [{ error: 0, warning: 0, info: 0 }, "Findings: no finding"],
     ]
   ) {
     assert.equal(
       summarize({ ...summary, findings }).split("\n").find((line: string) =>
-        line.startsWith("Doctor:")
+        line.startsWith("Findings:")
       ),
       expected,
+    );
+    assert.match(
+      summarize({ ...summary, findings }),
+      /APE: partial \(12 findings\)/,
     );
   }
 });

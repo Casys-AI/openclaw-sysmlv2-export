@@ -11,6 +11,7 @@ import { join, resolve, sep } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { collect } from "../src/collect.ts";
 import { doctor } from "../src/doctor.ts";
+import type { ApeSummary } from "../src/ape-rules.ts";
 import { emit } from "../src/emit.ts";
 import { ExportError } from "../src/error.ts";
 import {
@@ -55,6 +56,7 @@ export interface ExportSummary {
   inferred: { procedures: number; rules: number; failed: string[] } | null;
   validation: ValidationSummary;
   findings: FindingSummary;
+  ape: ApeSummary;
 }
 
 /** Rereads an instruction file only if it is still inside the workspace and
@@ -244,7 +246,6 @@ export async function runExport(
   const snapshot = await collect(stateDir, pluginList);
   const findings = doctor(snapshot);
   const findingSummary: FindingSummary = { error: 0, warning: 0, info: 0 };
-  for (const finding of findings) findingSummary[finding.severity]++;
   const files = new Map([
     ["snapshot.json", canonical(snapshot)],
     ["findings.json", canonical(findings)],
@@ -317,13 +318,27 @@ export async function runExport(
       : e;
   });
   for (const [name, text] of files) await writeFile(join(dir, name), text);
-  const { validation, diagnostics } = await validationReport(
+  const { validation, diagnostics, ape } = await validationReport(
     new Map([...files].filter(([name]) => name.endsWith(".sysml"))),
     stateDir,
   );
+  findings.push(...ape.findings);
+  findings.sort((a, b) =>
+    a.code < b.code
+      ? -1
+      : a.code > b.code
+      ? 1
+      : a.subject < b.subject
+      ? -1
+      : a.subject > b.subject
+      ? 1
+      : 0
+  );
+  for (const finding of findings) findingSummary[finding.severity]++;
+  await writeFile(join(dir, "findings.json"), canonical(findings));
   await writeFile(
     join(dir, "validation.json"),
-    canonical({ validation, ...diagnostics }),
+    canonical({ validation, ...diagnostics, ape }),
   );
   const versions = withVersion(await readVersions(outDir), {
     id: version,
@@ -356,5 +371,10 @@ export async function runExport(
     validation,
     findings: findingSummary,
     inferred,
+    ape: {
+      status: ape.status,
+      count: ape.findings.length,
+      ...(ape.code ? { code: ape.code } : {}),
+    },
   };
 }

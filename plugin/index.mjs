@@ -92,7 +92,14 @@ function summarize(s) {
   ].filter(([count]) => count).map(([count, label]) =>
     `${count} ${label}${count === 1 ? "" : "s"}`
   );
-  lines.push(`Doctor: ${findings.length ? findings.join(", ") : "no finding"}`);
+  lines.push(
+    `Findings: ${findings.length ? findings.join(", ") : "no finding"}`,
+  );
+  lines.push(
+    `APE: ${s.ape.status} (${s.ape.count} findings)${
+      s.ape.code ? ` — ${s.ape.code}` : ""
+    }; details in validation.json`,
+  );
   if (s.inferred) {
     lines.push(
       `Inferred (proposals, not admitted): ${s.inferred.procedures} procedures, ${s.inferred.rules} rules`,
