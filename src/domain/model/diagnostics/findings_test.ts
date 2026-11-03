@@ -153,3 +153,19 @@ Deno.test("a finding is new or resolved only when its rule ran on both sides", (
   assert.deepEqual(keys(delta.newRule), ["APE_C Alpha"]);
   assert.deepEqual(keys(delta.notComparable), ["D Alpha"]);
 });
+
+Deno.test("a finding whose text alone changed is neither new nor resolved", () => {
+  const side = (findings: ApeFinding[]) => ({
+    findings,
+    ran: new Set(["A"]),
+    collector: new Set<string>(),
+  });
+  const delta = findingsDelta(
+    side([finding("A", "agent:a", { context: "names the agent" })]),
+    side([finding("A", "agent:a"), finding("A", "agent:b")]),
+    { against: "v0", inputs: "same", labels: {} },
+  );
+  assert.deepEqual([delta.new, delta.resolved.map((f) => f.subject)], [[], [
+    "agent:b",
+  ]]);
+});

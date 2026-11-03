@@ -33,17 +33,17 @@ export interface FindingsDelta {
   notComparable: DeltaFinding[];
 }
 
-/** Findings of `from` that `other` lacks, as a multiset on (code, subject,
- * context). */
-function absentFrom(from: ApeFinding[], other: ApeFinding[]): ApeFinding[] {
+/** Findings of `from` that `other` lacks, as a multiset on `key`. */
+function absentFrom(
+  from: ApeFinding[],
+  other: ApeFinding[],
+  key: (f: ApeFinding) => string,
+): ApeFinding[] {
   const left = new Map<string, number>();
-  for (const f of other) {
-    const key = findingIdentity(f);
-    left.set(key, (left.get(key) ?? 0) + 1);
-  }
+  for (const f of other) left.set(key(f), (left.get(key(f)) ?? 0) + 1);
   return from.filter((f) => {
-    const key = findingIdentity(f), n = left.get(key) ?? 0;
-    if (n) left.set(key, n - 1);
+    const n = left.get(key(f)) ?? 0;
+    if (n) left.set(key(f), n - 1);
     return !n;
   });
 }
@@ -66,8 +66,13 @@ export function findingsDelta(
     subject,
     label: labels[subject] ?? subject,
   });
-  const appeared = absentFrom(now.findings, before.findings);
-  const gone = absentFrom(before.findings, now.findings);
+  // A finding whose text alone changed (a rule reworded by a newer plugin)
+  // keeps its code and subject: it is neither new nor resolved.
+  const place = (f: ApeFinding) => JSON.stringify([f.code, f.subject]);
+  const added = absentFrom(now.findings, before.findings, findingIdentity);
+  const removed = absentFrom(before.findings, now.findings, findingIdentity);
+  const appeared = absentFrom(added, removed, place);
+  const gone = absentFrom(removed, added, place);
   return {
     against,
     inputs,

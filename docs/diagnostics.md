@@ -53,15 +53,16 @@ widen; `related` is optional and absent from older versions.
 
 A version's findings are also compared with those of the last older version
 whose APE analysis completed and whose findings were recorded, as a multiset of
-code, subject and context. A finding absent now is `resolved`, and one absent
-before is `new`, only when its rule ran on both sides (`ape.metrics.queries`,
-with the `APE_` prefix ignored: the first exports wrote none). When the rule did
-not run in the earlier version a present finding is `newRule`, and when it did
-not run now an earlier one is `notComparable`. Collector notes always count as
-run. With no such earlier version there is no comparison. The comparison also
-says whether the configuration and inference were the same between the two
-versions (`inputs`), because a rule can change with the plugin and not with the
-configuration.
+code, subject and context; a finding whose context alone changed (a rule
+reworded by a newer plugin) is the same finding. A finding absent now is
+`resolved`, and one absent before is `new`, only when its rule ran on both sides
+(`ape.metrics.queries`, with the `APE_` prefix ignored: the first exports wrote
+none). When the rule did not run in the earlier version a present finding is
+`newRule`, and when it did not run now an earlier one is `notComparable`.
+Collector notes always count as run. With no such earlier version there is no
+comparison. The comparison also says whether the configuration and inference
+were the same between the two versions (`inputs`), because a rule can change
+with the plugin and not with the configuration.
 
 Subjects match the model's stable element IDs: `agent:<id>`, `cron:<id>`,
 `heartbeat:<agentId>`, `account:<id>`, `grant:<agentId>:<tool>` and `instance`.
