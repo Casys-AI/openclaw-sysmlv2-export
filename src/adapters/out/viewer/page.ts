@@ -301,6 +301,13 @@ svg.md-lod .md-edge:not(.hot) { opacity: .3; }
 .et tr.muted > td { color: var(--muted); }
 .et-name { font-weight: 600; }
 .et td.et-wrap { white-space: normal; min-width: 160px; }
+.et td.et-fig { white-space: normal; }
+.et-fig b { display: inline-block; min-width: 3.2ch; margin-right: 6px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.et-fig small { color: var(--muted); font-size: 11.5px; }
+.et-model { white-space: nowrap; }
+.et-fig .et-plus { margin-left: 6px; padding: 0 5px; border: 1px solid var(--line); border-radius: 999px; }
+.et-fig .et-chip { display: inline-block; margin: 1px 4px 1px 0; padding: 0 6px; border-radius: 999px; background: var(--accent-soft); color: var(--ink); }
+.et-fig .et-flag { margin-left: 6px; color: var(--muted); }
 .et-facet { color: var(--muted); font-style: italic; }
 .et-name span { display: block; } .et-name small { color: var(--muted); font: 400 10.5px var(--mono); }
 .et td.et-views { white-space: normal; min-width: 120px; }
@@ -1708,6 +1715,30 @@ function renderMatrix(box, t, mark) {
   rows();
   box.replaceChildren(bar, table);
 }
+// An Overview figure (tables.ts's figures): its number aligned, its split
+// small beside it, what it counts in the tooltip; the full value too.
+const FLAGS = { search: ["⌕", "memory search"], curated: ["✦", "curated memory (MEMORY.md)"], daily: ["▦", "daily notes"] };
+function figureCell(column, f, value) {
+  const td = el("td", "et-fig");
+  td.title = value + (f.names && f.names.length ? "\n" + f.names.join("\n") : "");
+  if (column === "model") {
+    td.append(el("span", "et-model", value.split(" · ")[0]));
+    if (f.n) td.append(el("small", "et-plus", "+" + f.n));
+    return td;
+  }
+  if (f.n !== undefined) td.append(el("b", "", f.of === 0 ? "—" : f.of !== undefined ? f.n + "/" + f.of : String(f.n)));
+  // Channels show their types; context its non-zero parts; a tool count's
+  // split by origin stays in the tooltip.
+  if (column === "channels") td.append(...(f.parts || []).map(([type, n]) => el("small", "et-chip", type + (n > 1 ? " " + n : ""))));
+  else if (column === "context") td.append(el("small", "", f.parts.filter(([, n]) => n).map(([label, n]) => n + " " + label).join(" · ")));
+  for (const flag of f.flags || []) {
+    const [glyph, words] = FLAGS[flag] || [flag, flag];
+    const g = el("small", "et-flag", glyph);
+    g.title = words;
+    td.append(g);
+  }
+  return td;
+}
 // Elements with some of their attributes, sortable by column and filtered by
 // text and by the facet column's values; each row links to its SysML lines
 // and to the other views that show it. A summary's attributes come first.
@@ -1761,7 +1792,8 @@ function renderElements(box, view, t, mark) {
       const name = el("td", "et-name");
       if (r.title) name.append(el("span", "", r.title), el("small", "", r.name));
       else name.textContent = r.name;
-      tr.append(name, ...r.values.map((v, c) => el("td", (wraps[c] ? "et-wrap" : "") + (c === facet ? " et-facet" : ""), v)));
+      tr.append(name, ...r.values.map((v, c) => r.figures && r.figures[t.columns[c]] ? figureCell(t.columns[c], r.figures[t.columns[c]], v)
+        : el("td", (wraps[c] ? "et-wrap" : "") + (c === facet ? " et-facet" : ""), v)));
       if (linked) {
         const links = el("td", "et-views");
         for (const id of r.views || []) {
