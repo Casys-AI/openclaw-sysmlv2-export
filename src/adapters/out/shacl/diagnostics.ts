@@ -344,6 +344,9 @@ export function evaluateApeRules(store: Store, program: ApeProgram) {
         recovery: annotation.recovery,
         pattern: annotation.pattern,
         finding: annotation.finding,
+        ...(related.size
+          ? { related: [...related].sort().map((id) => elementId("agent", id)) }
+          : {}),
       });
     }
     findings.sort(compareFindings);
