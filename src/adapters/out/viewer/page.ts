@@ -33,7 +33,7 @@ button, select { font: inherit; color: inherit; }
 .brand i { width: 12px; height: 12px; border-radius: 50%; background: #6d4bd8; flex: none; }
 .brand h1 { margin: 0; font-size: 14px; font-weight: 600; letter-spacing: -.01em; white-space: nowrap; }
 .brand h1 span { color: var(--muted); font-weight: 400; }
-.top select { max-width: 330px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
+.top select { max-width: 330px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .meta { min-width: 0; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .meta-verdict { all: unset; cursor: pointer; text-decoration: underline; text-decoration-color: var(--line-strong); }
 .meta-verdict:hover { color: var(--ink); } .meta-verdict:disabled { cursor: default; text-decoration: none; }
@@ -359,6 +359,25 @@ button.et-tile:hover { border-color: var(--line-strong); background: var(--card)
 .md-findings p { margin: 2px 0 0; }
 .md-findings .fix { color: var(--muted); }
 .md-notes summary { margin: 4px 0; cursor: pointer; font-size: 11.5px; color: var(--muted); }
+.doc-checks { margin: 2px 0 12px; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: 10px; background: var(--paper); }
+.doc-checks h3 { margin: 0 0 4px; }
+.doc-checks code { font: 10.5px var(--mono); color: var(--muted); }
+.doc-checks p { margin: 4px 0 0; }
+.doc-head { display: flex; align-items: center; gap: 0; }
+.doc-code { display: inline-flex; gap: 8px; align-items: baseline; }
+.doc-code strong { font-weight: 600; color: var(--doc); }
+.doc-groups code { color: var(--muted); }
+.doc-chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 2px; }
+.doc-chip { display: inline-flex; align-items: center; gap: 2px; padding: 1px 3px 1px 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); }
+.doc-chip.active { background: var(--accent-soft); border-color: var(--line-strong); }
+.md-inspector .doc-chip button { all: unset; cursor: pointer; }
+.doc-subject { font-weight: 600; padding-right: 4px; } button.doc-subject:hover { text-decoration: underline; }
+.doc-chip .doc-src { display: grid; place-items: center; width: 18px; height: 16px; border-radius: 5px; color: var(--muted); }
+.doc-chip .doc-src:hover { color: var(--ink); background: var(--hover); }
+.doc-chip .doc-src svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.doc-new { padding: 0 6px; border-radius: 999px; font-size: 10px; font-weight: 600; color: var(--chg); background: var(--chg-bg); }
+.doc-nested { display: flex; flex-wrap: wrap; align-items: center; gap: 0 6px; margin: 8px 0 0 10px; padding-left: 8px; border-left: 2px solid var(--line-strong); font-size: 11.5px; color: var(--muted); }
+.doc-nested .doc-chips { flex-basis: 100%; margin-top: 2px; }
 
 /* Files and changes */
 nav.files { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 10px; }
@@ -453,7 +472,9 @@ const state = { version: 0, tab: "diagrams", view: "overview", file: "OpenClawIn
   note: null,
   // Panels: where each was scrolled to (see showPanel), whether the Doctor's
   // notes are open, and whether a selection keeps the open panel.
-  scrolls: new Map(), panelKey: null, notesOpen: false, stay: false };
+  scrolls: new Map(), panelKey: null, notesOpen: false, limitsOpen: false, stay: false,
+  // The agents a finding relates, lit together while one of them is selected.
+  ring: null };
 
 function el(tag, cls, text) {
   const e = document.createElement(tag);
@@ -796,8 +817,8 @@ function headOf(view, id) {
 }
 // Opens a view of this version and selects one of its elements, if it has
 // it; the open panel stays when asked.
-function go(view, id, stay) {
-  navigate({ tab: "diagrams", view, focus: id, stay: Boolean(stay) });
+function go(view, id, stay, ring) {
+  navigate({ tab: "diagrams", view, focus: id, stay: Boolean(stay), ring: ring || null });
 }
 const nameOf = (n) => n.name || (n.lines || []).join(" ") || (n.label ? n.label.lines.join(" ") : n.shape);
 function button(text, onclick, cls) {
@@ -826,12 +847,13 @@ function renderRail(cur) {
   const changes = rail("changes");
   changes.querySelector("b").textContent = n ? String(n) : "";
   changes.title = d && d.isNew ? "Changes: new in this version" : before ? "Changes since " + when(versions[state.version + 1]) : "Changes";
-  const findings = versions[state.version].findings || [];
+  const v = versions[state.version], findings = v.findings || [], checked = !v.checks || v.checks.state === "verified";
   const errors = findings.filter((f) => f.severity === "error").length, warnings = findings.filter((f) => f.severity === "warning").length;
   const doctor = rail("doctor"), badge = doctor.querySelector("b");
-  badge.textContent = errors + warnings ? String(errors + warnings) : "";
-  badge.className = errors ? "doc-error" : "doc-warning";
-  doctor.title = "Doctor: " + plural(errors, "error") + ", " + plural(warnings, "warning");
+  // Unchecked, the badge is a neutral "?" whatever the collector noted.
+  badge.textContent = !checked ? "?" : errors + warnings ? String(errors + warnings) : "";
+  badge.className = !checked ? "doc-info" : errors ? "doc-error" : "doc-warning";
+  doctor.title = "Doctor: " + (!checked ? CHECKS_WORDS[v.checks.state] : plural(errors, "error") + ", " + plural(warnings, "warning"));
 }
 const rail = (name) => document.querySelector('.md-rail [data-panel="' + name + '"]');
 // Whether a view's changes are marked: not when the configuration is the same
@@ -984,7 +1006,7 @@ function renderDiagram(keepViewport) {
   state.focus = null;
   state.stay = false;
   if (state.selected && !headOf(view, state.selected)) state.selected = null;
-  if (focus) select(focus, true, stay); else applyFocus();
+  if (focus) select(focus, true, stay, state.ring); else applyFocus();
   if (state.panel && (!focus || stay)) openPanel(state.panel);
 }
 function drawScene(view, delta, keep) {
@@ -1055,7 +1077,16 @@ function room() {
 // most at 1:1; a frame taller than the room shows from its top, at a scale
 // its steps read at (0.75), and the wheel scrolls down it.
 function fitTo(id) {
-  const n = state.drawn.nodes.get(scopeOf(id)), r = room(), margin = 32;
+  frameBox(state.drawn.nodes.get(scopeOf(id)));
+}
+// The box around some nodes.
+function boxOf(ids) {
+  const ns = [...ids].map((id) => state.drawn.nodes.get(id)).filter(Boolean);
+  const x = Math.min(...ns.map((n) => n.x)), y = Math.min(...ns.map((n) => n.y));
+  return { x, y, w: Math.max(...ns.map((n) => n.x + n.w)) - x, h: Math.max(...ns.map((n) => n.y + n.h)) - y };
+}
+function frameBox(n) {
+  const r = room(), margin = 32;
   const kw = (r.w - 2 * margin) / n.w, whole = Math.min(kw, (r.h - 2 * margin) / n.h);
   const k = Math.min(1, Math.max(whole, Math.min(0.75, kw))), over = n.h * k > r.h - 2 * margin;
   state.viewport = { k, x: (r.w - n.w * k) / 2 - n.x * k, y: over ? margin - n.y * k : (r.h - n.h * k) / 2 - n.y * k };
@@ -1152,8 +1183,11 @@ function applyFocus() {
   if (!d) return;
   if (d.svg) {
     const sel = d.nodes.has(state.selected) ? state.selected : null;
-    const r = sel ? related(scopeOf(sel)) : null;
-    const hot = new Set([sel, d.nodes.has(state.hover) ? state.hover : null].flatMap((x) => x ? [...related(x).out] : []));
+    // A finding's related agents light up together, with the edges among them.
+    const ring = sel && state.ring && state.ring.has(sel) ? state.ring : null;
+    const among = ring && new Set(d.scene.edges.filter((e) => ring.has(e.s) && ring.has(e.t)).map((e) => e.id));
+    const r = ring ? { nodes: ring, edges: among } : sel ? related(scopeOf(sel)) : null;
+    const hot = ring ? among : new Set([sel, d.nodes.has(state.hover) ? state.hover : null].flatMap((x) => x ? [...related(x).out] : []));
     d.svg.classList.toggle("md-focus", Boolean(r));
     for (const g of d.world.querySelectorAll(".md-node")) {
       g.classList.toggle("lit", Boolean(r && r.nodes.has(g.dataset.id)));
@@ -1180,8 +1214,9 @@ function applyFocus() {
 }
 // Selects an element, shows it in the inspector unless the open panel stays
 // (a Doctor or Changes entry), and frames or reveals it when asked.
-function select(id, center, stay) {
+function select(id, center, stay, ring) {
   state.selected = id;
+  state.ring = ring || null;
   // Acting on the page answers a link's note.
   if (state.note) { state.note = null; renderNote(); }
   applyFocus();
@@ -1194,7 +1229,9 @@ function select(id, center, stay) {
   if (!stay) inspect(state.version, state.drawn.payload, id, status);
   const h = headOf(state.drawn.payload, id);
   announce((stay ? "Selected " : "Inspector: ") + (h.title || nameOf(h)));
-  if (center && n) fitTo(id);
+  const lit = ring && [...ring].filter((x) => state.drawn.nodes && state.drawn.nodes.has(x));
+  if (center && lit && lit.length > 1) frameBox(boxOf(lit));
+  else if (center && n) fitTo(id);
   else if (center) reveal(id);
   else if (n && room().w < before) keepInView(n);
 }
@@ -1281,8 +1318,15 @@ function inspect(vi, view, id, status) {
       button("All changes", () => openPanel("changes"), "md-back"));
     parts.push(line);
   }
-  const mine = (versions[vi].findings || []).filter((f) => f.subject === id);
-  if (mine.length) parts.push(findingList(mine, vi, false));
+  // Its findings, worst first; notes fold away.
+  const mine = (versions[vi].findings || []).filter((f) => f.subject === id).sort((a, b) => SEVERITIES.indexOf(a.severity) - SEVERITIES.indexOf(b.severity));
+  const notes = mine.filter((f) => f.severity === "info"), open = mine.filter((f) => f.severity !== "info");
+  if (open.length) parts.push(findingList(open));
+  if (notes.length) {
+    const d = el("details", "md-notes");
+    d.append(el("summary", "", plural(notes.length, "note")), findingList(notes));
+    parts.push(d);
+  }
   const prev = status === "changed" && entryOf(vi + 1, view.id), was = prev && payload(prev).elements[id];
   if (info.a.length) parts.push(attributes(info.a, was ? was.a : null, false));
   if (vi === state.version && state.drawn && state.drawn.scene) {
@@ -1380,46 +1424,165 @@ function viewOf(vi, id) {
   const e = [entries.find((x) => payload(x).id === shownView()), ...entries].find((x) => x && headOf(payload(x), id));
   return e ? payload(e) : null;
 }
-function findingList(findings, vi, withSubject) {
+// An element's own findings, in the inspector.
+function findingList(findings) {
   const ul = el("ul", "md-findings");
   for (const f of findings) {
     const li = el("li", "doc-" + f.severity), top = el("div");
-    const v = withSubject && viewOf(vi, f.subject), n = v && headOf(v, f.subject);
-    if (n) {
-      li.dataset.subject = f.subject;
-      top.append(button(n.title || nameOf(n), () => stayOn(v.id, f.subject), "md-subject"));
-    }
-    else if (withSubject) top.append(el("strong", "", f.subject));
-    top.append(el("i", "sev"), el("code", "", f.code));
+    top.append(el("i", "sev"), codeOf(f.code, null));
     li.append(top, el("p", "", f.context), el("p", "fix", f.recovery));
     ul.append(li);
   }
   return ul;
 }
-// Shows a panel entry's element without leaving the panel; a narrow window,
-// where the sidebar covers the diagram, folds the sidebar away.
-function stayOn(view, id) {
-  if (matchMedia("(max-width: 760px)").matches) collapse();
-  if (view === shownView()) select(id, true, true); else go(view, id, true);
+// A finding's code in discreet mono, its label beside it when the code needs
+// one; the APE pattern it checks is its tooltip.
+const CODE_LABELS = { PROSE_NOT_ENFORCED: "not enforced by config" };
+function codeOf(code, pattern) {
+  const c = el("code", "", code);
+  if (pattern) c.title = "APE pattern " + pattern;
+  if (!CODE_LABELS[code]) return c;
+  const s = el("span", "doc-code");
+  s.append(el("strong", "", CODE_LABELS[code]), c);
+  return s;
 }
-// Every finding of this version, errors first; notes fold away.
+// Shows a panel entry's element without leaving the panel, with the agents a
+// finding relates lit and framed together; a narrow window, where the
+// sidebar covers the diagram, folds the sidebar away.
+function stayOn(view, id, ring) {
+  if (matchMedia("(max-width: 760px)").matches) collapse();
+  if (view === shownView()) select(id, true, true, ring); else go(view, id, true, ring);
+}
+// The Doctor of a version: whether its checks ran, what is new since the
+// last checked version, then its findings by code (viewer.ts's
+// doctor.groups): the rules' errors and warnings open, notes and the
+// export's limits folded, what was resolved last.
 function showDoctor() {
-  const findings = versions[state.version].findings || [];
-  const of = (s) => findings.filter((f) => f.severity === s);
-  const errors = of("error"), warnings = of("warning"), notes = of("info");
-  const parts = [
-    el("h3", "", errors.length || warnings.length ? [errors.length ? plural(errors.length, "error") : "", warnings.length ? plural(warnings.length, "warning") : ""].filter(Boolean).join(" · ") : "No error or warning")];
-  for (const [label, list] of [["Errors", errors], ["Warnings", warnings]]) {
-    if (list.length) parts.push(el("p", "md-kicker", label + " · " + list.length), findingList(list, state.version, true));
-  }
-  if (notes.length) {
+  const v = versions[state.version], groups = merged(v.doctor.groups);
+  const rules = groups.filter((g) => g.source === "rule"), notes = groups.filter((g) => g.source === "note"), limits = groups.filter((g) => g.source === "collector");
+  const parts = [...checksHead(v, rules), ...sinceLine(v)];
+  if (rules.length) parts.push(groupList(nested(rules)));
+  for (const [list, word, open] of [[notes, "note", "notesOpen"], [limits, "export limit", "limitsOpen"]]) {
+    if (!list.length) continue;
     const d = el("details", "md-notes");
-    d.open = state.notesOpen;
-    d.ontoggle = () => { state.notesOpen = d.open; };
-    d.append(el("summary", "", plural(notes.length, "note")), findingList(notes, state.version, true));
+    d.open = state[open];
+    d.ontoggle = () => { state[open] = d.open; };
+    d.append(el("summary", "", plural(list.reduce((n, g) => n + g.subjects.length, 0), word)), groupList(list));
     parts.push(d);
   }
+  const resolved = v.doctor.delta && v.doctor.delta.resolved;
+  if (resolved && resolved.length) parts.push(resolvedList(v.doctor.delta));
   showPanel("doctor", parts);
+}
+// The title: the counts only when the checks ran, else why not and what to do.
+function checksHead(v, rules) {
+  const c = v.checks || { state: "verified" };
+  if (c.state === "verified") {
+    const n = (s) => rules.filter((g) => g.severity === s).reduce((k, g) => k + g.subjects.length, 0);
+    const h = el("h3", "", n("error") || n("warning") ? [n("error") ? plural(n("error"), "error") : "", n("warning") ? plural(n("warning"), "warning") : ""].filter(Boolean).join(" · ") : "No error or warning");
+    if (c.rules) h.title = plural(c.rules, "rule") + " checked";
+    return [h];
+  }
+  const head = { "not-run": "Checks not run", failed: "Checks failed", unrecorded: "Checks not recorded" }[c.state];
+  const box = el("div", "doc-checks");
+  box.append(el("h3", "", head), ...c.code ? [el("code", "", c.code)] : [], ...c.recovery ? [el("p", "", c.recovery)] : []);
+  return [box];
+}
+// What is new and resolved since the last checked version.
+function sinceLine(v) {
+  const d = v.doctor.delta;
+  if (!d) return [];
+  const p = el("p", "md-side-note", "Since " + when(versions.find((x) => x.id === d.against)) + ": " +
+    (d.new.length || d.resolved.length ? [d.new.length ? d.new.length + " new" : "", d.resolved.length ? d.resolved.length + " resolved" : ""].filter(Boolean).join(" · ") : "nothing new"));
+  p.title = plural(d.newRule.length, "finding") + " of a new rule, " + plural(d.notComparable.length, "finding") + " not comparable";
+  return [p];
+}
+// One group per severity, code and source; a recovery naming a path (one
+// group each in the data) is kept per subject.
+function merged(groups) {
+  const out = new Map();
+  for (const g of groups) {
+    const key = [g.severity, g.code, g.source].join("|");
+    if (!out.has(key)) out.set(key, { ...g, subjects: [] });
+    out.get(key).subjects.push(...g.subjects.map((s) => ({ ...s, recovery: g.recovery })));
+  }
+  return [...out.values()];
+}
+// A grant that widens a parent's exec sits under that parent's
+// EXEC_WITHOUT_APPROVAL, as the agents its finding relates.
+function nested(rules) {
+  const exec = rules.find((g) => g.code === "EXEC_WITHOUT_APPROVAL"), widens = rules.find((g) => g.code === "APE_GRANT_WIDENS_PARENT");
+  if (!exec || !widens) return rules;
+  const under = (s) => widens.subjects.filter((w) => (w.related || []).includes(s.id));
+  exec.subjects = exec.subjects.map((s) => ({ ...s, widened: { ...widens, subjects: under(s) } }));
+  const placed = new Set(exec.subjects.flatMap((s) => s.widened.subjects));
+  widens.subjects = widens.subjects.filter((w) => !placed.has(w));
+  return rules.filter((g) => g.subjects.length);
+}
+function groupList(groups) {
+  const ul = el("ul", "md-findings doc-groups");
+  for (const g of groups) {
+    const li = el("li", "doc-" + g.severity), head = el("div", "doc-head");
+    head.append(el("i", "sev"), codeOf(g.code, g.pattern));
+    li.append(head, ...subjectRows(g));
+    ul.append(li);
+  }
+  return ul;
+}
+// A text every subject shares shows once; a subject's own text is its
+// chip's tooltip.
+function subjectRows(g) {
+  const same = (k) => g.subjects.every((s) => s[k] === g.subjects[0][k]);
+  const chips = el("div", "doc-chips");
+  chips.append(...g.subjects.map((s) => subjectChip(g, s, [same("context") ? "" : s.context, same("recovery") ? "" : s.recovery])));
+  const rows = [...same("context") ? [el("p", "", g.subjects[0].context)] : [], chips, ...same("recovery") ? [el("p", "fix", g.subjects[0].recovery)] : []];
+  for (const s of g.subjects.filter((x) => x.widened && x.widened.subjects.length)) {
+    const sub = el("div", "doc-nested doc-" + s.widened.severity), chips = el("div", "doc-chips");
+    chips.append(...s.widened.subjects.map((w) => subjectChip(s.widened, w, [w.context])));
+    sub.title = s.widened.subjects[0].recovery;
+    sub.append(el("i", "sev"), codeOf(s.widened.code, s.widened.pattern), el("span", "", "toward " + s.label), chips);
+    rows.push(sub);
+  }
+  return rows;
+}
+// A subject: its readable name, which selects and frames it (the agents a
+// finding relates, in Reach when there is one), new since the last checked
+// version or of a new rule, and a link to its SysML lines.
+function subjectChip(g, s, own) {
+  const vi = state.version, d = versions[vi].doctor.delta;
+  const tagged = (list) => d && d[list].some((x) => x.code === g.code && x.subject === s.id);
+  const chip = el("span", "doc-chip");
+  chip.dataset.subject = s.id;
+  const reach = s.related && entryOf(vi, "reach") && headOf(payload(entryOf(vi, "reach")), s.id) ? "reach" : null;
+  const v = reach ? payload(entryOf(vi, "reach")) : viewOf(vi, s.id);
+  const name = v ? button(s.label, () => stayOn(v.id, s.id, s.related ? new Set([s.id, ...s.related]) : null), "doc-subject") : el("span", "doc-subject", s.label);
+  name.title = own.filter(Boolean).join("\n") || s.context;
+  chip.append(name);
+  if (tagged("new")) chip.append(el("small", "doc-new", "new"));
+  else if (tagged("newRule")) chip.append(el("small", "doc-new", "new rule"));
+  const ref = v && v.elements[s.id] && v.elements[s.id].s[0];
+  if (ref) {
+    const src = button("", () => showLines(vi, ref[0], ref[1], ref[2]), "doc-src");
+    src.title = ref[0] + ":" + ref[1] + (ref[2] > ref[1] ? "–" + ref[2] : "") + " · Show in Files";
+    src.setAttribute("aria-label", src.title);
+    src.append(sourceIcon());
+    chip.append(src);
+  }
+  return chip;
+}
+// What the last checked version had and this one no longer has; an element
+// gone since opens as it was.
+function resolvedList(d) {
+  const at = versions.findIndex((x) => x.id === d.against), det = el("details", "md-notes"), ul = el("div", "doc-chips");
+  for (const r of d.resolved) {
+    const now = viewOf(state.version, r.subject), then = viewOf(at, r.subject), chip = el("span", "doc-chip doc-" + r.severity);
+    const b = button(r.label, () => now ? stayOn(now.id, r.subject) : then && inspect(at, then, r.subject, null), "doc-subject");
+    b.title = r.code;
+    chip.append(el("i", "sev"), b);
+    ul.append(chip);
+  }
+  det.append(el("summary", "", plural(d.resolved.length, "resolved finding")), ul);
+  return det;
 }
 function showLines(vi, file, from, to) {
   navigate({ version: vi, tab: "files", file, range: [from, to] });
@@ -1705,7 +1868,8 @@ function tile(label, value, open) {
 }
 // The Doctor's errors and warnings, each count in its severity's colour.
 function doctorTile() {
-  const findings = versions[state.version].findings || [], count = (s) => findings.filter((f) => f.severity === s).length;
+  const v = versions[state.version], findings = v.findings || [], count = (s) => findings.filter((f) => f.severity === s).length;
+  if (v.checks && v.checks.state !== "verified") return tile("doctor", "? · " + CHECKS_WORDS[v.checks.state], () => openPanel("doctor"));
   const t = tile("doctor", "0", () => openPanel("doctor")), shown = ["error", "warning"].filter((s) => count(s));
   t.title = [plural(count("error"), "error"), plural(count("warning"), "warning"), plural(count("info"), "note")].join(", ");
   if (shown.length) t.querySelector("strong").replaceChildren(...shown.map((s) => el("b", "doc-" + s, String(count(s)))));
