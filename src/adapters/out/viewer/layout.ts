@@ -529,8 +529,8 @@ function build(
     kids.set(n.parent, [...kids.get(n.parent) ?? [], n]);
   }
   const elkNodes = new Map<string, ElkNode>();
-  // Nodes of one layer line up on the side the layer starts from.
-  const align = options["elk.direction"] === "RIGHT" ? "LEFT" : "TOP";
+  // Nodes of one layer line up on their top: every view is laid out downward.
+  const align = "TOP";
   const make = (n: DiagramNode): ElkNode => {
     const children = kids.get(n.id) ?? [];
     if (n.shape === "frame" || n.shape === "group") {

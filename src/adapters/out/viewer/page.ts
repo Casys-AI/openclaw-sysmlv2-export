@@ -176,7 +176,7 @@ svg.md-lod .md-edge:not(.hot) { opacity: .3; }
 .md-side-head button { all: unset; cursor: pointer; padding: 3px 8px; border-radius: 7px; font-size: 12px; color: var(--muted); }
 .md-side-head button:hover { color: var(--ink); background: var(--hover); }
 .md-side-head button[aria-pressed="true"] { color: var(--ink); background: var(--accent-soft); }
-.md-copy { display: inline-flex; align-items: center; gap: 4px; }
+.md-side-head .md-copy { display: inline-flex; align-items: center; gap: 4px; }
 .md-copy svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
 .md-copy[data-flash]::after { content: attr(data-flash); font-size: 11.5px; }
 .md-side-grip { position: absolute; z-index: 2; left: -4px; top: 0; bottom: 0; width: 8px; cursor: col-resize; touch-action: none; outline-offset: -2px; }
@@ -249,8 +249,8 @@ svg.md-lod .md-edge:not(.hot) { opacity: .3; }
 .md-sheet.folded .tb-bar { border-bottom: 0; }
 .hl tr.added > th, .hl tr.added > td { background: color-mix(in srgb, var(--add-bg) 60%, var(--card)); }
 .hl tr.changed > th, .hl tr.changed > td { background: color-mix(in srgb, var(--chg-bg) 60%, var(--card)); }
-/* A cell's marks compose: what changed (--bar) and what is selected (--sel). */
-.md-sheet :is(th, td) { box-shadow: var(--bar, 0 0 #0000), var(--sel, 0 0 #0000); }
+/* A cell's marks compose: what is selected (--sel) over what changed (--bar). */
+.md-sheet :is(th, td) { box-shadow: var(--sel, 0 0 #0000), var(--bar, 0 0 #0000); }
 .hl tr.added > :first-child { --bar: inset 3px 0 var(--add); } .hl tr.changed > :first-child { --bar: inset 3px 0 var(--chg); }
 .hl th.added { --bar: inset 0 -3px var(--add); } .hl th.changed { --bar: inset 0 -3px var(--chg); }
 .hl td.added { --bar: inset 0 0 0 2px var(--add); } .hl td.changed { --bar: inset 0 0 0 2px var(--chg); }
@@ -435,6 +435,8 @@ const state = { version: 0, tab: "diagrams", view: "overview", file: "OpenClawIn
   // Tables: the text filter, folded groups, the facet value shown, the sort,
   // and the height a table under a diagram was dragged to.
   filter: "", folded: new Set(), facet: null, sort: null, sheetH: null, sheetFolded: false,
+  // A folded legend, read from storage once.
+  legendFolded: null,
   // What the last link named that the page lacks (see follow).
   note: null,
   // Panels: where each was scrolled to (see showPanel), whether the Doctor's
@@ -848,8 +850,13 @@ function renderLegend(view) {
     return s;
   });
   // Folded, the legend is one button; the choice is kept between visits.
-  const folded = stored(LEGEND_KEY) === "1";
-  const fold = button(folded ? "Legend" : "‹", () => { store(LEGEND_KEY, folded ? null : "1"); renderLegend(view); }, "md-legend-fold");
+  if (state.legendFolded === null) state.legendFolded = stored(LEGEND_KEY) === "1";
+  const folded = state.legendFolded;
+  const fold = button(folded ? "Legend" : "‹", () => {
+    state.legendFolded = !folded;
+    store(LEGEND_KEY, folded ? null : "1");
+    renderLegend(view);
+  }, "md-legend-fold");
   fold.title = folded ? "Show the legend" : "Hide the legend";
   fold.setAttribute("aria-expanded", String(!folded));
   box.classList.toggle("folded", folded);
@@ -908,7 +915,6 @@ function renderDiagram(keepViewport) {
   if (view.table) {
     const at = [sheet.scrollTop, sheet.scrollLeft];
     renderTable(sheet, view, delta);
-    if (view.scene) sheet.querySelector(".tb-bar").append(foldButton(folded));
     if (keep) [sheet.scrollTop, sheet.scrollLeft] = at;
   }
   if (view.scene) drawScene(view, delta, kept);
@@ -975,14 +981,16 @@ function foldButton(folded) {
     refit();
   }, "tb-fold");
   b.setAttribute("aria-expanded", String(!folded));
+  b.dataset.key = "fold-table";
   return b;
 }
-// The part of the canvas the sidebar leaves visible; a narrow window lays
-// the sidebar over the canvas.
+// The part of the canvas the sidebar leaves visible. A narrow window lays the
+// sidebar over the canvas; when it leaves under 200 px, framing uses it all.
 function room() {
   const c = document.getElementById("canvas").getBoundingClientRect(), side = document.getElementById("side");
   const over = !side.hidden && getComputedStyle(side).position === "absolute";
-  return { w: (over ? Math.min(c.right, side.getBoundingClientRect().left) : c.right) - c.left, h: c.height };
+  const w = over ? Math.min(c.right, side.getBoundingClientRect().left) - c.left : c.width;
+  return { w: w < 200 ? c.width : w, h: c.height };
 }
 // Frames an element in the visible room: a step frames its procedure, at
 // most at 1:1; a frame taller than the room shows from its top, at a scale
@@ -1106,8 +1114,7 @@ function applyFocus() {
     if (doc) e.dataset.doc = doc.worst; else delete e.dataset.doc;
     if (name) name.title = doc ? doc.codes : "";
   }
-  // A panel's entries mark the selection.
-  for (const e of document.querySelectorAll("#inspector [data-subject]")) e.classList.toggle("active", e.dataset.subject === state.selected);
+  markEntries();
   // A selected matrix column marks its cells.
   const column = sheet.querySelector("th.mx-col.selected"), c = column ? column.dataset.col : null;
   for (const e of sheet.querySelectorAll("td[data-col]")) e.classList.toggle("on", e.dataset.col === c);
@@ -1116,6 +1123,8 @@ function applyFocus() {
 // (a Doctor or Changes entry), and frames or reveals it when asked.
 function select(id, center, stay) {
   state.selected = id;
+  // Acting on the page answers a link's note.
+  if (state.note) { state.note = null; renderNote(); }
   applyFocus();
   writeHash();
   if (!id) { if (state.panel === "inspector") openPanel("inspector"); return; }
@@ -1155,9 +1164,13 @@ function openPanel(name) {
   else showPanel("inspector", [el("p", "md-side-empty", "Select an element in the diagram or the table.")]);
 }
 // Fills the sidebar with one panel and opens it if it was collapsed.
+// A panel's entries mark the selection.
+function markEntries() {
+  for (const e of document.querySelectorAll("#inspector [data-subject]")) e.classList.toggle("active", e.dataset.subject === state.selected);
+}
 // Each panel, for a version and view (and the inspector, for an element),
 // opens again where it was scrolled to.
-function showPanel(name, parts, tools) {
+function showPanel(name, parts, tools, element) {
   const box = document.getElementById("inspector");
   document.getElementById("side-title").textContent = PANELS[name];
   document.getElementById("side-tools").replaceChildren(...tools || []);
@@ -1165,8 +1178,9 @@ function showPanel(name, parts, tools) {
   box.replaceChildren(...parts);
   document.getElementById("side").hidden = false;
   if (inside) box.focus({ preventScroll: true });
-  state.panelKey = [name, state.version, name === "doctor" ? "" : shownView(), name === "inspector" ? state.selected : ""].join("|");
+  state.panelKey = [name, state.version, name === "doctor" ? "" : shownView(), element || ""].join("|");
   box.scrollTop = state.scrolls.get(state.panelKey) || 0;
+  markEntries();
   state.panel = name;
   for (const b of document.querySelectorAll(".md-rail [data-panel]")) b.setAttribute("aria-pressed", String(b.dataset.panel === name));
 }
@@ -1242,7 +1256,7 @@ function inspect(vi, view, id, status) {
       parts.push(src);
     }
   }
-  showPanel("inspector", parts, vi === state.version && id === state.selected ? [copyLink()] : []);
+  showPanel("inspector", parts, vi === state.version && id === state.selected ? [copyLink()] : [], vi + "|" + id);
 }
 // Copies the link to the selection: this version, view and element.
 function copyLink() {
@@ -1322,8 +1336,8 @@ function findingList(findings, vi, withSubject) {
 // Shows a panel entry's element without leaving the panel; a narrow window,
 // where the sidebar covers the diagram, folds the sidebar away.
 function stayOn(view, id) {
-  if (view === shownView()) select(id, true, true); else go(view, id, true);
   if (matchMedia("(max-width: 760px)").matches) collapse();
+  if (view === shownView()) select(id, true, true); else go(view, id, true);
 }
 // Every finding of this version, errors first; notes fold away.
 function showDoctor() {
@@ -1354,6 +1368,7 @@ function renderTable(box, view, delta) {
   if (t.kind === "matrix") renderMatrix(box, t, mark);
   else if (t.kind === "week") renderWeek(box, t, mark);
   else renderElements(box, view, t, mark);
+  if (view.scene) box.querySelector(".tb-bar").append(foldButton(state.sheetFolded));
 }
 function search(label) {
   const input = el("input");
@@ -1465,7 +1480,7 @@ function renderElements(box, view, t, mark) {
     const values = [null, ...new Set(t.rows.map((r) => r.values[facet]))];
     bar.append(...values.map((v) => {
       const n = t.rows.filter((r) => v === null || r.values[facet] === v).length;
-      const b = button((v === null ? "all" : v) + " " + n, () => keepFocus(() => { state.facet = v; renderElements(box, view, t, mark); applyFocus(); }));
+      const b = button((v === null ? "all" : v) + " " + n, () => keepFocus(() => { state.facet = v; renderTable(box, view, currentView().delta); applyFocus(); }));
       b.dataset.key = "facet:" + v;
       b.setAttribute("aria-pressed", String(state.facet === v));
       return b;
@@ -1477,7 +1492,7 @@ function renderElements(box, view, t, mark) {
     const sorted = state.sort && state.sort.col === c;
     const th = button(c < 0 ? "name" : t.columns[c], () => keepFocus(() => {
       state.sort = sorted && state.sort.dir > 0 ? { col: c, dir: -1 } : sorted ? null : { col: c, dir: 1 };
-      renderElements(box, view, t, mark);
+      renderTable(box, view, currentView().delta);
       applyFocus();
     }));
     th.dataset.key = "sort:" + c;
@@ -1635,8 +1650,9 @@ function doctorTile() {
 }
 // Opens the view a total counts; a Tools group shows alone, its own groups folded.
 function openCount(view, group) {
-  const rows = group ? payload(entryOf(state.version, view)).table.rows : [];
-  navigate({ tab: "diagrams", view, ...group ? { folded: new Set(rows.filter((r) => r.shape !== "tool" && r.id !== group).map((r) => r.id)) } : {} });
+  const t = payload(entryOf(state.version, view)).table;
+  const folded = t && t.kind === "matrix" ? new Set(group ? t.rows.filter((r) => r.shape !== "tool" && r.id !== group).map((r) => r.id) : []) : state.folded;
+  navigate({ tab: "diagrams", view, folded });
   if (group) reveal(group);
 }
 
@@ -1826,6 +1842,8 @@ let gesture = 1;
 canvas.addEventListener("gesturestart", (e) => { e.preventDefault(); gesture = 1; });
 canvas.addEventListener("gesturechange", (e) => {
   e.preventDefault();
+  // A touch pinch already zooms through its two pointers.
+  if (pointers.size >= 2) return;
   const box = canvas.getBoundingClientRect();
   zoom(e.scale / gesture, e.clientX - box.left, e.clientY - box.top);
   gesture = e.scale;
@@ -1843,6 +1861,8 @@ canvas.addEventListener("keydown", (e) => {
   // Enter selects and frames an element; Space only selects it.
   if (g && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); select(g.dataset.id, e.key === "Enter"); return; }
   const v = state.viewport;
+  // Command, Control and Option shortcuts stay the browser's.
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (e.key === "Escape") select(null);
   else if (e.key === "0") fit();
   else if (e.key === "f" || e.key === "F") frame();
@@ -1855,7 +1875,7 @@ canvas.addEventListener("keydown", (e) => {
   e.preventDefault();
 });
 const sheet = document.getElementById("sheet");
-// A table row of a drawn element (a scheduled task's week) centers it.
+// A table row of a drawn element (a scheduled task's week) frames it.
 const drawn = (id) => Boolean(state.drawn && state.drawn.scene && state.drawn.scene.nodes.some((n) => n.id === id));
 sheet.addEventListener("click", (e) => {
   const x = e.target.closest("[data-id]");
@@ -1865,7 +1885,7 @@ sheet.addEventListener("keydown", (e) => {
   if (e.target.dataset.id && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); select(e.target.dataset.id, drawn(e.target.dataset.id)); }
   else if (e.key === "Escape") select(null);
 });
-// Dragging the splitter sets the table's height; the diagram fits again.
+// Dragging the splitter sets the table's height; a view at Fit fits again.
 const split = document.getElementById("split");
 split.addEventListener("pointerdown", (e) => { split.setPointerCapture(e.pointerId); split.dataset.drag = "1"; });
 split.addEventListener("pointermove", (e) => {
