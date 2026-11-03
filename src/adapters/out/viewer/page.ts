@@ -83,6 +83,8 @@ main > section[hidden] { display: none; }
 .md-tools[hidden] { display: none; }
 .md-tools button { all: unset; cursor: pointer; padding: 3px 9px; border-radius: 7px; font-size: 12px; font-weight: 500; color: var(--muted); }
 .md-tools button:hover { color: var(--ink); background: var(--hover); }
+.md-tools button:disabled { opacity: .4; cursor: default; background: none; }
+.md-tools svg { display: block; width: 15px; height: 15px; margin: 1px -2px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .md-canvas { position: absolute; inset: 0; overflow: hidden; cursor: grab; touch-action: none; outline: none;
   background-image: radial-gradient(var(--md-dot) 0.9px, transparent 1px); background-size: 22px 22px; }
 .md-canvas:active { cursor: grabbing; }
@@ -345,11 +347,11 @@ pre { padding: 8px 10px; }
 <div class="md-toolbar">
 <div class="md-title"><strong id="view-title"></strong><span id="view-sub"></span></div>
 <select id="view" aria-label="SysML view"></select>
-<div class="md-tools"><button type="button" id="fit" title="Fit (0)">Fit</button><button type="button" id="zoom-in" title="Zoom in (+)" aria-label="Zoom in">+</button><button type="button" id="zoom-out" title="Zoom out (−)" aria-label="Zoom out">−</button></div>
+<div class="md-tools"><button type="button" id="fit" title="Fit (0)">Fit</button><button type="button" id="fit-selection" title="Fit selection (F)" aria-label="Fit selection" disabled><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 7.5V3h4.5M12.5 3H17v4.5M17 12.5V17h-4.5M7.5 17H3v-4.5"/><rect x="7" y="7" width="6" height="6" rx="1.5"/></svg></button><button type="button" id="zoom-in" title="Zoom in (+)" aria-label="Zoom in">+</button><button type="button" id="zoom-out" title="Zoom out (−)" aria-label="Zoom out">−</button></div>
 </div>
 <div class="md-main">
 <div class="md-stage" id="stage">
-<div class="md-canvas" id="canvas" tabindex="0" role="group" aria-label="Diagram canvas. Arrow keys pan, plus and minus zoom, zero fits, Escape clears the selection."></div>
+<div class="md-canvas" id="canvas" tabindex="0" role="group" aria-label="Diagram canvas. Drag or scroll to pan, Command or Control and scroll to zoom. Arrow keys pan, plus and minus zoom, zero fits, F fits the selection, Enter frames an element, Escape clears the selection."></div>
 <div class="md-legend" id="legend"></div>
 <span class="md-hint">Drag or scroll to pan · ⌘/Ctrl + scroll to zoom · click an element</span>
 </div>
@@ -880,14 +882,42 @@ function drawScene(view, delta, keep) {
   if (keep && state.viewport) applyViewport(); else fit();
 }
 
+// Below this scale a diagram's rows (11.5 px) are too small to read.
+const READABLE = 0.5;
+// Fits the whole scene in the canvas. A scene taller than wide that would be
+// unreadable whole fits its width instead, from its top.
 function fit() {
   const d = state.drawn, box = document.getElementById("canvas").getBoundingClientRect();
   if (!d || !d.scene) return;
-  const top = 56, margin = 24;
-  const k = Math.min((box.width - 2 * margin) / Math.max(d.scene.w, 1), (box.height - top - 2 * margin) / Math.max(d.scene.h, 1), 1.25);
-  state.viewport = { k, x: (box.width - d.scene.w * k) / 2, y: top + (box.height - top - d.scene.h * k) / 2 };
-  state.fitK = k;
+  const margin = 24, kw = (box.width - 2 * margin) / Math.max(d.scene.w, 1);
+  const whole = Math.min(kw, (box.height - 2 * margin) / Math.max(d.scene.h, 1), 1.25);
+  const tall = d.scene.h > d.scene.w && whole < READABLE, k = tall ? Math.min(kw, 1.25) : whole;
+  state.viewport = { k, x: (box.width - d.scene.w * k) / 2, y: tall ? margin : (box.height - d.scene.h * k) / 2 };
+  state.fitK = whole;
   applyViewport();
+}
+// The part of the canvas the sidebar leaves visible; a narrow window lays
+// the sidebar over the canvas.
+function room() {
+  const c = document.getElementById("canvas").getBoundingClientRect(), side = document.getElementById("side");
+  const over = !side.hidden && getComputedStyle(side).position === "absolute";
+  return { w: (over ? Math.min(c.right, side.getBoundingClientRect().left) : c.right) - c.left, h: c.height };
+}
+// Frames an element in the visible room: a step frames its procedure, at
+// most at 1:1; a frame taller than the room shows from its top, readable.
+function fitTo(id) {
+  const n = state.drawn.nodes.get(scopeOf(id)), r = room(), margin = 32;
+  const kw = (r.w - 2 * margin) / n.w, whole = Math.min(kw, (r.h - 2 * margin) / n.h);
+  const k = Math.min(1, Math.max(whole, Math.min(READABLE, kw))), over = n.h * k > r.h - 2 * margin;
+  state.viewport = { k, x: (r.w - n.w * k) / 2 - n.x * k, y: over ? margin - n.y * k : (r.h - n.h * k) / 2 - n.y * k };
+  applyViewport();
+}
+// Pans the least that brings a node back beside a sidebar that just opened.
+function keepInView(n) {
+  const v = state.viewport, w = room().w, margin = 16;
+  const left = v.x + n.x * v.k, right = left + n.w * v.k;
+  const dx = right > w - margin ? Math.max(w - margin - right, margin - left) : 0;
+  if (dx) { state.viewport = { ...v, x: v.x + dx }; applyViewport(); }
 }
 function applyViewport() {
   const d = state.drawn, v = state.viewport;
@@ -938,6 +968,7 @@ function applyFocus() {
       g.classList.toggle("lit", Boolean(r && r.edges.has(g.dataset.id)));
       g.classList.toggle("hot", hot.has(g.dataset.id));
     }
+    document.getElementById("fit-selection").disabled = !sel;
   }
   const sheet = document.getElementById("sheet");
   for (const e of sheet.querySelectorAll("[data-id]")) {
@@ -956,15 +987,12 @@ function select(id, center) {
   if (!id) { if (state.panel === "inspector") openPanel("inspector"); return; }
   const d = currentView().delta;
   const status = d && d.added.includes(id) ? "added" : d && d.changed.includes(id) ? "changed" : null;
-  // The inspector opens first: centering uses the room it leaves.
+  // The inspector opens first: framing uses the room it leaves.
+  const n = state.drawn.nodes && state.drawn.nodes.get(id), before = room().w;
   inspect(state.version, state.drawn.payload, id, status);
-  const n = state.drawn.scene && state.drawn.scene.nodes.find((x) => x.id === id);
-  if (center && n) {
-    const box = document.getElementById("canvas").getBoundingClientRect();
-    const k = Math.max(state.viewport.k, 0.9);
-    state.viewport = { k, x: box.width / 2 - (n.x + n.w / 2) * k, y: box.height / 2 - (n.y + n.h / 2) * k };
-    applyViewport();
-  } else if (center) reveal(id);
+  if (center && n) fitTo(id);
+  else if (center) reveal(id);
+  else if (n && room().w < before) keepInView(n);
 }
 // Scrolls a table element into view; when the filter, the facet or folded
 // groups hide it, it clears them all.
@@ -1495,10 +1523,14 @@ try {
   if (w >= 300) document.getElementById("md").style.setProperty("--side-w", w + "px");
 } catch { /* storage unavailable */ }
 document.getElementById("fit").onclick = fit;
+// Frames the selection, or fits the whole scene when nothing drawn is selected.
+function frame() {
+  if (state.drawn && state.drawn.nodes && state.drawn.nodes.has(state.selected)) fitTo(state.selected); else fit();
+}
+document.getElementById("fit-selection").onclick = frame;
 document.getElementById("zoom-in").onclick = () => zoom(1.25);
 document.getElementById("zoom-out").onclick = () => zoom(0.8);
 const canvas = document.getElementById("canvas");
-let drag = null;
 canvas.addEventListener("wheel", (e) => {
   if (!state.viewport) return;
   e.preventDefault();
@@ -1506,25 +1538,65 @@ canvas.addEventListener("wheel", (e) => {
   if (e.ctrlKey || e.metaKey) zoom(Math.exp(-e.deltaY * 0.01), e.clientX - box.left, e.clientY - box.top);
   else { state.viewport = { ...state.viewport, x: state.viewport.x - e.deltaX, y: state.viewport.y - e.deltaY }; applyViewport(); }
 }, { passive: false });
+// Dragging pans, from the background or from an element; a press that does
+// not move is a click. Two fingers pinch to zoom.
+const pointers = new Map();
+let press = null, pinch = null;
+function spread() {
+  const [[ax, ay], [bx, by]] = [...pointers.values()], box = canvas.getBoundingClientRect();
+  return { d: Math.hypot(bx - ax, by - ay), x: (ax + bx) / 2 - box.left, y: (ay + by) / 2 - box.top };
+}
 canvas.addEventListener("pointerdown", (e) => {
-  if (e.target.closest(".md-node") || !state.viewport) return;
-  drag = { x: e.clientX, y: e.clientY, from: state.viewport };
-  canvas.setPointerCapture(e.pointerId);
+  if (!state.viewport) return;
+  pointers.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pointers.size === 2) { pinch = spread(); press = null; }
+  else press = { x: e.clientX, y: e.clientY, from: state.viewport, moved: false };
 });
 canvas.addEventListener("pointermove", (e) => {
-  if (!drag) return;
-  state.viewport = { ...drag.from, x: drag.from.x + e.clientX - drag.x, y: drag.from.y + e.clientY - drag.y };
+  if (!pointers.has(e.pointerId)) return;
+  pointers.set(e.pointerId, [e.clientX, e.clientY]);
+  if (pinch && pointers.size === 2) {
+    const now = spread();
+    zoom(now.d / pinch.d, now.x, now.y);
+    state.viewport = { ...state.viewport, x: state.viewport.x + now.x - pinch.x, y: state.viewport.y + now.y - pinch.y };
+    applyViewport();
+    pinch = now;
+    return;
+  }
+  if (!press) return;
+  const dx = e.clientX - press.x, dy = e.clientY - press.y;
+  if (!press.moved && Math.abs(dx) + Math.abs(dy) < 4) return;
+  // Captured only once it pans, so that a click still reaches its element.
+  if (!press.moved) { press.moved = true; canvas.setPointerCapture(e.pointerId); }
+  state.viewport = { ...press.from, x: press.from.x + dx, y: press.from.y + dy };
   applyViewport();
 });
+function release(e) {
+  pointers.delete(e.pointerId);
+  if (pointers.size < 2) pinch = null;
+}
+let panned = false;
 canvas.addEventListener("pointerup", (e) => {
-  const d = drag;
-  drag = null;
-  if (d && Math.abs(e.clientX - d.x) + Math.abs(e.clientY - d.y) < 3) select(null);
+  const p = press;
+  release(e);
+  press = null;
+  panned = Boolean(p && p.moved);
+  if (p && !p.moved && !e.target.closest(".md-node")) select(null);
 });
-canvas.addEventListener("pointercancel", () => { drag = null; });
+canvas.addEventListener("pointercancel", (e) => { release(e); press = null; });
 canvas.addEventListener("click", (e) => {
-  const g = e.target.closest(".md-node");
+  const g = !panned && e.target.closest(".md-node");
+  panned = false;
   if (g) select(g.dataset.id, false);
+});
+// Safari pinches with gesture events rather than ctrl + wheel.
+let gesture = 1;
+canvas.addEventListener("gesturestart", (e) => { e.preventDefault(); gesture = 1; });
+canvas.addEventListener("gesturechange", (e) => {
+  e.preventDefault();
+  const box = canvas.getBoundingClientRect();
+  zoom(e.scale / gesture, e.clientX - box.left, e.clientY - box.top);
+  gesture = e.scale;
 });
 function hover(id) {
   if (id !== state.hover) { state.hover = id; applyFocus(); }
@@ -1536,10 +1608,12 @@ canvas.addEventListener("pointerover", (e) => {
 canvas.addEventListener("pointerleave", () => hover(null));
 canvas.addEventListener("keydown", (e) => {
   const g = e.target.closest && e.target.closest(".md-node");
-  if (g && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); select(g.dataset.id, false); return; }
+  // Enter selects and frames an element; Space only selects it.
+  if (g && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); select(g.dataset.id, e.key === "Enter"); return; }
   const v = state.viewport;
   if (e.key === "Escape") select(null);
   else if (e.key === "0") fit();
+  else if (e.key === "f" || e.key === "F") frame();
   else if (e.key === "+" || e.key === "=") zoom(1.25);
   else if (e.key === "-") zoom(0.8);
   else if (v && e.key.startsWith("Arrow")) {
