@@ -374,6 +374,8 @@ const LEGENDS = {
 const state = { version: 0, tab: "diagrams", view: "overview", file: "OpenClawInstance.sysml", range: null,
   // An element to select once its view is shown.
   selected: null, focus: null, hover: null, viewport: null, highlight: true, drawn: null, doc: new Map(), panel: null,
+  // The scale Fit gave the drawn scene.
+  fitK: 1,
   // Tables: the text filter, folded groups, the facet value shown, the sort,
   // and the height a table under a diagram was dragged to.
   filter: "", folded: new Set(), facet: null, sort: null, sheetH: null };
@@ -396,9 +398,13 @@ const payload = (entry) => data.views[entry.view];
 const entryOf = (i, id) => (viewsOf(i) || []).find((e) => payload(e).id === id);
 const fileText = (i, name) => data.texts[versions[i].files[name]];
 
-// Routing: #<version>[/<view>|/files|/changes]
+// Routing: #<version>[/<view>|/files|/changes]. A segment that does not
+// decode is kept as written, and so names nothing.
+function decoded(segment) {
+  try { return decodeURIComponent(segment); } catch { return segment; }
+}
 function readHash() {
-  const parts = location.hash.slice(1).split("/").map(decodeURIComponent);
+  const parts = location.hash.slice(1).split("/").map(decoded);
   const i = versions.findIndex((v) => v.id === parts[0]);
   state.version = Math.max(0, i);
   if (parts[1] === "files" || parts[1] === "changes") state.tab = parts[1];
@@ -578,14 +584,16 @@ function defs() {
 }
 
 // ---- Diagram page
+// The view asked for (state.view) stays asked for across versions; a version
+// without it shows its first view.
 function currentView() {
   const entries = viewsOf(state.version);
   if (!entries || !entries.length) return null;
   const entry = entries.find((e) => payload(e).id === state.view) || entries[0];
-  state.view = payload(entry).id;
   return { entry, view: payload(entry), delta: entry.delta };
 }
-function renderPicker(entries) {
+const shownView = () => state.drawn && state.drawn.view;
+function renderPicker(entries, shown) {
   const select = document.getElementById("view");
   const groups = new Map();
   for (const e of entries) {
@@ -602,7 +610,7 @@ function renderPicker(entries) {
     g.append(...options);
     return g;
   }));
-  select.value = state.view;
+  select.value = shown;
 }
 // An element's header: a drawn node, or a row, column or cell of the table.
 function headOf(view, id) {
@@ -638,7 +646,7 @@ function marker(delta) {
 // The rail's counts: what changed in this view, and the doctor's errors and
 // warnings, coloured by the worst.
 function renderRail(cur) {
-  const d = cur && cur.delta, before = d && !d.isNew && payload(entryOf(state.version + 1, state.view));
+  const d = cur && cur.delta, before = d && !d.isNew && payload(entryOf(state.version + 1, cur.view.id));
   const n = before ? shown(d.added, cur.view).length + shown(d.changed, cur.view).length + shown(d.removed, before).length : 0;
   const changes = rail("changes");
   changes.querySelector("b").textContent = n ? String(n) : "";
@@ -661,7 +669,7 @@ function showChanges(cur) {
     showPanel("changes", [el("p", "md-side-empty", d ? "New in this version: the previous one has no such view." : "First version: nothing to compare.")]);
     return;
   }
-  const before = payload(entryOf(state.version + 1, state.view));
+  const before = payload(entryOf(state.version + 1, cur.view.id));
   const parts = [el("p", "md-side-note", "Since " + when(versions[state.version + 1]))];
   const group = (label, ids, view, open, diff) => {
     if (!ids.length) return;
@@ -741,8 +749,8 @@ function renderDiagram(keepViewport) {
     collapse();
     return;
   }
-  renderPicker(entries);
   const { view, delta } = cur;
+  renderPicker(entries, view.id);
   document.getElementById("view-title").textContent = view.title;
   document.getElementById("view-sub").textContent = subtitle(view);
   renderLegend(view);
@@ -800,6 +808,7 @@ function fit() {
   const top = 56, margin = 24;
   const k = Math.min((box.width - 2 * margin) / Math.max(d.scene.w, 1), (box.height - top - 2 * margin) / Math.max(d.scene.h, 1), 1.25);
   state.viewport = { k, x: (box.width - d.scene.w * k) / 2, y: top + (box.height - top - d.scene.h * k) / 2 };
+  state.fitK = k;
   applyViewport();
 }
 function applyViewport() {
@@ -810,7 +819,8 @@ function zoom(f, cx, cy) {
   const v = state.viewport, box = document.getElementById("canvas").getBoundingClientRect();
   if (!v) return;
   const x = cx === undefined ? box.width / 2 : cx, y = cy === undefined ? box.height / 2 : cy;
-  const k = Math.max(0.15, Math.min(3, v.k * f));
+  // Zooming out stops at 0.15, or at Fit when Fit is smaller.
+  const k = Math.max(Math.min(0.15, state.fitK), Math.min(3, v.k * f));
   state.viewport = { k, x: x - (x - v.x) * k / v.k, y: y - (y - v.y) * k / v.k };
   applyViewport();
 }
@@ -988,7 +998,7 @@ function marks(vi) {
 // The view of a version that shows an element: the current one if it does.
 function viewOf(vi, id) {
   const entries = viewsOf(vi) || [];
-  const e = [entries.find((x) => payload(x).id === state.view), ...entries].find((x) => x && headOf(payload(x), id));
+  const e = [entries.find((x) => payload(x).id === shownView()), ...entries].find((x) => x && headOf(payload(x), id));
   return e ? payload(e) : null;
 }
 function findingList(findings, vi, withSubject) {
@@ -996,7 +1006,7 @@ function findingList(findings, vi, withSubject) {
   for (const f of findings) {
     const li = el("li", "doc-" + f.severity), top = el("div");
     const v = withSubject && viewOf(vi, f.subject), n = v && headOf(v, f.subject);
-    if (n) top.append(button(n.title || nameOf(n), () => v.id === state.view ? select(f.subject, true) : go(v.id, f.subject), "md-subject"));
+    if (n) top.append(button(n.title || nameOf(n), () => v.id === shownView() ? select(f.subject, true) : go(v.id, f.subject), "md-subject"));
     else if (withSubject) top.append(el("strong", "", f.subject));
     top.append(el("code", "", f.code));
     li.append(top, el("p", "", f.context), el("p", "fix", f.recovery));
