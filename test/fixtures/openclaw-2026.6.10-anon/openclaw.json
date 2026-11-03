@@ -795,6 +795,20 @@
         "channel": "telegram",
         "accountId": "field"
       }
+    },
+    {
+      "agentId": "devbox",
+      "match": {
+        "channel": "whatsapp",
+        "accountId": "devbox"
+      }
+    },
+    {
+      "agentId": "devbox",
+      "match": {
+        "channel": "telegram",
+        "accountId": "retired"
+      }
     }
   ],
   "messages": {

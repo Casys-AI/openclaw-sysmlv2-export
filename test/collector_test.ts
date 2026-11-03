@@ -12,6 +12,7 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { EMAIL_ADDRESS_PATTERN, JWT_PATTERN } from "@logtape/redaction";
 import { collect } from "../src/collect.ts";
+import { doctor } from "../src/doctor.ts";
 import { ExportError } from "../src/error.ts";
 import { canonical, type Snapshot } from "../src/snapshot.ts";
 import { createFixture } from "./support/fixture.ts";
@@ -156,12 +157,12 @@ Deno.test("collector follows inner skill symlinks, skips outer ones, flags broke
     assert.ok(!agent.workspace.instructions.some((f) => f.path === "NOTES.md"));
     assert.ok(
       snapshot.ambiguities.some((f) =>
-        f.code === "INSTRUCTION_OUTSIDE_ROOT" && f.subject === "lead"
+        f.code === "INSTRUCTION_OUTSIDE_ROOT" && f.subject === "agent:lead"
       ),
     );
     assert.ok(
       snapshot.ambiguities.some((f) =>
-        f.code === "SKILL_SYMLINK_OUTSIDE_ROOT" && f.subject === "lead"
+        f.code === "SKILL_SYMLINK_OUTSIDE_ROOT" && f.subject === "agent:lead"
       ),
     );
     assert.doesNotMatch(canonical(snapshot), /private-client-notes|CANARY-/);
@@ -218,6 +219,25 @@ Deno.test("2026.10 exec modes keep the no-approval posture visible", async () =>
   );
   assert.equal(await posture("2026.10.9", undefined), "full/off");
   assert.equal(await posture("2026.6.10", undefined), "unknown/unknown");
+});
+
+Deno.test("2026.10 messaging defaults on but respects an explicit disable", async () => {
+  const fixture = await createFixture();
+  try {
+    const path = join(fixture.home, "openclaw.json");
+    const config = JSON.parse(await readFile(path, "utf8"));
+    config.meta.lastTouchedVersion = "2026.10.9";
+    for (const enabled of [undefined, false]) {
+      config.tools.agentToAgent = { enabled, allow: ["*"] };
+      await writeFile(path, JSON.stringify(config));
+      assert.equal(
+        (await collect(fixture.home)).messaging.enabled,
+        enabled !== false,
+      );
+    }
+  } finally {
+    await fixture.cleanup();
+  }
 });
 
 Deno.test("plugin inventory keeps tool-declaring plugins and manifest optional flags, never paths", async () => {
@@ -303,7 +323,7 @@ Deno.test("a cron job without agentId is kept unassigned with a finding", async 
     );
     assert.ok(
       snapshot.ambiguities.some((f) =>
-        f.code === "CRON_AGENT_UNRESOLVED" && f.subject === row.job_id
+        f.code === "CRON_AGENT_UNRESOLVED" && f.subject === `cron:${row.job_id}`
       ),
     );
   } finally {
@@ -832,12 +852,10 @@ Deno.test("exec replaces agent lists, merges profile keys and leaves default saf
       ),
     );
     assert.deepEqual(
-      snapshot.ambiguities.filter((f) =>
-        f.code === "SAFE_BINS_DEFAULT_UNRESOLVED"
-      )
+      doctor(snapshot).filter((f) => f.code === "SAFE_BINS_DEFAULT_UNRESOLVED")
         .map((f) => f.subject).sort(),
       snapshot.agents.filter((a) => a.grants.some((g) => g.tool === "exec"))
-        .map((a) => a.id).sort(),
+        .map((a) => `agent:${a.id}`).sort(),
     );
   } finally {
     await fixture.cleanup();

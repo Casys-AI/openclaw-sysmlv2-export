@@ -2337,84 +2337,84 @@
       "context": "Cron uses the gateway host timezone, which is not collected.",
       "recovery": "Set an explicit timezone; docs/automation/cron-jobs.md.",
       "severity": "info",
-      "subject": "job-10"
+      "subject": "cron:job-10"
     },
     {
       "code": "ELEVATED_CONTEXT_REQUIRED",
       "context": "Elevated exec is configured but depends on sender allowlists and session directives; no unconditional host grant is inferred.",
       "recovery": "Verify sender and session gates; docs/tools/elevated.md.",
       "severity": "info",
-      "subject": "client"
+      "subject": "agent:client"
     },
     {
       "code": "ELEVATED_CONTEXT_REQUIRED",
       "context": "Elevated exec is configured but depends on sender allowlists and session directives; no unconditional host grant is inferred.",
       "recovery": "Verify sender and session gates; docs/tools/elevated.md.",
       "severity": "info",
-      "subject": "coach"
+      "subject": "agent:coach"
     },
     {
       "code": "ELEVATED_CONTEXT_REQUIRED",
       "context": "Elevated exec is configured but depends on sender allowlists and session directives; no unconditional host grant is inferred.",
       "recovery": "Verify sender and session gates; docs/tools/elevated.md.",
       "severity": "info",
-      "subject": "devbox"
+      "subject": "agent:devbox"
     },
     {
       "code": "ELEVATED_CONTEXT_REQUIRED",
       "context": "Elevated exec is configured but depends on sender allowlists and session directives; no unconditional host grant is inferred.",
       "recovery": "Verify sender and session gates; docs/tools/elevated.md.",
       "severity": "info",
-      "subject": "field"
+      "subject": "agent:field"
     },
     {
       "code": "ELEVATED_CONTEXT_REQUIRED",
       "context": "Elevated exec is configured but depends on sender allowlists and session directives; no unconditional host grant is inferred.",
       "recovery": "Verify sender and session gates; docs/tools/elevated.md.",
       "severity": "info",
-      "subject": "secretary"
+      "subject": "agent:secretary"
     },
     {
       "code": "FALLBACK_TOOL_POLICY_UNRESOLVED",
       "context": "Grants describe the primary model. Fallback provider policies and model-native tools may differ.",
       "recovery": "Resolve grants again for the actual fallback model; docs/tools/multi-agent-sandbox-tools.md and docs/tools/exec.md.",
       "severity": "info",
-      "subject": "client"
+      "subject": "agent:client"
     },
     {
       "code": "FALLBACK_TOOL_POLICY_UNRESOLVED",
       "context": "Grants describe the primary model. Fallback provider policies and model-native tools may differ.",
       "recovery": "Resolve grants again for the actual fallback model; docs/tools/multi-agent-sandbox-tools.md and docs/tools/exec.md.",
       "severity": "info",
-      "subject": "coach"
+      "subject": "agent:coach"
     },
     {
       "code": "FALLBACK_TOOL_POLICY_UNRESOLVED",
       "context": "Grants describe the primary model. Fallback provider policies and model-native tools may differ.",
       "recovery": "Resolve grants again for the actual fallback model; docs/tools/multi-agent-sandbox-tools.md and docs/tools/exec.md.",
       "severity": "info",
-      "subject": "devbox"
+      "subject": "agent:devbox"
     },
     {
       "code": "FALLBACK_TOOL_POLICY_UNRESOLVED",
       "context": "Grants describe the primary model. Fallback provider policies and model-native tools may differ.",
       "recovery": "Resolve grants again for the actual fallback model; docs/tools/multi-agent-sandbox-tools.md and docs/tools/exec.md.",
       "severity": "info",
-      "subject": "field"
+      "subject": "agent:field"
     },
     {
       "code": "FALLBACK_TOOL_POLICY_UNRESOLVED",
       "context": "Grants describe the primary model. Fallback provider policies and model-native tools may differ.",
       "recovery": "Resolve grants again for the actual fallback model; docs/tools/multi-agent-sandbox-tools.md and docs/tools/exec.md.",
       "severity": "info",
-      "subject": "lead"
+      "subject": "agent:lead"
     },
     {
       "code": "FALLBACK_TOOL_POLICY_UNRESOLVED",
       "context": "Grants describe the primary model. Fallback provider policies and model-native tools may differ.",
       "recovery": "Resolve grants again for the actual fallback model; docs/tools/multi-agent-sandbox-tools.md and docs/tools/exec.md.",
       "severity": "info",
-      "subject": "secretary"
+      "subject": "agent:secretary"
     },
     {
       "code": "STATIC_TOOL_AVAILABILITY",
@@ -2428,77 +2428,35 @@
       "context": "Policy mentions tools that neither the documented built-in catalog nor any plugin of the inventory declares; they receive no grants.",
       "recovery": "Supply the plugin inventory or remove stale names; docs/gateway/config-tools/tool-policy.md.",
       "severity": "info",
-      "subject": "client"
+      "subject": "agent:client"
     },
     {
       "code": "TOOL_CATALOG_INCOMPLETE",
       "context": "Policy mentions tools that neither the documented built-in catalog nor any plugin of the inventory declares; they receive no grants.",
       "recovery": "Supply the plugin inventory or remove stale names; docs/gateway/config-tools/tool-policy.md.",
       "severity": "info",
-      "subject": "coach"
+      "subject": "agent:coach"
     },
     {
       "code": "TOOL_CATALOG_INCOMPLETE",
       "context": "Policy mentions tools that neither the documented built-in catalog nor any plugin of the inventory declares; they receive no grants.",
       "recovery": "Supply the plugin inventory or remove stale names; docs/gateway/config-tools/tool-policy.md.",
       "severity": "info",
-      "subject": "devbox"
+      "subject": "agent:devbox"
     },
     {
       "code": "TOOL_CATALOG_INCOMPLETE",
       "context": "Policy mentions tools that neither the documented built-in catalog nor any plugin of the inventory declares; they receive no grants.",
       "recovery": "Supply the plugin inventory or remove stale names; docs/gateway/config-tools/tool-policy.md.",
       "severity": "info",
-      "subject": "field"
+      "subject": "agent:field"
     },
     {
       "code": "TOOL_CATALOG_INCOMPLETE",
       "context": "Policy mentions tools that neither the documented built-in catalog nor any plugin of the inventory declares; they receive no grants.",
       "recovery": "Supply the plugin inventory or remove stale names; docs/gateway/config-tools/tool-policy.md.",
       "severity": "info",
-      "subject": "secretary"
-    },
-    {
-      "code": "UNRESOLVED_AGENT_REFERENCE",
-      "context": "Cron target is absent from agents.list; it is not an implicit configured agent.",
-      "recovery": "Reconcile the cron target with configured agents; docs/concepts/multi-agent.md and docs/automation/cron-jobs.md.",
-      "severity": "info",
-      "subject": "job-1"
-    },
-    {
-      "code": "UNRESOLVED_AGENT_REFERENCE",
-      "context": "Cron target is absent from agents.list; it is not an implicit configured agent.",
-      "recovery": "Reconcile the cron target with configured agents; docs/concepts/multi-agent.md and docs/automation/cron-jobs.md.",
-      "severity": "info",
-      "subject": "job-2"
-    },
-    {
-      "code": "UNRESOLVED_AGENT_REFERENCE",
-      "context": "Cron target is absent from agents.list; it is not an implicit configured agent.",
-      "recovery": "Reconcile the cron target with configured agents; docs/concepts/multi-agent.md and docs/automation/cron-jobs.md.",
-      "severity": "info",
-      "subject": "job-3"
-    },
-    {
-      "code": "UNRESOLVED_AGENT_REFERENCE",
-      "context": "Cron target is absent from agents.list; it is not an implicit configured agent.",
-      "recovery": "Reconcile the cron target with configured agents; docs/concepts/multi-agent.md and docs/automation/cron-jobs.md.",
-      "severity": "info",
-      "subject": "job-4"
-    },
-    {
-      "code": "UNRESOLVED_AGENT_REFERENCE",
-      "context": "Cron target is absent from agents.list; it is not an implicit configured agent.",
-      "recovery": "Reconcile the cron target with configured agents; docs/concepts/multi-agent.md and docs/automation/cron-jobs.md.",
-      "severity": "info",
-      "subject": "job-5"
-    },
-    {
-      "code": "UNRESOLVED_AGENT_REFERENCE",
-      "context": "Cron target is absent from agents.list; it is not an implicit configured agent.",
-      "recovery": "Reconcile the cron target with configured agents; docs/concepts/multi-agent.md and docs/automation/cron-jobs.md.",
-      "severity": "info",
-      "subject": "job-6"
+      "subject": "agent:secretary"
     }
   ],
   "backupCount": 2,
@@ -2507,6 +2465,12 @@
       "account": "telegram:field",
       "agentId": "field",
       "id": "binding-1b6d7fadd02512869b66-7",
+      "peerKind": null
+    },
+    {
+      "account": "telegram:retired",
+      "agentId": "devbox",
+      "id": "binding-2319022519025ce293b8-9",
       "peerKind": null
     },
     {
@@ -2525,6 +2489,12 @@
       "account": "telegram:lead",
       "agentId": "lead",
       "id": "binding-765daf766d61288f0dff-6",
+      "peerKind": null
+    },
+    {
+      "account": "whatsapp:devbox",
+      "agentId": "devbox",
+      "id": "binding-7e4892419c5b7145ad50-8",
       "peerKind": null
     },
     {

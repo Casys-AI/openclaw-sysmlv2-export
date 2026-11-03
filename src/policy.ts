@@ -1,3 +1,4 @@
+import { elementId } from "./element-id.ts";
 import { enumeration, type Obj, obj, strings, text } from "./input.ts";
 import type { Agent, Finding, Plugin, Policy, Sandbox } from "./snapshot.ts";
 import { byId, unique } from "./snapshot.ts";
@@ -311,7 +312,7 @@ export function resolvePolicy(
     ) {
       findings.push(info(
         "TOOL_PROFILE_PARTIAL",
-        id,
+        elementId("agent", id),
         `Profile ${name} includes gateway update.run only; its automatic gateway grant is withheld because grants do not encode action subsets.`,
         "Review gateway actions separately; docs/gateway/config-tools/tool-policy.md.",
       ));
@@ -408,7 +409,7 @@ export function resolvePolicy(
     findings.push(
       info(
         "SESSION_DEPENDENT_SANDBOX",
-        id,
+        elementId("agent", id),
         "Host and sandbox grants describe separate session contexts.",
         "Resolve the session main key before using a grant; docs/tools/multi-agent-sandbox-tools.md.",
       ),
@@ -432,7 +433,7 @@ export function resolvePolicy(
     findings.push(
       info(
         "MCP_TOOL_SUBSET_UNRESOLVED",
-        id,
+        elementId("agent", id),
         "Policy names a subset of server tools whose runtime catalog is unknown; subset entries grant no whole server.",
         "Inspect the server's live tools or use its server glob; docs/gateway/config-tools/tool-policy.md.",
       ),
@@ -442,7 +443,7 @@ export function resolvePolicy(
     findings.push(
       info(
         "EMPTY_ALLOWLIST_UNRESOLVED",
-        id,
+        elementId("agent", id),
         "An empty allowlist is treated conservatively as granting no tools; the docs disagree on empty-list behavior.",
         "Set explicit tool names; compare docs/gateway/sandbox-vs-tool-policy-vs-elevated.md and docs/tools/multi-agent-sandbox-tools.md.",
       ),
@@ -452,7 +453,7 @@ export function resolvePolicy(
     findings.push(
       info(
         "SANDBOX_DEFAULT_TOOLS_UNRESOLVED",
-        id,
+        elementId("agent", id),
         "Sandbox grants are withheld: the supplied docs do not identify a complete versioned default catalog for omitted policy fields.",
         "Set sandbox tools.allow and tools.deny explicitly; docs/gateway/config-agents.md.",
       ),
@@ -469,7 +470,7 @@ export function resolvePolicy(
     findings.push(
       info(
         "TOOL_CATALOG_INCOMPLETE",
-        id,
+        elementId("agent", id),
         "Policy mentions tools that neither the documented built-in catalog nor any plugin of the inventory declares; they receive no grants.",
         "Supply the plugin inventory or remove stale names; docs/gateway/config-tools/tool-policy.md.",
       ),
@@ -482,7 +483,7 @@ export function resolvePolicy(
     findings.push(
       info(
         "CONTEXT_DEPENDENT_TOOLS",
-        id,
+        elementId("agent", id),
         "Sender or subagent policies require runtime context.",
         "Inspect the active sender and subagent policies; docs/gateway/config-tools.md.",
       ),

@@ -1,4 +1,6 @@
 import type { Finding, Snapshot } from "./snapshot.ts";
+import { elementId } from "./element-id.ts";
+import { is202610 } from "./policy.ts";
 
 // OpenClaw 2026.10.9 dist/exec-safe-bin-runtime-policy-CgvU47MQ.mjs:
 // the interpreter list and versioned-name rule behind audit-BzL_D921.mjs's
@@ -56,7 +58,17 @@ function unprofiledInterpreter(
 }
 
 export function doctor(snapshot: Snapshot): Finding[] {
-  const findings = [...snapshot.ambiguities];
+  // Older /5 snapshots keep reference diagnostics in ambiguities. Recompute
+  // these concepts here, once, using the same rules as newly collected input.
+  const findings = snapshot.ambiguities.filter((f) =>
+    ![
+      "UNRESOLVED_AGENT_REFERENCE",
+      "UNRESOLVED_BINDING_REFERENCE",
+      "SAFE_BINS_DEFAULT_UNRESOLVED",
+    ].includes(
+      f.code,
+    )
+  );
   const add = (
     code: string,
     severity: Finding["severity"],
@@ -76,12 +88,28 @@ export function doctor(snapshot: Snapshot): Finding[] {
         "EXEC_ALLOWLIST_WILDCARD",
         "warning",
         subject,
-        "An exec allowlist command matches every executable name.",
+        "An exec allowlist has a wildcard executable basename; any directory restriction is omitted from the snapshot.",
         "Replace the wildcard with the intended command names or binary paths.",
       );
     }
   };
   for (const a of snapshot.agents) {
+    const subject = elementId("agent", a.id);
+    // docs/tools/exec.md lists the config default as unset;
+    // docs/tools/exec-approvals-advanced.md lists runtime defaults. The export
+    // collects explicit commands only; these are different layers, not a
+    // contradiction between the documents.
+    if (
+      a.execution.safeBins === null && a.grants.some((g) => g.tool === "exec")
+    ) {
+      add(
+        "SAFE_BINS_DEFAULT_UNRESOLVED",
+        "info",
+        subject,
+        "Safe bins are unset; this collector does not expand runtime defaults into command grants.",
+        "Set tools.exec.safeBins explicitly if command-level grants are needed; docs/tools/exec-approvals-advanced.md.",
+      );
+    }
     // docs/gateway/config-tools/tool-policy.md: MCP tools need a separate
     // sandbox-layer grant even when a normal tool profile allows bundle-mcp.
     if (
@@ -91,7 +119,7 @@ export function doctor(snapshot: Snapshot): Finding[] {
       add(
         "MCP_SANDBOX_GATE",
         "info",
-        a.id,
+        subject,
         "Enabled MCP servers have no tool grant in the sandbox layer.",
         "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
       );
@@ -102,61 +130,83 @@ export function doctor(snapshot: Snapshot): Finding[] {
       add(
         "SAFE_BIN_INTERPRETER_UNPROFILED",
         "warning",
-        a.id,
+        subject,
         "An interpreter or runtime in safeBins has no explicit argv profile.",
         "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
       );
     }
-    wildcard(a.id, a.execution.commands);
-    const exec = a.grants.some((g) => g.tool === "exec");
+    wildcard(subject, a.execution.commands);
+    // docs/tools/exec-approvals.md, YOLO distinctions: auto routes sandboxed
+    // sessions to the sandbox, and cannot freely switch them to gateway/node.
+    // Explicit gateway runs on the host even with a sandbox-layer tool grant.
+    const hostExec = a.grants.some((g) =>
+      g.tool === "exec" && (a.execution.host === "gateway" ||
+        a.execution.host === "auto" && g.layer === "host")
+    );
     // docs/tools/exec-approvals.md: the host approval policy can tighten the
     // configured security/ask pair; inspect the resolved posture.
     if (
-      exec && a.execution.effective.security === "full" &&
+      hostExec && a.execution.effective.security === "full" &&
       a.execution.effective.ask === "off"
     ) {
       add(
         "EXEC_WITHOUT_APPROVAL",
         "error",
-        a.id,
-        "Exec is policy-reachable with effective host security full and ask off.",
-        "Restrict exec security or require approvals.",
+        subject,
+        "Host exec is policy-reachable with security full and ask off; ordinary approval prompts are disabled.",
+        "Set tools.exec.mode to ask or auto, or tighten the execution host's approvals policy.",
       );
     }
-    if (exec && a.sandbox.mode !== "all") {
+    // docs/gateway/sandboxing.md and docs/tools/exec.md: explicit host routing
+    // bypasses the sandbox; host=sandbox fails closed without a sandbox runtime.
+    if (hostExec && a.execution.effective.security !== "deny") {
       add(
         "AGENT_WITHOUT_SANDBOX",
-        "warning",
-        a.id,
-        "Exec can be reached in a session without a sandbox.",
-        "Enable sandbox mode all or remove the exec grant.",
+        a.execution.effective.security === "unknown" ? "info" : "warning",
+        subject,
+        a.execution.effective.security === "unknown"
+          ? "Exec routes to the gateway outside the sandbox; its effective security is unresolved."
+          : "Exec can run on the gateway host outside the sandbox.",
+        "Use sandbox mode all with exec host auto or sandbox, or remove the exec grant.",
       );
     }
-    if (a.sandbox.dangerouslyAllowExternalBindSources) {
+    // docs/gateway/sandboxing/multiple-folders-for-one-agent.md: this opt-in
+    // relaxes source roots only; system, credential and socket checks remain.
+    if (
+      a.sandbox.mode !== "off" && a.sandbox.dangerouslyAllowExternalBindSources
+    ) {
       add(
         "EXTERNAL_BIND_SOURCES",
         "warning",
-        a.id,
-        "External bind sources are explicitly allowed.",
+        subject,
+        "An active sandbox permits bind sources outside workspace roots; other path checks still apply.",
         "Disable dangerouslyAllowExternalBindSources and use permitted source roots.",
       );
     }
+    // docs/gateway/doctor/workspace-and-dreams.md, section 19: a backup tip,
+    // not an invalid configuration. A parent Git repository is not collected.
     if (!a.workspace.versioned) {
       add(
         "WORKSPACE_UNVERSIONED",
-        "warning",
-        a.id,
-        "Workspace has no .git entry.",
-        "Track the intended workspace files in version control.",
+        "info",
+        subject,
+        "No .git entry was recorded at the workspace root; parent repositories are not checked.",
+        "If the workspace is not already backed up, track intended files in a private repository.",
       );
     }
-    if (a.workspace.malformedSkills.length) {
+    // dist/skill-root-discovery-B5Jg-4aX.mjs, discoverSkillCandidates: a
+    // configured root may itself be a skill. Other unresolved entries are not
+    // proof of an invalid skill; they may be supporting files or broken links.
+    const unresolvedSkills = a.workspace.malformedSkills.filter((p) =>
+      p !== "skills/SKILL.md"
+    );
+    if (unresolvedSkills.length) {
       add(
         "MALFORMED_SKILLS_DIR",
-        "warning",
-        a.id,
-        `${a.workspace.malformedSkills.length} malformed skill locations.`,
-        "Place each skill in its own directory with SKILL.md.",
+        "info",
+        subject,
+        `${unresolvedSkills.length} entries under skills could not be resolved by the collector; skill validity is not established.`,
+        "Inspect these entries locally and repair broken links that belong to intended skills.",
       );
     }
     // docs/reference/memory-config.md: session sources and explicit recall
@@ -170,7 +220,7 @@ export function doctor(snapshot: Snapshot): Finding[] {
       add(
         "MEMORY_SESSIONS_INDEXED",
         "warning",
-        a.id,
+        subject,
         "Memory search includes conversation transcripts.",
         "Review session indexing and cross-conversation recall; docs/reference/memory-config.md.",
       );
@@ -182,48 +232,110 @@ export function doctor(snapshot: Snapshot): Finding[] {
       add(
         "MEMORY_REMOTE_EMBEDDINGS",
         "info",
-        a.id,
-        "Memory search uses a remote embedding provider.",
+        subject,
+        "Memory search selects an embedding adapter other than local or none; endpoint location and transmission are not verified.",
         "Review the embedding provider and its data handling; docs/reference/memory-config.md.",
       );
     }
   }
-  wildcard("instance", snapshot.execApprovals?.wildcardCommands ?? []);
-  if (snapshot.messaging.allowedTargets.includes("*")) {
+  wildcard(
+    elementId("instance"),
+    snapshot.execApprovals?.wildcardCommands ?? [],
+  );
+  // dist/session-visibility-c_9BAYYO.mjs, createAgentToAgentPolicy: enabled
+  // gates cross-agent access; both requester and target must match the allowlist.
+  if (
+    snapshot.messaging.enabled &&
+    snapshot.messaging.allowedTargets.includes("*")
+  ) {
     add(
       "AGENT_TO_AGENT_WILDCARD",
       "warning",
-      "instance",
-      "Agent-to-agent policy contains a wildcard.",
-      "List only the intended messaging targets.",
+      elementId("instance"),
+      "Enabled agent-to-agent policy allows every requester and target pair.",
+      "List only the intended requester and target agents, or disable agent-to-agent access.",
     );
   }
-  if (snapshot.plaintextSecretCount > 0) {
-    add(
-      "PLAINTEXT_SECRET_IN_CONFIG",
-      "error",
-      "instance",
-      `${snapshot.plaintextSecretCount} plaintext credential or environment values were excluded.`,
-      "Replace plaintext credentials with supported secret references.",
-    );
-  }
+  // plaintextSecretCount in /5 includes arbitrary env/header strings, with no
+  // retained paths. It cannot prove a supported credential surface from
+  // docs/reference/secretref-credential-surface.md, so it is not a doctor rule.
+  const agents = new Set(snapshot.agents.map((a) => a.id));
+  const cronRuntimeVerified = is202610(snapshot.openclawVersion);
   for (const job of snapshot.cron) {
-    if (job.runtime.consecutiveErrors >= 3) {
+    const subject = elementId("cron", job.id);
+    // dist/server-cron-DmxBCDVE.mjs, resolveCronAgent: an absent explicit
+    // target throws "cron job agent is unavailable"; no default substitution.
+    // dist/zod-schema-2kniG8D0.mjs, explicitTargets: the ambient system agent
+    // must itself belong to the roster. Older runtimes remain unverified.
+    if (job.agentId !== null && !agents.has(job.agentId)) {
+      add(
+        "UNRESOLVED_AGENT_REFERENCE",
+        job.enabled && cronRuntimeVerified ? "error" : "info",
+        subject,
+        !cronRuntimeVerified
+          ? "The task targets an absent agent; runtime behavior is unverified for the recorded OpenClaw version."
+          : job.enabled
+          ? "The scheduled task targets an absent agent and fails when run."
+          : "The disabled task targets an absent agent and will fail if run.",
+        "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
+      );
+    }
+    // dist/cron-2TRTJPLC.mjs, CHRONIC_FAILURE_MIN_CONSECUTIVE_ERRORS and
+    // inspectCronJobHealth: only enabled jobs with at least three errors qualify.
+    if (job.enabled && job.runtime.consecutiveErrors >= 3) {
       add(
         "CRON_FAILING",
         "warning",
-        job.id,
+        subject,
         `${job.runtime.consecutiveErrors} consecutive failures.`,
         "Inspect job execution locally; error bodies are deliberately excluded.",
       );
     }
   }
+  for (const binding of snapshot.bindings) {
+    const account = snapshot.accounts.find((a) => a.id === binding.account);
+    // docs/channels/channel-routing.md: accountId "*" matches any account on
+    // that channel. dist/server-channels-eZDWbzoS.mjs, startChannelProcessOwned:
+    // listAccountIds determines startup; disabled accounts are skipped.
+    const matches = binding.account.endsWith(":*")
+      ? snapshot.accounts.filter((a) => `${a.channel}:*` === binding.account)
+      : account
+      ? [account]
+      : [];
+    const subject = account
+      ? elementId("account", account.id)
+      : agents.has(binding.agentId)
+      ? elementId("agent", binding.agentId)
+      : elementId("instance");
+    if (!matches.some((a) => a.enabled)) {
+      add(
+        "BINDING_ACCOUNT_UNAVAILABLE",
+        "warning",
+        subject,
+        "A binding has no matching enabled channel account in the snapshot.",
+        "Enable its channel and account, correct match.accountId, or remove the obsolete binding.",
+      );
+    }
+    // docs/concepts/multi-agent.md: the exported connection needs both
+    // configured endpoints; this note describes the missing model endpoint.
+    if (!agents.has(binding.agentId)) {
+      add(
+        "UNRESOLVED_BINDING_REFERENCE",
+        "info",
+        subject,
+        "The binding names an absent agent; no connection is drawn.",
+        "Set the binding's agentId to an existing agent or remove the obsolete binding.",
+      );
+    }
+  }
+  // docs/gateway/doctor/config-migrations.md, rewrite rules: doctor writes an
+  // openclaw.json.bak ring. Prefix counts do not prove manual edits or a fault.
   if (snapshot.backupCount > 0) {
     add(
       "MANUAL_CONFIG_BACKUPS",
       "info",
-      "instance",
-      `${snapshot.backupCount} configuration backups exist; openclaw doctor creates some of them itself.`,
+      elementId("instance"),
+      `${snapshot.backupCount} openclaw.json.* files were recorded; they may include OpenClaw doctor's own backups.`,
       "Review backup retention and protect any credentials they contain.",
     );
   }

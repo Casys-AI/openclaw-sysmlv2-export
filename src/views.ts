@@ -1,3 +1,4 @@
+import { elementId } from "./element-id.ts";
 import { type Grant, grants, name, ORIGINS } from "./emit.ts";
 import type { Inference } from "./infer.ts";
 import type { Agent, Snapshot } from "./snapshot.ts";
@@ -324,7 +325,7 @@ function agentBlock(a: Agent, granted: Grant[]): DiagramNode {
   );
   const skills = a.workspace.skills.map((s) => s.id);
   return node({
-    id: `agent:${a.id}`,
+    id: elementId("agent", a.id),
     shape: "block",
     keyword: "part",
     name: `agent_${a.id}`,
@@ -385,7 +386,7 @@ function instanceTotals(
   const sum = (count: (a: Inference["agents"][number]) => number) =>
     inference!.agents.reduce((n, a) => n + count(a), 0);
   return node({
-    id: "instance",
+    id: elementId("instance"),
     shape: "block",
     keyword: "package",
     name: "OpenClawInstance",
@@ -463,7 +464,7 @@ function overviewView(
   const inferredOf = (agentId: string) =>
     inference?.agents.find((x) => x.agentId === agentId);
   const rows = agents.map((a) => {
-    const id = `agent:${a.id}`, inferred = inferredOf(a.id);
+    const id = elementId("agent", a.id), inferred = inferredOf(a.id);
     const accounts = bound(a.id);
     return node({
       id,
@@ -540,10 +541,10 @@ function overviewView(
       facet: "runs on",
       views: Object.fromEntries(
         agents.map((a) => [
-          `agent:${a.id}`,
+          elementId("agent", a.id),
           others.filter((v) =>
             v.id === `behaviour:${a.id}` ||
-            v.nodes.some((n) => n.id === `agent:${a.id}`)
+            v.nodes.some((n) => n.id === elementId("agent", a.id))
           ).map((v) => v.id),
         ]),
       ),
@@ -557,15 +558,15 @@ function systemView(s: Snapshot, granted: Map<string, Grant[]>): DiagramView {
   const nodes = byId(s.agents).map((a) => agentBlock(a, granted.get(a.id)!));
   for (const channel of [...new Set(s.accounts.map((a) => a.channel))]) {
     nodes.push(node({
-      id: `channel:${channel}`,
+      id: elementId("channel", channel),
       shape: "group",
       name: `channel = ${quoted(channel)}`,
     }));
   }
   for (const acc of s.accounts) {
     nodes.push(node({
-      id: `account:${acc.id}`,
-      parent: `channel:${acc.channel}`,
+      id: elementId("account", acc.id),
+      parent: elementId("channel", acc.channel),
       shape: "block",
       keyword: "part",
       name: `account_${acc.id}`,
@@ -594,13 +595,14 @@ function systemView(s: Snapshot, granted: Map<string, Grant[]>): DiagramView {
   const ids = new Set(nodes.map((n) => n.id));
   const edges: DiagramEdge[] = s.bindings
     .filter((b) =>
-      ids.has(`agent:${b.agentId}`) && ids.has(`account:${b.account}`)
+      ids.has(elementId("agent", b.agentId)) &&
+      ids.has(elementId("account", b.account))
     )
     .map((b) => ({
-      id: `binding:${b.id}`,
+      id: elementId("binding", b.id),
       kind: "connection",
-      source: `agent:${b.agentId}`,
-      target: `account:${b.account}`,
+      source: elementId("agent", b.agentId),
+      target: elementId("account", b.account),
       label: b.peerKind,
       attributes: [],
       sysml: [inst("Entries", name("binding", b.id))],
@@ -635,7 +637,7 @@ function toolsView(s: Snapshot, granted: Map<string, Grant[]>): DiagramView {
       new Set(mine.filter((g) => g.layer === layer).map((g) => g.tool.key))
         .size;
     return node({
-      id: `agent:${a.id}`,
+      id: elementId("agent", a.id),
       shape: "block",
       keyword: "part",
       name: `agent_${a.id}`,
@@ -652,16 +654,16 @@ function toolsView(s: Snapshot, granted: Map<string, Grant[]>): DiagramView {
   const rows: DiagramNode[] = [], cells: DiagramEdge[] = [];
   const group = (origin: typeof ORIGINS[number]) => {
     rows.push(node({
-      id: `origin:${origin}`,
+      id: elementId("origin", origin),
       shape: "group",
       name: `origin = ${origin}`,
     }));
-    return `origin:${origin}`;
+    return elementId("origin", origin);
   };
   const tool = (t: Grant["tool"], parent: string) => {
     const byAgent = holders.get(t.key)!;
     rows.push(node({
-      id: `tool:${t.key}`,
+      id: elementId("tool", t.key),
       parent,
       shape: "tool",
       name: t.toolId,
@@ -683,10 +685,10 @@ function toolsView(s: Snapshot, granted: Map<string, Grant[]>): DiagramView {
     for (const a of agents.filter((a) => byAgent.has(a.id))) {
       const mine = byAgent.get(a.id)!, layers = layersOf(mine).join(", ");
       cells.push({
-        id: `grant:${a.id}:${t.key}`,
+        id: elementId("grant", a.id, t.key),
         kind: "grant",
-        source: `agent:${a.id}`,
-        target: `tool:${t.key}`,
+        source: elementId("agent", a.id),
+        target: elementId("tool", t.key),
         label: layers,
         attributes: [["layer", layers]],
         sysml: mine.map((g) =>
@@ -719,7 +721,7 @@ function toolsView(s: Snapshot, granted: Map<string, Grant[]>): DiagramView {
   if (s.plugins?.length) {
     const g = group("plugin");
     for (const p of s.plugins) {
-      const id = `plugin:${p.id}`;
+      const id = elementId("plugin", p.id);
       rows.push(node({
         id,
         parent: g,
@@ -743,7 +745,7 @@ function toolsView(s: Snapshot, granted: Map<string, Grant[]>): DiagramView {
   if (s.mcpServers.length) {
     const g = group("mcp");
     for (const m of s.mcpServers) {
-      const id = `mcp:${m.id}`;
+      const id = elementId("mcp", m.id);
       rows.push(node({
         id,
         parent: g,
@@ -797,7 +799,7 @@ function schedulesView(s: Snapshot): DiagramView | null {
       id: `wakes:${id}`,
       kind: known.has(agentId) ? "owner" : "target",
       source: id,
-      target: `agent:${agentId}`,
+      target: elementId("agent", agentId),
       label: null,
       attributes: [],
       sysml: [],
@@ -805,7 +807,7 @@ function schedulesView(s: Snapshot): DiagramView | null {
   };
   for (const a of agents) {
     if (!a.heartbeat) continue;
-    const id = `heartbeat:${a.id}`;
+    const id = elementId("heartbeat", a.id);
     nodes.push(node({
       id,
       shape: "block",
@@ -842,7 +844,7 @@ function schedulesView(s: Snapshot): DiagramView | null {
     wake(id, a.id);
   }
   for (const j of s.cron) {
-    const id = `cron:${j.id}`, sc = j.schedule;
+    const id = elementId("cron", j.id), sc = j.schedule;
     const raw = sc.kind === "every"
       ? `every ${sc.everyMs} ms`
       : `${sc.kind} ${quoted(sc.expression ?? "")}`;
@@ -895,7 +897,7 @@ function schedulesView(s: Snapshot): DiagramView | null {
     nodes.push(
       a
         ? node({
-          id: `agent:${id}`,
+          id: elementId("agent", id),
           shape: "block",
           keyword: "part",
           name: `agent_${id}`,
@@ -908,7 +910,7 @@ function schedulesView(s: Snapshot): DiagramView | null {
           sysml: [inst("Operators", name("agent", id))],
         })
         : node({
-          id: `agent:${id}`,
+          id: elementId("agent", id),
           shape: "block",
           keyword: "ref part",
           name: id,

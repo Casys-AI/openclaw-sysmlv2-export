@@ -2,6 +2,7 @@ import { lstat, readdir, readFile, realpath, stat } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { ExportError, invalid, ioError } from "./error.ts";
+import { elementId } from "./element-id.ts";
 import {
   type ApprovalPolicy,
   approvalPolicy,
@@ -240,7 +241,7 @@ async function workspace(
     findings.push(
       info(
         "WORKSPACE_MISSING",
-        id,
+        elementId("agent", id),
         "The configured workspace does not exist.",
         "Create the workspace or fix agents.list[].workspace.",
       ),
@@ -256,7 +257,7 @@ async function workspace(
       findings.push(
         info(
           "INSTRUCTION_OUTSIDE_ROOT",
-          id,
+          elementId("agent", id),
           `${entry.name} is a broken link or resolves outside the workspace; it is not collected.`,
           "Keep instruction files inside the agent workspace.",
         ),
@@ -304,7 +305,7 @@ async function workspace(
         findings.push(
           info(
             "SKILL_SYMLINK_OUTSIDE_ROOT",
-            id,
+            elementId("agent", id),
             `${prefix}/${child.name} resolves outside the workspace; OpenClaw ignores it unless skills.load.allowSymlinkTargets trusts the target.`,
             "Move the skill into the workspace or trust its target; docs/tools/skills.md.",
           ),
@@ -478,7 +479,7 @@ function sandbox(
     findings.push(
       info(
         "SANDBOX_SCOPE_UNRESOLVED",
-        id,
+        elementId("agent", id),
         "The reference docs disagree: agent versus session default scope.",
         "Set sandbox.scope explicitly; compare docs/gateway/sandboxing.md and docs/tools/multi-agent-sandbox-tools.md.",
       ),
@@ -496,7 +497,7 @@ function sandbox(
     findings.push(
       info(
         "SANDBOX_BACKEND_UNRESOLVED",
-        id,
+        elementId("agent", id),
         "Only Docker sandbox settings are mapped; this backend's isolation settings are not collected.",
         "Inspect the backend separately; docs/gateway/sandboxing.md.",
       ),
@@ -567,7 +568,7 @@ function state(
         findings.push(
           info(
             "SUBMINUTE_SCHEDULE",
-            id,
+            elementId("cron", id),
             "The interval is preserved in milliseconds; AssemblyCases::ScheduleUnit has no second or millisecond unit.",
             "Use MillisecondEvery.durationMs for the exact interval; the inherited count and unit are intentionally unset.",
           ),
@@ -580,7 +581,7 @@ function state(
         findings.push(
           info(
             "CRON_TIMEZONE_UNRESOLVED",
-            id,
+            elementId("cron", id),
             "Cron uses the gateway host timezone, which is not collected.",
             "Set an explicit timezone; docs/automation/cron-jobs.md.",
           ),
@@ -785,7 +786,7 @@ export async function collect(
         findings.push(
           info(
             "FALLBACK_TOOL_POLICY_UNRESOLVED",
-            id,
+            elementId("agent", id),
             "Grants describe the primary model. Fallback provider policies and model-native tools may differ.",
             "Resolve grants again for the actual fallback model; docs/tools/multi-agent-sandbox-tools.md and docs/tools/exec.md.",
           ),
@@ -821,7 +822,7 @@ export async function collect(
         findings.push(
           info(
             "ELEVATED_CONTEXT_REQUIRED",
-            id,
+            elementId("agent", id),
             "Elevated exec is configured but depends on sender allowlists and session directives; no unconditional host grant is inferred.",
             "Verify sender and session gates; docs/tools/elevated.md.",
           ),
@@ -858,18 +859,10 @@ export async function collect(
           ...stored.commandsByAgent.get(id) ?? [],
         ]),
       };
-      if (safeBins === null && resolved.grants.some((g) => g.tool === "exec")) {
-        findings.push(info(
-          "SAFE_BINS_DEFAULT_UNRESOLVED",
-          id,
-          "Safe bins are unset; the docs disagree on the default list, so no default command grants are inferred.",
-          "Set tools.exec.safeBins explicitly; compare docs/tools/exec.md and docs/tools/exec-approvals-advanced.md.",
-        ));
-      }
       if (execution.host === "node") {
         findings.push(info(
           "NODE_EXEC_APPROVALS_UNRESOLVED",
-          id,
+          elementId("agent", id),
           "Node exec uses the remote execution host's approvals; the local SQLite policy cannot establish that posture.",
           "Inspect approvals on the execution node; docs/tools/exec-approvals.md.",
         ));
@@ -880,7 +873,7 @@ export async function collect(
         findings.push(
           info(
             "EXEC_APPROVALS_UNRESOLVED",
-            id,
+            elementId("agent", id),
             "Configured exec defaults are not fully documented for this version; host approvals do not resolve every effective field.",
             "Inspect host approvals and normalized exec mode; docs/tools/exec.md.",
           ),
@@ -902,7 +895,7 @@ export async function collect(
         } else {findings.push(
             info(
               "HEARTBEAT_DEFAULT_UNRESOLVED",
-              id,
+              elementId("agent", id),
               "Default heartbeat cadence depends on authentication mode, which is not collected.",
               "Set heartbeat.every explicitly; docs/gateway/heartbeat.md.",
             ),
@@ -987,23 +980,7 @@ export async function collect(
         ...identity,
       };
     });
-    const jobs = stored.cron,
-      ids = new Set(agents.map((a) => a.id));
-    for (const binding of bindings) {
-      if (
-        !ids.has(binding.agentId) ||
-        !accounts.some((a) => a.id === binding.account)
-      ) {
-        findings.push(
-          info(
-            "UNRESOLVED_BINDING_REFERENCE",
-            binding.id,
-            "The binding refers to an absent agent or channel account; no connection is emitted.",
-            "Reconcile the binding endpoints; docs/concepts/multi-agent.md.",
-          ),
-        );
-      }
-    }
+    const jobs = stored.cron;
     for (const job of jobs) {
       if (job.agentId === null) {
         // 2026.10: plugin-managed jobs such as memory-core's dreaming sweep
@@ -1012,18 +989,9 @@ export async function collect(
         findings.push(
           info(
             "CRON_AGENT_UNRESOLVED",
-            job.id,
+            elementId("cron", job.id),
             "The job names no agent; OpenClaw resolves its execution agent at run time.",
             "Check the agent with openclaw automations show <jobId>; docs/automation/cron-jobs/troubleshooting.md.",
-          ),
-        );
-      } else if (!ids.has(job.agentId)) {
-        findings.push(
-          info(
-            "UNRESOLVED_AGENT_REFERENCE",
-            job.id,
-            "Cron target is absent from agents.list; it is not an implicit configured agent.",
-            "Reconcile the cron target with configured agents; docs/concepts/multi-agent.md and docs/automation/cron-jobs.md.",
           ),
         );
       }
@@ -1077,7 +1045,9 @@ export async function collect(
       execApprovals: stored.execApprovals,
       memoryBackend: memoryBackend(config),
       messaging: {
-        enabled: boolean(messaging.enabled, false),
+        // dist/session-visibility-c_9BAYYO.mjs, createAgentToAgentPolicy:
+        // 2026.10 cross-agent access is enabled unless explicitly disabled.
+        enabled: boolean(messaging.enabled, is202610(version)),
         allowedTargets: unique(strings(messaging.allow)),
       },
       ambiguities: findings.sort((a, b) =>

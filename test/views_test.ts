@@ -42,7 +42,8 @@ Deno.test("the fixture's views hold its agents, tools, schedules and procedures"
     "channel:whatsapp",
   ]);
   assert.equal(ids(system, "account:").length, 10);
-  assert.equal(system.edges.length, 8);
+  // The disabled account is drawn; the absent account has no endpoint.
+  assert.equal(system.edges.length, 9);
   assert.ok(
     edges(system, "connection").includes("agent:lead account:telegram:lead"),
   );

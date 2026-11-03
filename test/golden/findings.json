@@ -1,161 +1,154 @@
 [
   {
     "code": "AGENT_TO_AGENT_WILDCARD",
-    "context": "Agent-to-agent policy contains a wildcard.",
-    "recovery": "List only the intended messaging targets.",
+    "context": "Enabled agent-to-agent policy allows every requester and target pair.",
+    "recovery": "List only the intended requester and target agents, or disable agent-to-agent access.",
     "severity": "warning",
     "subject": "instance"
   },
   {
     "code": "AGENT_WITHOUT_SANDBOX",
-    "context": "Exec can be reached in a session without a sandbox.",
-    "recovery": "Enable sandbox mode all or remove the exec grant.",
+    "context": "Exec can run on the gateway host outside the sandbox.",
+    "recovery": "Use sandbox mode all with exec host auto or sandbox, or remove the exec grant.",
     "severity": "warning",
-    "subject": "lead"
+    "subject": "agent:lead"
   },
   {
-    "code": "CRON_FAILING",
-    "context": "5 consecutive failures.",
-    "recovery": "Inspect job execution locally; error bodies are deliberately excluded.",
+    "code": "BINDING_ACCOUNT_UNAVAILABLE",
+    "context": "A binding has no matching enabled channel account in the snapshot.",
+    "recovery": "Enable its channel and account, correct match.accountId, or remove the obsolete binding.",
     "severity": "warning",
-    "subject": "job-1"
+    "subject": "account:whatsapp:devbox"
   },
   {
-    "code": "CRON_FAILING",
-    "context": "6 consecutive failures.",
-    "recovery": "Inspect job execution locally; error bodies are deliberately excluded.",
+    "code": "BINDING_ACCOUNT_UNAVAILABLE",
+    "context": "A binding has no matching enabled channel account in the snapshot.",
+    "recovery": "Enable its channel and account, correct match.accountId, or remove the obsolete binding.",
     "severity": "warning",
-    "subject": "job-10"
+    "subject": "agent:devbox"
   },
   {
     "code": "CRON_TIMEZONE_UNRESOLVED",
     "context": "Cron uses the gateway host timezone, which is not collected.",
     "recovery": "Set an explicit timezone; docs/automation/cron-jobs.md.",
     "severity": "info",
-    "subject": "job-10"
+    "subject": "cron:job-10"
   },
   {
     "code": "ELEVATED_CONTEXT_REQUIRED",
     "context": "Elevated exec is configured but depends on sender allowlists and session directives; no unconditional host grant is inferred.",
     "recovery": "Verify sender and session gates; docs/tools/elevated.md.",
     "severity": "info",
-    "subject": "client"
+    "subject": "agent:client"
   },
   {
     "code": "ELEVATED_CONTEXT_REQUIRED",
     "context": "Elevated exec is configured but depends on sender allowlists and session directives; no unconditional host grant is inferred.",
     "recovery": "Verify sender and session gates; docs/tools/elevated.md.",
     "severity": "info",
-    "subject": "coach"
+    "subject": "agent:coach"
   },
   {
     "code": "ELEVATED_CONTEXT_REQUIRED",
     "context": "Elevated exec is configured but depends on sender allowlists and session directives; no unconditional host grant is inferred.",
     "recovery": "Verify sender and session gates; docs/tools/elevated.md.",
     "severity": "info",
-    "subject": "devbox"
+    "subject": "agent:devbox"
   },
   {
     "code": "ELEVATED_CONTEXT_REQUIRED",
     "context": "Elevated exec is configured but depends on sender allowlists and session directives; no unconditional host grant is inferred.",
     "recovery": "Verify sender and session gates; docs/tools/elevated.md.",
     "severity": "info",
-    "subject": "field"
+    "subject": "agent:field"
   },
   {
     "code": "ELEVATED_CONTEXT_REQUIRED",
     "context": "Elevated exec is configured but depends on sender allowlists and session directives; no unconditional host grant is inferred.",
     "recovery": "Verify sender and session gates; docs/tools/elevated.md.",
     "severity": "info",
-    "subject": "secretary"
+    "subject": "agent:secretary"
   },
   {
     "code": "EXEC_ALLOWLIST_WILDCARD",
-    "context": "An exec allowlist command matches every executable name.",
+    "context": "An exec allowlist has a wildcard executable basename; any directory restriction is omitted from the snapshot.",
     "recovery": "Replace the wildcard with the intended command names or binary paths.",
     "severity": "warning",
     "subject": "instance"
   },
   {
     "code": "EXTERNAL_BIND_SOURCES",
-    "context": "External bind sources are explicitly allowed.",
+    "context": "An active sandbox permits bind sources outside workspace roots; other path checks still apply.",
     "recovery": "Disable dangerouslyAllowExternalBindSources and use permitted source roots.",
     "severity": "warning",
-    "subject": "client"
+    "subject": "agent:client"
   },
   {
     "code": "EXTERNAL_BIND_SOURCES",
-    "context": "External bind sources are explicitly allowed.",
+    "context": "An active sandbox permits bind sources outside workspace roots; other path checks still apply.",
     "recovery": "Disable dangerouslyAllowExternalBindSources and use permitted source roots.",
     "severity": "warning",
-    "subject": "coach"
+    "subject": "agent:coach"
   },
   {
     "code": "EXTERNAL_BIND_SOURCES",
-    "context": "External bind sources are explicitly allowed.",
+    "context": "An active sandbox permits bind sources outside workspace roots; other path checks still apply.",
     "recovery": "Disable dangerouslyAllowExternalBindSources and use permitted source roots.",
     "severity": "warning",
-    "subject": "field"
+    "subject": "agent:field"
   },
   {
     "code": "EXTERNAL_BIND_SOURCES",
-    "context": "External bind sources are explicitly allowed.",
+    "context": "An active sandbox permits bind sources outside workspace roots; other path checks still apply.",
     "recovery": "Disable dangerouslyAllowExternalBindSources and use permitted source roots.",
     "severity": "warning",
-    "subject": "secretary"
+    "subject": "agent:secretary"
   },
   {
     "code": "FALLBACK_TOOL_POLICY_UNRESOLVED",
     "context": "Grants describe the primary model. Fallback provider policies and model-native tools may differ.",
     "recovery": "Resolve grants again for the actual fallback model; docs/tools/multi-agent-sandbox-tools.md and docs/tools/exec.md.",
     "severity": "info",
-    "subject": "client"
+    "subject": "agent:client"
   },
   {
     "code": "FALLBACK_TOOL_POLICY_UNRESOLVED",
     "context": "Grants describe the primary model. Fallback provider policies and model-native tools may differ.",
     "recovery": "Resolve grants again for the actual fallback model; docs/tools/multi-agent-sandbox-tools.md and docs/tools/exec.md.",
     "severity": "info",
-    "subject": "coach"
+    "subject": "agent:coach"
   },
   {
     "code": "FALLBACK_TOOL_POLICY_UNRESOLVED",
     "context": "Grants describe the primary model. Fallback provider policies and model-native tools may differ.",
     "recovery": "Resolve grants again for the actual fallback model; docs/tools/multi-agent-sandbox-tools.md and docs/tools/exec.md.",
     "severity": "info",
-    "subject": "devbox"
+    "subject": "agent:devbox"
   },
   {
     "code": "FALLBACK_TOOL_POLICY_UNRESOLVED",
     "context": "Grants describe the primary model. Fallback provider policies and model-native tools may differ.",
     "recovery": "Resolve grants again for the actual fallback model; docs/tools/multi-agent-sandbox-tools.md and docs/tools/exec.md.",
     "severity": "info",
-    "subject": "field"
+    "subject": "agent:field"
   },
   {
     "code": "FALLBACK_TOOL_POLICY_UNRESOLVED",
     "context": "Grants describe the primary model. Fallback provider policies and model-native tools may differ.",
     "recovery": "Resolve grants again for the actual fallback model; docs/tools/multi-agent-sandbox-tools.md and docs/tools/exec.md.",
     "severity": "info",
-    "subject": "lead"
+    "subject": "agent:lead"
   },
   {
     "code": "FALLBACK_TOOL_POLICY_UNRESOLVED",
     "context": "Grants describe the primary model. Fallback provider policies and model-native tools may differ.",
     "recovery": "Resolve grants again for the actual fallback model; docs/tools/multi-agent-sandbox-tools.md and docs/tools/exec.md.",
     "severity": "info",
-    "subject": "secretary"
-  },
-  {
-    "code": "MALFORMED_SKILLS_DIR",
-    "context": "1 malformed skill locations.",
-    "recovery": "Place each skill in its own directory with SKILL.md.",
-    "severity": "warning",
-    "subject": "secretary"
+    "subject": "agent:secretary"
   },
   {
     "code": "MANUAL_CONFIG_BACKUPS",
-    "context": "2 configuration backups exist; openclaw doctor creates some of them itself.",
+    "context": "2 openclaw.json.* files were recorded; they may include OpenClaw doctor's own backups.",
     "recovery": "Review backup retention and protect any credentials they contain.",
     "severity": "info",
     "subject": "instance"
@@ -165,77 +158,70 @@
     "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
     "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
     "severity": "info",
-    "subject": "client"
+    "subject": "agent:client"
   },
   {
     "code": "MCP_SANDBOX_GATE",
     "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
     "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
     "severity": "info",
-    "subject": "coach"
+    "subject": "agent:coach"
   },
   {
     "code": "MCP_SANDBOX_GATE",
     "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
     "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
     "severity": "info",
-    "subject": "devbox"
+    "subject": "agent:devbox"
   },
   {
     "code": "MCP_SANDBOX_GATE",
     "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
     "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
     "severity": "info",
-    "subject": "secretary"
-  },
-  {
-    "code": "PLAINTEXT_SECRET_IN_CONFIG",
-    "context": "37 plaintext credential or environment values were excluded.",
-    "recovery": "Replace plaintext credentials with supported secret references.",
-    "severity": "error",
-    "subject": "instance"
+    "subject": "agent:secretary"
   },
   {
     "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
     "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
     "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
     "severity": "warning",
-    "subject": "client"
+    "subject": "agent:client"
   },
   {
     "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
     "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
     "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
     "severity": "warning",
-    "subject": "coach"
+    "subject": "agent:coach"
   },
   {
     "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
     "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
     "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
     "severity": "warning",
-    "subject": "devbox"
+    "subject": "agent:devbox"
   },
   {
     "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
     "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
     "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
     "severity": "warning",
-    "subject": "field"
+    "subject": "agent:field"
   },
   {
     "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
     "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
     "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
     "severity": "warning",
-    "subject": "lead"
+    "subject": "agent:lead"
   },
   {
     "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
     "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
     "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
     "severity": "warning",
-    "subject": "secretary"
+    "subject": "agent:secretary"
   },
   {
     "code": "STATIC_TOOL_AVAILABILITY",
@@ -249,111 +235,111 @@
     "context": "Policy mentions tools that neither the documented built-in catalog nor any plugin of the inventory declares; they receive no grants.",
     "recovery": "Supply the plugin inventory or remove stale names; docs/gateway/config-tools/tool-policy.md.",
     "severity": "info",
-    "subject": "client"
+    "subject": "agent:client"
   },
   {
     "code": "TOOL_CATALOG_INCOMPLETE",
     "context": "Policy mentions tools that neither the documented built-in catalog nor any plugin of the inventory declares; they receive no grants.",
     "recovery": "Supply the plugin inventory or remove stale names; docs/gateway/config-tools/tool-policy.md.",
     "severity": "info",
-    "subject": "coach"
+    "subject": "agent:coach"
   },
   {
     "code": "TOOL_CATALOG_INCOMPLETE",
     "context": "Policy mentions tools that neither the documented built-in catalog nor any plugin of the inventory declares; they receive no grants.",
     "recovery": "Supply the plugin inventory or remove stale names; docs/gateway/config-tools/tool-policy.md.",
     "severity": "info",
-    "subject": "devbox"
+    "subject": "agent:devbox"
   },
   {
     "code": "TOOL_CATALOG_INCOMPLETE",
     "context": "Policy mentions tools that neither the documented built-in catalog nor any plugin of the inventory declares; they receive no grants.",
     "recovery": "Supply the plugin inventory or remove stale names; docs/gateway/config-tools/tool-policy.md.",
     "severity": "info",
-    "subject": "field"
+    "subject": "agent:field"
   },
   {
     "code": "TOOL_CATALOG_INCOMPLETE",
     "context": "Policy mentions tools that neither the documented built-in catalog nor any plugin of the inventory declares; they receive no grants.",
     "recovery": "Supply the plugin inventory or remove stale names; docs/gateway/config-tools/tool-policy.md.",
     "severity": "info",
-    "subject": "secretary"
+    "subject": "agent:secretary"
   },
   {
     "code": "UNRESOLVED_AGENT_REFERENCE",
-    "context": "Cron target is absent from agents.list; it is not an implicit configured agent.",
-    "recovery": "Reconcile the cron target with configured agents; docs/concepts/multi-agent.md and docs/automation/cron-jobs.md.",
+    "context": "The task targets an absent agent; runtime behavior is unverified for the recorded OpenClaw version.",
+    "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
     "severity": "info",
-    "subject": "job-1"
+    "subject": "cron:job-1"
   },
   {
     "code": "UNRESOLVED_AGENT_REFERENCE",
-    "context": "Cron target is absent from agents.list; it is not an implicit configured agent.",
-    "recovery": "Reconcile the cron target with configured agents; docs/concepts/multi-agent.md and docs/automation/cron-jobs.md.",
+    "context": "The task targets an absent agent; runtime behavior is unverified for the recorded OpenClaw version.",
+    "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
     "severity": "info",
-    "subject": "job-2"
+    "subject": "cron:job-2"
   },
   {
     "code": "UNRESOLVED_AGENT_REFERENCE",
-    "context": "Cron target is absent from agents.list; it is not an implicit configured agent.",
-    "recovery": "Reconcile the cron target with configured agents; docs/concepts/multi-agent.md and docs/automation/cron-jobs.md.",
+    "context": "The task targets an absent agent; runtime behavior is unverified for the recorded OpenClaw version.",
+    "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
     "severity": "info",
-    "subject": "job-3"
+    "subject": "cron:job-3"
   },
   {
     "code": "UNRESOLVED_AGENT_REFERENCE",
-    "context": "Cron target is absent from agents.list; it is not an implicit configured agent.",
-    "recovery": "Reconcile the cron target with configured agents; docs/concepts/multi-agent.md and docs/automation/cron-jobs.md.",
+    "context": "The task targets an absent agent; runtime behavior is unverified for the recorded OpenClaw version.",
+    "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
     "severity": "info",
-    "subject": "job-4"
+    "subject": "cron:job-4"
   },
   {
     "code": "UNRESOLVED_AGENT_REFERENCE",
-    "context": "Cron target is absent from agents.list; it is not an implicit configured agent.",
-    "recovery": "Reconcile the cron target with configured agents; docs/concepts/multi-agent.md and docs/automation/cron-jobs.md.",
+    "context": "The task targets an absent agent; runtime behavior is unverified for the recorded OpenClaw version.",
+    "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
     "severity": "info",
-    "subject": "job-5"
+    "subject": "cron:job-5"
   },
   {
     "code": "UNRESOLVED_AGENT_REFERENCE",
-    "context": "Cron target is absent from agents.list; it is not an implicit configured agent.",
-    "recovery": "Reconcile the cron target with configured agents; docs/concepts/multi-agent.md and docs/automation/cron-jobs.md.",
+    "context": "The task targets an absent agent; runtime behavior is unverified for the recorded OpenClaw version.",
+    "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
     "severity": "info",
-    "subject": "job-6"
+    "subject": "cron:job-6"
   },
   {
     "code": "WORKSPACE_UNVERSIONED",
-    "context": "Workspace has no .git entry.",
-    "recovery": "Track the intended workspace files in version control.",
-    "severity": "warning",
-    "subject": "client"
+    "context": "No .git entry was recorded at the workspace root; parent repositories are not checked.",
+    "recovery": "If the workspace is not already backed up, track intended files in a private repository.",
+    "severity": "info",
+    "subject": "agent:client"
   },
   {
     "code": "WORKSPACE_UNVERSIONED",
-    "context": "Workspace has no .git entry.",
-    "recovery": "Track the intended workspace files in version control.",
-    "severity": "warning",
-    "subject": "coach"
+    "context": "No .git entry was recorded at the workspace root; parent repositories are not checked.",
+    "recovery": "If the workspace is not already backed up, track intended files in a private repository.",
+    "severity": "info",
+    "subject": "agent:coach"
   },
   {
     "code": "WORKSPACE_UNVERSIONED",
-    "context": "Workspace has no .git entry.",
-    "recovery": "Track the intended workspace files in version control.",
-    "severity": "warning",
-    "subject": "devbox"
+    "context": "No .git entry was recorded at the workspace root; parent repositories are not checked.",
+    "recovery": "If the workspace is not already backed up, track intended files in a private repository.",
+    "severity": "info",
+    "subject": "agent:devbox"
   },
   {
     "code": "WORKSPACE_UNVERSIONED",
-    "context": "Workspace has no .git entry.",
-    "recovery": "Track the intended workspace files in version control.",
-    "severity": "warning",
-    "subject": "field"
+    "context": "No .git entry was recorded at the workspace root; parent repositories are not checked.",
+    "recovery": "If the workspace is not already backed up, track intended files in a private repository.",
+    "severity": "info",
+    "subject": "agent:field"
   },
   {
     "code": "WORKSPACE_UNVERSIONED",
-    "context": "Workspace has no .git entry.",
-    "recovery": "Track the intended workspace files in version control.",
-    "severity": "warning",
-    "subject": "secretary"
+    "context": "No .git entry was recorded at the workspace root; parent repositories are not checked.",
+    "recovery": "If the workspace is not already backed up, track intended files in a private repository.",
+    "severity": "info",
+    "subject": "agent:secretary"
   }
 ]

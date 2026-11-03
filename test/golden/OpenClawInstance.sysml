@@ -2008,6 +2008,8 @@ package OpenClawInstance {
         }
         connection 'binding_binding-765daf766d61288f0dff-6' : AgentBinding connect Operators::agent_lead to 'account_telegram:lead' {
         }
+        connection 'binding_binding-7e4892419c5b7145ad50-8' : AgentBinding connect Operators::agent_devbox to 'account_whatsapp:devbox' {
+        }
         connection 'binding_binding-7ea0ec7db3778bcb9435-1' : AgentBinding connect Operators::agent_secretary to 'account_whatsapp:secretary' {
             attribute :>> peerKind = "direct";
         }

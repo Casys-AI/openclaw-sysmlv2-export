@@ -35,7 +35,7 @@ Deno.test("collector preserves complete account, binding and bundled skill ident
         account.channel === "whatsapp" && account.accountId === "secretary"
       ),
     );
-    assert.equal(snapshot.bindings.length, 8);
+    assert.equal(snapshot.bindings.length, 10);
     assert.ok(
       snapshot.bundledSkills.some((skill) =>
         skill.id === "1password" && !skill.enabled

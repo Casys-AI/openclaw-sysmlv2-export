@@ -381,7 +381,7 @@ Deno.test("MCP subsets are known but cannot grant a whole server", () => {
       [],
     );
     assert.deepEqual(findings.map((f) => [f.code, f.severity, f.subject]), [
-      ["MCP_TOOL_SUBSET_UNRESOLVED", "info", "test"],
+      ["MCP_TOOL_SUBSET_UNRESOLVED", "info", "agent:test"],
     ]);
   }
   const findings: Finding[] = [];
