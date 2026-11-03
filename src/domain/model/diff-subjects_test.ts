@@ -32,6 +32,9 @@ Deno.test("changes read as bullets per element, under readable names", () => {
     canonical,
   );
   const of = (id: string) => subjects.find((s) => s.id === id)!;
+  const labels = elementLabels(snapshot);
+  assert.equal(labels["hook:hook-0"], "Webhook");
+  assert.equal(labels["instance"], "Instance");
   assert.equal(subjects[0].id, "instance");
   assert.deepEqual(subjects[0].bullets, [
     { kind: "memory.backend", field: "slot", before: "—", after: "none" },

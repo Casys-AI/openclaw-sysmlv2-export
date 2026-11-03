@@ -3,7 +3,8 @@ import type { Snapshot } from "./snapshot.ts";
 
 /** The readable name of every element the Doctor, the Changes list and the
  * inspector title, by element id: an agent's display name, a task's name, an
- * account's `channel:account`. An element missing here is its own label. */
+ * account's `channel:account`, a hook's name. An element missing here is its
+ * own label. */
 export function elementLabels(s: Snapshot): Record<string, string> {
   const agent = new Map(s.agents.map((a) => [a.id, a.name]));
   const labels: Record<string, string> = {
