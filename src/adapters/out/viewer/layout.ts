@@ -763,13 +763,19 @@ async function laidOut(
   return sceneOf(view, scenes, await elk.layout(graph));
 }
 
-/** The aspect of the canvas a diagram gets on a 1600 × 1000 window: 1528 ×
- * 880 px, less the table under it, which takes a bar and a header (80 px) and
- * 28 px a row, up to 42% of the height (page.ts). With no table this is about
- * a 16:9 screen; a table of ten rows or more leaves 3:1. */
-export function canvasAspect(tableRows: number): number {
-  const table = tableRows ? Math.min(0.42 * 880, 80 + 28 * tableRows) : 0;
-  return 1528 / (880 - table);
+/** The canvas of a 1600 × 1000 window, and the table under a diagram: a bar
+ * and a header, a row, and at most the share of the height that page.ts gives
+ * it. */
+const CANVAS = { w: 1528, h: 880 };
+const TABLE = { head: 80, row: 28, share: 0.42 };
+/** The aspect of the canvas a diagram gets once its table has taken its room.
+ * With no table this is about a 16:9 screen; a table of ten rows or more
+ * leaves 3:1. */
+function canvasAspect(tableRows: number): number {
+  const table = tableRows
+    ? Math.min(TABLE.share * CANVAS.h, TABLE.head + TABLE.row * tableRows)
+    : 0;
+  return CANVAS.w / (CANVAS.h - table);
 }
 /** The scale at which a scene fits a viewport of that aspect and height 1. */
 const shown = (s: Scene, aspect: number) => Math.min(aspect / s.w, 1 / s.h);
