@@ -80,6 +80,13 @@ main > section[hidden] { display: none; }
 .md-title strong { font-size: 18px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .md-title span { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .md-toolbar select { min-width: 140px; max-width: 280px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
+.md-chip { max-width: 360px; padding: 3px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.md-chip[hidden] { display: none; }
+.tb-tabs { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 9px; }
+.tb-bar .tb-tabs button { border: 0; border-radius: 7px; color: var(--muted); font-weight: 600; }
+.tb-bar .tb-tabs button[aria-pressed="true"] { color: var(--ink); background: var(--accent-soft); }
+.et td.et-num { text-align: right; font-variant-numeric: tabular-nums; }
+.et-tag { margin-left: 8px; padding: 0 6px; border-radius: 999px; font: 600 10.5px var(--font); color: var(--doc); background: var(--warn-bg); white-space: nowrap; }
 .md-tools { display: flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
 .md-tools { margin-left: auto; }
 .md-tools[hidden] { display: none; }
@@ -435,6 +442,7 @@ pre { padding: 8px 10px; }
 <div class="md-toolbar">
 <div class="md-title"><strong id="view-title"></strong><span id="view-sub"></span></div>
 <select id="view" aria-label="SysML view"></select>
+<span class="md-chip" id="authority" hidden></span>
 <div class="md-tools"><button type="button" id="fit" title="Fit (0)">Fit</button><button type="button" id="fit-selection" title="Fit selection (F)" aria-label="Fit selection" disabled><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 7.5V3h4.5M12.5 3H17v4.5M17 12.5V17h-4.5M7.5 17H3v-4.5"/><rect x="7" y="7" width="6" height="6" rx="1.5"/></svg></button><button type="button" id="zoom-in" title="Zoom in (+)" aria-label="Zoom in">+</button><button type="button" id="zoom-out" title="Zoom out (−)" aria-label="Zoom out">−</button></div>
 </div>
 <div class="md-main">
@@ -491,6 +499,8 @@ const state = { version: 0, tab: "diagrams", view: "overview", file: "OpenClawIn
   // Tables: the text filter, folded groups, the facet value shown, the sort,
   // and the height a table under a diagram was dragged to.
   filter: "", folded: new Set(), facet: null, sort: null, sheetH: null, sheetFolded: false,
+  // Behaviour's table: "rules" or "procedures".
+  sheetTab: "rules",
   // A folded legend, read from storage once.
   legendFolded: null,
   // What the last link named that the page lacks (see follow).
@@ -577,7 +587,9 @@ function missing(code, id) {
   // The asked-for view: the nearest version that has it opens it.
   const has = versions.map((_, i) => i).filter((i) => entryOf(i, id)).sort((a, b) => Math.abs(a - state.version) - Math.abs(b - state.version));
   const title = has.length ? payload(entryOf(has[0], id)).title : id;
-  return { code, text: title + " is not in this version", detail: "No view " + id + " in this version" + (has.length ? "; " + plural(has.length, "version") + " of this page have it." : " nor in any other."),
+  // A Behaviour view is missing because this version ran no inference.
+  const why = id.startsWith("behaviour:") && !versions[state.version].inferred ? " · inference not run" : " is not in this version";
+  return { code, text: title + why, detail: "No view " + id + " in this version" + (has.length ? "; " + plural(has.length, "version") + " of this page have it." : " nor in any other."),
     recovery: has.length ? { label: when(versions[has[0]]), go: () => navigate({ version: has[0] }, true) } : null };
 }
 function renderNote() {
@@ -976,8 +988,20 @@ function renderLegend(view) {
   box.replaceChildren(...folded ? [] : keys, fold);
   box.hidden = !items.length;
 }
+// When a Behaviour view's inference was made: an earlier run's, reused
+// because its sources did not change (export-instance.ts's inferredIn).
+function inferredIn(view) {
+  const ref = versions[state.version].files["inference.json"], agent = view.id.slice("behaviour:".length);
+  if (ref === undefined) return null;
+  const a = (JSON.parse(data.texts[ref]).agents || []).find((x) => x.agentId === agent);
+  return a && a.inferredIn && a.inferredIn !== versions[state.version].id ? a.inferredIn : null;
+}
 function subtitle(view) {
   const t = view.table;
+  if (view.group === "Behaviour" && inferredIn(view)) {
+    const at = versions.find((v) => v.id === inferredIn(view));
+    return "inferred " + (at ? when(at) : inferredIn(view)) + " · sources unchanged";
+  }
   if (t && t.kind === "matrix") {
     return t.rows.filter((r) => r.shape === "tool" && !r.dashed).length + " tools × " + t.columns.length + " agents · SysML allocation matrix";
   }
@@ -1009,23 +1033,32 @@ function renderDiagram(keepViewport) {
   renderPicker(entries, view.id);
   document.getElementById("view-title").textContent = view.title;
   document.getElementById("view-sub").textContent = subtitle(view);
+  // Behaviour's authority: where exec runs and what the agent may send through.
+  const authority = document.getElementById("authority");
+  authority.hidden = !view.authority;
+  if (view.authority) {
+    authority.textContent = view.authority.text;
+    authority.title = "exec runs " + (view.authority.exec.join(", ") || "nowhere: not granted") + (view.authority.ask ? " · ask " + view.authority.ask : "") +
+      (view.authority.outbound.length ? " · may send through " + view.authority.outbound.join(", ") : "");
+  }
   renderLegend(view);
   const keep = keepViewport && state.drawn && state.drawn.view === view.id, kept = keep && state.drawn.scene;
   if (!keep) { state.selected = null; state.filter = ""; state.facet = null; state.sort = null; }
   document.getElementById("md").classList.toggle("hl", state.highlight);
   document.querySelector(".md-tools").hidden = !view.scene;
-  stage.hidden = !view.scene && Boolean(view.table);
-  sheet.hidden = !view.table;
+  const listed = Boolean(view.table || view.procedures);
+  stage.hidden = !view.scene && listed;
+  sheet.hidden = !listed;
   sheet.classList.toggle("alone", !view.scene);
   const folded = Boolean(view.scene && state.sheetFolded);
-  document.getElementById("split").hidden = !(view.scene && view.table) || folded;
+  document.getElementById("split").hidden = !(view.scene && listed) || folded;
   sheet.classList.toggle("folded", folded);
   sheet.style.height = view.scene && state.sheetH && !folded ? state.sheetH + "px" : "";
   sheet.style.maxHeight = view.scene && state.sheetH && !folded ? "none" : "";
   state.drawn = { view: view.id, svg: null, world: null, scene: view.scene, payload: view };
   state.doc = marks(state.version);
   // The table first: the diagram fits in the room it leaves.
-  if (view.table) {
+  if (listed) {
     const at = [sheet.scrollTop, sheet.scrollLeft];
     renderTable(sheet, view, changeMarks());
     if (keep) [sheet.scrollTop, sheet.scrollLeft] = at;
@@ -1624,10 +1657,42 @@ function showLines(vi, file, from, to) {
 // ---- Tables
 function renderTable(box, view, delta) {
   const t = view.table, mark = marker(delta);
-  if (t.kind === "matrix") renderMatrix(box, t, mark);
+  if (view.procedures && (state.sheetTab === "procedures" || !t)) renderProcedures(box, view, mark);
+  else if (t.kind === "matrix") renderMatrix(box, t, mark);
   else if (t.kind === "week") renderWeek(box, t, mark);
   else renderElements(box, view, t, mark);
-  if (view.scene) box.querySelector(".tb-bar").append(foldButton(state.sheetFolded));
+  const bar = box.querySelector(".tb-bar");
+  if (view.procedures && t) bar.querySelector(".tb-title").replaceWith(sheetTabs(view));
+  if (view.scene) bar.append(foldButton(state.sheetFolded));
+}
+// Behaviour's table shows its rules or its procedures, for every Behaviour view.
+function sheetTabs(view) {
+  const tabs = el("span", "tb-tabs");
+  tabs.append(...[["rules", "Rules", view.table.rows.length], ["procedures", "Procedures", view.procedures.length]].map(([key, label, n]) => {
+    const b = button(label + " " + n, () => keepFocus(() => { state.sheetTab = key; renderTable(document.getElementById("sheet"), view, changeMarks()); applyFocus(); }));
+    b.dataset.key = "sheet-tab:" + key;
+    b.setAttribute("aria-pressed", String((state.sheetTab === "procedures") === (key === "procedures")));
+    return b;
+  }));
+  return tabs;
+}
+// A view's procedures (views.ts's procedures), in drawing order: a row
+// frames its procedure.
+function renderProcedures(box, view, mark) {
+  const bar = el("div", "tb-bar"), table = el("table", "et"), head = el("tr"), tbody = el("tbody");
+  bar.append(el("strong", "tb-title", "Procedures"));
+  head.append(...["procedure", "trigger", "steps"].map((c) => el("th", "", c)));
+  tbody.append(...view.procedures.map((p) => {
+    const tr = el("tr", mark(p.id).trim());
+    tr.dataset.id = p.id;
+    tr.tabIndex = 0;
+    tr.append(el("td", "et-name", p.title), el("td", "et-wrap", p.trigger), el("td", "et-num", String(p.steps)));
+    return tr;
+  }));
+  const thead = el("thead");
+  thead.append(head);
+  table.append(thead, tbody);
+  box.replaceChildren(bar, table);
 }
 function search(label) {
   const input = el("input");
@@ -1747,6 +1812,15 @@ function renderMatrix(box, t, mark) {
   rows();
   box.replaceChildren(bar, table);
 }
+// The rules of a Behaviour view that a PROSE_NOT_ENFORCED finding names: its
+// subject is the agent, the rule is named in its context.
+function unenforcedRules(view) {
+  if (view.group !== "Behaviour") return new Set();
+  const agent = "agent:" + view.id.slice("behaviour:".length);
+  const words = (versions[state.version].findings || []).filter((f) => f.code === "PROSE_NOT_ENFORCED" && f.subject === agent)
+    .flatMap((f) => f.context.split(/[^\w.:-]+/));
+  return new Set(view.table.rows.map((r) => r.id).filter((id) => words.includes(id.slice("rule:".length))));
+}
 // An Overview figure (tables.ts's figures): its number aligned, its split
 // small beside it, what it counts in the tooltip; the full value too.
 const FLAGS = { search: ["⌕", "memory search"], curated: ["✦", "curated memory (MEMORY.md)"], daily: ["▦", "daily notes"] };
@@ -1790,6 +1864,7 @@ function renderElements(box, view, t, mark) {
     }));
   }
   const text = (r, c) => c < 0 ? r.title || r.name : r.values[c];
+  const unenforced = unenforcedRules(view);
   const table = el("table", "et"), head = el("tr"), tbody = el("tbody");
   [-1, ...t.columns.keys()].forEach((c) => {
     const sorted = state.sort && state.sort.col === c;
@@ -1824,6 +1899,7 @@ function renderElements(box, view, t, mark) {
       const name = el("td", "et-name");
       if (r.title) name.append(el("span", "", r.title), el("small", "", r.name));
       else name.textContent = r.name;
+      if (unenforced.has(r.id)) name.append(el("small", "et-tag doc-warning", CODE_LABELS.PROSE_NOT_ENFORCED));
       tr.append(name, ...r.values.map((v, c) => r.figures && r.figures[t.columns[c]] ? figureCell(t.columns[c], r.figures[t.columns[c]], v)
         : el("td", (wraps[c] ? "et-wrap" : "") + (c === facet ? " et-facet" : ""), v)));
       if (linked) {
