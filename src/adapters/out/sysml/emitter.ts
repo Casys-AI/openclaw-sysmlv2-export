@@ -1,3 +1,4 @@
+import { credentialPathParts } from "../../../domain/openclaw/credentials.ts";
 import { canonical } from "../../../infrastructure/canonical-json.ts";
 import { name } from "../../../domain/model/sysml-name.ts";
 import { grants, ORIGINS } from "../../../domain/openclaw/tool-grants.ts";
@@ -31,6 +32,25 @@ function file(f: FileRef, declaration: string): string[] {
   return block(
     declaration,
     attrs({ path: f.path, sha256: f.sha256, bytes: f.bytes }),
+  );
+}
+function stringMembers(role: string, values: readonly string[]): string[] {
+  return values.map((value, index) =>
+    `attribute ${role}_${index} :> ${role} = ${literal(value)};`
+  );
+}
+function commandMembers(
+  commands: Snapshot["agents"][number]["execution"]["commands"],
+): string[] {
+  return commands.flatMap((command, index) =>
+    block(
+      `part command_${index} :> commands`,
+      attrs({
+        command: command.command,
+        kind: command.kind,
+        argsRestricted: command.argsRestricted,
+      }),
+    )
   );
 }
 function every(ms: number): string[] {
@@ -88,11 +108,24 @@ export function emit(snapshot: Snapshot): Map<string, string> {
       f.path === "MEMORY.md"
     );
     const { search, daily, otherCount } = a.memory;
-    const { commands: _commands, approvals, effective, ...execution } =
-      a.execution;
+    const {
+      commands,
+      safeBins,
+      safeBinProfiles,
+      approvals,
+      effective,
+      ...execution
+    } = a.execution;
     operators.push(
       ...block(`part ${name("agent", a.id)} : ${name("Agent", a.id)}`, [
         ...block("part :>> context", [
+          ...attrs({ workspaceVersioned: a.workspace.versioned }),
+          ...a.workspace.malformedSkills.flatMap((path, index) =>
+            block(
+              `part unresolvedEntry_${index} :> unresolvedEntries`,
+              attrs({ path }),
+            )
+          ),
           ...a.workspace.instructions.flatMap((f) =>
             file(f, `part ${name("file", f.id)} :> instructions`)
           ),
@@ -104,24 +137,26 @@ export function emit(snapshot: Snapshot): Map<string, string> {
           ),
           ...block(
             "part :>> memory",
-            attrs({
-              searchEnabled: search.enabled,
-              searchProvider: search.provider,
-              searchModel: search.model,
-              searchFallback: search.fallback,
-              searchSources: search.sources,
-              rememberAcrossConversations: search.rememberAcrossConversations,
-              extraPathCount: search.extraPathCount,
-              multimodal: search.multimodal,
-              curatedSha256: curated?.sha256 ?? null,
-              curatedBytes: curated?.bytes ?? null,
-              dailyCount: daily.count,
-              dailyFirstDate: daily.firstDate,
-              dailyLastDate: daily.lastDate,
-              dailyBytes: daily.bytes,
-              dailySha256: daily.sha256,
-              otherCount,
-            }),
+            [
+              ...attrs({
+                searchEnabled: search.enabled,
+                searchProvider: search.provider,
+                searchModel: search.model,
+                searchFallback: search.fallback,
+                rememberAcrossConversations: search.rememberAcrossConversations,
+                extraPathCount: search.extraPathCount,
+                multimodal: search.multimodal,
+                curatedSha256: curated?.sha256 ?? null,
+                curatedBytes: curated?.bytes ?? null,
+                dailyCount: daily.count,
+                dailyFirstDate: daily.firstDate,
+                dailyLastDate: daily.lastDate,
+                dailyBytes: daily.bytes,
+                dailySha256: daily.sha256,
+                otherCount,
+              }),
+              ...stringMembers("searchSources", search.sources),
+            ],
           ),
         ]),
         ...block(
@@ -138,17 +173,24 @@ export function emit(snapshot: Snapshot): Map<string, string> {
             bindCount: a.sandbox.bindCount,
             bindModes: a.sandbox.bindModes,
             environmentNames: a.sandbox.environmentNames,
+            dangerouslyAllowExternalBindSources:
+              a.sandbox.dangerouslyAllowExternalBindSources,
           }),
         ),
         ...block(
           "part execution : ExecutionPosture",
-          attrs({
-            ...execution,
-            approvalSecurity: approvals.security,
-            approvalAsk: approvals.ask,
-            effectiveSecurity: effective.security,
-            effectiveAsk: effective.ask,
-          }),
+          [
+            ...attrs({
+              ...execution,
+              approvalSecurity: approvals.security,
+              approvalAsk: approvals.ask,
+              effectiveSecurity: effective.security,
+              effectiveAsk: effective.ask,
+            }),
+            ...stringMembers("safeBins", safeBins ?? []),
+            ...stringMembers("safeBinProfiles", safeBinProfiles),
+            ...commandMembers(commands),
+          ],
         ),
       ]),
     );
@@ -233,6 +275,7 @@ export function emit(snapshot: Snapshot): Map<string, string> {
     cases.push(...block(`part ${name("heartbeat", a.id)} : ScheduledCase`, [
       ...attrs({
         id: `heartbeat:${a.id}`,
+        kind: "heartbeat",
         displayName: `Heartbeat ${a.id}`,
         enabled: a.heartbeat.everyMs > 0,
       }),
@@ -250,6 +293,7 @@ export function emit(snapshot: Snapshot): Map<string, string> {
     cases.push(...block(`part ${name("cron", j.id)} : ScheduledCase`, [
       ...attrs({
         id: j.id,
+        kind: "cron",
         displayName: j.name,
         enabled: j.enabled,
         unresolvedTarget: owner ? null : j.agentId,
@@ -283,6 +327,7 @@ export function emit(snapshot: Snapshot): Map<string, string> {
     block(
       `part ${name("account", a.id)} : ChannelAccount`,
       attrs({
+        id: a.id,
         channel: a.channel,
         accountId: a.accountId,
         enabled: a.enabled,
@@ -291,7 +336,35 @@ export function emit(snapshot: Snapshot): Map<string, string> {
       }),
     )
   );
+  for (
+    const [index, path] of [...snapshot.plaintextCredentialPaths ?? []].sort()
+      .entries()
+  ) {
+    const parts = credentialPathParts(path);
+    const account = parts[0] === "channels"
+      ? snapshot.accounts.find((a) =>
+        a.channel === parts[1] && a.accountId === parts[3]
+      )
+      : undefined;
+    entries.push(...block(`part credentialPath_${index} : CredentialPath`, [
+      ...attrs({ path }),
+      ...(account
+        ? [`ref part :>> account = ${name("account", account.id)};`]
+        : []),
+    ]));
+  }
   for (const b of snapshot.bindings) {
+    entries.push(
+      ...block(
+        `part ${name("bindingConfiguration", b.id)} : BindingConfiguration`,
+        attrs({
+          id: b.id,
+          agentId: b.agentId,
+          account: b.account,
+          peerKind: b.peerKind,
+        }),
+      ),
+    );
     if (
       snapshot.agents.some((a) => a.id === b.agentId) &&
       snapshot.accounts.some((a) => a.id === b.account)
@@ -375,19 +448,29 @@ export function emit(snapshot: Snapshot): Map<string, string> {
     const { defaults, wildcardCommands } = snapshot.execApprovals;
     authority.push(...block(
       "part execApprovals : ExecApprovals",
-      attrs({
-        defaultSecurity: defaults.security,
-        defaultAsk: defaults.ask,
-        askFallback: defaults.askFallback,
-        autoAllowSkills: defaults.autoAllowSkills,
-        wildcardCommands,
-      }),
+      [
+        ...attrs({
+          defaultSecurity: defaults.security,
+          defaultAsk: defaults.ask,
+          askFallback: defaults.askFallback,
+          autoAllowSkills: defaults.autoAllowSkills,
+          wildcardCommands,
+        }),
+        ...commandMembers(wildcardCommands),
+      ],
     ));
   }
 
   const instance = block("package OpenClawInstance", [
     "private import OpenClawImport::*;",
     "private import ScalarValues::*;",
+    ...block(
+      "part inventory : InstanceInventory",
+      attrs({
+        openclawVersion: snapshot.openclawVersion,
+        backupCount: snapshot.backupCount,
+      }),
+    ),
     ...group(
       "Operators",
       "OpenClaw agents as software operators, each with its context, sandbox and exec posture, and the model providers they use.",

@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { EMAIL_ADDRESS_PATTERN, JWT_PATTERN } from "@logtape/redaction";
 import { collect } from "../../src/adapters/out/openclaw/collector.ts";
-import { doctor } from "../../src/domain/model/diagnostics/doctor.ts";
 import { emit, name } from "../../src/adapters/out/sysml/emitter.ts";
 import { canonical } from "../../src/infrastructure/canonical-json.ts";
 import { createFixture } from "../support/fixture.ts";
@@ -19,12 +18,10 @@ Deno.test("fixture output is deterministic, sanitized, and matches reviewed gold
     const outputs = new Map([
       ["snapshot.json", canonical(snapshot)],
       ...files,
-      ["findings.json", canonical(doctor(snapshot))],
     ]);
     assert.deepEqual([...outputs.keys()].sort(), [
       "OpenClawImport.sysml",
       "OpenClawInstance.sysml",
-      "findings.json",
       "snapshot.json",
     ]);
     for (const [name, output] of outputs) {

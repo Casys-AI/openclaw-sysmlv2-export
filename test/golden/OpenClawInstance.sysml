@@ -1,6 +1,10 @@
 package OpenClawInstance {
     private import OpenClawImport::*;
     private import ScalarValues::*;
+    part inventory : InstanceInventory {
+        attribute :>> openclawVersion = "2026.6.10";
+        attribute :>> backupCount = 2;
+    }
     package Operators {
         doc /* OpenClaw agents as software operators, each with its context, sandbox and exec posture, and the model providers they use. */
         part def Agent_client :> OpenClawAgent {
@@ -97,6 +101,7 @@ package OpenClawInstance {
         }
         part agent_client : Agent_client {
             part :>> context {
+                attribute :>> workspaceVersioned = false;
                 part 'file_AGENTS.md' :> instructions {
                     attribute :>> path = "AGENTS.md";
                     attribute :>> sha256 = "b950438849e5142c35fa7ebc87aa7e9b154aa0a0c84712d947359af840112b29";
@@ -146,12 +151,12 @@ package OpenClawInstance {
                     attribute :>> searchEnabled = true;
                     attribute :>> searchProvider = "local";
                     attribute :>> searchFallback = "none";
-                    attribute :>> searchSources = "[\"memory\"]";
                     attribute :>> extraPathCount = 0;
                     attribute :>> multimodal = false;
                     attribute :>> dailyCount = 0;
                     attribute :>> dailyBytes = 0;
                     attribute :>> otherCount = 0;
+                    attribute searchSources_0 :> searchSources = "memory";
                 }
             }
             part sandbox : Sandbox {
@@ -166,6 +171,7 @@ package OpenClawInstance {
                 attribute :>> bindCount = 1;
                 attribute :>> bindModes = "[\"rw\"]";
                 attribute :>> environmentNames = "[\"DATABASE_URL\",\"OAUTH_BROKER_SECRET_KEY\",\"PAGES_BASE_URL\",\"READER_API_KEY\",\"SEARCH_API_KEY\"]";
+                attribute :>> dangerouslyAllowExternalBindSources = true;
             }
             part execution : ExecutionPosture {
                 attribute :>> host = "auto";
@@ -173,8 +179,6 @@ package OpenClawInstance {
                 attribute :>> ask = "off";
                 attribute :>> elevated = true;
                 attribute :>> elevatedChannelsCount = 1;
-                attribute :>> safeBins = "[\"jq\",\"python3\",\"wc\"]";
-                attribute :>> safeBinProfiles = "[\"wc\"]";
                 attribute :>> trustedDirCount = 1;
                 attribute :>> pathPrependCount = 1;
                 attribute :>> strictInlineEval = false;
@@ -182,6 +186,20 @@ package OpenClawInstance {
                 attribute :>> approvalAsk = "on-miss";
                 attribute :>> effectiveSecurity = "allowlist";
                 attribute :>> effectiveAsk = "on-miss";
+                attribute safeBins_0 :> safeBins = "jq";
+                attribute safeBins_1 :> safeBins = "python3";
+                attribute safeBins_2 :> safeBins = "wc";
+                attribute safeBinProfiles_0 :> safeBinProfiles = "wc";
+                part command_0 :> commands {
+                    attribute :>> command = "python3";
+                    attribute :>> kind = "safe-bin";
+                    attribute :>> argsRestricted = true;
+                }
+                part command_1 :> commands {
+                    attribute :>> command = "wc";
+                    attribute :>> kind = "safe-bin";
+                    attribute :>> argsRestricted = true;
+                }
             }
         }
         part def Agent_coach :> OpenClawAgent {
@@ -283,6 +301,7 @@ package OpenClawInstance {
         }
         part agent_coach : Agent_coach {
             part :>> context {
+                attribute :>> workspaceVersioned = false;
                 part 'file_AGENTS.md' :> instructions {
                     attribute :>> path = "AGENTS.md";
                     attribute :>> sha256 = "b950438849e5142c35fa7ebc87aa7e9b154aa0a0c84712d947359af840112b29";
@@ -327,12 +346,12 @@ package OpenClawInstance {
                     attribute :>> searchEnabled = true;
                     attribute :>> searchProvider = "local";
                     attribute :>> searchFallback = "none";
-                    attribute :>> searchSources = "[\"memory\"]";
                     attribute :>> extraPathCount = 0;
                     attribute :>> multimodal = false;
                     attribute :>> dailyCount = 0;
                     attribute :>> dailyBytes = 0;
                     attribute :>> otherCount = 0;
+                    attribute searchSources_0 :> searchSources = "memory";
                 }
             }
             part sandbox : Sandbox {
@@ -347,6 +366,7 @@ package OpenClawInstance {
                 attribute :>> bindCount = 1;
                 attribute :>> bindModes = "[\"rw\"]";
                 attribute :>> environmentNames = "[\"DATABASE_URL\",\"OAUTH_BROKER_SECRET_KEY\",\"PAGES_BASE_URL\",\"READER_API_KEY\",\"SEARCH_API_KEY\"]";
+                attribute :>> dangerouslyAllowExternalBindSources = true;
             }
             part execution : ExecutionPosture {
                 attribute :>> host = "auto";
@@ -354,8 +374,6 @@ package OpenClawInstance {
                 attribute :>> ask = "off";
                 attribute :>> elevated = true;
                 attribute :>> elevatedChannelsCount = 1;
-                attribute :>> safeBins = "[\"jq\",\"python3\",\"wc\"]";
-                attribute :>> safeBinProfiles = "[\"wc\"]";
                 attribute :>> trustedDirCount = 1;
                 attribute :>> pathPrependCount = 1;
                 attribute :>> strictInlineEval = false;
@@ -363,6 +381,20 @@ package OpenClawInstance {
                 attribute :>> approvalAsk = "on-miss";
                 attribute :>> effectiveSecurity = "allowlist";
                 attribute :>> effectiveAsk = "on-miss";
+                attribute safeBins_0 :> safeBins = "jq";
+                attribute safeBins_1 :> safeBins = "python3";
+                attribute safeBins_2 :> safeBins = "wc";
+                attribute safeBinProfiles_0 :> safeBinProfiles = "wc";
+                part command_0 :> commands {
+                    attribute :>> command = "python3";
+                    attribute :>> kind = "safe-bin";
+                    attribute :>> argsRestricted = true;
+                }
+                part command_1 :> commands {
+                    attribute :>> command = "wc";
+                    attribute :>> kind = "safe-bin";
+                    attribute :>> argsRestricted = true;
+                }
             }
         }
         part def Agent_devbox :> OpenClawAgent {
@@ -463,6 +495,7 @@ package OpenClawInstance {
         }
         part agent_devbox : Agent_devbox {
             part :>> context {
+                attribute :>> workspaceVersioned = false;
                 part 'file_AGENTS.md' :> instructions {
                     attribute :>> path = "AGENTS.md";
                     attribute :>> sha256 = "b950438849e5142c35fa7ebc87aa7e9b154aa0a0c84712d947359af840112b29";
@@ -507,12 +540,12 @@ package OpenClawInstance {
                     attribute :>> searchEnabled = true;
                     attribute :>> searchProvider = "local";
                     attribute :>> searchFallback = "none";
-                    attribute :>> searchSources = "[\"memory\"]";
                     attribute :>> extraPathCount = 0;
                     attribute :>> multimodal = false;
                     attribute :>> dailyCount = 0;
                     attribute :>> dailyBytes = 0;
                     attribute :>> otherCount = 0;
+                    attribute searchSources_0 :> searchSources = "memory";
                 }
             }
             part sandbox : Sandbox {
@@ -527,6 +560,7 @@ package OpenClawInstance {
                 attribute :>> bindCount = 0;
                 attribute :>> bindModes = "[]";
                 attribute :>> environmentNames = "[\"GATEWAY_HOST\",\"GATEWAY_PORT\",\"HOOKS_TOKEN\",\"OAUTH_BROKER_SECRET_KEY\",\"READER_API_KEY\",\"SEARCH_API_KEY\"]";
+                attribute :>> dangerouslyAllowExternalBindSources = false;
             }
             part execution : ExecutionPosture {
                 attribute :>> host = "auto";
@@ -534,8 +568,6 @@ package OpenClawInstance {
                 attribute :>> ask = "off";
                 attribute :>> elevated = true;
                 attribute :>> elevatedChannelsCount = 1;
-                attribute :>> safeBins = "[\"jq\",\"python3\",\"wc\"]";
-                attribute :>> safeBinProfiles = "[\"wc\"]";
                 attribute :>> trustedDirCount = 1;
                 attribute :>> pathPrependCount = 1;
                 attribute :>> strictInlineEval = false;
@@ -543,6 +575,20 @@ package OpenClawInstance {
                 attribute :>> approvalAsk = "on-miss";
                 attribute :>> effectiveSecurity = "allowlist";
                 attribute :>> effectiveAsk = "on-miss";
+                attribute safeBins_0 :> safeBins = "jq";
+                attribute safeBins_1 :> safeBins = "python3";
+                attribute safeBins_2 :> safeBins = "wc";
+                attribute safeBinProfiles_0 :> safeBinProfiles = "wc";
+                part command_0 :> commands {
+                    attribute :>> command = "python3";
+                    attribute :>> kind = "safe-bin";
+                    attribute :>> argsRestricted = true;
+                }
+                part command_1 :> commands {
+                    attribute :>> command = "wc";
+                    attribute :>> kind = "safe-bin";
+                    attribute :>> argsRestricted = true;
+                }
             }
         }
         part def Agent_field :> OpenClawAgent {
@@ -642,6 +688,7 @@ package OpenClawInstance {
         }
         part agent_field : Agent_field {
             part :>> context {
+                attribute :>> workspaceVersioned = false;
                 part 'file_AGENTS.md' :> instructions {
                     attribute :>> path = "AGENTS.md";
                     attribute :>> sha256 = "b950438849e5142c35fa7ebc87aa7e9b154aa0a0c84712d947359af840112b29";
@@ -716,7 +763,6 @@ package OpenClawInstance {
                     attribute :>> searchEnabled = true;
                     attribute :>> searchProvider = "local";
                     attribute :>> searchFallback = "none";
-                    attribute :>> searchSources = "[\"memory\"]";
                     attribute :>> extraPathCount = 0;
                     attribute :>> multimodal = false;
                     attribute :>> curatedSha256 = "b5f5a6329599f58b01306d855af8b198f425af2f7bf2e6cb0c57caaa9784eb23";
@@ -727,6 +773,7 @@ package OpenClawInstance {
                     attribute :>> dailyBytes = 16;
                     attribute :>> dailySha256 = "371942c13809f135478a482a31bd56195e4c58dfdc1994e5ba661ce959e940c9";
                     attribute :>> otherCount = 0;
+                    attribute searchSources_0 :> searchSources = "memory";
                 }
             }
             part sandbox : Sandbox {
@@ -741,6 +788,7 @@ package OpenClawInstance {
                 attribute :>> bindCount = 1;
                 attribute :>> bindModes = "[\"rw\"]";
                 attribute :>> environmentNames = "[\"GATEWAY_HOST\",\"GATEWAY_PORT\",\"HOOKS_TOKEN\",\"NAS_ACCOUNT\",\"NAS_BASE_PATH\",\"NAS_HOST\",\"NAS_PASSWORD\",\"OAUTH_BROKER_SECRET_KEY\",\"OPENAI_API_KEY\",\"READER_API_KEY\",\"SEARCH_API_KEY\",\"SEO_API_PASSWORD\",\"SEO_API_TOKEN\",\"SEO_API_USER\"]";
+                attribute :>> dangerouslyAllowExternalBindSources = true;
             }
             part execution : ExecutionPosture {
                 attribute :>> host = "auto";
@@ -748,8 +796,6 @@ package OpenClawInstance {
                 attribute :>> ask = "off";
                 attribute :>> elevated = true;
                 attribute :>> elevatedChannelsCount = 1;
-                attribute :>> safeBins = "[\"jq\",\"python3\",\"wc\"]";
-                attribute :>> safeBinProfiles = "[\"wc\"]";
                 attribute :>> trustedDirCount = 1;
                 attribute :>> pathPrependCount = 1;
                 attribute :>> strictInlineEval = false;
@@ -757,6 +803,20 @@ package OpenClawInstance {
                 attribute :>> approvalAsk = "on-miss";
                 attribute :>> effectiveSecurity = "allowlist";
                 attribute :>> effectiveAsk = "on-miss";
+                attribute safeBins_0 :> safeBins = "jq";
+                attribute safeBins_1 :> safeBins = "python3";
+                attribute safeBins_2 :> safeBins = "wc";
+                attribute safeBinProfiles_0 :> safeBinProfiles = "wc";
+                part command_0 :> commands {
+                    attribute :>> command = "python3";
+                    attribute :>> kind = "safe-bin";
+                    attribute :>> argsRestricted = true;
+                }
+                part command_1 :> commands {
+                    attribute :>> command = "wc";
+                    attribute :>> kind = "safe-bin";
+                    attribute :>> argsRestricted = true;
+                }
             }
         }
         part def Agent_lead :> OpenClawAgent {
@@ -842,6 +902,7 @@ package OpenClawInstance {
         }
         part agent_lead : Agent_lead {
             part :>> context {
+                attribute :>> workspaceVersioned = true;
                 part 'file_AGENTS.md' :> instructions {
                     attribute :>> path = "AGENTS.md";
                     attribute :>> sha256 = "b950438849e5142c35fa7ebc87aa7e9b154aa0a0c84712d947359af840112b29";
@@ -1051,7 +1112,6 @@ package OpenClawInstance {
                     attribute :>> searchEnabled = true;
                     attribute :>> searchProvider = "local";
                     attribute :>> searchFallback = "none";
-                    attribute :>> searchSources = "[\"memory\"]";
                     attribute :>> extraPathCount = 0;
                     attribute :>> multimodal = false;
                     attribute :>> curatedSha256 = "b5f5a6329599f58b01306d855af8b198f425af2f7bf2e6cb0c57caaa9784eb23";
@@ -1062,6 +1122,7 @@ package OpenClawInstance {
                     attribute :>> dailyBytes = 32;
                     attribute :>> dailySha256 = "fff8b2bf3669aa98b4fccab9de17d486d49f3bf68bc51fedce99802e66e7d9d5";
                     attribute :>> otherCount = 2;
+                    attribute searchSources_0 :> searchSources = "memory";
                 }
             }
             part sandbox : Sandbox {
@@ -1073,6 +1134,7 @@ package OpenClawInstance {
                 attribute :>> bindCount = 0;
                 attribute :>> bindModes = "[]";
                 attribute :>> environmentNames = "[\"OAUTH_BROKER_SECRET_KEY\",\"READER_API_KEY\",\"SEARCH_API_KEY\"]";
+                attribute :>> dangerouslyAllowExternalBindSources = false;
             }
             part execution : ExecutionPosture {
                 attribute :>> host = "auto";
@@ -1080,8 +1142,6 @@ package OpenClawInstance {
                 attribute :>> ask = "on-miss";
                 attribute :>> elevated = true;
                 attribute :>> elevatedChannelsCount = 1;
-                attribute :>> safeBins = "[\"jq\",\"python3\",\"wc\"]";
-                attribute :>> safeBinProfiles = "[\"wc\"]";
                 attribute :>> trustedDirCount = 1;
                 attribute :>> pathPrependCount = 1;
                 attribute :>> strictInlineEval = false;
@@ -1089,6 +1149,30 @@ package OpenClawInstance {
                 attribute :>> approvalAsk = "on-miss";
                 attribute :>> effectiveSecurity = "allowlist";
                 attribute :>> effectiveAsk = "on-miss";
+                attribute safeBins_0 :> safeBins = "jq";
+                attribute safeBins_1 :> safeBins = "python3";
+                attribute safeBins_2 :> safeBins = "wc";
+                attribute safeBinProfiles_0 :> safeBinProfiles = "wc";
+                part command_0 :> commands {
+                    attribute :>> command = "rg";
+                    attribute :>> kind = "name";
+                    attribute :>> argsRestricted = false;
+                }
+                part command_1 :> commands {
+                    attribute :>> command = "git";
+                    attribute :>> kind = "path";
+                    attribute :>> argsRestricted = true;
+                }
+                part command_2 :> commands {
+                    attribute :>> command = "python3";
+                    attribute :>> kind = "safe-bin";
+                    attribute :>> argsRestricted = true;
+                }
+                part command_3 :> commands {
+                    attribute :>> command = "wc";
+                    attribute :>> kind = "safe-bin";
+                    attribute :>> argsRestricted = true;
+                }
             }
         }
         part def Agent_secretary :> OpenClawAgent {
@@ -1182,6 +1266,10 @@ package OpenClawInstance {
         }
         part agent_secretary : Agent_secretary {
             part :>> context {
+                attribute :>> workspaceVersioned = false;
+                part unresolvedEntry_0 :> unresolvedEntries {
+                    attribute :>> path = "skills/SKILL.md";
+                }
                 part 'file_AGENTS.md' :> instructions {
                     attribute :>> path = "AGENTS.md";
                     attribute :>> sha256 = "b950438849e5142c35fa7ebc87aa7e9b154aa0a0c84712d947359af840112b29";
@@ -1251,7 +1339,6 @@ package OpenClawInstance {
                     attribute :>> searchEnabled = true;
                     attribute :>> searchProvider = "local";
                     attribute :>> searchFallback = "none";
-                    attribute :>> searchSources = "[\"memory\"]";
                     attribute :>> extraPathCount = 0;
                     attribute :>> multimodal = false;
                     attribute :>> curatedSha256 = "b5f5a6329599f58b01306d855af8b198f425af2f7bf2e6cb0c57caaa9784eb23";
@@ -1259,6 +1346,7 @@ package OpenClawInstance {
                     attribute :>> dailyCount = 0;
                     attribute :>> dailyBytes = 0;
                     attribute :>> otherCount = 0;
+                    attribute searchSources_0 :> searchSources = "memory";
                 }
             }
             part sandbox : Sandbox {
@@ -1273,6 +1361,7 @@ package OpenClawInstance {
                 attribute :>> bindCount = 1;
                 attribute :>> bindModes = "[\"rw\"]";
                 attribute :>> environmentNames = "[\"GATEWAY_HOST\",\"GATEWAY_PORT\",\"HOOKS_TOKEN\",\"OAUTH_BROKER_SECRET_KEY\",\"OPENAI_API_KEY\",\"READER_API_KEY\",\"SEARCH_API_KEY\"]";
+                attribute :>> dangerouslyAllowExternalBindSources = true;
             }
             part execution : ExecutionPosture {
                 attribute :>> host = "auto";
@@ -1280,8 +1369,6 @@ package OpenClawInstance {
                 attribute :>> ask = "off";
                 attribute :>> elevated = true;
                 attribute :>> elevatedChannelsCount = 1;
-                attribute :>> safeBins = "[\"jq\",\"python3\",\"wc\"]";
-                attribute :>> safeBinProfiles = "[\"wc\"]";
                 attribute :>> trustedDirCount = 1;
                 attribute :>> pathPrependCount = 1;
                 attribute :>> strictInlineEval = false;
@@ -1289,6 +1376,20 @@ package OpenClawInstance {
                 attribute :>> approvalAsk = "on-miss";
                 attribute :>> effectiveSecurity = "allowlist";
                 attribute :>> effectiveAsk = "on-miss";
+                attribute safeBins_0 :> safeBins = "jq";
+                attribute safeBins_1 :> safeBins = "python3";
+                attribute safeBins_2 :> safeBins = "wc";
+                attribute safeBinProfiles_0 :> safeBinProfiles = "wc";
+                part command_0 :> commands {
+                    attribute :>> command = "python3";
+                    attribute :>> kind = "safe-bin";
+                    attribute :>> argsRestricted = true;
+                }
+                part command_1 :> commands {
+                    attribute :>> command = "wc";
+                    attribute :>> kind = "safe-bin";
+                    attribute :>> argsRestricted = true;
+                }
             }
         }
         part provider_google : ModelProvider {
@@ -1750,6 +1851,7 @@ package OpenClawInstance {
         doc /* Cron jobs and heartbeats as scheduled cases. */
         part heartbeat_lead : ScheduledCase {
             attribute :>> id = "heartbeat:lead";
+            attribute :>> kind = "heartbeat";
             attribute :>> displayName = "Heartbeat lead";
             attribute :>> enabled = true;
             ref part :>> targetAgent = Operators::agent_lead;
@@ -1763,6 +1865,7 @@ package OpenClawInstance {
         }
         part 'cron_job-1' : ScheduledCase {
             attribute :>> id = "job-1";
+            attribute :>> kind = "cron";
             attribute :>> displayName = "Daily digest";
             attribute :>> enabled = false;
             attribute :>> unresolvedTarget = "main";
@@ -1779,6 +1882,7 @@ package OpenClawInstance {
         }
         part 'cron_job-10' : ScheduledCase {
             attribute :>> id = "job-10";
+            attribute :>> kind = "cron";
             attribute :>> displayName = "Weekly Retrospective";
             attribute :>> enabled = false;
             attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
@@ -1795,6 +1899,7 @@ package OpenClawInstance {
         }
         part 'cron_job-2' : ScheduledCase {
             attribute :>> id = "job-2";
+            attribute :>> kind = "cron";
             attribute :>> displayName = "Security check";
             attribute :>> enabled = false;
             attribute :>> unresolvedTarget = "main";
@@ -1811,6 +1916,7 @@ package OpenClawInstance {
         }
         part 'cron_job-3' : ScheduledCase {
             attribute :>> id = "job-3";
+            attribute :>> kind = "cron";
             attribute :>> displayName = "process-leads";
             attribute :>> enabled = false;
             attribute :>> unresolvedTarget = "main";
@@ -1827,6 +1933,7 @@ package OpenClawInstance {
         }
         part 'cron_job-4' : ScheduledCase {
             attribute :>> id = "job-4";
+            attribute :>> kind = "cron";
             attribute :>> displayName = "Daily analytics report";
             attribute :>> enabled = false;
             attribute :>> unresolvedTarget = "main";
@@ -1843,6 +1950,7 @@ package OpenClawInstance {
         }
         part 'cron_job-5' : ScheduledCase {
             attribute :>> id = "job-5";
+            attribute :>> kind = "cron";
             attribute :>> displayName = "Weekly scouting A";
             attribute :>> enabled = false;
             attribute :>> unresolvedTarget = "main";
@@ -1859,6 +1967,7 @@ package OpenClawInstance {
         }
         part 'cron_job-6' : ScheduledCase {
             attribute :>> id = "job-6";
+            attribute :>> kind = "cron";
             attribute :>> displayName = "Weekly scouting B";
             attribute :>> enabled = false;
             attribute :>> unresolvedTarget = "main";
@@ -1875,6 +1984,7 @@ package OpenClawInstance {
         }
         part 'cron_job-7' : ScheduledCase {
             attribute :>> id = "job-7";
+            attribute :>> kind = "cron";
             attribute :>> displayName = "field-usage-daily";
             attribute :>> enabled = false;
             attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
@@ -1892,6 +2002,7 @@ package OpenClawInstance {
         }
         part 'cron_job-8' : ScheduledCase {
             attribute :>> id = "job-8";
+            attribute :>> kind = "cron";
             attribute :>> displayName = "field-usage-alert";
             attribute :>> enabled = false;
             attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
@@ -1910,6 +2021,7 @@ package OpenClawInstance {
         }
         part 'cron_job-9' : ScheduledCase {
             attribute :>> id = "job-9";
+            attribute :>> kind = "cron";
             attribute :>> displayName = "Daily marketing report";
             attribute :>> enabled = false;
             attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
@@ -1929,6 +2041,7 @@ package OpenClawInstance {
     package Entries {
         doc /* Channel accounts, the agents bound to them, and hooks. */
         part 'account_discord:default' : ChannelAccount {
+            attribute :>> id = "discord:default";
             attribute :>> channel = "discord";
             attribute :>> accountId = "default";
             attribute :>> enabled = true;
@@ -1936,6 +2049,7 @@ package OpenClawInstance {
             attribute :>> groupPolicy = "allowlist";
         }
         part 'account_discord:sandbox' : ChannelAccount {
+            attribute :>> id = "discord:sandbox";
             attribute :>> channel = "discord";
             attribute :>> accountId = "sandbox";
             attribute :>> enabled = true;
@@ -1943,6 +2057,7 @@ package OpenClawInstance {
             attribute :>> groupPolicy = "allowlist";
         }
         part 'account_telegram:default' : ChannelAccount {
+            attribute :>> id = "telegram:default";
             attribute :>> channel = "telegram";
             attribute :>> accountId = "default";
             attribute :>> enabled = true;
@@ -1950,6 +2065,7 @@ package OpenClawInstance {
             attribute :>> groupPolicy = "allowlist";
         }
         part 'account_telegram:field' : ChannelAccount {
+            attribute :>> id = "telegram:field";
             attribute :>> channel = "telegram";
             attribute :>> accountId = "field";
             attribute :>> enabled = true;
@@ -1957,6 +2073,7 @@ package OpenClawInstance {
             attribute :>> groupPolicy = "allowlist";
         }
         part 'account_telegram:lead' : ChannelAccount {
+            attribute :>> id = "telegram:lead";
             attribute :>> channel = "telegram";
             attribute :>> accountId = "lead";
             attribute :>> enabled = true;
@@ -1964,6 +2081,7 @@ package OpenClawInstance {
             attribute :>> groupPolicy = "allowlist";
         }
         part 'account_whatsapp:coaching' : ChannelAccount {
+            attribute :>> id = "whatsapp:coaching";
             attribute :>> channel = "whatsapp";
             attribute :>> accountId = "coaching";
             attribute :>> enabled = true;
@@ -1971,6 +2089,7 @@ package OpenClawInstance {
             attribute :>> groupPolicy = "allowlist";
         }
         part 'account_whatsapp:default' : ChannelAccount {
+            attribute :>> id = "whatsapp:default";
             attribute :>> channel = "whatsapp";
             attribute :>> accountId = "default";
             attribute :>> enabled = true;
@@ -1978,6 +2097,7 @@ package OpenClawInstance {
             attribute :>> groupPolicy = "allowlist";
         }
         part 'account_whatsapp:devbox' : ChannelAccount {
+            attribute :>> id = "whatsapp:devbox";
             attribute :>> channel = "whatsapp";
             attribute :>> accountId = "devbox";
             attribute :>> enabled = false;
@@ -1985,6 +2105,7 @@ package OpenClawInstance {
             attribute :>> groupPolicy = "allowlist";
         }
         part 'account_whatsapp:field' : ChannelAccount {
+            attribute :>> id = "whatsapp:field";
             attribute :>> channel = "whatsapp";
             attribute :>> accountId = "field";
             attribute :>> enabled = true;
@@ -1992,31 +2113,108 @@ package OpenClawInstance {
             attribute :>> groupPolicy = "allowlist";
         }
         part 'account_whatsapp:secretary' : ChannelAccount {
+            attribute :>> id = "whatsapp:secretary";
             attribute :>> channel = "whatsapp";
             attribute :>> accountId = "secretary";
             attribute :>> enabled = true;
             attribute :>> dmPolicy = "allowlist";
             attribute :>> groupPolicy = "allowlist";
         }
+        part credentialPath_0 : CredentialPath {
+            attribute :>> path = "/channels/discord/accounts/default/token";
+            ref part :>> account = 'account_discord:default';
+        }
+        part credentialPath_1 : CredentialPath {
+            attribute :>> path = "/channels/discord/accounts/sandbox/token";
+            ref part :>> account = 'account_discord:sandbox';
+        }
+        part credentialPath_2 : CredentialPath {
+            attribute :>> path = "/channels/telegram/accounts/field/botToken";
+            ref part :>> account = 'account_telegram:field';
+        }
+        part credentialPath_3 : CredentialPath {
+            attribute :>> path = "/channels/telegram/accounts/lead/botToken";
+            ref part :>> account = 'account_telegram:lead';
+        }
+        part credentialPath_4 : CredentialPath {
+            attribute :>> path = "/gateway/auth/token";
+        }
+        part credentialPath_5 : CredentialPath {
+            attribute :>> path = "/models/providers/google/apiKey";
+        }
+        part 'bindingConfiguration_binding-1b6d7fadd02512869b66-7' : BindingConfiguration {
+            attribute :>> id = "binding-1b6d7fadd02512869b66-7";
+            attribute :>> agentId = "field";
+            attribute :>> account = "telegram:field";
+        }
         connection 'binding_binding-1b6d7fadd02512869b66-7' : AgentBinding connect Operators::agent_field to 'account_telegram:field' {
         }
+        part 'bindingConfiguration_binding-2319022519025ce293b8-9' : BindingConfiguration {
+            attribute :>> id = "binding-2319022519025ce293b8-9";
+            attribute :>> agentId = "devbox";
+            attribute :>> account = "telegram:retired";
+        }
+        part 'bindingConfiguration_binding-40a6ca9891072b8f0537-5' : BindingConfiguration {
+            attribute :>> id = "binding-40a6ca9891072b8f0537-5";
+            attribute :>> agentId = "client";
+            attribute :>> account = "whatsapp:coaching";
+            attribute :>> peerKind = "direct";
+        }
         connection 'binding_binding-40a6ca9891072b8f0537-5' : AgentBinding connect Operators::agent_client to 'account_whatsapp:coaching' {
+            attribute :>> peerKind = "direct";
+        }
+        part 'bindingConfiguration_binding-449f56fb335550499a13-4' : BindingConfiguration {
+            attribute :>> id = "binding-449f56fb335550499a13-4";
+            attribute :>> agentId = "coach";
+            attribute :>> account = "whatsapp:coaching";
             attribute :>> peerKind = "direct";
         }
         connection 'binding_binding-449f56fb335550499a13-4' : AgentBinding connect Operators::agent_coach to 'account_whatsapp:coaching' {
             attribute :>> peerKind = "direct";
         }
+        part 'bindingConfiguration_binding-765daf766d61288f0dff-6' : BindingConfiguration {
+            attribute :>> id = "binding-765daf766d61288f0dff-6";
+            attribute :>> agentId = "lead";
+            attribute :>> account = "telegram:lead";
+        }
         connection 'binding_binding-765daf766d61288f0dff-6' : AgentBinding connect Operators::agent_lead to 'account_telegram:lead' {
         }
+        part 'bindingConfiguration_binding-7e4892419c5b7145ad50-8' : BindingConfiguration {
+            attribute :>> id = "binding-7e4892419c5b7145ad50-8";
+            attribute :>> agentId = "devbox";
+            attribute :>> account = "whatsapp:devbox";
+        }
         connection 'binding_binding-7e4892419c5b7145ad50-8' : AgentBinding connect Operators::agent_devbox to 'account_whatsapp:devbox' {
+        }
+        part 'bindingConfiguration_binding-7ea0ec7db3778bcb9435-1' : BindingConfiguration {
+            attribute :>> id = "binding-7ea0ec7db3778bcb9435-1";
+            attribute :>> agentId = "secretary";
+            attribute :>> account = "whatsapp:secretary";
+            attribute :>> peerKind = "direct";
         }
         connection 'binding_binding-7ea0ec7db3778bcb9435-1' : AgentBinding connect Operators::agent_secretary to 'account_whatsapp:secretary' {
             attribute :>> peerKind = "direct";
         }
+        part 'bindingConfiguration_binding-c98dcabd536f3e6fb436-2' : BindingConfiguration {
+            attribute :>> id = "binding-c98dcabd536f3e6fb436-2";
+            attribute :>> agentId = "lead";
+            attribute :>> account = "discord:default";
+        }
         connection 'binding_binding-c98dcabd536f3e6fb436-2' : AgentBinding connect Operators::agent_lead to 'account_discord:default' {
+        }
+        part 'bindingConfiguration_binding-f06f0d0d3698fe4a4a98-0' : BindingConfiguration {
+            attribute :>> id = "binding-f06f0d0d3698fe4a4a98-0";
+            attribute :>> agentId = "field";
+            attribute :>> account = "whatsapp:field";
+            attribute :>> peerKind = "direct";
         }
         connection 'binding_binding-f06f0d0d3698fe4a4a98-0' : AgentBinding connect Operators::agent_field to 'account_whatsapp:field' {
             attribute :>> peerKind = "direct";
+        }
+        part 'bindingConfiguration_binding-f302b80e62a7fbb9fcfa-3' : BindingConfiguration {
+            attribute :>> id = "binding-f302b80e62a7fbb9fcfa-3";
+            attribute :>> agentId = "devbox";
+            attribute :>> account = "discord:sandbox";
         }
         connection 'binding_binding-f302b80e62a7fbb9fcfa-3' : AgentBinding connect Operators::agent_devbox to 'account_discord:sandbox' {
         }
@@ -2619,6 +2817,11 @@ package OpenClawInstance {
             attribute :>> askFallback = "deny";
             attribute :>> autoAllowSkills = false;
             attribute :>> wildcardCommands = "[{\"id\":\"path:*\",\"command\":\"*\",\"kind\":\"path\",\"argsRestricted\":false}]";
+            part command_0 :> commands {
+                attribute :>> command = "*";
+                attribute :>> kind = "path";
+                attribute :>> argsRestricted = false;
+            }
         }
     }
 }

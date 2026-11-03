@@ -1,5 +1,12 @@
 package OpenClawImport {
     private import ScalarValues::*;
+    part def InstanceInventory { attribute openclawVersion : String; attribute backupCount : Integer; }
+    part def WorkspaceEntry { attribute path : String; }
+    part def ExecCommand { attribute command : String; attribute kind : String; attribute argsRestricted : Boolean; }
+    part def BindingConfiguration {
+        attribute id : String; attribute agentId : String; attribute account : String; attribute peerKind : String;
+    }
+    part def CredentialPath { attribute path : String; ref part account : ChannelAccount [0..1]; }
     part def OpenClawAgent :> AssemblyCore::SoftwareOperator {
         attribute id : String;
         attribute displayName : String;
@@ -41,6 +48,8 @@ package OpenClawImport {
         doc /* Corresponds to Assembly's context-and-memory category: the
          * instruction files, skills and memory an agent works from. Files and
          * skills are referenced by path and digest, never copied. */
+        attribute workspaceVersioned : Boolean;
+        part unresolvedEntries : WorkspaceEntry [0..*];
         part instructions : InstructionFile [0..*];
         part skills : APESkills::InitialSkill [0..*];
         part memory : AgentMemory;
@@ -52,8 +61,10 @@ package OpenClawImport {
         attribute memory : String; attribute cpus : Real;
         attribute bindCount : Integer; attribute bindModes : String;
         attribute environmentNames : String;
+        attribute dangerouslyAllowExternalBindSources : Boolean;
     }
     part def ChannelAccount {
+        attribute id : String;
         attribute channel : String; attribute accountId : String;
         attribute enabled : Boolean; attribute dmPolicy : String;
         attribute groupPolicy : String;
@@ -69,6 +80,7 @@ package OpenClawImport {
     attribute def AtSchedule :> AssemblyCases::Schedule { attribute instant : String; }
     attribute def MillisecondEvery :> AssemblyCases::Every { attribute durationMs : Integer; }
     part def ScheduledCase :> AssemblyCases::CaseType {
+        attribute kind : String;
         attribute id : String; attribute displayName : String;
         attribute enabled : Boolean;
         ref part targetAgent : OpenClawAgent [0..1];
@@ -129,7 +141,8 @@ package OpenClawImport {
         attribute mode : String; attribute approvalSecurity : String; attribute approvalAsk : String;
         attribute effectiveSecurity : String; attribute effectiveAsk : String;
         attribute elevated : Boolean; attribute elevatedChannelsCount : Integer;
-        attribute safeBins : String; attribute safeBinProfiles : String;
+        attribute safeBins : String [0..*]; attribute safeBinProfiles : String [0..*];
+        part commands : ExecCommand [0..*];
         attribute trustedDirCount : Integer; attribute pathPrependCount : Integer;
         attribute strictInlineEval : Boolean;
     }
@@ -137,6 +150,7 @@ package OpenClawImport {
         attribute defaultSecurity : String; attribute defaultAsk : String;
         attribute askFallback : String; attribute autoAllowSkills : Boolean;
         attribute wildcardCommands : String;
+        part commands : ExecCommand [0..*];
     }
     part def AgentMemory {
         doc /* Inventory of OpenClaw's agent-written Markdown memory and its
@@ -144,7 +158,7 @@ package OpenClawImport {
          * has no admission and no validity window. */
         attribute searchEnabled : Boolean; attribute searchProvider : String;
         attribute searchModel : String; attribute searchFallback : String;
-        attribute searchSources : String; attribute rememberAcrossConversations : Boolean;
+        attribute searchSources : String [0..*]; attribute rememberAcrossConversations : Boolean;
         attribute extraPathCount : Integer; attribute multimodal : Boolean;
         attribute curatedSha256 : String; attribute curatedBytes : Integer;
         attribute dailyCount : Integer; attribute dailyFirstDate : String;

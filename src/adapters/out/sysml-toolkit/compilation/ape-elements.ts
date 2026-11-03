@@ -76,6 +76,7 @@ const APE_METACLASSES = new Set([
   "FeatureChainExpression",
   "LiteralString",
   "LiteralBoolean",
+  "LiteralInteger",
   "EnumerationUsage",
   "EnumerationDefinition",
 ]);
