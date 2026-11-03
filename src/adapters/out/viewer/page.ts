@@ -323,7 +323,9 @@ svg.md-lod .md-edge:not(.hot) { opacity: .3; }
 .et td.et-views { white-space: normal; min-width: 120px; }
 .et-views button { all: unset; cursor: pointer; margin-right: 10px; color: var(--ink); text-decoration: underline; text-decoration-color: var(--line-strong); }
 .et-views button:hover { text-decoration-color: var(--ink); }
-.et-sum { display: flex; flex-wrap: wrap; gap: 10px; padding: 14px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.et-sum { position: relative; display: flex; flex-wrap: wrap; gap: 10px; padding: 14px; border-bottom: 1px solid var(--line); cursor: pointer; }
+/* The instance's own findings mark the band of its totals. */
+.et-sum[data-doc]::before { content: ""; position: absolute; left: 4px; top: 5px; width: 9px; height: 9px; background: var(--doc); clip-path: var(--shape); }
 .et-tile { display: grid; grid-template: "label label" auto "figure rest" auto / auto 1fr; align-items: baseline; gap: 0 7px; min-width: 110px; padding: 8px 12px 9px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
 button.et-tile { cursor: pointer; text-align: left; }
 button.et-tile:hover { border-color: var(--line-strong); background: var(--card); }
@@ -1268,7 +1270,7 @@ function applyFocus() {
   const sheet = document.getElementById("sheet");
   for (const e of sheet.querySelectorAll("[data-id]")) {
     e.classList.toggle("selected", e.dataset.id === state.selected);
-    const doc = state.doc.get(e.dataset.id), name = e.querySelector(".et-name");
+    const doc = state.doc.get(e.dataset.id), name = e.classList.contains("et-sum") ? e : e.querySelector(".et-name");
     if (doc) e.dataset.doc = doc.worst; else delete e.dataset.doc;
     if (name) name.title = doc ? doc.codes : "";
   }
@@ -2016,9 +2018,10 @@ function summary(view, head, mark) {
   const box = el("div", "et-sum" + mark(head.id));
   box.dataset.id = head.id;
   box.tabIndex = 0;
+  const failed = versions[state.version].inferred && versions[state.version].inferred.failed;
   box.append(doctorTile(), ...view.elements[head.id].a.map(([label, value]) => {
     const [target, group] = TILE_VIEWS[label] || [];
-    return tile(label, value, target && entryOf(state.version, target) ? () => openCount(target, group) : null);
+    return tile(label, value + (label === "inferred" && failed ? " · " + failed + " failed" : ""), target && entryOf(state.version, target) ? () => openCount(target, group) : null);
   }));
   return box;
 }
