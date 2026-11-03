@@ -63,6 +63,7 @@ export interface ShaclRule {
 export interface ShaclProgram {
   dataOptions: DataOptions;
   file?: string;
+  sourceFiles?: ReadonlyMap<string, string>;
   shapes: ShaclShape[];
   rules: ShaclRule[];
 }
@@ -142,6 +143,7 @@ function single(
 export function readShaclProgram(
   store: Store,
   file?: string,
+  sourceFiles?: ReadonlyMap<string, string>,
 ): ShaclProgram {
   let activeNode: Resource | undefined;
   try {
@@ -337,9 +339,19 @@ export function readShaclProgram(
         ordinal(a.sourceConstraint.toString(), b.sourceConstraint.toString())
       );
     }
-    return { dataOptions: dataOptions(store), file, shapes, rules };
+    return {
+      dataOptions: dataOptions(store),
+      file,
+      sourceFiles,
+      shapes,
+      rules,
+    };
   } catch (cause) {
-    throw new ShaclStageError("loading", cause, sourceFile(file, activeNode));
+    throw new ShaclStageError(
+      "loading",
+      cause,
+      sourceFile(sourceFiles?.get(activeNode?.value ?? "") ?? file, activeNode),
+    );
   }
 }
 
@@ -392,7 +404,8 @@ export function materializeShaclRules(store: Store, program: ShaclProgram) {
       }
       derivedQuads += quads;
       views.push({
-        file: program.file ?? rule.name,
+        file: program.sourceFiles?.get(rule.node.value) ?? program.file ??
+          rule.name,
         graph: rule.graph,
         ms: performance.now() - started,
         quads,
@@ -401,7 +414,10 @@ export function materializeShaclRules(store: Store, program: ShaclProgram) {
       throw new ShaclStageError(
         "view",
         cause,
-        sourceFile(program.file, rule.node),
+        sourceFile(
+          program.sourceFiles?.get(rule.node.value) ?? program.file,
+          rule.node,
+        ),
       );
     }
   }
@@ -581,7 +597,10 @@ export function validateShacl(store: Store, program: ShaclProgram) {
     throw new ShaclStageError(
       "rule",
       cause,
-      sourceFile(program.file, activeNode),
+      sourceFile(
+        program.sourceFiles?.get(activeNode?.value ?? "") ?? program.file,
+        activeNode,
+      ),
     );
   }
 }

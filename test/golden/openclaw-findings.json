@@ -1,0 +1,890 @@
+{
+  "baseline": [
+    {
+      "code": "AGENT_TO_AGENT_WILDCARD",
+      "context": "Enabled agent-to-agent policy allows every requester and target pair.",
+      "recovery": "List only the intended requester and target agents, or disable agent-to-agent access.",
+      "severity": "warning",
+      "subject": "instance"
+    },
+    {
+      "code": "AGENT_WITHOUT_SANDBOX",
+      "context": "Exec can run on the gateway host outside the sandbox.",
+      "recovery": "Use sandbox mode all with exec host auto or sandbox, or remove the exec grant.",
+      "severity": "warning",
+      "subject": "agent:lead"
+    },
+    {
+      "code": "BINDING_ACCOUNT_UNAVAILABLE",
+      "context": "A binding has no matching enabled channel account in the snapshot.",
+      "recovery": "Enable its channel and account, correct match.accountId, or remove the obsolete binding.",
+      "severity": "warning",
+      "subject": "account:whatsapp:devbox"
+    },
+    {
+      "code": "BINDING_ACCOUNT_UNAVAILABLE",
+      "context": "A binding has no matching enabled channel account in the snapshot.",
+      "recovery": "Enable its channel and account, correct match.accountId, or remove the obsolete binding.",
+      "severity": "warning",
+      "subject": "agent:devbox"
+    },
+    {
+      "code": "EXEC_ALLOWLIST_WILDCARD",
+      "context": "An exec allowlist has a wildcard executable basename; any directory restriction is omitted from the snapshot.",
+      "recovery": "Replace the wildcard with the intended command names or binary paths.",
+      "severity": "warning",
+      "subject": "instance"
+    },
+    {
+      "code": "EXTERNAL_BIND_SOURCES",
+      "context": "An active sandbox permits bind sources outside workspace roots; other path checks still apply.",
+      "recovery": "Disable dangerouslyAllowExternalBindSources and use permitted source roots.",
+      "severity": "warning",
+      "subject": "agent:client"
+    },
+    {
+      "code": "EXTERNAL_BIND_SOURCES",
+      "context": "An active sandbox permits bind sources outside workspace roots; other path checks still apply.",
+      "recovery": "Disable dangerouslyAllowExternalBindSources and use permitted source roots.",
+      "severity": "warning",
+      "subject": "agent:coach"
+    },
+    {
+      "code": "EXTERNAL_BIND_SOURCES",
+      "context": "An active sandbox permits bind sources outside workspace roots; other path checks still apply.",
+      "recovery": "Disable dangerouslyAllowExternalBindSources and use permitted source roots.",
+      "severity": "warning",
+      "subject": "agent:field"
+    },
+    {
+      "code": "EXTERNAL_BIND_SOURCES",
+      "context": "An active sandbox permits bind sources outside workspace roots; other path checks still apply.",
+      "recovery": "Disable dangerouslyAllowExternalBindSources and use permitted source roots.",
+      "severity": "warning",
+      "subject": "agent:secretary"
+    },
+    {
+      "code": "MANUAL_CONFIG_BACKUPS",
+      "context": "2 openclaw.json.* files were recorded; they may include OpenClaw doctor's own backups.",
+      "recovery": "Review backup retention and protect any credentials they contain.",
+      "severity": "info",
+      "subject": "instance"
+    },
+    {
+      "code": "MCP_SANDBOX_GATE",
+      "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
+      "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
+      "severity": "info",
+      "subject": "agent:client"
+    },
+    {
+      "code": "MCP_SANDBOX_GATE",
+      "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
+      "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
+      "severity": "info",
+      "subject": "agent:coach"
+    },
+    {
+      "code": "MCP_SANDBOX_GATE",
+      "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
+      "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
+      "severity": "info",
+      "subject": "agent:devbox"
+    },
+    {
+      "code": "MCP_SANDBOX_GATE",
+      "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
+      "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
+      "severity": "info",
+      "subject": "agent:secretary"
+    },
+    {
+      "code": "PLAINTEXT_CREDENTIAL",
+      "context": "A plaintext credential is configured at /channels/discord/accounts/default/token.",
+      "recovery": "Replace the value at /channels/discord/accounts/default/token with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
+      "severity": "warning",
+      "subject": "account:discord:default"
+    },
+    {
+      "code": "PLAINTEXT_CREDENTIAL",
+      "context": "A plaintext credential is configured at /channels/discord/accounts/sandbox/token.",
+      "recovery": "Replace the value at /channels/discord/accounts/sandbox/token with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
+      "severity": "warning",
+      "subject": "account:discord:sandbox"
+    },
+    {
+      "code": "PLAINTEXT_CREDENTIAL",
+      "context": "A plaintext credential is configured at /channels/telegram/accounts/field/botToken.",
+      "recovery": "Replace the value at /channels/telegram/accounts/field/botToken with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
+      "severity": "warning",
+      "subject": "account:telegram:field"
+    },
+    {
+      "code": "PLAINTEXT_CREDENTIAL",
+      "context": "A plaintext credential is configured at /channels/telegram/accounts/lead/botToken.",
+      "recovery": "Replace the value at /channels/telegram/accounts/lead/botToken with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
+      "severity": "warning",
+      "subject": "account:telegram:lead"
+    },
+    {
+      "code": "PLAINTEXT_CREDENTIAL",
+      "context": "A plaintext credential is configured at /gateway/auth/token.",
+      "recovery": "Replace the value at /gateway/auth/token with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
+      "severity": "warning",
+      "subject": "instance"
+    },
+    {
+      "code": "PLAINTEXT_CREDENTIAL",
+      "context": "A plaintext credential is configured at /models/providers/google/apiKey.",
+      "recovery": "Replace the value at /models/providers/google/apiKey with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
+      "severity": "warning",
+      "subject": "instance"
+    },
+    {
+      "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
+      "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
+      "severity": "warning",
+      "subject": "agent:client"
+    },
+    {
+      "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
+      "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
+      "severity": "warning",
+      "subject": "agent:coach"
+    },
+    {
+      "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
+      "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
+      "severity": "warning",
+      "subject": "agent:devbox"
+    },
+    {
+      "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
+      "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
+      "severity": "warning",
+      "subject": "agent:field"
+    },
+    {
+      "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
+      "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
+      "severity": "warning",
+      "subject": "agent:lead"
+    },
+    {
+      "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
+      "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
+      "severity": "warning",
+      "subject": "agent:secretary"
+    },
+    {
+      "code": "UNRESOLVED_AGENT_REFERENCE",
+      "context": "The task targets an absent agent; runtime behavior is unverified for the recorded OpenClaw version.",
+      "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
+      "severity": "info",
+      "subject": "cron:job-1"
+    },
+    {
+      "code": "UNRESOLVED_AGENT_REFERENCE",
+      "context": "The task targets an absent agent; runtime behavior is unverified for the recorded OpenClaw version.",
+      "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
+      "severity": "info",
+      "subject": "cron:job-2"
+    },
+    {
+      "code": "UNRESOLVED_AGENT_REFERENCE",
+      "context": "The task targets an absent agent; runtime behavior is unverified for the recorded OpenClaw version.",
+      "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
+      "severity": "info",
+      "subject": "cron:job-3"
+    },
+    {
+      "code": "UNRESOLVED_AGENT_REFERENCE",
+      "context": "The task targets an absent agent; runtime behavior is unverified for the recorded OpenClaw version.",
+      "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
+      "severity": "info",
+      "subject": "cron:job-4"
+    },
+    {
+      "code": "UNRESOLVED_AGENT_REFERENCE",
+      "context": "The task targets an absent agent; runtime behavior is unverified for the recorded OpenClaw version.",
+      "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
+      "severity": "info",
+      "subject": "cron:job-5"
+    },
+    {
+      "code": "UNRESOLVED_AGENT_REFERENCE",
+      "context": "The task targets an absent agent; runtime behavior is unverified for the recorded OpenClaw version.",
+      "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
+      "severity": "info",
+      "subject": "cron:job-6"
+    },
+    {
+      "code": "WORKSPACE_UNVERSIONED",
+      "context": "No .git entry was recorded at the workspace root; parent repositories are not checked.",
+      "recovery": "If the workspace is not already backed up, track intended files in a private repository.",
+      "severity": "info",
+      "subject": "agent:client"
+    },
+    {
+      "code": "WORKSPACE_UNVERSIONED",
+      "context": "No .git entry was recorded at the workspace root; parent repositories are not checked.",
+      "recovery": "If the workspace is not already backed up, track intended files in a private repository.",
+      "severity": "info",
+      "subject": "agent:coach"
+    },
+    {
+      "code": "WORKSPACE_UNVERSIONED",
+      "context": "No .git entry was recorded at the workspace root; parent repositories are not checked.",
+      "recovery": "If the workspace is not already backed up, track intended files in a private repository.",
+      "severity": "info",
+      "subject": "agent:devbox"
+    },
+    {
+      "code": "WORKSPACE_UNVERSIONED",
+      "context": "No .git entry was recorded at the workspace root; parent repositories are not checked.",
+      "recovery": "If the workspace is not already backed up, track intended files in a private repository.",
+      "severity": "info",
+      "subject": "agent:field"
+    },
+    {
+      "code": "WORKSPACE_UNVERSIONED",
+      "context": "No .git entry was recorded at the workspace root; parent repositories are not checked.",
+      "recovery": "If the workspace is not already backed up, track intended files in a private repository.",
+      "severity": "info",
+      "subject": "agent:secretary"
+    }
+  ],
+  "extended": [
+    {
+      "code": "AGENT_TO_AGENT_WILDCARD",
+      "context": "Enabled agent-to-agent policy allows every requester and target pair.",
+      "recovery": "List only the intended requester and target agents, or disable agent-to-agent access.",
+      "severity": "warning",
+      "subject": "instance"
+    },
+    {
+      "code": "AGENT_WITHOUT_SANDBOX",
+      "context": "Exec can run on the gateway host outside the sandbox.",
+      "recovery": "Use sandbox mode all with exec host auto or sandbox, or remove the exec grant.",
+      "severity": "warning",
+      "subject": "agent:client"
+    },
+    {
+      "code": "AGENT_WITHOUT_SANDBOX",
+      "context": "Exec can run on the gateway host outside the sandbox.",
+      "recovery": "Use sandbox mode all with exec host auto or sandbox, or remove the exec grant.",
+      "severity": "warning",
+      "subject": "agent:lead"
+    },
+    {
+      "code": "BINDING_ACCOUNT_UNAVAILABLE",
+      "context": "A binding has no matching enabled channel account in the snapshot.",
+      "recovery": "Enable its channel and account, correct match.accountId, or remove the obsolete binding.",
+      "severity": "warning",
+      "subject": "account:discord:default"
+    },
+    {
+      "code": "BINDING_ACCOUNT_UNAVAILABLE",
+      "context": "A binding has no matching enabled channel account in the snapshot.",
+      "recovery": "Enable its channel and account, correct match.accountId, or remove the obsolete binding.",
+      "severity": "warning",
+      "subject": "account:discord:default"
+    },
+    {
+      "code": "BINDING_ACCOUNT_UNAVAILABLE",
+      "context": "A binding has no matching enabled channel account in the snapshot.",
+      "recovery": "Enable its channel and account, correct match.accountId, or remove the obsolete binding.",
+      "severity": "warning",
+      "subject": "account:whatsapp:devbox"
+    },
+    {
+      "code": "BINDING_ACCOUNT_UNAVAILABLE",
+      "context": "A binding has no matching enabled channel account in the snapshot.",
+      "recovery": "Enable its channel and account, correct match.accountId, or remove the obsolete binding.",
+      "severity": "warning",
+      "subject": "agent:client"
+    },
+    {
+      "code": "BINDING_ACCOUNT_UNAVAILABLE",
+      "context": "A binding has no matching enabled channel account in the snapshot.",
+      "recovery": "Enable its channel and account, correct match.accountId, or remove the obsolete binding.",
+      "severity": "warning",
+      "subject": "agent:devbox"
+    },
+    {
+      "code": "BINDING_ACCOUNT_UNAVAILABLE",
+      "context": "A binding has no matching enabled channel account in the snapshot.",
+      "recovery": "Enable its channel and account, correct match.accountId, or remove the obsolete binding.",
+      "severity": "warning",
+      "subject": "instance"
+    },
+    {
+      "code": "EXEC_ALLOWLIST_WILDCARD",
+      "context": "An exec allowlist has a wildcard executable basename; any directory restriction is omitted from the snapshot.",
+      "recovery": "Replace the wildcard with the intended command names or binary paths.",
+      "severity": "warning",
+      "subject": "agent:client"
+    },
+    {
+      "code": "EXEC_ALLOWLIST_WILDCARD",
+      "context": "An exec allowlist has a wildcard executable basename; any directory restriction is omitted from the snapshot.",
+      "recovery": "Replace the wildcard with the intended command names or binary paths.",
+      "severity": "warning",
+      "subject": "instance"
+    },
+    {
+      "code": "EXEC_WITHOUT_APPROVAL",
+      "context": "Host exec is policy-reachable with security full and ask off; ordinary approval prompts are disabled.",
+      "recovery": "Set tools.exec.mode to ask or auto, or tighten the execution host's approvals policy.",
+      "severity": "error",
+      "subject": "agent:client"
+    },
+    {
+      "code": "EXTERNAL_BIND_SOURCES",
+      "context": "An active sandbox permits bind sources outside workspace roots; other path checks still apply.",
+      "recovery": "Disable dangerouslyAllowExternalBindSources and use permitted source roots.",
+      "severity": "warning",
+      "subject": "agent:client"
+    },
+    {
+      "code": "EXTERNAL_BIND_SOURCES",
+      "context": "An active sandbox permits bind sources outside workspace roots; other path checks still apply.",
+      "recovery": "Disable dangerouslyAllowExternalBindSources and use permitted source roots.",
+      "severity": "warning",
+      "subject": "agent:coach"
+    },
+    {
+      "code": "EXTERNAL_BIND_SOURCES",
+      "context": "An active sandbox permits bind sources outside workspace roots; other path checks still apply.",
+      "recovery": "Disable dangerouslyAllowExternalBindSources and use permitted source roots.",
+      "severity": "warning",
+      "subject": "agent:field"
+    },
+    {
+      "code": "EXTERNAL_BIND_SOURCES",
+      "context": "An active sandbox permits bind sources outside workspace roots; other path checks still apply.",
+      "recovery": "Disable dangerouslyAllowExternalBindSources and use permitted source roots.",
+      "severity": "warning",
+      "subject": "agent:secretary"
+    },
+    {
+      "code": "MALFORMED_SKILLS_DIR",
+      "context": "2 entries under skills could not be resolved by the collector; skill validity is not established.",
+      "recovery": "Inspect these entries locally and repair broken links that belong to intended skills.",
+      "severity": "info",
+      "subject": "agent:client"
+    },
+    {
+      "code": "MANUAL_CONFIG_BACKUPS",
+      "context": "2 openclaw.json.* files were recorded; they may include OpenClaw doctor's own backups.",
+      "recovery": "Review backup retention and protect any credentials they contain.",
+      "severity": "info",
+      "subject": "instance"
+    },
+    {
+      "code": "MCP_SANDBOX_GATE",
+      "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
+      "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
+      "severity": "info",
+      "subject": "agent:client"
+    },
+    {
+      "code": "MCP_SANDBOX_GATE",
+      "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
+      "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
+      "severity": "info",
+      "subject": "agent:coach"
+    },
+    {
+      "code": "MCP_SANDBOX_GATE",
+      "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
+      "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
+      "severity": "info",
+      "subject": "agent:devbox"
+    },
+    {
+      "code": "MCP_SANDBOX_GATE",
+      "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
+      "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
+      "severity": "info",
+      "subject": "agent:secretary"
+    },
+    {
+      "code": "MEMORY_REMOTE_EMBEDDINGS",
+      "context": "Memory search selects an embedding adapter other than local or none; endpoint location and transmission are not verified.",
+      "recovery": "Review the embedding provider and its data handling; docs/reference/memory-config.md.",
+      "severity": "info",
+      "subject": "agent:client"
+    },
+    {
+      "code": "MEMORY_SESSIONS_INDEXED",
+      "context": "Memory search includes conversation transcripts.",
+      "recovery": "Review session indexing and cross-conversation recall; docs/reference/memory-config.md.",
+      "severity": "warning",
+      "subject": "agent:client"
+    },
+    {
+      "code": "PLAINTEXT_CREDENTIAL",
+      "context": "A plaintext credential is configured at /channels/discord/accounts/default/token.",
+      "recovery": "Replace the value at /channels/discord/accounts/default/token with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
+      "severity": "warning",
+      "subject": "account:discord:default"
+    },
+    {
+      "code": "PLAINTEXT_CREDENTIAL",
+      "context": "A plaintext credential is configured at /gateway/auth/token.",
+      "recovery": "Replace the value at /gateway/auth/token with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
+      "severity": "warning",
+      "subject": "instance"
+    },
+    {
+      "code": "PLAINTEXT_CREDENTIAL",
+      "context": "A plaintext credential is configured at /models/providers/synthetic/apiKey.",
+      "recovery": "Replace the value at /models/providers/synthetic/apiKey with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
+      "severity": "warning",
+      "subject": "instance"
+    },
+    {
+      "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
+      "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
+      "severity": "warning",
+      "subject": "agent:client"
+    },
+    {
+      "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
+      "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
+      "severity": "warning",
+      "subject": "agent:coach"
+    },
+    {
+      "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
+      "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
+      "severity": "warning",
+      "subject": "agent:devbox"
+    },
+    {
+      "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
+      "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
+      "severity": "warning",
+      "subject": "agent:field"
+    },
+    {
+      "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
+      "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
+      "severity": "warning",
+      "subject": "agent:lead"
+    },
+    {
+      "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
+      "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
+      "severity": "warning",
+      "subject": "agent:secretary"
+    },
+    {
+      "code": "UNRESOLVED_AGENT_REFERENCE",
+      "context": "The disabled task targets an absent agent and will fail if run.",
+      "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
+      "severity": "info",
+      "subject": "cron:absent-false"
+    },
+    {
+      "code": "UNRESOLVED_AGENT_REFERENCE",
+      "context": "The scheduled task targets an absent agent and fails when run.",
+      "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
+      "severity": "error",
+      "subject": "cron:absent-true"
+    },
+    {
+      "code": "UNRESOLVED_AGENT_REFERENCE",
+      "context": "The disabled task targets an absent agent and will fail if run.",
+      "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
+      "severity": "info",
+      "subject": "cron:job-1"
+    },
+    {
+      "code": "UNRESOLVED_AGENT_REFERENCE",
+      "context": "The disabled task targets an absent agent and will fail if run.",
+      "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
+      "severity": "info",
+      "subject": "cron:job-2"
+    },
+    {
+      "code": "UNRESOLVED_AGENT_REFERENCE",
+      "context": "The disabled task targets an absent agent and will fail if run.",
+      "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
+      "severity": "info",
+      "subject": "cron:job-3"
+    },
+    {
+      "code": "UNRESOLVED_AGENT_REFERENCE",
+      "context": "The disabled task targets an absent agent and will fail if run.",
+      "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
+      "severity": "info",
+      "subject": "cron:job-4"
+    },
+    {
+      "code": "UNRESOLVED_AGENT_REFERENCE",
+      "context": "The disabled task targets an absent agent and will fail if run.",
+      "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
+      "severity": "info",
+      "subject": "cron:job-5"
+    },
+    {
+      "code": "UNRESOLVED_AGENT_REFERENCE",
+      "context": "The disabled task targets an absent agent and will fail if run.",
+      "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
+      "severity": "info",
+      "subject": "cron:job-6"
+    },
+    {
+      "code": "UNRESOLVED_BINDING_REFERENCE",
+      "context": "The binding names an absent agent; no connection is drawn.",
+      "recovery": "Set the binding's agentId to an existing agent or remove the obsolete binding.",
+      "severity": "info",
+      "subject": "instance"
+    },
+    {
+      "code": "WORKSPACE_UNVERSIONED",
+      "context": "No .git entry was recorded at the workspace root; parent repositories are not checked.",
+      "recovery": "If the workspace is not already backed up, track intended files in a private repository.",
+      "severity": "info",
+      "subject": "agent:client"
+    },
+    {
+      "code": "WORKSPACE_UNVERSIONED",
+      "context": "No .git entry was recorded at the workspace root; parent repositories are not checked.",
+      "recovery": "If the workspace is not already backed up, track intended files in a private repository.",
+      "severity": "info",
+      "subject": "agent:coach"
+    },
+    {
+      "code": "WORKSPACE_UNVERSIONED",
+      "context": "No .git entry was recorded at the workspace root; parent repositories are not checked.",
+      "recovery": "If the workspace is not already backed up, track intended files in a private repository.",
+      "severity": "info",
+      "subject": "agent:devbox"
+    },
+    {
+      "code": "WORKSPACE_UNVERSIONED",
+      "context": "No .git entry was recorded at the workspace root; parent repositories are not checked.",
+      "recovery": "If the workspace is not already backed up, track intended files in a private repository.",
+      "severity": "info",
+      "subject": "agent:field"
+    },
+    {
+      "code": "WORKSPACE_UNVERSIONED",
+      "context": "No .git entry was recorded at the workspace root; parent repositories are not checked.",
+      "recovery": "If the workspace is not already backed up, track intended files in a private repository.",
+      "severity": "info",
+      "subject": "agent:secretary"
+    }
+  ],
+  "unverified-and-negative": [
+    {
+      "code": "AGENT_TO_AGENT_WILDCARD",
+      "context": "Enabled agent-to-agent policy allows every requester and target pair.",
+      "recovery": "List only the intended requester and target agents, or disable agent-to-agent access.",
+      "severity": "warning",
+      "subject": "instance"
+    },
+    {
+      "code": "AGENT_WITHOUT_SANDBOX",
+      "context": "Exec routes to the gateway outside the sandbox; its effective security is unresolved.",
+      "recovery": "Use sandbox mode all with exec host auto or sandbox, or remove the exec grant.",
+      "severity": "info",
+      "subject": "agent:client"
+    },
+    {
+      "code": "AGENT_WITHOUT_SANDBOX",
+      "context": "Exec can run on the gateway host outside the sandbox.",
+      "recovery": "Use sandbox mode all with exec host auto or sandbox, or remove the exec grant.",
+      "severity": "warning",
+      "subject": "agent:lead"
+    },
+    {
+      "code": "BINDING_ACCOUNT_UNAVAILABLE",
+      "context": "A binding has no matching enabled channel account in the snapshot.",
+      "recovery": "Enable its channel and account, correct match.accountId, or remove the obsolete binding.",
+      "severity": "warning",
+      "subject": "account:discord:default"
+    },
+    {
+      "code": "BINDING_ACCOUNT_UNAVAILABLE",
+      "context": "A binding has no matching enabled channel account in the snapshot.",
+      "recovery": "Enable its channel and account, correct match.accountId, or remove the obsolete binding.",
+      "severity": "warning",
+      "subject": "account:discord:default"
+    },
+    {
+      "code": "BINDING_ACCOUNT_UNAVAILABLE",
+      "context": "A binding has no matching enabled channel account in the snapshot.",
+      "recovery": "Enable its channel and account, correct match.accountId, or remove the obsolete binding.",
+      "severity": "warning",
+      "subject": "account:whatsapp:devbox"
+    },
+    {
+      "code": "BINDING_ACCOUNT_UNAVAILABLE",
+      "context": "A binding has no matching enabled channel account in the snapshot.",
+      "recovery": "Enable its channel and account, correct match.accountId, or remove the obsolete binding.",
+      "severity": "warning",
+      "subject": "agent:client"
+    },
+    {
+      "code": "BINDING_ACCOUNT_UNAVAILABLE",
+      "context": "A binding has no matching enabled channel account in the snapshot.",
+      "recovery": "Enable its channel and account, correct match.accountId, or remove the obsolete binding.",
+      "severity": "warning",
+      "subject": "agent:devbox"
+    },
+    {
+      "code": "BINDING_ACCOUNT_UNAVAILABLE",
+      "context": "A binding has no matching enabled channel account in the snapshot.",
+      "recovery": "Enable its channel and account, correct match.accountId, or remove the obsolete binding.",
+      "severity": "warning",
+      "subject": "instance"
+    },
+    {
+      "code": "EXEC_ALLOWLIST_WILDCARD",
+      "context": "An exec allowlist has a wildcard executable basename; any directory restriction is omitted from the snapshot.",
+      "recovery": "Replace the wildcard with the intended command names or binary paths.",
+      "severity": "warning",
+      "subject": "agent:client"
+    },
+    {
+      "code": "EXEC_ALLOWLIST_WILDCARD",
+      "context": "An exec allowlist has a wildcard executable basename; any directory restriction is omitted from the snapshot.",
+      "recovery": "Replace the wildcard with the intended command names or binary paths.",
+      "severity": "warning",
+      "subject": "instance"
+    },
+    {
+      "code": "EXTERNAL_BIND_SOURCES",
+      "context": "An active sandbox permits bind sources outside workspace roots; other path checks still apply.",
+      "recovery": "Disable dangerouslyAllowExternalBindSources and use permitted source roots.",
+      "severity": "warning",
+      "subject": "agent:client"
+    },
+    {
+      "code": "EXTERNAL_BIND_SOURCES",
+      "context": "An active sandbox permits bind sources outside workspace roots; other path checks still apply.",
+      "recovery": "Disable dangerouslyAllowExternalBindSources and use permitted source roots.",
+      "severity": "warning",
+      "subject": "agent:coach"
+    },
+    {
+      "code": "EXTERNAL_BIND_SOURCES",
+      "context": "An active sandbox permits bind sources outside workspace roots; other path checks still apply.",
+      "recovery": "Disable dangerouslyAllowExternalBindSources and use permitted source roots.",
+      "severity": "warning",
+      "subject": "agent:field"
+    },
+    {
+      "code": "EXTERNAL_BIND_SOURCES",
+      "context": "An active sandbox permits bind sources outside workspace roots; other path checks still apply.",
+      "recovery": "Disable dangerouslyAllowExternalBindSources and use permitted source roots.",
+      "severity": "warning",
+      "subject": "agent:secretary"
+    },
+    {
+      "code": "MANUAL_CONFIG_BACKUPS",
+      "context": "2 openclaw.json.* files were recorded; they may include OpenClaw doctor's own backups.",
+      "recovery": "Review backup retention and protect any credentials they contain.",
+      "severity": "info",
+      "subject": "instance"
+    },
+    {
+      "code": "MCP_SANDBOX_GATE",
+      "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
+      "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
+      "severity": "info",
+      "subject": "agent:client"
+    },
+    {
+      "code": "MCP_SANDBOX_GATE",
+      "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
+      "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
+      "severity": "info",
+      "subject": "agent:coach"
+    },
+    {
+      "code": "MCP_SANDBOX_GATE",
+      "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
+      "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
+      "severity": "info",
+      "subject": "agent:devbox"
+    },
+    {
+      "code": "MCP_SANDBOX_GATE",
+      "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
+      "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
+      "severity": "info",
+      "subject": "agent:secretary"
+    },
+    {
+      "code": "PLAINTEXT_CREDENTIAL",
+      "context": "A plaintext credential is configured at /channels/discord/accounts/default/token.",
+      "recovery": "Replace the value at /channels/discord/accounts/default/token with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
+      "severity": "warning",
+      "subject": "account:discord:default"
+    },
+    {
+      "code": "PLAINTEXT_CREDENTIAL",
+      "context": "A plaintext credential is configured at /gateway/auth/token.",
+      "recovery": "Replace the value at /gateway/auth/token with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
+      "severity": "warning",
+      "subject": "instance"
+    },
+    {
+      "code": "PLAINTEXT_CREDENTIAL",
+      "context": "A plaintext credential is configured at /models/providers/synthetic/apiKey.",
+      "recovery": "Replace the value at /models/providers/synthetic/apiKey with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
+      "severity": "warning",
+      "subject": "instance"
+    },
+    {
+      "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
+      "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
+      "severity": "warning",
+      "subject": "agent:coach"
+    },
+    {
+      "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
+      "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
+      "severity": "warning",
+      "subject": "agent:devbox"
+    },
+    {
+      "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
+      "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
+      "severity": "warning",
+      "subject": "agent:field"
+    },
+    {
+      "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
+      "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
+      "severity": "warning",
+      "subject": "agent:lead"
+    },
+    {
+      "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
+      "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
+      "severity": "warning",
+      "subject": "agent:secretary"
+    },
+    {
+      "code": "UNRESOLVED_AGENT_REFERENCE",
+      "context": "The task targets an absent agent; runtime behavior is unverified for the recorded OpenClaw version.",
+      "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
+      "severity": "info",
+      "subject": "cron:absent-false"
+    },
+    {
+      "code": "UNRESOLVED_AGENT_REFERENCE",
+      "context": "The task targets an absent agent; runtime behavior is unverified for the recorded OpenClaw version.",
+      "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
+      "severity": "info",
+      "subject": "cron:absent-true"
+    },
+    {
+      "code": "UNRESOLVED_AGENT_REFERENCE",
+      "context": "The task targets an absent agent; runtime behavior is unverified for the recorded OpenClaw version.",
+      "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
+      "severity": "info",
+      "subject": "cron:job-1"
+    },
+    {
+      "code": "UNRESOLVED_AGENT_REFERENCE",
+      "context": "The task targets an absent agent; runtime behavior is unverified for the recorded OpenClaw version.",
+      "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
+      "severity": "info",
+      "subject": "cron:job-2"
+    },
+    {
+      "code": "UNRESOLVED_AGENT_REFERENCE",
+      "context": "The task targets an absent agent; runtime behavior is unverified for the recorded OpenClaw version.",
+      "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
+      "severity": "info",
+      "subject": "cron:job-3"
+    },
+    {
+      "code": "UNRESOLVED_AGENT_REFERENCE",
+      "context": "The task targets an absent agent; runtime behavior is unverified for the recorded OpenClaw version.",
+      "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
+      "severity": "info",
+      "subject": "cron:job-4"
+    },
+    {
+      "code": "UNRESOLVED_AGENT_REFERENCE",
+      "context": "The task targets an absent agent; runtime behavior is unverified for the recorded OpenClaw version.",
+      "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
+      "severity": "info",
+      "subject": "cron:job-5"
+    },
+    {
+      "code": "UNRESOLVED_AGENT_REFERENCE",
+      "context": "The task targets an absent agent; runtime behavior is unverified for the recorded OpenClaw version.",
+      "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
+      "severity": "info",
+      "subject": "cron:job-6"
+    },
+    {
+      "code": "UNRESOLVED_BINDING_REFERENCE",
+      "context": "The binding names an absent agent; no connection is drawn.",
+      "recovery": "Set the binding's agentId to an existing agent or remove the obsolete binding.",
+      "severity": "info",
+      "subject": "instance"
+    },
+    {
+      "code": "WORKSPACE_UNVERSIONED",
+      "context": "No .git entry was recorded at the workspace root; parent repositories are not checked.",
+      "recovery": "If the workspace is not already backed up, track intended files in a private repository.",
+      "severity": "info",
+      "subject": "agent:client"
+    },
+    {
+      "code": "WORKSPACE_UNVERSIONED",
+      "context": "No .git entry was recorded at the workspace root; parent repositories are not checked.",
+      "recovery": "If the workspace is not already backed up, track intended files in a private repository.",
+      "severity": "info",
+      "subject": "agent:coach"
+    },
+    {
+      "code": "WORKSPACE_UNVERSIONED",
+      "context": "No .git entry was recorded at the workspace root; parent repositories are not checked.",
+      "recovery": "If the workspace is not already backed up, track intended files in a private repository.",
+      "severity": "info",
+      "subject": "agent:devbox"
+    },
+    {
+      "code": "WORKSPACE_UNVERSIONED",
+      "context": "No .git entry was recorded at the workspace root; parent repositories are not checked.",
+      "recovery": "If the workspace is not already backed up, track intended files in a private repository.",
+      "severity": "info",
+      "subject": "agent:field"
+    },
+    {
+      "code": "WORKSPACE_UNVERSIONED",
+      "context": "No .git entry was recorded at the workspace root; parent repositories are not checked.",
+      "recovery": "If the workspace is not already backed up, track intended files in a private repository.",
+      "severity": "info",
+      "subject": "agent:secretary"
+    }
+  ]
+}

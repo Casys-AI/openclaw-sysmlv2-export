@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { compareFindings } from "../../../domain/model/diagnostics/doctor.ts";
+import { compareFindings } from "../../../domain/model/diagnostics/findings.ts";
 import { elementId } from "../../../domain/model/element-id.ts";
 import {
   isRecord,
@@ -9,7 +9,6 @@ import { namedNode, type Store, type Term } from "../oxigraph/store.ts";
 import {
   materializeShaclRules,
   readShaclProgram,
-  REPORT_GRAPH,
   SH,
   type ShaclProgram,
   ShaclStageError,
@@ -79,15 +78,10 @@ export class ApeStageError extends Error {
 
 const APE = "urn:ase:ape:v1:";
 const FILE = "rules/ape/ape.ttl";
-const SHAPE_URL = new URL(
-  import.meta.url.endsWith(".ts")
-    ? "../../../../rules/ape/ape.ttl"
-    : "./rules/ape/ape.ttl",
-  import.meta.url,
-);
+const FILES = [FILE, "rules/openclaw/openclaw.ttl"];
 export interface ApeAnnotation {
   code: string;
-  pattern: string;
+  pattern?: string;
   finding: ApeFinding["finding"];
   recovery: string;
   message: string;
@@ -120,44 +114,58 @@ function annotations(
   const result = new Map<string, ApeAnnotation>();
   const fields = ["code", "pattern", "finding", "recovery"];
   for (const shape of program.shapes) {
-    const values: Record<string, string> = {};
-    for (
-      const row of selected(
-        store,
-        `SELECT ?p ?o WHERE { ${shape.node} ?p ?o }`,
-        { default_graph: namedNode(SHAPES_GRAPH), named_graphs: [] },
-      )
-    ) {
-      const predicate = row.get("p")!.value;
-      const name = predicate.slice(APE.length);
-      if (!predicate.startsWith(APE) || !fields.includes(name)) continue;
-      const value = row.get("o")!;
+    try {
+      const values: Record<string, string> = {};
+      for (
+        const row of selected(
+          store,
+          `SELECT ?p ?o WHERE { ${shape.node} ?p ?o }`,
+          { default_graph: namedNode(SHAPES_GRAPH), named_graphs: [] },
+        )
+      ) {
+        const predicate = row.get("p")!.value;
+        const name = predicate.slice(APE.length);
+        if (!predicate.startsWith(APE) || !fields.includes(name)) continue;
+        const value = row.get("o")!;
+        if (
+          value.termType !== "Literal" || !value.value.trim() || name in values
+        ) throw new Error(`Invalid APE shape annotation ${name}`);
+        values[name] = value.value;
+      }
+      for (const name of ["code", "recovery"]) {
+        if (!(name in values)) {
+          throw new Error(`Missing APE shape annotation ${name}`);
+        }
+      }
+      if (!/^[A-Z][A-Z_]+$/.test(values.code)) {
+        throw new Error("Invalid APE shape annotation code");
+      }
       if (
-        value.termType !== "Literal" || !value.value.trim() || name in values
-      ) throw new Error(`Invalid APE shape annotation ${name}`);
-      values[name] = value.value;
-    }
-    for (const name of fields) {
-      if (!(name in values)) {
-        throw new Error(`Missing APE shape annotation ${name}`);
+        (values.pattern === undefined) !== (values.finding === undefined) ||
+        values.code.startsWith("APE_") && !values.pattern ||
+        values.finding !== undefined &&
+          !["present", "absent"].includes(values.finding)
+      ) {
+        throw new Error("Invalid APE shape annotation finding");
       }
-    }
-    if (!/^[A-Z][A-Z_]+$/.test(values.code)) {
-      throw new Error("Invalid APE shape annotation code");
-    }
-    if (!["present", "absent"].includes(values.finding)) {
-      throw new Error("Invalid APE shape annotation finding");
-    }
-    for (const constraint of shape.constraints) {
-      if (constraint.messages.length !== 1) {
-        throw new Error("APE constraints require one message");
+      for (const constraint of shape.constraints) {
+        if (constraint.messages.length !== 1) {
+          throw new Error("APE constraints require one message");
+        }
+        result.set(
+          JSON.stringify([shape.node.value, constraint.sourceConstraint.value]),
+          {
+            ...values,
+            message: constraint.messages[0].value,
+          } as unknown as ApeAnnotation,
+        );
       }
-      result.set(
-        JSON.stringify([shape.node.value, constraint.sourceConstraint.value]),
-        {
-          ...values,
-          message: constraint.messages[0].value,
-        } as unknown as ApeAnnotation,
+    } catch (error) {
+      const file = program.sourceFiles?.get(shape.node.value) ?? program.file;
+      throw new ApeStageError(
+        "loading",
+        error,
+        file ? `${file}#${shape.node.value}` : undefined,
       );
     }
   }
@@ -179,12 +187,30 @@ function stageError(
 export async function readApeProgram(
   store: Store,
 ): Promise<ApeProgram> {
+  const sourceFiles = new Map<string, string>();
+  for (const file of FILES) {
+    try {
+      const url = new URL(
+        import.meta.url.endsWith(".ts") ? `../../../../${file}` : `./${file}`,
+        import.meta.url,
+      );
+      store.load(await readFile(url, "utf8"), {
+        format: "text/turtle",
+        to_graph_name: namedNode(SHAPES_GRAPH),
+      });
+      for (
+        const quad of store.match(null, null, null, namedNode(SHAPES_GRAPH))
+      ) {
+        if (!sourceFiles.has(quad.subject.value)) {
+          sourceFiles.set(quad.subject.value, file);
+        }
+      }
+    } catch (error) {
+      throw stageError(error, "loading", file);
+    }
+  }
+  const program = readShaclProgram(store, undefined, sourceFiles);
   try {
-    store.load(await readFile(SHAPE_URL, "utf8"), {
-      format: "text/turtle",
-      to_graph_name: namedNode(SHAPES_GRAPH),
-    });
-    const program = readShaclProgram(store, FILE);
     return admitApeProgram(store, program);
   } catch (error) {
     throw stageError(error, "loading");
@@ -201,6 +227,7 @@ export function materializeApeViews(store: Store, program: ShaclProgram) {
 
 /** Map the standard report, never re-run an independent TypeScript rule pipeline. */
 export function evaluateApeRules(store: Store, program: ApeProgram) {
+  let activeConstraint: string | undefined;
   try {
     const evaluated = validateShacl(store, program);
     const meta = program.annotations;
@@ -222,6 +249,26 @@ export function evaluateApeRules(store: Store, program: ApeProgram) {
       }
       ids.set(node.value, id.value);
     }
+    const subjects = new Map<string, string>();
+    for (
+      const row of selected(
+        store,
+        `SELECT DISTINCT ?node ?subject WHERE { ?node <urn:openclaw:diagnostics:v1:subject> ?subject }`,
+        program.dataOptions,
+      )
+    ) {
+      const node = row.get("node")!;
+      const subject = row.get("subject")!;
+      if (node.termType !== "NamedNode" || subject.termType !== "Literal") {
+        throw new Error(
+          "OpenClaw subjects require IRI nodes and literal subjects",
+        );
+      }
+      if (subjects.has(node.value)) {
+        throw new Error("OpenClaw focus has conflicting subjects");
+      }
+      subjects.set(node.value, subject.value);
+    }
     const groups = new Map<
       string,
       {
@@ -231,30 +278,44 @@ export function evaluateApeRules(store: Store, program: ApeProgram) {
         related: Set<string>;
       }
     >();
-    for (
-      const row of selected(
-        store,
-        `SELECT ?focus ?shape ?constraint ?severity ?value WHERE {
-      ?result a <${SH}ValidationResult>; <${SH}focusNode> ?focus; <${SH}sourceShape> ?shape; <${SH}sourceConstraint> ?constraint;
-        <${SH}resultSeverity> ?severity; <${SH}value> ?value .
-    }`,
-        { default_graph: namedNode(REPORT_GRAPH), named_graphs: [] },
-      )
-    ) {
+    const findings: ApeFinding[] = [];
+    for (const result of evaluated.results) {
+      activeConstraint = result.sourceConstraint.value;
       const annotation = meta.get(
-        JSON.stringify([row.get("shape")!.value, row.get("constraint")!.value]),
+        JSON.stringify([
+          result.sourceShape.value,
+          result.sourceConstraint.value,
+        ]),
       );
-      if (!annotation) {
-        throw new Error("Missing APE annotations for report result");
-      }
-      const focus = ids.get(row.get("focus")!.value);
-      if (!focus) throw new Error("APE report focus has no agentId");
+      if (!annotation) throw new Error("Missing annotations for report result");
       const severity = ({
         [SH + "Violation"]: "error",
         [SH + "Warning"]: "warning",
         [SH + "Info"]: "info",
-      } as const)[row.get("severity")!.value];
-      if (!severity) throw new Error("Unsupported APE result severity");
+      } as const)[result.severity];
+      if (!severity) throw new Error("Unsupported result severity");
+      if (!annotation.code.startsWith("APE_")) {
+        const subject = subjects.get(result.focusNode.value);
+        if (subject === undefined) {
+          throw new Error("OpenClaw report focus has no subject");
+        }
+        findings.push({
+          code: annotation.code,
+          severity,
+          subject,
+          context: result.messages.map((message) => message.value).join("\n"),
+          recovery: annotation.recovery.replace(
+            /\{[?$]value\}/g,
+            () => result.value.value,
+          ),
+          ...(annotation.pattern
+            ? { pattern: annotation.pattern, finding: annotation.finding }
+            : {}),
+        });
+        continue;
+      }
+      const focus = ids.get(result.focusNode.value);
+      if (!focus) throw new Error("APE report focus has no agentId");
       const key = JSON.stringify([annotation.code, focus]);
       if (!groups.has(key)) {
         groups.set(key, { annotation, focus, severity, related: new Set() });
@@ -264,43 +325,58 @@ export function evaluateApeRules(store: Store, program: ApeProgram) {
         throw new Error("APE finding group has conflicting severity");
       }
       if (/\{[?$]relatedAgentId\}/.test(annotation.message)) {
-        const related = ids.get(row.get("value")!.value);
+        const related = ids.get(result.value.value);
         if (!related) {
           throw new Error("APE report value has no related agentId");
         }
         group.related.add(related);
       }
     }
-    const findings: ApeFinding[] = [...groups.values()].map((
-      { annotation, focus, severity, related },
-    ) => ({
-      code: `APE_${annotation.code}`,
-      severity,
-      subject: elementId("agent", focus),
-      context: annotation.message.replace(
-        /\{[?$]relatedAgentId\}/g,
-        () => [...related].sort().join(", "),
-      ),
-      recovery: annotation.recovery,
-      pattern: annotation.pattern,
-      finding: annotation.finding,
-    }));
+    for (const { annotation, focus, severity, related } of groups.values()) {
+      findings.push({
+        code: annotation.code,
+        severity,
+        subject: elementId("agent", focus),
+        context: annotation.message.replace(
+          /\{[?$]relatedAgentId\}/g,
+          () => [...related].sort().join(", "),
+        ),
+        recovery: annotation.recovery,
+        pattern: annotation.pattern,
+        finding: annotation.finding,
+      });
+    }
     findings.sort(compareFindings);
-    const queries = evaluated.queries.map((query) => {
+    const byCode = new Map<
+      string,
+      { code: string; ms: number; findings: number }
+    >();
+    for (const query of evaluated.queries) {
       const annotation = meta.get(
         JSON.stringify([query.sourceShape.value, query.sourceConstraint.value]),
       )!;
-      return {
-        code: annotation.code,
-        ms: query.ms,
-        findings: [...groups.values()].filter((group) =>
-          group.annotation.code === annotation.code
-        ).length,
-      };
-    });
+      const aggregate = byCode.get(annotation.code) ??
+        {
+          code: annotation.code,
+          ms: 0,
+          findings: findings.filter((finding) =>
+            finding.code === annotation.code
+          ).length,
+        };
+      aggregate.ms += query.ms;
+      byCode.set(annotation.code, aggregate);
+    }
+    const queries = [...byCode.values()].sort((a, b) =>
+      a.code < b.code ? -1 : a.code > b.code ? 1 : 0
+    );
+
     return { findings, queries, validationReport: evaluated.validationReport };
   } catch (error) {
-    throw stageError(error);
+    throw stageError(
+      error,
+      "rule",
+      program.sourceFiles?.get(activeConstraint ?? "") ?? program.file ?? FILE,
+    );
   }
 }
 

@@ -268,3 +268,32 @@ Deno.test("global CONSTRUCT admission parses once without prebinding or projecti
     )
   );
 });
+
+Deno.test("global COUNT construct counts entries while batched constraints reject aggregates", async () => {
+  await initOxigraph();
+  const store = new Store();
+  try {
+    store.load(
+      '<urn:a> <urn:entry> "one", "two" . <urn:b> <urn:entry> "three" .',
+      { format: "text/turtle" },
+    );
+    const query = admitConstruct(
+      `CONSTRUCT { <urn:summary> <urn:count> ?count } WHERE {
+      { SELECT (COUNT(?entry) AS ?count) WHERE { ?owner <urn:entry> ?entry } }
+    }`,
+    );
+    const quads = store.query(query);
+    assert(Array.isArray(quads));
+    assert.equal(quads.length, 1);
+    assert.equal((quads[0] as { object: { value: string } }).object.value, "3");
+    assert.throws(
+      () =>
+        admitSelect(
+          "SELECT ?this (COUNT(?entry) AS ?count) WHERE { ?this <urn:entry> ?entry } GROUP BY ?this",
+        ),
+      ShaclQueryError,
+    );
+  } finally {
+    (store as Store & { free(): void }).free();
+  }
+});

@@ -23,7 +23,7 @@ const prefixes = `@prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix ex: <urn:test:> .`;
 const shape = `${prefixes}
 ex:Shape a sh:NodeShape; sh:targetSubjectsOf ape:agentId;
-  ape:code "TEST_RULE"; ape:pattern "4.2"; ape:finding "absent"; ape:recovery "Review the modeled entry.";
+  ape:code "APE_TEST_RULE"; ape:pattern "4.2"; ape:finding "absent"; ape:recovery "Review the modeled entry.";
   sh:sparql ex:Constraint .
 ex:Constraint sh:severity sh:Warning;
   sh:message "Cycle with {$relatedAgentId}; again {$relatedAgentId}.";
@@ -93,7 +93,8 @@ Deno.test("APE annotations and agent IDs are required at the adapter boundary", 
       const program = load(store, broken);
       assert.throws(
         () => admitApeProgram(store, program),
-        /annotation/,
+        (e) =>
+          e instanceof ApeStageError && /annotation/.test(e.toJSON().cause),
       );
     } finally {
       dispose(store);
@@ -390,6 +391,78 @@ Deno.test("APE report construction scales to 150 fully meshed agents and 22,350 
     );
   } finally {
     dispose(parsedReport);
+    dispose(store);
+  }
+});
+
+Deno.test("OpenClaw report mapping preserves distinct focuses and actual messages with stable ties", async () => {
+  await initOxigraph();
+  const store = new Store();
+  try {
+    const program = load(
+      store,
+      `${prefixes}
+      ex:Shape a sh:NodeShape; sh:targetSubjectsOf ex:path;
+        ape:code "PLAINTEXT_CREDENTIAL"; ape:recovery "Replace {?value}.";
+        sh:sparql ex:Constraint .
+      ex:Constraint sh:severity sh:Warning; sh:message "Configured at {?value}.";
+        sh:select """SELECT DISTINCT $this ?value WHERE { $this <urn:test:path> ?value }""" .`,
+    );
+    store.load(
+      `${prefixes}
+      ex:first <urn:openclaw:diagnostics:v1:subject> "instance"; ex:path "z$&" .
+      ex:second <urn:openclaw:diagnostics:v1:subject> "instance"; ex:path "a$$" .`,
+      { format: "text/turtle" },
+    );
+    const report = evaluateApeRules(store, admitApeProgram(store, program));
+    assert.deepEqual(report.findings, [
+      {
+        code: "PLAINTEXT_CREDENTIAL",
+        subject: "instance",
+        severity: "warning",
+        context: "Configured at a$$.",
+        recovery: "Replace a$$.",
+      },
+      {
+        code: "PLAINTEXT_CREDENTIAL",
+        subject: "instance",
+        severity: "warning",
+        context: "Configured at z$&.",
+        recovery: "Replace z$&.",
+      },
+    ]);
+    assert.equal(report.queries.length, 1);
+    assert.equal(report.queries[0].findings, 2);
+  } finally {
+    dispose(store);
+  }
+});
+
+Deno.test("multi-file admission reports the failing constraint origin", async () => {
+  await initOxigraph();
+  const store = new Store();
+  try {
+    store.load(
+      `${prefixes}
+      ex:Shape a sh:NodeShape; sh:targetNode ex:focus; sh:sparql ex:Broken .
+      ex:Broken sh:select "SELECT ?this WHERE { SERVICE <https://example.com/> { ?this ?p ?o } }" .`,
+      { format: "text/turtle", to_graph_name: namedNode(SHAPES_GRAPH) },
+    );
+    assert.throws(
+      () =>
+        readShaclProgram(
+          store,
+          undefined,
+          new Map([
+            ["urn:test:Shape", "rules/ape/ape.ttl"],
+            ["urn:test:Broken", "rules/openclaw/openclaw.ttl"],
+          ]),
+        ),
+      (error) =>
+        error instanceof ShaclStageError &&
+        error.file === "rules/openclaw/openclaw.ttl#urn:test:Broken",
+    );
+  } finally {
     dispose(store);
   }
 });

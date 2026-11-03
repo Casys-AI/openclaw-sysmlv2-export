@@ -118,7 +118,9 @@ function checkAst(value: unknown, focusBound: boolean): void {
   ) {
     unsupported("AS this must not reassign the pre-bound variable");
   }
-  if (node.type === "aggregate") unsupported("Aggregates are unsupported");
+  if (focusBound && node.type === "aggregate") {
+    unsupported("Aggregates are unsupported in batched constraints");
+  }
   if (node.type === "functionCall") {
     unsupported("IRI function calls are unsupported");
   }

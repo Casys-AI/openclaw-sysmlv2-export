@@ -1,0 +1,542 @@
+@prefix f: <urn:openclaw:diagnostics:v1:field:OpenClawImport::> .
+@prefix oc: <urn:openclaw:diagnostics:v1:> .
+@prefix ape: <urn:ase:ape:v1:> .
+@prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix dct: <http://purl.org/dc/terms/> .
+oc:Prefixes sh:declare
+ [ sh:prefix "oc";
+   sh:namespace "urn:openclaw:diagnostics:v1:"^^xsd:anyURI ],
+ [ sh:prefix "f";
+   sh:namespace "urn:openclaw:diagnostics:v1:field:OpenClawImport::"^^xsd:anyURI ],
+ [ sh:prefix "ape";
+   sh:namespace "urn:ase:ape:v1:"^^xsd:anyURI ],
+ [ sh:prefix "sysml";
+   sh:namespace "https://www.omg.org/spec/SysML#"^^xsd:anyURI ] .
+
+oc:Configuration a sh:SPARQLRule;
+   sh:runOnce true;
+   sh:order 60;
+   ape:name "openclaw-Configuration";
+   ape:graph <urn:openclaw:diagnostics:v1:view:Configuration>;
+   sh:prefixes oc:Prefixes;
+   sh:construct """
+CONSTRUCT {
+  ?element ?field ?value;
+  oc:kind ?kind;
+  oc:owns ?child;
+  oc:assignedValue ?assigned;
+  oc:scope ?scope.
+} WHERE {
+  GRAPH ?build {
+    ?element sysml:owner+ ?scope.
+    ?scope a sysml:Package.
+    FILTER NOT EXISTS {
+      ?scope sysml:owner ?parent.
+      ?parent a sysml:Package
+    } {
+      ?element a ?metaclass;
+      (sysml:ownedSpecialization/sysml:general)*/sysml:type/sysml:qualifiedName ?kind.
+      VALUES ?metaclass {
+        sysml:PartUsage sysml:ItemUsage sysml:ReferenceUsage sysml:ConnectionUsage
+      }
+    } UNION {
+      ?element sysml:ownedMember ?child
+    } UNION {
+      ?element sysml:value/(sysml:value|sysml:referent|sysml:targetFeature) ?assigned
+    } UNION {
+      ?element sysml:ownedMember ?feature.
+      ?feature (sysml:ownedRedefinition/sysml:redefinedFeature|sysml:ownedSubsetting/sysml:subsettedFeature)/sysml:qualifiedName ?role;
+      sysml:value/(sysml:value|sysml:referent|sysml:targetFeature) ?value.
+      FILTER(STRSTARTS(?role,"OpenClawImport::"))
+ BIND(IRI(CONCAT("urn:openclaw:diagnostics:v1:field:",?role)) AS ?field)
+    }
+  } FILTER(STRSTARTS(STR(?build),"urn:ase:ape:openmbee:v2:build:"))
+} """ .
+
+oc:Subjects a sh:SPARQLRule;
+   sh:runOnce true;
+   sh:order 70;
+   ape:name "openclaw-Subjects";
+   ape:graph <urn:openclaw:diagnostics:v1:view:Subjects>;
+   sh:prefixes oc:Prefixes;
+   sh:construct """
+CONSTRUCT {
+  ?focus oc:subject ?subject.
+} WHERE {
+  {
+    ?focus ape:agentId ?id.
+    BIND(CONCAT("agent:",?id) AS ?subject)
+  } UNION {
+    ?focus oc:kind "OpenClawImport::InstanceInventory".
+    BIND("instance" AS ?subject)
+  } UNION {
+    ?focus oc:kind "OpenClawImport::ChannelAccount";
+    f:ChannelAccount::id ?id.
+    BIND(CONCAT("account:",?id) AS ?subject)
+  } UNION {
+    ?focus oc:kind "OpenClawImport::ScheduledCase";
+    f:ScheduledCase::kind "cron";
+    f:ScheduledCase::id ?id.
+    BIND(CONCAT("cron:",?id) AS ?subject)
+  } UNION {
+    ?focus oc:kind "OpenClawImport::BindingConfiguration";
+    oc:scope ?scope;
+    f:BindingConfiguration::account ?selector;
+    f:BindingConfiguration::agentId ?agentId.
+    OPTIONAL {
+      ?account oc:kind "OpenClawImport::ChannelAccount";
+      oc:scope ?scope;
+      f:ChannelAccount::id ?selector
+    } OPTIONAL {
+      ?agent ape:agentId ?agentId;
+      ape:scope ?scope
+    } BIND(IF(BOUND(?account),CONCAT("account:",?selector),IF(BOUND(?agent),CONCAT("agent:",?agentId),"instance")) AS ?subject)
+  } UNION {
+    ?focus oc:kind "OpenClawImport::CredentialPath".
+    OPTIONAL {
+      ?focus f:CredentialPath::account ?account.
+      ?account f:ChannelAccount::id ?id
+    } BIND(IF(BOUND(?id),CONCAT("account:",?id),"instance") AS ?subject)
+  }
+} """ .
+
+oc:Counts a sh:SPARQLRule;
+   sh:runOnce true;
+   sh:order 80;
+   ape:name "openclaw-Counts";
+   ape:graph <urn:openclaw:diagnostics:v1:view:Counts>;
+   sh:prefixes oc:Prefixes;
+   sh:construct """
+CONSTRUCT {
+  ?context oc:unresolvedEntryCount ?count.
+} WHERE {
+  {
+    SELECT ?context (COUNT(?entry) AS ?count) WHERE {
+      ?context oc:owns ?entry.
+      ?entry oc:kind "OpenClawImport::WorkspaceEntry";
+      f:WorkspaceEntry::path ?path.
+      FILTER(?path != "skills/SKILL.md")
+    } GROUP BY ?context
+  }
+} """ .
+
+oc:EXEC_WITHOUT_APPROVAL0 a sh:NodeShape;
+   sh:targetSubjectsOf ape:agentId;
+   ape:code "EXEC_WITHOUT_APPROVAL";
+   ape:recovery "Set tools.exec.mode to ask or auto, or tighten the execution host's approvals policy.";
+   dct:source "OpenClaw 2026.10.9 docs/tools/exec-approvals.md";
+   sh:sparql oc:EXEC_WITHOUT_APPROVAL0-constraint.
+oc:EXEC_WITHOUT_APPROVAL0-constraint sh:severity sh:Violation;
+   sh:message "Host exec is policy-reachable with security full and ask off; ordinary approval prompts are disabled.";
+   sh:prefixes oc:Prefixes;
+   sh:select """
+SELECT DISTINCT $this WHERE {
+  $this ape:agentId ?agentId;
+  oc:owns ?posture.
+  ?posture oc:kind "OpenClawImport::ExecutionPosture".
+  $this ape:definition ?definition.
+  ?definition oc:owns/oc:assignedValue ?grant.
+  ?grant f:ToolGrant::tool ?tool;
+  f:ToolGrant::layer ?layer.
+  ?tool f:OpenClawTool::toolId "exec".
+  ?posture f:ExecutionPosture::host ?host;
+  f:ExecutionPosture::effectiveSecurity ?security.
+  FILTER(?host="gateway" || (?host="auto" && ?layer="host"))
+?posture f:ExecutionPosture::effectiveAsk "off".
+  FILTER(?security="full")
+} """ .
+
+oc:AGENT_WITHOUT_SANDBOX0 a sh:NodeShape;
+   sh:targetSubjectsOf ape:agentId;
+   ape:code "AGENT_WITHOUT_SANDBOX";
+   ape:recovery "Use sandbox mode all with exec host auto or sandbox, or remove the exec grant.";
+   dct:source "OpenClaw 2026.10.9 docs/gateway/sandboxing.md; docs/tools/exec.md";
+   sh:sparql oc:AGENT_WITHOUT_SANDBOX0-constraint.
+oc:AGENT_WITHOUT_SANDBOX0-constraint sh:severity sh:Warning;
+   sh:message "Exec can run on the gateway host outside the sandbox.";
+   sh:prefixes oc:Prefixes;
+   sh:select """
+SELECT DISTINCT $this WHERE {
+  $this ape:agentId ?agentId;
+  oc:owns ?posture.
+  ?posture oc:kind "OpenClawImport::ExecutionPosture".
+  $this ape:definition ?definition.
+  ?definition oc:owns/oc:assignedValue ?grant.
+  ?grant f:ToolGrant::tool ?tool;
+  f:ToolGrant::layer ?layer.
+  ?tool f:OpenClawTool::toolId "exec".
+  ?posture f:ExecutionPosture::host ?host;
+  f:ExecutionPosture::effectiveSecurity ?security.
+  FILTER(?host="gateway" || (?host="auto" && ?layer="host"))
+FILTER(?security != "deny" && ?security != "unknown")
+} """ .
+
+oc:AGENT_WITHOUT_SANDBOX1 a sh:NodeShape;
+   sh:targetSubjectsOf ape:agentId;
+   ape:code "AGENT_WITHOUT_SANDBOX";
+   ape:recovery "Use sandbox mode all with exec host auto or sandbox, or remove the exec grant.";
+   dct:source "OpenClaw 2026.10.9 docs/gateway/sandboxing.md; docs/tools/exec.md";
+   sh:sparql oc:AGENT_WITHOUT_SANDBOX1-constraint.
+oc:AGENT_WITHOUT_SANDBOX1-constraint sh:severity sh:Info;
+   sh:message "Exec routes to the gateway outside the sandbox; its effective security is unresolved.";
+   sh:prefixes oc:Prefixes;
+   sh:select """
+SELECT DISTINCT $this WHERE {
+  $this ape:agentId ?agentId;
+  oc:owns ?posture.
+  ?posture oc:kind "OpenClawImport::ExecutionPosture".
+  $this ape:definition ?definition.
+  ?definition oc:owns/oc:assignedValue ?grant.
+  ?grant f:ToolGrant::tool ?tool;
+  f:ToolGrant::layer ?layer.
+  ?tool f:OpenClawTool::toolId "exec".
+  ?posture f:ExecutionPosture::host ?host;
+  f:ExecutionPosture::effectiveSecurity ?security.
+  FILTER(?host="gateway" || (?host="auto" && ?layer="host"))
+FILTER(?security="unknown")
+} """ .
+
+oc:EXEC_ALLOWLIST_WILDCARD0 a sh:NodeShape;
+   sh:targetSubjectsOf oc:subject;
+   ape:code "EXEC_ALLOWLIST_WILDCARD";
+   ape:recovery "Replace the wildcard with the intended command names or binary paths.";
+   dct:source "OpenClaw 2026.10.9 docs/tools/exec-approvals.md";
+   sh:sparql oc:EXEC_ALLOWLIST_WILDCARD0-constraint.
+oc:EXEC_ALLOWLIST_WILDCARD0-constraint sh:severity sh:Warning;
+   sh:message "An exec allowlist has a wildcard executable basename; any directory restriction is omitted from the snapshot.";
+   sh:prefixes oc:Prefixes;
+   sh:select """
+SELECT DISTINCT $this WHERE {
+  {
+    $this ape:agentId ?agentId;
+    oc:owns ?posture.
+    ?posture oc:kind "OpenClawImport::ExecutionPosture".
+    ?posture oc:owns ?command.
+    ?command f:ExecCommand::command "*".
+
+  } UNION {
+    $this oc:kind "OpenClawImport::InstanceInventory";
+    oc:scope ?scope.
+    ?approvals oc:kind "OpenClawImport::ExecApprovals";
+    oc:scope ?scope;
+    oc:owns ?command.
+    ?command f:ExecCommand::command "*".
+
+  }
+} """ .
+
+oc:MCP_SANDBOX_GATE0 a sh:NodeShape;
+   sh:targetSubjectsOf ape:agentId;
+   ape:code "MCP_SANDBOX_GATE";
+   ape:recovery "Allow the intended server globs or bundle-mcp in the sandbox tool policy.";
+   dct:source "OpenClaw 2026.10.9 docs/gateway/config-tools/tool-policy.md";
+   sh:sparql oc:MCP_SANDBOX_GATE0-constraint.
+oc:MCP_SANDBOX_GATE0-constraint sh:severity sh:Info;
+   sh:message "Enabled MCP servers have no tool grant in the sandbox layer.";
+   sh:prefixes oc:Prefixes;
+   sh:select """
+SELECT DISTINCT $this WHERE {
+  $this ape:agentId ?id;
+  ape:scope ?scope;
+  oc:owns ?sandbox;
+  ape:definition ?definition.
+  ?sandbox oc:kind "OpenClawImport::Sandbox";
+  f:Sandbox::mode ?mode.
+  FILTER(?mode != "off")
+?server oc:kind "OpenClawImport::McpServer";
+  oc:scope ?scope;
+  f:McpServer::enabled true.
+  FILTER NOT EXISTS {
+    ?definition oc:owns/oc:assignedValue ?grant.
+    ?grant f:ToolGrant::layer "sandbox";
+    f:ToolGrant::tool ?tool.
+    ?tool f:OpenClawTool::toolId ?toolId.
+    ?enabledServer oc:scope ?scope;
+    oc:kind "OpenClawImport::McpServer";
+    f:McpServer::enabled true;
+    f:McpServer::toolPrefix ?prefix.
+    FILTER(?toolId=CONCAT(?prefix,"__*"))
+  }
+} """ .
+
+oc:EXTERNAL_BIND_SOURCES0 a sh:NodeShape;
+   sh:targetSubjectsOf ape:agentId;
+   ape:code "EXTERNAL_BIND_SOURCES";
+   ape:recovery "Disable dangerouslyAllowExternalBindSources and use permitted source roots.";
+   dct:source "OpenClaw 2026.10.9 docs/gateway/sandboxing/multiple-folders-for-one-agent.md";
+   sh:sparql oc:EXTERNAL_BIND_SOURCES0-constraint.
+oc:EXTERNAL_BIND_SOURCES0-constraint sh:severity sh:Warning;
+   sh:message "An active sandbox permits bind sources outside workspace roots; other path checks still apply.";
+   sh:prefixes oc:Prefixes;
+   sh:select """
+SELECT DISTINCT $this WHERE {
+  $this ape:agentId ?id;
+  oc:owns ?sandbox.
+  ?sandbox oc:kind "OpenClawImport::Sandbox";
+  f:Sandbox::mode ?mode;
+  f:Sandbox::dangerouslyAllowExternalBindSources true.
+  FILTER(?mode != "off")
+} """ .
+
+oc:WORKSPACE_UNVERSIONED0 a sh:NodeShape;
+   sh:targetSubjectsOf ape:agentId;
+   ape:code "WORKSPACE_UNVERSIONED";
+   ape:recovery "If the workspace is not already backed up, track intended files in a private repository.";
+   dct:source "OpenClaw 2026.10.9 docs/gateway/doctor/workspace-and-dreams.md section 19";
+   sh:sparql oc:WORKSPACE_UNVERSIONED0-constraint.
+oc:WORKSPACE_UNVERSIONED0-constraint sh:severity sh:Info;
+   sh:message "No .git entry was recorded at the workspace root; parent repositories are not checked.";
+   sh:prefixes oc:Prefixes;
+   sh:select """
+SELECT DISTINCT $this WHERE {
+  $this ape:agentId ?id;
+  oc:owns ?context.
+  ?context f:AgentContext::workspaceVersioned false.
+} """ .
+
+oc:MALFORMED_SKILLS_DIR0 a sh:NodeShape;
+   sh:targetSubjectsOf ape:agentId;
+   ape:code "MALFORMED_SKILLS_DIR";
+   ape:recovery "Inspect these entries locally and repair broken links that belong to intended skills.";
+   dct:source "OpenClaw 2026.10.9 dist/skill-root-discovery-B5Jg-4aX.mjs discoverSkillCandidates";
+   sh:sparql oc:MALFORMED_SKILLS_DIR0-constraint.
+oc:MALFORMED_SKILLS_DIR0-constraint sh:severity sh:Info;
+   sh:message "{$count} entries under skills could not be resolved by the collector; skill validity is not established.";
+   sh:prefixes oc:Prefixes;
+   sh:select """
+SELECT DISTINCT $this ?count WHERE {
+  $this ape:agentId ?id;
+  oc:owns ?context.
+  ?context oc:unresolvedEntryCount ?count.
+  FILTER(?count>0)
+} """ .
+
+oc:MEMORY_SESSIONS_INDEXED0 a sh:NodeShape;
+   sh:targetSubjectsOf ape:agentId;
+   ape:code "MEMORY_SESSIONS_INDEXED";
+   ape:recovery "Review session indexing and cross-conversation recall; docs/reference/memory-config.md.";
+   dct:source "OpenClaw 2026.10.9 docs/reference/memory-config.md";
+   sh:sparql oc:MEMORY_SESSIONS_INDEXED0-constraint.
+oc:MEMORY_SESSIONS_INDEXED0-constraint sh:severity sh:Warning;
+   sh:message "Memory search includes conversation transcripts.";
+   sh:prefixes oc:Prefixes;
+   sh:select """
+SELECT DISTINCT $this WHERE {
+  $this ape:agentId ?id;
+  oc:owns/oc:owns ?memory.
+  ?memory f:AgentMemory::searchEnabled true.
+  {
+    ?memory f:AgentMemory::searchSources "sessions"
+  } UNION {
+    ?memory f:AgentMemory::rememberAcrossConversations true
+  }
+} """ .
+
+oc:MEMORY_REMOTE_EMBEDDINGS0 a sh:NodeShape;
+   sh:targetSubjectsOf ape:agentId;
+   ape:code "MEMORY_REMOTE_EMBEDDINGS";
+   ape:recovery "Review the embedding provider and its data handling; docs/reference/memory-config.md.";
+   dct:source "OpenClaw 2026.10.9 docs/reference/memory-config.md";
+   sh:sparql oc:MEMORY_REMOTE_EMBEDDINGS0-constraint.
+oc:MEMORY_REMOTE_EMBEDDINGS0-constraint sh:severity sh:Info;
+   sh:message "Memory search selects an embedding adapter other than local or none; endpoint location and transmission are not verified.";
+   sh:prefixes oc:Prefixes;
+   sh:select """
+SELECT DISTINCT $this WHERE {
+  $this ape:agentId ?id;
+  oc:owns/oc:owns ?memory.
+  ?memory f:AgentMemory::searchEnabled true.
+  ?memory f:AgentMemory::searchProvider ?provider.
+  FILTER(?provider != "local" && ?provider != "none")
+} """ .
+
+oc:AGENT_TO_AGENT_WILDCARD0 a sh:NodeShape;
+   sh:targetSubjectsOf f:InstanceInventory::openclawVersion;
+   ape:code "AGENT_TO_AGENT_WILDCARD";
+   ape:recovery "List only the intended requester and target agents, or disable agent-to-agent access.";
+   dct:source "OpenClaw 2026.10.9 dist/session-visibility-c_9BAYYO.mjs createAgentToAgentPolicy";
+   sh:sparql oc:AGENT_TO_AGENT_WILDCARD0-constraint.
+oc:AGENT_TO_AGENT_WILDCARD0-constraint sh:severity sh:Warning;
+   sh:message "Enabled agent-to-agent policy allows every requester and target pair.";
+   sh:prefixes oc:Prefixes;
+   sh:select """
+SELECT DISTINCT $this WHERE {
+  $this oc:kind "OpenClawImport::InstanceInventory";
+  oc:scope ?scope.
+  ?policy oc:kind "OpenClawImport::MessagingPolicy";
+  oc:scope ?scope;
+  f:MessagingPolicy::enabled true;
+  f:MessagingPolicy::wildcardTargets true.
+} """ .
+
+oc:PLAINTEXT_CREDENTIAL0 a sh:NodeShape;
+   sh:targetSubjectsOf f:CredentialPath::path;
+   ape:code "PLAINTEXT_CREDENTIAL";
+   ape:recovery "Replace the value at {?value} with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.";
+   dct:source "OpenClaw 2026.10.9 docs/reference/secretref-credential-surface.md";
+   sh:sparql oc:PLAINTEXT_CREDENTIAL0-constraint.
+oc:PLAINTEXT_CREDENTIAL0-constraint sh:severity sh:Warning;
+   sh:message "A plaintext credential is configured at {$value}.";
+   sh:prefixes oc:Prefixes;
+   sh:select """
+SELECT DISTINCT $this ?value WHERE {
+  $this oc:kind "OpenClawImport::CredentialPath";
+  f:CredentialPath::path ?value.
+} """ .
+
+oc:UNRESOLVED_AGENT_REFERENCE0 a sh:NodeShape;
+   sh:targetSubjectsOf f:ScheduledCase::unresolvedTarget;
+   ape:code "UNRESOLVED_AGENT_REFERENCE";
+   ape:recovery "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.";
+   dct:source "OpenClaw 2026.10.9 dist/server-cron-DmxBCDVE.mjs resolveCronAgent; dist/zod-schema-2kniG8D0.mjs explicitTargets";
+   sh:sparql oc:UNRESOLVED_AGENT_REFERENCE0-constraint.
+oc:UNRESOLVED_AGENT_REFERENCE0-constraint sh:severity sh:Violation;
+   sh:message "The scheduled task targets an absent agent and fails when run.";
+   sh:prefixes oc:Prefixes;
+   sh:select """
+SELECT DISTINCT $this ?value WHERE {
+  $this oc:kind "OpenClawImport::ScheduledCase";
+  oc:scope ?scope;
+  f:ScheduledCase::kind "cron";
+  f:ScheduledCase::unresolvedTarget ?value;
+  f:ScheduledCase::enabled ?enabled.
+  ?inventory oc:kind "OpenClawImport::InstanceInventory";
+  oc:scope ?scope;
+  f:InstanceInventory::openclawVersion ?version.
+  BIND(REGEX(?version,"^2026[.]10[.][0-9]+([-+].*)?$") AS ?verified)
+FILTER(?verified && ?enabled)
+} """ .
+
+oc:UNRESOLVED_AGENT_REFERENCE1 a sh:NodeShape;
+   sh:targetSubjectsOf f:ScheduledCase::unresolvedTarget;
+   ape:code "UNRESOLVED_AGENT_REFERENCE";
+   ape:recovery "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.";
+   dct:source "OpenClaw 2026.10.9 dist/server-cron-DmxBCDVE.mjs resolveCronAgent; dist/zod-schema-2kniG8D0.mjs explicitTargets";
+   sh:sparql oc:UNRESOLVED_AGENT_REFERENCE1-constraint.
+oc:UNRESOLVED_AGENT_REFERENCE1-constraint sh:severity sh:Info;
+   sh:message "The disabled task targets an absent agent and will fail if run.";
+   sh:prefixes oc:Prefixes;
+   sh:select """
+SELECT DISTINCT $this ?value WHERE {
+  $this oc:kind "OpenClawImport::ScheduledCase";
+  oc:scope ?scope;
+  f:ScheduledCase::kind "cron";
+  f:ScheduledCase::unresolvedTarget ?value;
+  f:ScheduledCase::enabled ?enabled.
+  ?inventory oc:kind "OpenClawImport::InstanceInventory";
+  oc:scope ?scope;
+  f:InstanceInventory::openclawVersion ?version.
+  BIND(REGEX(?version,"^2026[.]10[.][0-9]+([-+].*)?$") AS ?verified)
+FILTER(?verified && !?enabled)
+} """ .
+
+oc:UNRESOLVED_AGENT_REFERENCE2 a sh:NodeShape;
+   sh:targetSubjectsOf f:ScheduledCase::unresolvedTarget;
+   ape:code "UNRESOLVED_AGENT_REFERENCE";
+   ape:recovery "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.";
+   dct:source "OpenClaw 2026.10.9 dist/server-cron-DmxBCDVE.mjs resolveCronAgent; dist/zod-schema-2kniG8D0.mjs explicitTargets";
+   sh:sparql oc:UNRESOLVED_AGENT_REFERENCE2-constraint.
+oc:UNRESOLVED_AGENT_REFERENCE2-constraint sh:severity sh:Info;
+   sh:message "The task targets an absent agent; runtime behavior is unverified for the recorded OpenClaw version.";
+   sh:prefixes oc:Prefixes;
+   sh:select """
+SELECT DISTINCT $this ?value WHERE {
+  $this oc:kind "OpenClawImport::ScheduledCase";
+  oc:scope ?scope;
+  f:ScheduledCase::kind "cron";
+  f:ScheduledCase::unresolvedTarget ?value;
+  f:ScheduledCase::enabled ?enabled.
+  ?inventory oc:kind "OpenClawImport::InstanceInventory";
+  oc:scope ?scope;
+  f:InstanceInventory::openclawVersion ?version.
+  BIND(REGEX(?version,"^2026[.]10[.][0-9]+([-+].*)?$") AS ?verified)
+FILTER(!?verified)
+} """ .
+
+oc:BINDING_ACCOUNT_UNAVAILABLE0 a sh:NodeShape;
+   sh:targetSubjectsOf f:BindingConfiguration::agentId;
+   ape:code "BINDING_ACCOUNT_UNAVAILABLE";
+   ape:recovery "Enable its channel and account, correct match.accountId, or remove the obsolete binding.";
+   dct:source "OpenClaw 2026.10.9 docs/channels/channel-routing.md; dist/server-channels-eZDWbzoS.mjs startChannelProcessOwned";
+   sh:sparql oc:BINDING_ACCOUNT_UNAVAILABLE0-constraint.
+oc:BINDING_ACCOUNT_UNAVAILABLE0-constraint sh:severity sh:Warning;
+   sh:message "A binding has no matching enabled channel account in the snapshot.";
+   sh:prefixes oc:Prefixes;
+   sh:select """
+SELECT DISTINCT $this WHERE {
+  $this oc:kind "OpenClawImport::BindingConfiguration";
+  oc:scope ?scope;
+  f:BindingConfiguration::account ?selector;
+  f:BindingConfiguration::agentId ?agentId.
+  FILTER NOT EXISTS {
+    ?account oc:kind "OpenClawImport::ChannelAccount";
+    oc:scope ?scope;
+    f:ChannelAccount::id ?accountId;
+    f:ChannelAccount::channel ?channel;
+    f:ChannelAccount::enabled true.
+    FILTER(IF(STRENDS(?selector,":*"),?selector=CONCAT(?channel,":*"),?selector=?accountId))
+  }
+} """ .
+
+oc:UNRESOLVED_BINDING_REFERENCE0 a sh:NodeShape;
+   sh:targetSubjectsOf f:BindingConfiguration::agentId;
+   ape:code "UNRESOLVED_BINDING_REFERENCE";
+   ape:recovery "Set the binding's agentId to an existing agent or remove the obsolete binding.";
+   dct:source "OpenClaw 2026.10.9 docs/concepts/multi-agent.md";
+   sh:sparql oc:UNRESOLVED_BINDING_REFERENCE0-constraint.
+oc:UNRESOLVED_BINDING_REFERENCE0-constraint sh:severity sh:Info;
+   sh:message "The binding names an absent agent; no connection is drawn.";
+   sh:prefixes oc:Prefixes;
+   sh:select """
+SELECT DISTINCT $this WHERE {
+  $this oc:kind "OpenClawImport::BindingConfiguration";
+  oc:scope ?scope;
+  f:BindingConfiguration::account ?selector;
+  f:BindingConfiguration::agentId ?agentId.
+  FILTER NOT EXISTS {
+    ?agent ape:scope ?scope;
+    ape:agentId ?agentId
+  }
+} """ .
+
+oc:MANUAL_CONFIG_BACKUPS0 a sh:NodeShape;
+   sh:targetSubjectsOf f:InstanceInventory::backupCount;
+   ape:code "MANUAL_CONFIG_BACKUPS";
+   ape:recovery "Review backup retention and protect any credentials they contain.";
+   dct:source "OpenClaw 2026.10.9 docs/gateway/doctor/config-migrations.md";
+   sh:sparql oc:MANUAL_CONFIG_BACKUPS0-constraint.
+oc:MANUAL_CONFIG_BACKUPS0-constraint sh:severity sh:Info;
+   sh:message "{$count} openclaw.json.* files were recorded; they may include OpenClaw doctor's own backups.";
+   sh:prefixes oc:Prefixes;
+   sh:select """
+SELECT DISTINCT $this ?count WHERE {
+  $this oc:kind "OpenClawImport::InstanceInventory";
+  f:InstanceInventory::backupCount ?count.
+  FILTER(?count>0)
+} """ .
+
+oc:SAFE_BIN_INTERPRETER_UNPROFILED0 a sh:NodeShape;
+   sh:targetSubjectsOf ape:agentId;
+   ape:code "SAFE_BIN_INTERPRETER_UNPROFILED";
+   ape:recovery "Remove interpreter safe bins or define hardened safeBinProfiles entries.";
+   dct:source "OpenClaw 2026.10.9 dist/exec-safe-bin-runtime-policy-CgvU47MQ.mjs; dist/exec-safe-bin-trust-tdUplWO7.mjs";
+   sh:sparql oc:SAFE_BIN_INTERPRETER_UNPROFILED0-constraint.
+oc:SAFE_BIN_INTERPRETER_UNPROFILED0-constraint sh:severity sh:Warning;
+   sh:message "An interpreter or runtime in safeBins has no explicit argv profile.";
+   sh:prefixes oc:Prefixes;
+   sh:select """
+SELECT DISTINCT $this WHERE {
+  $this ape:agentId ?agentId;
+  oc:owns ?posture.
+  ?posture oc:kind "OpenClawImport::ExecutionPosture".
+  ?posture f:ExecutionPosture::safeBins ?bin.
+  BIND(LCASE(REPLACE(STR(?bin),"^[\\u0009-\\u000d\\u0020\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]+|[\\u0009-\\u000d\\u0020\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]+$","")) AS ?trimmed)
+BIND(REPLACE(?trimmed,"^.*[/\\\\\\\\]","") AS ?basename)
+BIND(REPLACE(?basename,"[.](exe|cmd|bat|com)$","") AS ?normalized)
+FILTER(REGEX(?normalized,"^(ash|awk|bash|busybox|bun|cmd|cscript|dash|deno|fish|gawk|gsed|ksh|lua|mawk|nawk|node|nodejs|perl|php|powershell|pypy|pwsh|python|python2|python3|ruby|sed|sh|toybox|wscript|zsh)$") || REGEX(?normalized,"^(python|ruby|perl|php|node)[0-9]+([.][0-9]+)?$"))
+FILTER NOT EXISTS {
+    ?posture f:ExecutionPosture::safeBinProfiles ?profile.
+    FILTER(LCASE(REPLACE(STR(?profile),"^[\\u0009-\\u000d\\u0020\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]+|[\\u0009-\\u000d\\u0020\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]+$",""))=?normalized)
+  }
+} """ .

@@ -41,16 +41,16 @@ function expectedTuples(extended: boolean) {
   ) {
     for (const agent of component) {
       for (const related of component) {
-        if (agent !== related) tuples.push(["LINK_CYCLE", agent, related]);
+        if (agent !== related) tuples.push(["APE_LINK_CYCLE", agent, related]);
       }
     }
   }
   if (extended) {
     tuples.push(
-      ["GRANT_WIDENS_PARENT", "bridge", "host"],
-      ["GRANT_WIDENS_PARENT", "parent", "host"],
-      ["UNREACHABLE_OPERATOR", "orphan", "orphan"],
-      ["UNREACHABLE_OPERATOR", "self", "self"],
+      ["APE_GRANT_WIDENS_PARENT", "bridge", "host"],
+      ["APE_GRANT_WIDENS_PARENT", "parent", "host"],
+      ["APE_UNREACHABLE_OPERATOR", "orphan", "orphan"],
+      ["APE_UNREACHABLE_OPERATOR", "self", "self"],
     );
   }
   return sortTuples(tuples);
@@ -68,6 +68,7 @@ function evaluate(store: Store) {
           <${SH}focusNode> ?focus; <${SH}value> ?value .
       }
       GRAPH <urn:ase:ape:v1:shapes> { ?shape <${APE}code> ?code }
+      FILTER(STRSTARTS(STR(?code), "APE_"))
       ?focus <${APE}agentId> ?agentId .
       OPTIONAL { ?value <${APE}agentId> ?relatedAgentId }
     }`,
@@ -100,7 +101,7 @@ function evaluate(store: Store) {
 
 Deno.test({
   name:
-    "Toolkit 0.10.10 and OpenSysML 0.11.0 give identical shipped APE findings on the same sources",
+    "Toolkit 0.10.10 and OpenSysML 0.11.0 give identical shipped model findings on the same sources",
   ignore: !oracleArchive,
   async fn(t) {
     assert.ok(

@@ -1,8 +1,8 @@
 import type { Finding } from "../snapshot.ts";
 
 export interface ApeFinding extends Finding {
-  pattern: string;
-  finding: "present" | "absent" | "indeterminate";
+  pattern?: string;
+  finding?: "present" | "absent" | "indeterminate";
 }
 export type ApeStage = "projection" | "loading" | "view" | "rule";
 export interface ApeReport {

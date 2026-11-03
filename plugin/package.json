@@ -27,6 +27,7 @@
     "toolkit-worker.mjs",
     "oxigraph_bg.wasm",
     "rules/ape/*.ttl",
+    "rules/openclaw/*.ttl",
     "openclaw.plugin.json",
     "README.md",
     "LICENSE",

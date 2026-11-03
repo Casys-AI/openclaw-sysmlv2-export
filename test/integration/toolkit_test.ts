@@ -52,12 +52,20 @@ Deno.test({
       assert.equal(base.errors.length, 0);
       assert.equal(base.ape.status, "completed");
       assert.deepEqual(
-        base.ape.metrics!.queries.map((q) => [q.code, q.findings]),
+        base.ape.metrics!.queries.filter((q) => q.code.startsWith("APE_"))
+          .map((q) => [q.code, q.findings]),
         [
-          ["GRANT_WIDENS_PARENT", 0],
-          ["LINK_CYCLE", 6],
-          ["UNREACHABLE_OPERATOR", 0],
+          ["APE_GRANT_WIDENS_PARENT", 0],
+          ["APE_LINK_CYCLE", 6],
+          ["APE_UNREACHABLE_OPERATOR", 0],
         ],
+      );
+      assert.equal(
+        new Set(
+          base.ape.metrics!.queries.map((q) => q.code)
+            .filter((code) => !code.startsWith("APE_")),
+        ).size,
+        16,
       );
       assert.deepEqual(
         base.ape.findings.filter((f) => f.code === "APE_LINK_CYCLE").map((f) =>
@@ -197,7 +205,7 @@ Deno.test({
         new Date("2026-11-02T10:15:00Z"),
       );
       assert.deepEqual(summary.validation, { status: "passed", errors: 0 });
-      assert.deepEqual(summary.ape, { status: "completed", count: 6 });
+      assert.equal(summary.ape.status, "completed");
       assert.ok(summary.inferred!.rules > 0);
       const published = JSON.parse(
         await readFile(join(summary.outDir, "validation.json"), "utf8"),
@@ -209,6 +217,11 @@ Deno.test({
         JSON.stringify(published),
         /"(?:totalMs|preparationMs|projectionMs|loadMs|ms)":/,
       );
+      const apeFindings = published.ape.findings.filter(
+        (f: { code: string }) => f.code.startsWith("APE_"),
+      );
+      assert.equal(apeFindings.length, 6);
+      assert.equal(summary.ape.count, published.ape.findings.length);
       assert.equal(Object.hasOwn(published.ape.metrics, "quads"), false);
       assert.equal(Object.hasOwn(published.ape, "validationReport"), false);
       const page = await readFile(summary.viewer, "utf8");
@@ -239,21 +252,25 @@ Deno.test({
           `SELECT ?result WHERE { ?report <${sh}result> ?result . ?result a <${sh}ValidationResult>; <${sh}sourceShape> <urn:ase:ape:v1:LINK_CYCLE> }`,
         );
         assert.ok(Array.isArray(results));
-        assert.ok(results.length >= published.ape.findings.length);
+        assert.ok(results.length >= apeFindings.length);
+        const allResults = reportStore.query(
+          `SELECT ?result WHERE { ?report <${sh}result> ?result . ?result a <${sh}ValidationResult> }`,
+        );
+        assert.ok(Array.isArray(allResults));
         assert.equal(
           reportStore.match(
             null,
             namedNode(sh + "sourceConstraintComponent"),
             namedNode(sh + "SPARQLConstraintComponent"),
           ).length,
-          results.length,
+          allResults.length,
         );
         // RDF reports one result per solution; APE JSON groups related values by agent.
         const focuses = reportStore.query(
-          `SELECT DISTINCT ?focus WHERE { ?result <${sh}focusNode> ?focus }`,
+          `SELECT DISTINCT ?focus WHERE { ?result <${sh}sourceShape> <urn:ase:ape:v1:LINK_CYCLE>; <${sh}focusNode> ?focus }`,
         );
         assert.ok(Array.isArray(focuses));
-        assert.equal(focuses.length, published.ape.findings.length);
+        assert.equal(focuses.length, apeFindings.length);
       } finally {
         (reportStore as Store & { free(): void }).free();
       }
@@ -264,7 +281,7 @@ Deno.test({
         publishedFindings.filter((f: { code: string }) =>
           f.code.startsWith("APE_")
         ),
-        published.ape.findings,
+        apeFindings,
       );
       for (const severity of ["error", "warning", "info"] as const) {
         assert.equal(

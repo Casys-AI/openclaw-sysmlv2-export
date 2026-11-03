@@ -219,7 +219,7 @@ CONSTRUCT {
 
 ape:GRANT_WIDENS_PARENT a sh:NodeShape ;
   sh:targetSubjectsOf ape:agentId ;
-  ape:code "GRANT_WIDENS_PARENT" ; ape:pattern "S3" ;
+  ape:code "APE_GRANT_WIDENS_PARENT" ; ape:pattern "S3" ;
   ape:finding "present" ;
   ape:recovery "Review the delegated execution boundary and attenuate grants or require approval at the host execution endpoint." ;
   sh:sparql ape:GRANT_WIDENS_PARENT-constraint .
@@ -244,7 +244,7 @@ SELECT DISTINCT $this ?value ?relatedAgentId WHERE {
 
 ape:LINK_CYCLE a sh:NodeShape ;
   sh:targetSubjectsOf ape:agentId ;
-  ape:code "LINK_CYCLE" ; ape:pattern "4.2" ;
+  ape:code "APE_LINK_CYCLE" ; ape:pattern "4.2" ;
   ape:finding "present" ;
   ape:recovery "Review the delegation cycle and make its termination and supervisory intervention explicit." ;
   sh:sparql ape:LINK_CYCLE-constraint .
@@ -268,7 +268,7 @@ SELECT DISTINCT $this ?value ?relatedAgentId WHERE {
 
 ape:UNREACHABLE_OPERATOR a sh:NodeShape ;
   sh:targetSubjectsOf ape:agentId ;
-  ape:code "UNREACHABLE_OPERATOR" ; ape:pattern "4.2" ;
+  ape:code "APE_UNREACHABLE_OPERATOR" ; ape:pattern "4.2" ;
   ape:finding "absent" ;
   ape:recovery "Review the agent's intended entry or supervision path and model it explicitly." ;
   sh:sparql ape:UNREACHABLE_OPERATOR-constraint .
