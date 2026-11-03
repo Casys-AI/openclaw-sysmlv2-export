@@ -1,5 +1,30 @@
 # Changelog
 
+## Unreleased
+
+- **The Toolkit ships inside the plugin.** The package carries the pinned
+  sysml-toolkit 0.10.10 files in `toolkit/` (about 20 MB, licenses included), so
+  installing the plugin gives model validation and diagnostics with no further
+  step, and nothing is downloaded at install or export time. Every export still
+  checks each file against its pinned SHA-256; a missing or modified file is a
+  `TOOLKIT_INTEGRITY` error whose recovery is to reinstall the plugin, and the
+  export is kept with a failed validation. `plugin/THIRD_PARTY_NOTICES.md` now
+  names the Toolkit, its licenses and its upstream release.
+- **Removed:** `openclaw sysmlv2-toolkit install` and `--from`, the install into
+  `<state dir>/sysmlv2-export-toolkit/`, and the `TOOLKIT_NOT_INSTALLED` and
+  `TOOLKIT_DOWNLOAD_FAILED` errors. `openclaw sysmlv2-toolkit status` stays and
+  verifies the bundled files. An export no longer ends with validation
+  `skipped`; the status remains only on earlier versions. A
+  `<state dir>/sysmlv2-export-toolkit/` folder left by an earlier install is no
+  longer read and can be deleted.
+- **Build.** `deno task plugin:build` writes `plugin/toolkit/` from the archive
+  that `SYSML_TOOLKIT_WASM_ARCHIVE` names, after checking it against the pinned
+  hash. It never downloads: without the variable it fails with
+  `TOOLKIT_ARCHIVE_MISSING`. CI downloads and verifies the archive before the
+  build.
+- **Deno CLI.** `diagnose` takes `--toolkit <dir>` (for instance
+  `plugin/toolkit`) in place of `--state-dir`.
+
 ## 0.2.0 — 2026-11-03
 
 The snapshot schema stays `openclaw-snapshot/5`, with one optional field,

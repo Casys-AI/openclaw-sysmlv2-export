@@ -22,10 +22,10 @@ The export reads an OpenClaw instance without changing it and turns it into:
 Each plugin run is kept as a version, browsable and comparable in an offline
 viewer.
 
-With the Toolkit installed, model checks (§7.2) run OpenClaw and APE SHACL rules
-on the compiled SysML. Exports retain collector notes if model checks are
-skipped; findings do not change the instance or block export. The Deno CLI can
-check an existing export.
+With the Toolkit bundled in the plugin package, model checks (§7.2) run OpenClaw
+and APE SHACL rules on the compiled SysML. Exports retain collector notes if the
+Toolkit is damaged and model checks cannot run; findings do not change the
+instance or block export. The Deno CLI can check an existing export.
 
 **Targets.** OpenClaw 2026.10.x, following the 2026.10.9 documentation. The
 collector also reads 2026.6.10 configurations (`agents.list`, legacy memory
@@ -46,7 +46,7 @@ calls the next.
 | emit     | `emit(snapshot) → Map<path, text>`     | Deterministic SysML text: `OpenClawImport.sysml`, `OpenClawInstance.sysml`.   |
 | diagnose | Model checks and collector notes       | Toolkit validation and SHACL rules (§7.2); plugin and Deno CLI.               |
 | diff     | `diff(a, b) → Change[]`                | Structural changes between two snapshots (§8).                                |
-| validate | `validate(files) → Diagnostics`        | Compiles written files with the explicitly installed pinned WASM Toolkit.     |
+| validate | `validate(files) → Diagnostics`        | Compiles written files with the pinned WASM Toolkit bundled in the plugin.    |
 | views    | `diagramViews(snapshot, inference)`    | The viewer's model: nodes and edges per view, each with its SysML; its table. |
 | layout   | `layoutView(view) → Scene`             | Positions a view's drawn elements with elkjs, at export time. Asynchronous.   |
 | tables   | `drawing(view)`, `tableData(view)`     | Splits a view into what is drawn and its table, shaped for the page (§10.5).  |
@@ -612,8 +612,9 @@ is not evidence that an older export contains no plaintext credentials.
 
 The plugin writes the canonical sorted findings and collector notes to
 `findings.json`; summary and `versions.json` counts include them. Model checks
-are skipped without the Toolkit, with no TypeScript fallback. The viewer's
-Doctor panel displays the available findings and their status.
+do not run when the bundled Toolkit is missing or damaged, with no TypeScript
+fallback. The viewer's Doctor panel displays the available findings and their
+status.
 
 ## 8. Diff
 
@@ -801,45 +802,60 @@ unified diff of each file since the previous version.
   payloads shared by several versions are stored once, and the embedded data
   cannot close its script element.
 
-### 10.6 Toolkit installation and validation
+### 10.6 Toolkit packaging and validation
 
 ```text
-openclaw sysmlv2-toolkit install [--from <archive.tgz>]
 openclaw sysmlv2-toolkit status
 ```
 
-Installation is explicit. Without `--from`, it downloads
-`https://github.com/Open-MBEE/sysml-toolkit/releases/download/v0.10.10/sysml-wasm-0.10.10.tgz`.
-The pinned archive SHA-256 is
-`93d6ef0a2140fceabc3115cd95d629146bc004c3959bfa23d715cce8b06cc13c`. The
-installer verifies the archive and files, then atomically installs into
-`<state dir>/sysmlv2-export-toolkit/0.10.10/`. A verified existing installation
-is an idempotent no-op. Status JSON is `{installed, version, path, verified}`;
-installation JSON adds the boolean `changed`.
+The plugin package carries the Toolkit in `toolkit/`, beside `core.mjs`: exactly
+the pinned files of `src/adapters/sysml-toolkit-pin.ts` (`sysmlv2.js`,
+`sysmlv2_bg.wasm`, the three `stdlib/` snapshots and its manifest, `LICENSE`,
+`LICENSE-EPL-2.0`, `THIRD-PARTY-NOTICES.md`), about 20 MB. Installing the plugin
+needs no further step and an export downloads nothing. `status` prints
+`{version, path, verified}`.
+
+`deno task plugin:build` writes `plugin/toolkit/` from the public archive
+`https://github.com/Open-MBEE/sysml-toolkit/releases/download/v0.10.10/sysml-wasm-0.10.10.tgz`,
+whose SHA-256 is
+`93d6ef0a2140fceabc3115cd95d629146bc004c3959bfa23d715cce8b06cc13c`. The build
+never downloads: `SYSML_TOOLKIT_WASM_ARCHIVE` names the archive, and a missing
+or unreadable one fails with `TOOLKIT_ARCHIVE_MISSING`, a wrong one with
+`TOOLKIT_INTEGRITY`, before anything is bundled. Each written file is checked
+against its own pinned SHA-256, and the directory holds nothing else. It is
+gitignored and listed in the package `files`.
+
+The runtime reads one directory. The plugin resolves `toolkit/` from the
+location of its bundle; a Deno checkout resolves `plugin/toolkit/` from the
+source. Callers can name another directory: `diagnose` takes `--toolkit <dir>`,
+and the tests extract the archive into a temporary directory they pass to
+validation. There is no fallback to an earlier copy, such as the former
+`<state dir>/sysmlv2-export-toolkit/`, which can be deleted.
 
 The Toolkit's `LICENSE` (Apache-2.0), `LICENSE-EPL-2.0` (its SysML v2 standard
-library), and `THIRD-PARTY-NOTICES.md` are copied into the installation. Neither
-an Assembly checkout nor a silent download is needed for compilation.
+library) and `THIRD-PARTY-NOTICES.md` ship in `toolkit/`;
+`plugin/THIRD_PARTY_NOTICES.md` names sysml-toolkit 0.10.10, its licenses and
+the upstream release as the source of the EPL-covered library.
 
 After writing the export, `runExport` validates every written SysML file,
 including inferred SysML and the local `core.sysml`, `cases.sysml` and
 `skills.sysml`, using the Toolkit's standard library. The standalone Deno export
 remains the separate emitter; tests call validation on its exact output files.
-It checks installed file hashes and uses `initSync` inside
+It checks the bundled file hashes on every load and uses `initSync` inside
 `node:worker_threads`, with a 60-second compile timeout.
 
 The validation summary is `{status, errors, code?, recovery?}`, where `status`
-is `passed`, `failed` or `skipped` and `errors` is a number. `validation.json`
-is `{validation: summary, errors: [...], warnings: [...]}`. Each diagnostic has
+is `passed` or `failed` (`skipped` only in exports made before the Toolkit was
+bundled) and `errors` is a number. `validation.json` is
+`{validation: summary, errors: [...], warnings: [...]}`. Each diagnostic has
 `code`, `message`, `file`, `line` and `column`; source positions are 1-based,
-and runtime errors use null for the file and position. Skipped validation still
-writes the file, with empty diagnostic arrays. Unresolved references in the
-exported sources count as errors even when the Toolkit marks them advisory;
+and runtime errors use null for the file and position. Unresolved references in
+the exported sources count as errors even when the Toolkit marks them advisory;
 other non-error findings are kept in `warnings`. Chat and tool output include
 one short validation line.
 
-Missing Toolkit skips validation with `TOOLKIT_NOT_INSTALLED` and recovery
-exactly `openclaw sysmlv2-toolkit install`. Compilation errors, tampering and
+A missing or modified bundled file is `TOOLKIT_INTEGRITY`, with a recovery that
+says to reinstall the plugin. Compilation errors, that integrity failure and
 timeouts fail validation without discarding the export. These diagnostics are
 informational to the export result.
 
@@ -869,19 +885,20 @@ This is not a full SHACL implementation. Portable APE findings retain their
 A completed analysis writes `ape-report.ttl` once as a SHACL validation report
 for both rule sets. The report name and `ape` result field remain for
 compatibility. `validation.json` adds an `ape` summary with status, findings and
-count metrics; it omits the report RDF. Status is `completed`, `skipped` (no
-Toolkit or a failed check), or `failed`; a failure carries `code`, `stage`
-(projection, loading, view or rule), `file` and `cause`, separate from Toolkit
-diagnostics. APE has its own default 10-second deadline; `APE_TIMEOUT` fails APE
-alone and preserves the settled compile result. Persisted metrics contain
-counts, not timings. The rules read only the compiled model, never the snapshot.
+count metrics; it omits the report RDF. Status is `completed`, `skipped` (a
+failed Toolkit check or no usable Toolkit), or `failed`; a failure carries
+`code`, `stage` (projection, loading, view or rule), `file` and `cause`,
+separate from Toolkit diagnostics. APE has its own default 10-second deadline;
+`APE_TIMEOUT` fails APE alone and preserves the settled compile result.
+Persisted metrics contain counts, not timings. The rules read only the compiled
+model, never the snapshot.
 
 ### 10.7 Deno CLI
 
 ```text
 deno task collect --home <dir> [--plugins <file>] --out <file>
 deno task export  --snapshot <file> --out <dir>
-deno task diagnose --export <version-dir> --state-dir <Toolkit-install-state-dir>
+deno task diagnose --export <version-dir> --toolkit plugin/toolkit
 deno task diff    <a> <b>
 ```
 
@@ -906,10 +923,9 @@ Failures are `{ code, context, recovery }` errors, never findings.
 | `INSTRUCTION_CHANGED`, `INFERENCE_NOT_JSON`       | plugin    | Per agent during inference (§9).                                                        |
 | `EXPORT_VERSION_EXISTS`, `EXPORT_VERSION_MISSING` | plugin    | Two runs in the same second; `versions.json` lists a missing directory.                 |
 | `CLI_USAGE`, `CLI_IO_ERROR`                       | Deno CLI  | Invalid arguments; files cannot be read or created.                                     |
-| `TOOLKIT_NOT_INSTALLED`                           | validate  | Toolkit missing; validation skipped. Recovery: `openclaw sysmlv2-toolkit install`.      |
-| `TOOLKIT_INTEGRITY`                               | toolkit   | Archive or installed file hash verification failed.                                     |
+| `TOOLKIT_INTEGRITY`                               | toolkit   | A bundled file is missing or modified, or the build's archive is not the pinned one.    |
+| `TOOLKIT_ARCHIVE_MISSING`                         | build     | `SYSML_TOOLKIT_WASM_ARCHIVE` is unset or names an unreadable file.                      |
 | `TOOLKIT_TIMEOUT`                                 | validate  | The worker exceeded 60 seconds.                                                         |
-| `TOOLKIT_DOWNLOAD_FAILED`                         | toolkit   | Reading or downloading the installation archive failed.                                 |
 | `TOOLKIT_VALIDATION_FAILED`                       | validate  | The worker or compiler could not complete validation.                                   |
 
 ## 12. Limits and known unknowns
@@ -1009,10 +1025,13 @@ Failures are `{ code, context, recovery }` errors, never findings.
 - **Model checks.** The test contract covers positive and negative cases for
   each migrated rule.
 - **Toolkit.** An export directory of the fixture, with an inferred package,
-  compiles alone with the pinned public sysml-wasm 0.10.10 archive, without an
-  Assembly checkout. CI downloads it and checks its SHA-256 before running
-  `deno task test:toolkit`. Locally, set `SYSML_TOOLKIT_WASM_ARCHIVE` to an
-  absolute archive path; optional archive-dependent tests skip when absent.
+  compiles alone with the pinned public sysml-wasm 0.10.10 files, without an
+  Assembly checkout. CI downloads the archive, checks its SHA-256, bundles it
+  with `plugin:build` and runs `deno task test:toolkit`. Locally, set
+  `SYSML_TOOLKIT_WASM_ARCHIVE` to an absolute archive path; the tests extract it
+  into a temporary directory, and archive-dependent tests skip when it is
+  absent. Without the Toolkit, an export keeps its files and validation fails
+  with `TOOLKIT_INTEGRITY`.
 - **Viewer.** The fixture's views hold the expected nodes and edges, the Tools
   matrix one cell per grant, a Behaviour view its rules as a table and the
   Overview each agent's figures and links; cron expressions are placed in the

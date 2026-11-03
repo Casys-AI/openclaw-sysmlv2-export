@@ -40,11 +40,12 @@ Each run writes `<state dir>/sysmlv2-export/<UTC time>/` with `snapshot.json`,
 
 ## Check the system
 
-With the Toolkit installed, every export checks the SysML model with OpenClaw
-and APE SHACL rules. The summary counts findings and the viewer's Doctor panel
-lists them. If the Toolkit is unavailable, model checks are skipped and
-collector notes remain available. Findings do not block an export or change the
-instance.
+Every export checks the SysML model with OpenClaw and APE SHACL rules, using the
+Toolkit that ships inside this plugin: nothing to install, nothing downloaded.
+The summary counts findings and the viewer's Doctor panel lists them. If the
+bundled Toolkit is missing or damaged, validation fails with
+`TOOLKIT_INTEGRITY`, model checks do not run and collector notes remain
+available. Findings do not block an export or change the instance.
 
 See the
 [diagnostics guide](https://github.com/Casys-AI/openclaw-sysmlv2-export/blob/main/docs/diagnostics.md)
@@ -52,21 +53,23 @@ for all codes and their sources.
 
 ## Validate the model
 
-Each export can be compiled with sysml-toolkit, an open-source SysML v2
-compiler. Install it once, explicitly; exporting never downloads anything.
+Each export is compiled with sysml-toolkit, an open-source SysML v2 compiler.
+The pinned sysml-wasm 0.10.10 release is bundled in this package (about 20 MB),
+so installing the plugin is the whole setup; exporting never downloads anything.
 
 ```sh
-openclaw sysmlv2-toolkit install [--from <archive.tgz>]
 openclaw sysmlv2-toolkit status
 ```
 
-`install` fetches the pinned public sysml-wasm 0.10.10 release (about 21 MB), or
-reads a local copy, and checks it against its pinned SHA-256. Every export is
-then compiled with a 60-second deadline. APE runs under its own default
-10-second deadline; `APE_TIMEOUT` preserves the compile result. The result says
-whether validation `passed`, `failed` or was `skipped`, and `validation.json`
-lists the diagnostics. The Toolkit is under the Apache License 2.0 and its
-standard library under the EPL 2.0; their licenses are installed with it.
+`status` prints JSON: the bundled version and `verified: true` once every file
+matches its pinned SHA-256. Each export performs the same check; a missing or
+modified file is a `TOOLKIT_INTEGRITY` error, and reinstalling the plugin fixes
+it. Every export is compiled with a 60-second deadline. APE runs under its own
+default 10-second deadline; `APE_TIMEOUT` preserves the compile result. The
+result says whether validation `passed` or `failed`, and `validation.json` lists
+the diagnostics. The Toolkit is under the Apache License 2.0 and its standard
+library under the EPL 2.0; their licenses ship in `toolkit/`, and
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) names the source.
 
 ## Privacy
 
@@ -82,8 +85,9 @@ standard library under the EPL 2.0; their licenses are installed with it.
 Source, documentation and specification:
 <https://github.com/Casys-AI/openclaw-sysmlv2-export>. MIT license; the bundle
 includes elkjs 0.9.3 (Eclipse Public License 2.0) to lay the diagrams out, and
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) holds the notices of every
-bundled package.
+`toolkit/` carries sysml-toolkit 0.10.10 (Apache License 2.0, with an EPL 2.0
+SysML library). [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) holds the
+notices of every bundled package.
 
 Contributors: see [contribution boundaries](../CONTRIBUTING.md) and the
 [source map](../src/README.md).
