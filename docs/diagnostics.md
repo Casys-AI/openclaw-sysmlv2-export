@@ -21,6 +21,45 @@ The export summary and `versions.json` store `findings: {error, warning, info}`
 counts. The viewer's Doctor panel displays the findings available for each
 version; model-check status distinguishes skipped checks from an empty result.
 
+### Whether the checks ran
+
+An empty list of findings is clean only when the checks ran. The viewer reads
+`validation.json` and gives each version one of four states:
+
+| State        | Meaning                                                                                     |
+| ------------ | ------------------------------------------------------------------------------------------- |
+| `verified`   | The APE analysis completed (or, in an archive older than it, the findings were recorded).   |
+| `not-run`    | It was skipped, for example `TOOLKIT_NOT_INSTALLED`; the export's recovery is kept with it. |
+| `failed`     | It started and failed (`APE_TIMEOUT`, `APE_WORKER_FAILED`…).                                |
+| `unrecorded` | The archive holds no findings, or a `findings.json` the viewer cannot read.                 |
+
+A version also gives the number of failed inferences and, when the analysis
+completed, how many rules ran (`ape.metrics.queries`).
+
+### Reading findings
+
+The viewer groups findings by severity, code and recovery, each subject with its
+own context. A group's source is `rule` (an error or warning from a model
+check), `note` (an informative model check) or `collector` (a limit noted while
+collecting, found in the snapshot's `ambiguities`). An APE finding that names
+other agents in its context lists them in `related` (`agent:<id>`, sorted), so a
+cycle can be lit and the delegation findings can sit under the exec finding they
+widen; `related` is optional and absent from older versions.
+
+### New and resolved
+
+A version's findings are also compared with those of the last older version
+whose APE analysis completed and whose findings were recorded, as a multiset of
+code, subject and context. A finding absent now is `resolved`, and one absent
+before is `new`, only when its rule ran on both sides (`ape.metrics.queries`,
+with the `APE_` prefix ignored: the first exports wrote none). When the rule did
+not run in the earlier version a present finding is `newRule`, and when it did
+not run now an earlier one is `notComparable`. Collector notes always count as
+run. With no such earlier version there is no comparison. The comparison also
+says whether the configuration and inference were the same between the two
+versions (`inputs`), because a rule can change with the plugin and not with the
+configuration.
+
 Subjects match the model's stable element IDs: `agent:<id>`, `cron:<id>`,
 `heartbeat:<agentId>`, `account:<id>`, `grant:<agentId>:<tool>` and `instance`.
 A binding finding uses the existing account, otherwise the existing agent,

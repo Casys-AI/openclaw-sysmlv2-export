@@ -386,12 +386,15 @@ export function createViewer(
     const findings = versions.map((v, i) => findingsOf(v, snapshots[i]));
     const apes = versions.map((v) => apeOf(v.files));
     const labels = snapshots.map((s) => s ? elementLabels(s) : {});
+    const recorded = versions.map((v) =>
+      Object.hasOwn(v.files, "findings.json")
+    );
     const checks: Checks[] = versions.map((v, i) =>
       checksOf({
         ape: apes[i],
         findings: findings[i].unreadable
           ? "unreadable"
-          : Object.hasOwn(v.files, "findings.json")
+          : recorded[i]
           ? "recorded"
           : "missing",
         validation: v.entry.validation,
@@ -401,10 +404,10 @@ export function createViewer(
     const collectors = snapshots.map((s) =>
       collectorNotes(s?.ambiguities ?? [])
     );
-    // The version a delta of findings is set against: the last one whose
-    // checks ran and whose findings are readable (older than `i`).
+    // The version a delta of findings is set against: the last older one whose
+    // findings are recorded and readable and whose analysis completed.
     const comparable = (i: number) =>
-      !findings[i].unreadable && rulesRan(apes[i]) !== null;
+      recorded[i] && !findings[i].unreadable && rulesRan(apes[i]) !== null;
     const verdict = (now: number, before: number): InputsVerdict =>
       inputsVerdict(
         { snapshot: snapshots[before], inference: inferences[before] },
