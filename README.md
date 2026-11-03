@@ -74,8 +74,8 @@ Beside the run folders, `versions.json` lists the runs, newest first, and
 
 Every export runs the doctor on its snapshot and writes `findings.json`: errors,
 warnings and notes, each with a code, the element concerned and how to fix it.
-The summary and `versions.json` count them. In the viewer, the Doctor chip in
-the header lists them, and the elements concerned carry a mark. Findings never
+The summary and `versions.json` count them. In the viewer, the Doctor panel of
+the sidebar lists them, and the elements concerned carry a mark. Findings never
 block an export or change the instance.
 
 ![The Doctor panel: each finding with the element it concerns and its fix](docs/screenshots/doctor.png)
@@ -130,11 +130,12 @@ and its diagrams are laid out when the export runs. Pick a version, then a view.
   with decisions, hand-offs and escalations, and its rules in a requirements
   table with the lines they come from.
 
-Click an element, a row or a cell to see its attributes and its exact SysML
-text. What was added or changed since the previous version is highlighted; the
-change counts open a list of what was added, changed and removed, with each
-changed value shown before and after. The Files and Changes tabs show each file
-and its diff against the previous version.
+The icon rail on the right opens three panels in a sidebar that you can collapse
+and resize. The Inspector shows the attributes and exact SysML text of the
+element, row or cell you click. Changes lists what was added, changed and
+removed since the previous version, each changed value before and after, and the
+diagram and table highlight it. Doctor lists the findings. The Files and Changes
+tabs show each file and its diff against the previous version.
 
 ![Overview: one row per agent under the instance's totals](docs/screenshots/overview.png)
 

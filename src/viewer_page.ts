@@ -57,29 +57,24 @@ main > section[hidden] { display: none; }
 }
 
 /* Diagrams: Assembly's SysML page, as one sheet. */
-.md { position: relative; height: 100%; display: grid; grid-template: auto minmax(0, 1fr) / minmax(0, 1fr); }
-.md-main { grid-row: 2; grid-column: 1; min-height: 0; display: flex; flex-direction: column; }
+.md { position: relative; height: 100%; display: grid; grid-template: "bar side rail" auto "main side rail" minmax(0, 1fr) / minmax(0, 1fr) auto auto; }
+.md-main { grid-area: main; min-height: 0; display: flex; flex-direction: column; }
 .md-stage { position: relative; flex: 1 1 0; min-height: 0; }
 .md-stage[hidden], .md-sheet[hidden], .md-split[hidden] { display: none; }
 .md-split { flex: none; height: 9px; margin: 0 12px; cursor: row-resize; touch-action: none; position: relative; }
 .md-split::after { content: ""; position: absolute; left: 50%; top: 3px; width: 40px; height: 3px; border-radius: 2px; background: var(--line-strong); transform: translateX(-50%); }
 .md-split:hover::after { background: var(--md-soft); }
-.md-toolbar { position: relative; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 10px 16px 0; pointer-events: none; }
+.md-toolbar { grid-area: bar; position: relative; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 10px 16px 0; pointer-events: none; }
 .md-toolbar > * { pointer-events: auto; }
 .md-title { display: flex; align-items: baseline; gap: 8px; min-width: 0; max-width: 420px; }
 .md-title strong { font-size: 18px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .md-title span { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .md-toolbar select { min-width: 140px; max-width: 280px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
-.md-chips, .md-tools { display: flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
-.md-chips:empty { display: none; }
+.md-tools { display: flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
 .md-tools { margin-left: auto; }
 .md-tools[hidden] { display: none; }
-.md-chips button, .md-tools button, .md-chips > span { all: unset; cursor: pointer; padding: 3px 9px; border-radius: 7px; font-size: 12px; font-weight: 500; color: var(--muted); }
-.md-chips > span { cursor: default; }
-.md-chips button span + span { margin-left: 8px; }
-.md-chips button:hover, .md-tools button:hover { color: var(--ink); background: var(--hover); }
-.md-chips .add { color: var(--add); } .md-chips .chg { color: var(--warn); } .md-chips .del { color: var(--del); }
-.md-chips button[aria-pressed="false"] { text-decoration: line-through; }
+.md-tools button { all: unset; cursor: pointer; padding: 3px 9px; border-radius: 7px; font-size: 12px; font-weight: 500; color: var(--muted); }
+.md-tools button:hover { color: var(--ink); background: var(--hover); }
 .md-canvas { position: absolute; inset: 0; overflow: hidden; cursor: grab; touch-action: none; outline: none;
   background-image: radial-gradient(var(--md-dot) 0.9px, transparent 1px); background-size: 22px 22px; }
 .md-canvas:active { cursor: grabbing; }
@@ -142,10 +137,28 @@ svg.md-focus .md-node.leaf:not(.lit) { opacity: .28; }
 svg.md-focus .md-edge.lit .md-line { stroke-width: 1.8; }
 
 /* Inspector */
-.md-inspector { grid-row: 2; grid-column: 1; justify-self: end; align-self: start; position: relative; z-index: 3; width: 380px; max-height: calc(100% - 20px); margin: 8px 12px 12px; overflow: auto; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); backdrop-filter: blur(8px); font-size: 12px; box-shadow: 0 10px 30px rgb(0 0 0 / 6%); }
-.md.inspect-left .md-inspector { justify-self: start; }
-.md-inspector[hidden] { display: none; }
-.md-inspector h3 { margin: 2px 26px 0 0; font-size: 15px; font-weight: 600; word-break: break-word; }
+/* Sidebar: one panel at a time beside the diagram, picked from the icon rail. */
+.md-side { grid-area: side; position: relative; display: flex; flex-direction: column; width: var(--side-w, 380px); min-height: 0; border-left: 1px solid var(--line); background: var(--card); }
+.md-side[hidden] { display: none; }
+.md-side-head { flex: none; display: flex; align-items: center; gap: 6px; height: 46px; padding: 0 8px 0 16px; border-bottom: 1px solid var(--line); }
+.md-side-head strong { font-size: 13px; font-weight: 600; }
+.md-side-tools { margin-left: auto; display: flex; gap: 2px; }
+.md-side-head button { all: unset; cursor: pointer; padding: 3px 8px; border-radius: 7px; font-size: 12px; color: var(--muted); }
+.md-side-head button:hover { color: var(--ink); background: var(--hover); }
+.md-side-head button[aria-pressed="true"] { color: var(--ink); background: var(--accent-soft); }
+.md-side-grip { position: absolute; z-index: 2; left: -4px; top: 0; bottom: 0; width: 8px; cursor: col-resize; touch-action: none; outline-offset: -2px; }
+.md-side-grip:hover, .md-side-grip[data-drag] { background: linear-gradient(to right, transparent 3px, var(--line-strong) 3px 5px, transparent 5px); }
+.md-rail { grid-area: rail; display: flex; flex-direction: column; align-items: center; gap: 4px; width: 46px; padding: 8px 0; border-left: 1px solid var(--line); background: var(--card); }
+.md-rail button { all: unset; position: relative; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 8px; color: var(--muted); cursor: pointer; }
+.md-rail button:hover { color: var(--ink); background: var(--hover); }
+.md-rail button[aria-pressed="true"] { color: var(--ink); background: var(--accent-soft); }
+.md-rail svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.md-rail b { position: absolute; top: -1px; right: -3px; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 999px; font: 600 9.5px/15px var(--font); text-align: center; color: #fff; background: var(--doc, var(--md-soft)); }
+.md-rail b:empty { display: none; }
+.md-inspector { flex: 1 1 0; min-height: 0; overflow: auto; padding: 12px 16px 16px; font-size: 12px; }
+.md-side-empty { margin: 8px 0; color: var(--muted); }
+.md-side-note { margin: 0 0 12px; font-size: 11px; color: var(--muted); }
+.md-inspector h3 { margin: 2px 0 0; font-size: 15px; font-weight: 600; word-break: break-word; }
 .md-inspector h3 span { font-weight: 400; color: var(--muted); }
 .md-kicker { margin: 0; font-size: 10.5px; letter-spacing: .04em; color: var(--muted); }
 .md-inspector .md-kicker + ul, .md-inspector .md-kicker + .md-src { margin-top: 4px; }
@@ -156,7 +169,6 @@ svg.md-focus .md-edge.lit .md-line { stroke-width: 1.8; }
 .md-inspector li button { all: unset; display: flex; gap: 8px; width: 100%; padding: 4px 0; border-top: 1px solid var(--line); cursor: pointer; }
 .md-inspector li button:hover .md-other { text-decoration: underline; }
 .md-kind { min-width: 92px; color: var(--muted); }
-.md-close { all: unset; position: absolute; top: 8px; right: 12px; cursor: pointer; font-size: 17px; color: var(--muted); }
 .md-status { display: inline-block; margin-top: 6px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
 .md-status.added { color: var(--add); background: var(--add-bg); } .md-status.changed { color: var(--warn); background: var(--warn-bg); } .md-status.removed { color: var(--del); background: var(--del-bg); }
 .md-src { margin: 0; } .md-src[open] { margin-bottom: 8px; }
@@ -176,8 +188,6 @@ svg.md-focus .md-edge.lit .md-line { stroke-width: 1.8; }
 .md-back { all: unset; margin-left: 10px; cursor: pointer; font-size: 11.5px; color: var(--muted); text-decoration: underline; text-decoration-color: var(--line-strong); }
 .md-back:hover { color: var(--ink); }
 .md-changes + .md-back { display: block; margin: -4px 0 12px; }
-.md.inspecting .md-legend { display: none; }
-.md.inspecting .md-sheet { margin-right: 404px; } .md.inspect-left .md-sheet { margin: 0 12px 12px 404px; }
 .md-canvas:focus-visible, button:focus-visible, select:focus-visible, [role="button"]:focus-visible { outline: 2px solid #797369; outline-offset: 2px; }
 
 /* Tables: a view's elements in rows, under its diagram or alone. */
@@ -267,14 +277,8 @@ svg.md-focus .md-edge.lit .md-line { stroke-width: 1.8; }
 
 /* Doctor: findings on the elements they concern. */
 .doc-error, [data-doc="error"] { --doc: var(--del); } .doc-warning, [data-doc="warning"] { --doc: var(--warn); } .doc-info { --doc: var(--md-soft); }
-.doc-dot { display: inline-block; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--doc); }
 th[data-doc]::before, tr[data-doc] > .et-name:not(:has(span))::before, tr[data-doc] > .et-name > span::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: var(--doc); vertical-align: 1px; }
 .wk th[data-doc]::before { margin-left: -13px; }
-.doc-chip { all: unset; flex: none; display: inline-flex; align-items: center; gap: 10px; padding: 4px 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); font-size: 12px; color: var(--muted); cursor: pointer; white-space: nowrap; }
-.doc-chip[hidden] { display: none; }
-.doc-chip:hover { color: var(--ink); border-color: var(--line-strong); }
-.doc-chip > span:first-child { font-weight: 600; color: var(--ink); }
-.doc-chip .doc-error, .doc-chip .doc-warning { display: inline-flex; align-items: center; gap: 5px; color: var(--doc); font-weight: 600; }
 .md-doc circle { fill: var(--doc); stroke: var(--paper); stroke-width: 2; }
 .md-doc text { font-size: 10px; font-weight: 700; fill: #fff !important; text-anchor: middle; }
 .md-findings { list-style: none; margin: 4px 0 12px; padding: 0; }
@@ -302,8 +306,8 @@ pre { padding: 8px 10px; }
 .k { color: #8250df; } .s { color: #0a3069; } .c { color: #6e7781; }
 @media (max-width: 760px) {
   .top { flex-wrap: wrap; height: auto; padding: 8px 12px; } .meta { display: none; }
-  .md-inspector { justify-self: stretch; align-self: end; width: auto; max-height: 55%; margin: 0 8px 8px; } .md-legend, .md-hint { display: none; }
-  .md.inspecting .md-sheet { margin: 0 12px 12px; }
+  .md { grid-template: "bar rail" auto "main rail" minmax(0, 1fr) / minmax(0, 1fr) auto; } .md-legend, .md-hint { display: none; }
+  .md-side { position: absolute; z-index: 5; top: 0; bottom: 0; right: 46px; width: min(420px, calc(100% - 56px)); box-shadow: -10px 0 30px rgb(0 0 0 / 8%); } .md-side-grip { display: none; }
 }
 </style>
 </head>
@@ -312,7 +316,6 @@ pre { padding: 8px 10px; }
 <div class="brand"><i aria-hidden="true"></i><h1>OpenClaw <span>→ SysML v2</span></h1></div>
 <select id="version" aria-label="Version"></select>
 <span class="meta" id="meta"></span>
-<button type="button" class="doc-chip" id="doctor" hidden></button>
 <nav class="tabs" aria-label="Pages"><button data-tab="diagrams">Diagrams</button><button data-tab="files">Files</button><button data-tab="changes">Changes</button></nav>
 </header>
 <main>
@@ -320,7 +323,6 @@ pre { padding: 8px 10px; }
 <div class="md-toolbar">
 <div class="md-title"><strong id="view-title"></strong><span id="view-sub"></span></div>
 <select id="view" aria-label="SysML view"></select>
-<div class="md-chips" id="delta" role="group" aria-label="Changes since the previous version"></div>
 <div class="md-tools"><button type="button" id="fit" title="Fit (0)">Fit</button><button type="button" id="zoom-in" title="Zoom in (+)" aria-label="Zoom in">+</button><button type="button" id="zoom-out" title="Zoom out (−)" aria-label="Zoom out">−</button></div>
 </div>
 <div class="md-main">
@@ -332,7 +334,16 @@ pre { padding: 8px 10px; }
 <div class="md-split" id="split" role="separator" aria-orientation="horizontal" aria-label="Resize the table" title="Drag to resize" hidden></div>
 <div class="md-sheet" id="sheet" hidden></div>
 </div>
-<aside class="md-inspector" id="inspector" aria-label="Element" hidden></aside>
+<aside class="md-side" id="side" aria-labelledby="side-title" hidden>
+<div class="md-side-grip" id="side-grip" role="separator" aria-orientation="vertical" aria-label="Resize the sidebar" title="Drag to resize · double-click to reset" tabindex="0"></div>
+<header class="md-side-head"><strong id="side-title"></strong><span class="md-side-tools" id="side-tools"></span><button type="button" id="side-collapse" title="Collapse the sidebar" aria-label="Collapse the sidebar">»</button></header>
+<div class="md-inspector" id="inspector"></div>
+</aside>
+<nav class="md-rail" aria-label="Panels">
+<button type="button" data-panel="inspector" aria-label="Inspector" title="Inspector" aria-pressed="false"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="3" width="14" height="14" rx="2.5"/><path d="M6.5 7.5h7M6.5 10.5h7M6.5 13.5h4"/></svg></button>
+<button type="button" data-panel="changes" aria-label="Changes" title="Changes" aria-pressed="false"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v8M6 7h8M6 16h8"/></svg><b></b></button>
+<button type="button" data-panel="doctor" aria-label="Doctor" title="Doctor" aria-pressed="false"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M2 10.5h3.5l2-5 4 10 2-5H18"/></svg><b></b></button>
+</nav>
 </div></section>
 <section id="files" class="sheet" hidden></section>
 <section id="changes" class="sheet" hidden></section>
@@ -359,7 +370,7 @@ const LEGENDS = {
 
 const state = { version: 0, tab: "diagrams", view: "overview", file: "OpenClawInstance.sysml", range: null,
   // An element to select once its view is shown.
-  selected: null, focus: null, hover: null, viewport: null, highlight: true, drawn: null, doc: new Map(),
+  selected: null, focus: null, hover: null, viewport: null, highlight: true, drawn: null, doc: new Map(), panel: null,
   // Tables: the text filter, folded groups, the facet value shown, the sort,
   // and the height a table under a diagram was dragged to.
   filter: "", folded: new Set(), facet: null, sort: null, sheetH: null };
@@ -422,7 +433,6 @@ function renderHeader() {
     v.inferred ? "inferred " + v.inferred.procedures + " procedures, " + v.inferred.rules + " rules" : "no inference",
     v.changes ? v.changes.length + " file" + (v.changes.length === 1 ? "" : "s") + " changed" : "first version",
   ].join(" · ");
-  renderDoctorChip();
   for (const b of document.querySelectorAll(".tabs button")) {
     if (b.dataset.tab === state.tab) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
   }
@@ -622,35 +632,34 @@ function marker(delta) {
   return (id) => added.has(id) ? " added" : changed.has(id) ? " changed" : "";
 }
 
-function renderDelta(cur) {
-  const box = document.getElementById("delta"), d = cur.delta;
-  box.replaceChildren();
-  if (!d) return;
-  if (d.isNew) { box.append(el("span", "add", "New in this version")); return; }
-  const before = payload(entryOf(state.version + 1, state.view));
-  const added = shown(d.added, cur.view), changed = shown(d.changed, cur.view), removed = shown(d.removed, before);
-  if (!added.length && !changed.length && !removed.length) { box.append(el("span", "", "No change since " + when(versions[state.version + 1]))); return; }
-  const toggle = button("Changes", () => {
-    state.highlight = !state.highlight;
-    toggle.setAttribute("aria-pressed", String(state.highlight));
-    document.getElementById("md").classList.toggle("hl", state.highlight);
-  });
-  toggle.title = "Highlight what changed since " + when(versions[state.version + 1]);
-  toggle.setAttribute("aria-pressed", String(state.highlight));
-  const list = button("", () => showChanges(cur));
-  list.title = "List what changed";
-  if (added.length) list.append(el("span", "add", "+" + added.length + " added"));
-  if (changed.length) list.append(el("span", "chg", "~" + changed.length + " changed"));
-  if (removed.length) list.append(el("span", "del", "−" + removed.length + " removed"));
-  box.append(toggle, list);
+// The rail's counts: what changed in this view, and the doctor's errors and
+// warnings, coloured by the worst.
+function renderRail(cur) {
+  const d = cur && cur.delta, before = d && !d.isNew && payload(entryOf(state.version + 1, state.view));
+  const n = before ? shown(d.added, cur.view).length + shown(d.changed, cur.view).length + shown(d.removed, before).length : 0;
+  const changes = rail("changes");
+  changes.querySelector("b").textContent = n ? String(n) : "";
+  changes.title = d && d.isNew ? "Changes: new in this version" : before ? "Changes since " + when(versions[state.version + 1]) : "Changes";
+  const findings = versions[state.version].findings || [];
+  const errors = findings.filter((f) => f.severity === "error").length, warnings = findings.filter((f) => f.severity === "warning").length;
+  const doctor = rail("doctor"), badge = doctor.querySelector("b");
+  badge.textContent = errors + warnings ? String(errors + warnings) : "";
+  badge.className = errors ? "doc-error" : "doc-warning";
+  doctor.title = "Doctor: " + plural(errors, "error") + ", " + plural(warnings, "warning");
 }
+const rail = (name) => document.querySelector('.md-rail [data-panel="' + name + '"]');
 // The ids of a delta that this view shows.
 const shown = (ids, view) => ids.filter((id) => headOf(view, id));
 // What was added, changed and removed since the previous version, with the
 // values that changed; each entry opens its element.
 function showChanges(cur) {
-  const d = cur.delta, before = payload(entryOf(state.version + 1, state.view));
-  const parts = [closer(), el("p", "md-kicker", "Since " + when(versions[state.version + 1])), el("h3", "", "Changes")];
+  const d = cur && cur.delta;
+  if (!d || d.isNew) {
+    showPanel("changes", [el("p", "md-side-empty", d ? "New in this version: the previous one has no such view." : "First version: nothing to compare.")]);
+    return;
+  }
+  const before = payload(entryOf(state.version + 1, state.view));
+  const parts = [el("p", "md-side-note", "Since " + when(versions[state.version + 1]))];
   const group = (label, ids, view, open, diff) => {
     if (!ids.length) return;
     const ul = el("ul", "md-changes");
@@ -670,9 +679,15 @@ function showChanges(cur) {
   group("Added", shown(d.added, cur.view), cur.view, (id) => select(id, true), false);
   group("Changed", shown(d.changed, cur.view), cur.view, (id) => select(id, true), true);
   group("Removed", shown(d.removed, before), before, (id) => inspect(state.version + 1, before, id, "removed"), false);
-  state.selected = null;
-  applyFocus();
-  showPanel(parts, false);
+  if (parts.length === 1) parts.push(el("p", "md-side-empty", "No change in this view."));
+  const highlight = button("Highlight", () => {
+    state.highlight = !state.highlight;
+    highlight.setAttribute("aria-pressed", String(state.highlight));
+    document.getElementById("md").classList.toggle("hl", state.highlight);
+  });
+  highlight.title = "Mark what changed in the diagram and the table";
+  highlight.setAttribute("aria-pressed", String(state.highlight));
+  showPanel("changes", parts, [highlight]);
 }
 function renderLegend(view) {
   const box = document.getElementById("legend");
@@ -709,25 +724,24 @@ function renderDiagram(keepViewport) {
   const canvas = document.getElementById("canvas"), stage = document.getElementById("stage"), sheet = document.getElementById("sheet");
   const cur = currentView();
   const entries = viewsOf(state.version);
-  closeInspector();
+  renderRail(cur);
   if (!cur) {
     document.getElementById("view-title").textContent = "Diagrams";
     document.getElementById("view-sub").textContent = "";
     document.getElementById("view").replaceChildren();
-    document.getElementById("delta").replaceChildren();
     document.getElementById("legend").hidden = true;
     stage.hidden = false;
     sheet.hidden = true;
     document.getElementById("split").hidden = true;
     canvas.replaceChildren(el("p", "md-empty", "No diagrams for this version: its snapshot uses a schema this viewer does not read. Its files are under Files."));
     state.drawn = null;
+    collapse();
     return;
   }
   renderPicker(entries);
   const { view, delta } = cur;
   document.getElementById("view-title").textContent = view.title;
   document.getElementById("view-sub").textContent = subtitle(view);
-  renderDelta(cur);
   renderLegend(view);
   const keep = keepViewport && state.drawn && state.drawn.view === view.id, kept = keep && state.drawn.scene;
   if (!keep) { state.selected = null; state.filter = ""; state.facet = null; state.sort = null; }
@@ -749,10 +763,14 @@ function renderDiagram(keepViewport) {
   }
   if (view.scene) drawScene(view, delta, kept);
   else canvas.replaceChildren(...view.table ? [] : [el("p", "md-empty", "Nothing to show in this view for this version.")]);
-  if (state.focus && headOf(view, state.focus)) state.selected = state.focus;
-  if (state.selected && !headOf(view, state.selected)) state.selected = null;
-  if (state.selected) select(state.selected, state.selected === state.focus); else applyFocus();
+  // An element opened from elsewhere shows in the inspector; otherwise the
+  // open panel follows the version and the view.
+  const focus = state.focus && headOf(view, state.focus) ? state.focus : null;
   state.focus = null;
+  if (focus) { select(focus, true); return; }
+  if (state.selected && !headOf(view, state.selected)) state.selected = null;
+  applyFocus();
+  if (state.panel) openPanel(state.panel);
 }
 function drawScene(view, delta, keep) {
   const canvas = document.getElementById("canvas");
@@ -831,7 +849,11 @@ function applyFocus() {
 function select(id, center) {
   state.selected = id;
   applyFocus();
-  if (!id) { closeInspector(); return; }
+  if (!id) { if (state.panel === "inspector") openPanel("inspector"); return; }
+  const d = currentView().delta;
+  const status = d && d.added.includes(id) ? "added" : d && d.changed.includes(id) ? "changed" : null;
+  // The inspector opens first: centering uses the room it leaves.
+  inspect(state.version, state.drawn.payload, id, status);
   const n = state.drawn.scene && state.drawn.scene.nodes.find((x) => x.id === id);
   if (center && n) {
     const box = document.getElementById("canvas").getBoundingClientRect();
@@ -839,9 +861,6 @@ function select(id, center) {
     state.viewport = { k, x: box.width / 2 - (n.x + n.w / 2) * k, y: box.height / 2 - (n.y + n.h / 2) * k };
     applyViewport();
   } else if (center) reveal(id);
-  const d = currentView().delta;
-  const status = d && d.added.includes(id) ? "added" : d && d.changed.includes(id) ? "changed" : null;
-  inspect(state.version, state.drawn.payload, id, status);
 }
 // Scrolls a table element into view; when the filter, the facet or folded
 // groups hide it, it clears them all.
@@ -859,25 +878,29 @@ function reveal(id) {
   if (e) e.scrollIntoView({ block: "center", inline: "nearest" });
 }
 
-function closeInspector() {
-  const box = document.getElementById("inspector");
-  box.hidden = true;
-  box.parentElement.classList.remove("inspecting", "inspect-left");
+const PANELS = { inspector: "Inspector", changes: "Changes", doctor: "Doctor" };
+// Shows a panel of this version and view; the inspector shows the selection.
+function openPanel(name) {
+  if (name === "changes") showChanges(currentView());
+  else if (name === "doctor") showDoctor();
+  else if (state.selected) select(state.selected, false);
+  else showPanel("inspector", [el("p", "md-side-empty", "Select an element in the diagram or the table.")]);
 }
-function closer() {
-  const close = button("×", () => select(null), "md-close");
-  close.title = "Close";
-  close.setAttribute("aria-label", "Close inspector");
-  return close;
-}
-// The panel beside the table, over the diagram: an element, or the changes.
-function showPanel(parts, left) {
+// Fills the sidebar with one panel and opens it if it was collapsed.
+function showPanel(name, parts, tools) {
   const box = document.getElementById("inspector");
+  document.getElementById("side-title").textContent = PANELS[name];
+  document.getElementById("side-tools").replaceChildren(...tools || []);
   box.replaceChildren(...parts);
-  box.hidden = false;
   box.scrollTop = 0;
-  box.parentElement.classList.add("inspecting");
-  box.parentElement.classList.toggle("inspect-left", left);
+  document.getElementById("side").hidden = false;
+  state.panel = name;
+  for (const b of document.querySelectorAll(".md-rail [data-panel]")) b.setAttribute("aria-pressed", String(b.dataset.panel === name));
+}
+function collapse() {
+  document.getElementById("side").hidden = true;
+  state.panel = null;
+  for (const b of document.querySelectorAll(".md-rail [data-panel]")) b.setAttribute("aria-pressed", "false");
 }
 // An element's attributes; against the previous version's, a changed value
 // shows struck through above the new one. Only the differences when asked.
@@ -900,11 +923,11 @@ function inspect(vi, view, id, status) {
   if (!n) return;
   const h = el("h3", "", nameOf(n));
   if (n.type) h.append(el("span", "", n.type));
-  const parts = [closer(), el("p", "md-kicker", n.kw || n.shape), h];
+  const parts = [el("p", "md-kicker", n.kw || n.shape), h];
   if (status) {
     const line = el("div");
     line.append(el("span", "md-status " + status, status === "removed" ? "removed since " + when(versions[vi]) : status + " since " + when(versions[vi + 1])),
-      button("All changes", () => showChanges(currentView()), "md-back"));
+      button("All changes", () => openPanel("changes"), "md-back"));
     parts.push(line);
   }
   const mine = (versions[vi].findings || []).filter((f) => f.subject === id);
@@ -945,9 +968,7 @@ function inspect(vi, view, id, status) {
       parts.push(src);
     }
   }
-  const canvas = document.getElementById("canvas").getBoundingClientRect();
-  const v = state.viewport;
-  showPanel(parts, Boolean(vi === state.version && n.w && v && v.x + (n.x + n.w / 2) * v.k > canvas.width / 2 + 120));
+  showPanel("inspector", parts);
 }
 // ---- Doctor
 const SEVERITIES = ["error", "warning", "info"];
@@ -980,27 +1001,12 @@ function findingList(findings, vi, withSubject) {
   }
   return ul;
 }
-function renderDoctorChip() {
-  const findings = versions[state.version].findings, chip = document.getElementById("doctor");
-  chip.hidden = !findings;
-  if (!findings) return;
-  chip.replaceChildren(el("span", "", "Doctor"));
-  for (const s of SEVERITIES) {
-    const n = findings.filter((f) => f.severity === s).length, c = el("span", "doc-" + s);
-    if (!n) continue;
-    if (s !== "info") c.append(el("i", "doc-dot"));
-    c.append(plural(n, s === "info" ? "note" : s));
-    chip.append(c);
-  }
-  if (!findings.length) chip.append(el("span", "", "no finding"));
-  chip.title = "What the doctor found in this version";
-}
 // Every finding of this version, errors first; notes fold away.
 function showDoctor() {
   const findings = versions[state.version].findings || [];
   const of = (s) => findings.filter((f) => f.severity === s);
   const errors = of("error"), warnings = of("warning"), notes = of("info");
-  const parts = [closer(), el("p", "md-kicker", "Doctor"),
+  const parts = [
     el("h3", "", errors.length || warnings.length ? [errors.length ? plural(errors.length, "error") : "", warnings.length ? plural(warnings.length, "warning") : ""].filter(Boolean).join(" · ") : "No error or warning")];
   for (const [label, list] of [["Errors", errors], ["Warnings", warnings]]) {
     if (list.length) parts.push(el("p", "md-kicker", label + " · " + list.length), findingList(list, state.version, true));
@@ -1010,9 +1016,7 @@ function showDoctor() {
     d.append(el("summary", "", plural(notes.length, "note")), findingList(notes, state.version, true));
     parts.push(d);
   }
-  state.selected = null;
-  applyFocus();
-  showPanel(parts, false);
+  showPanel("doctor", parts);
 }
 function showLines(vi, file, from, to) {
   state.version = vi;
@@ -1337,7 +1341,34 @@ function render(keepViewport) {
 document.getElementById("version").onchange = (e) => { state.version = +e.target.value; state.range = null; state.sort = null; state.facet = null; render(true); };
 document.getElementById("view").onchange = (e) => { state.view = e.target.value; render(); };
 for (const b of document.querySelectorAll(".tabs button")) b.onclick = () => { state.tab = b.dataset.tab; render(true); };
-document.getElementById("doctor").onclick = () => { state.tab = "diagrams"; render(true); showDoctor(); };
+// The rail opens a panel, or collapses the sidebar when it is already open.
+for (const b of document.querySelectorAll(".md-rail [data-panel]")) {
+  b.onclick = () => state.panel === b.dataset.panel ? collapse() : openPanel(b.dataset.panel);
+}
+document.getElementById("side-collapse").onclick = collapse;
+// Dragging the sidebar's edge, or its arrow keys, sets its width, kept for the
+// next visit; a double click restores the default.
+const side = document.getElementById("side"), grip = document.getElementById("side-grip");
+const WIDTH_KEY = "openclaw-sysmlv2-viewer:sidebar-width";
+function sideWidth(w) {
+  const md = document.getElementById("md");
+  if (w) md.style.setProperty("--side-w", w + "px"); else md.style.removeProperty("--side-w");
+  try { if (w) localStorage.setItem(WIDTH_KEY, String(w)); else localStorage.removeItem(WIDTH_KEY); } catch { /* storage unavailable */ }
+}
+const clampWidth = (w) => Math.round(Math.max(300, Math.min(document.getElementById("md").getBoundingClientRect().width * 0.6, w)));
+grip.addEventListener("pointerdown", (e) => { grip.setPointerCapture(e.pointerId); grip.dataset.drag = "1"; });
+grip.addEventListener("pointermove", (e) => { if (grip.dataset.drag) sideWidth(clampWidth(side.getBoundingClientRect().right - e.clientX)); });
+for (const type of ["pointerup", "pointercancel", "lostpointercapture"]) grip.addEventListener(type, () => { delete grip.dataset.drag; });
+grip.addEventListener("dblclick", () => sideWidth(null));
+grip.addEventListener("keydown", (e) => {
+  if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+  e.preventDefault();
+  sideWidth(clampWidth(side.offsetWidth + (e.key === "ArrowLeft" ? 24 : -24)));
+});
+try {
+  const w = Number(localStorage.getItem(WIDTH_KEY));
+  if (w >= 300) document.getElementById("md").style.setProperty("--side-w", w + "px");
+} catch { /* storage unavailable */ }
 document.getElementById("fit").onclick = fit;
 document.getElementById("zoom-in").onclick = () => zoom(1.25);
 document.getElementById("zoom-out").onclick = () => zoom(0.8);

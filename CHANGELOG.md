@@ -7,7 +7,7 @@ The snapshot schema stays `openclaw-snapshot/5`, with one optional field,
 
 - **Diagnostics.** Every export runs the doctor and writes `findings.json`; the
   summary, the reply and `versions.json` count its errors, warnings and notes.
-  In the viewer, a Doctor chip lists the findings and the elements concerned
+  In the viewer, the Doctor panel lists the findings and the elements concerned
   carry a mark. Each rule follows the OpenClaw 2026.10.9 sources and was checked
   on a real instance; [Diagnostics](docs/diagnostics.md) gives every code with
   its fix. New: a scheduled task aimed at a missing agent, a binding to an
@@ -43,12 +43,13 @@ The snapshot schema stays `openclaw-snapshot/5`, with one optional field,
   listed as not weekly.
 - A table under a diagram can be resized, and schedules in words also read day
   ranges and names (`MON-FRI`).
-- **Readable changes.** The change counts open one list of what was added,
-  changed and removed, with each changed value before and after; the inspector
-  strikes the old value above the new one. The inspector sits beside the table
-  instead of over it, scrolls as one panel and folds each piece of SysML to its
-  first line. View and version pickers show a larger, styled list where the
-  browser allows it.
+- **A sidebar.** An icon rail on the right opens the Inspector, Changes and
+  Doctor panels, with their counts on the icons. The sidebar sits beside the
+  diagram and the table, collapses, and keeps the width you drag it to. Changes
+  lists what was added, changed and removed, with each changed value before and
+  after; the inspector strikes the old value above the new one and folds each
+  piece of SysML to its first line. View and version pickers show a larger,
+  styled list where the browser allows it.
 
 ## 0.1.0 — preview
 
