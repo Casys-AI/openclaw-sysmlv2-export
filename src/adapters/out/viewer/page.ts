@@ -336,24 +336,45 @@ button.et-tile:hover { border-color: var(--line-strong); background: var(--card)
 .et-src button { all: unset; display: grid; place-items: center; width: 22px; height: 18px; border-radius: 5px; cursor: pointer; color: var(--muted); }
 .et-src button:hover { color: var(--ink); background: var(--hover); }
 .et-src svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
-.wk { border-collapse: separate; border-spacing: 0; font-size: 12px; }
-.wk th, .wk td { padding: 2px 14px; text-align: left; font-weight: 400; white-space: nowrap; vertical-align: middle; }
+/* The week: an agent's cases in rows beside it, each with a 168-hour strip
+   that fills its column. */
+.wk { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; }
+.wk th, .wk td { padding: 2px 10px; text-align: left; font-weight: 400; white-space: nowrap; vertical-align: middle; }
 .wk thead th { position: sticky; top: 0; z-index: 1; background: var(--card); border-bottom: 1px solid var(--line-strong); color: var(--muted); font-weight: 500; }
-.wk tbody th[data-id] { cursor: pointer; padding-left: 28px; }
-.wk tbody th small { margin-left: 8px; color: var(--muted); }
-.wk-agent th { padding-top: 8px; font: 600 11.5px var(--mono); }
-.wk tr.muted th { color: var(--muted); }
-.wk td[data-id] { cursor: pointer; }
-.wk-run { display: inline-block; width: 7px; height: 7px; margin-left: 8px; border-radius: 50%; background: var(--md-soft); vertical-align: 1px; }
-.wk-run.ok { background: var(--add); } .wk-run.bad { background: var(--del); }
-.wk tr th.selected { --sel: inset 0 1px var(--ink), inset 0 -1px var(--ink); }
-.wk-strip { display: block; overflow: visible; }
-.wk-strip text { font-size: 10px; fill: var(--muted); }
-.wk-strip line { stroke: var(--line-strong); }
+.wk tbody tr.wk-first:not(:first-child) > * { border-top: 1px solid var(--line); }
+.wk th.wk-who { vertical-align: top; padding: 2px 14px; }
+.wk th.wk-who[data-id] { cursor: pointer; }
+.wk-who span { font-weight: 600; }
+.wk-who.dashed span { font-weight: 500; color: var(--muted); border-bottom: 1px dashed var(--line-strong); }
+.wk-task { cursor: pointer; }
+.wk-task small { margin-left: 8px; color: var(--muted); }
+.wk tr.muted .wk-task { color: var(--muted); }
+.wk td.wk-week { width: 100%; min-width: 340px; padding: 2px 14px 2px 4px; cursor: pointer; }
+.wk-strip { display: block; width: 100%; height: 16px; }
+.wk th.wk-axis { padding-left: 4px; padding-right: 14px; }
+.wk-axis div { display: flex; }
+.wk-axis span { flex: 1; padding-bottom: 3px; text-align: center; font-size: 10.5px; background: linear-gradient(to right, var(--line-strong) 1px, transparent 1px) left bottom / 25% 3px repeat-x; }
 .wk-day { fill: var(--paper); }
 .wk-fire { fill: var(--md-stroke); }
-.wk-band { fill: var(--md-stroke); opacity: .3; }
-.wk tr.muted .wk-fire, .wk tr.muted .wk-band { fill: var(--md-soft); opacity: .45; }
+.wk-band { fill: var(--md-stroke); opacity: .45; }
+/* A disabled case fades, so that what runs stands out. */
+.wk tr.muted .wk-fire { fill: var(--md-soft); opacity: .55; }
+.wk tr.muted .wk-band { fill: var(--md-soft); opacity: .25; }
+/* Hours that cannot be placed in UTC: the gateway's own time zone. */
+.wk-float { background: repeating-linear-gradient(135deg, transparent 0 3px, var(--line) 3px 4px) content-box; }
+.wk-float .wk-day { fill: transparent; }
+.wk-run { display: inline-block; width: 7px; height: 7px; margin-left: 8px; border-radius: 50%; background: var(--md-soft); vertical-align: 1px; }
+.wk-run.ok { background: var(--add); } .wk-run.bad { background: var(--del); }
+.wk tr.muted .wk-run { opacity: .6; }
+.wk :is(th, td).selected { --sel: inset 0 1px var(--ink), inset 0 -1px var(--ink); }
+.hl .wk :is(th, td).added { background: color-mix(in srgb, var(--add-bg) 60%, var(--card)); }
+.hl .wk :is(th, td).changed { background: color-mix(in srgb, var(--chg-bg) 60%, var(--card)); }
+.hl .wk th.added { --bar: inset 3px 0 var(--add); } .hl .wk th.changed { --bar: inset 3px 0 var(--chg); }
+.hl .wk th.touched { --bar: inset 2px 0 color-mix(in srgb, var(--chg) 45%, var(--card)); }
+.wk-key { display: inline-block; width: 14px; height: 12px; border-radius: 2px; }
+.wk-key.wk-fire { background: linear-gradient(var(--md-stroke), var(--md-stroke)) center / 4px 12px no-repeat; }
+.wk-key.wk-band { background: linear-gradient(var(--md-stroke), var(--md-stroke)) center / 14px 6px no-repeat; }
+
 .g { display: inline-block; position: relative; width: 11px; height: 11px; border: 1.2px solid var(--md-stroke); border-radius: 2px; vertical-align: middle; }
 .g.h, .g.b { background: var(--md-stroke); }
 .g.s { background: linear-gradient(to bottom right, transparent 50%, var(--md-stroke) 50%); }
@@ -1947,77 +1968,102 @@ function renderElements(box, view, t, mark) {
   rows();
   box.replaceChildren(...t.summary ? [summary(view, t.summary, mark)] : [], bar, table);
 }
-// When each scheduled task fires in a week, hour by hour, under the agent it
-// wakes. Hours are in each task's own time zone; an interval under a day fires
-// all week, from an unknown start.
-const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], HOUR = 5, DAY = 24 * HOUR + 4, WEEK_W = 7 * DAY - 4, DAY_MS = 86400000;
+// ---- Scheduled tasks: the week each task fires in.
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], DAY_MS = 86400000;
+// An agent's display name, or the id the instance lacks.
+const agentName = (id) => versions[state.version].labels[id] || id.slice("agent:".length);
+// A case's last run: a dot, green when it passed; its status in a tooltip.
+function runMark(row) {
+  const run = el("i", "wk-run " + (row.lastRun === "ok" ? "ok" : "bad"));
+  run.title = "Last run: " + row.lastRun + (row.errors > 1 ? " · " + row.errors + " in a row" : "");
+  return run;
+}
+// A time zone's offset as UTC±h[:mm].
+function utcText(offset) {
+  const a = Math.abs(offset);
+  return "UTC" + (offset < 0 ? "−" : "+") + Math.floor(a / 60) + (a % 60 ? ":" + String(a % 60).padStart(2, "0") : "");
+}
+// The hours a case fires in, as one 168-hour strip that stretches to its
+// column: a mark per hour it fires in, a band for an interval under a day.
 function strip(row) {
-  const g = sv("svg", { class: "wk-strip", width: WEEK_W, height: 16, "aria-hidden": "true" });
-  DAYS.forEach((_, d) => g.append(sv("rect", { class: "wk-day", x: d * DAY, y: 0, width: 24 * HOUR, height: 16 })));
+  const g = sv("svg", { class: "wk-strip", viewBox: "0 0 168 16", preserveAspectRatio: "none", "aria-hidden": "true" });
+  DAYS.forEach((_, d) => g.append(sv("rect", { class: "wk-day", x: d * 24 + 0.2, y: 0, width: 23.6, height: 16 })));
   if (row.everyMs && row.everyMs < DAY_MS) {
-    const band = sv("rect", { class: "wk-band", x: 0, y: 5, width: WEEK_W, height: 6 });
+    const band = sv("rect", { class: "wk-band", x: 0, y: 5, width: 168, height: 6 });
     band.append(sv("title", {}, row.when + ", all week"));
     g.append(band);
   }
+  const zone = row.offset !== null ? "UTC · " + row.zone + " is " + utcText(row.offset) : row.zone || "gateway time";
+  const hh = (h) => String(h % 24).padStart(2, "0") + ":00";
   for (const [hour, times] of row.fires || []) {
-    const d = Math.floor(hour / 24), h = hour % 24;
-    const r = sv("rect", { class: "wk-fire", x: d * DAY + h * HOUR, y: 2, width: HOUR - 1, height: 12, rx: 1 });
-    r.append(sv("title", {}, DAYS[d] + " " + String(h).padStart(2, "0") + ":00 · " + times + (times === 1 ? " time" : " times")));
+    const r = sv("rect", { class: "wk-fire", x: hour + 0.1, y: 2, width: 0.8, height: 12 });
+    r.append(sv("title", {}, DAYS[Math.floor(hour / 24)] + " " + hh(hour) + "–" + hh(hour + 1) + " " + zone + " · " + plural(times, "time")));
     g.append(r);
   }
   return g;
 }
-function renderWeek(box, t, mark) {
-  const bar = el("div", "tb-bar");
-  const key = (cls, text) => {
-    const k = el("span", "tb-key");
-    const g = sv("svg", { width: 14, height: 12, "aria-hidden": "true" });
-    g.append(sv("rect", cls === "wk-band" ? { class: cls, x: 0, y: 3, width: 14, height: 6 } : { class: cls, x: 5, y: 0, width: 4, height: 12, rx: 1 }));
-    k.append(g, text);
-    return k;
-  };
-  const local = el("span", "tb-note", "local hours");
-  local.title = "Hours in each task's own time zone";
-  bar.append(el("strong", "tb-title", "Week"), local, key("wk-fire", "fires in that hour"), key("wk-band", "interval, all week"));
-  const table = el("table", "wk"), head = el("tr"), axis = sv("svg", { class: "wk-strip", width: WEEK_W, height: 16, "aria-hidden": "true" });
-  DAYS.forEach((name, d) => {
-    axis.append(sv("text", { x: d * DAY + 12 * HOUR, y: 11, "text-anchor": "middle" }, name));
-    for (const h of [6, 12, 18]) axis.append(sv("line", { x1: d * DAY + h * HOUR, x2: d * DAY + h * HOUR, y1: 13, y2: 16 }));
-  });
-  const th = el("th");
-  th.append(axis);
-  head.append(el("th", "", "task"), th);
-  const thead = el("thead"), tbody = el("tbody");
+// The table's key: a mark, a band, a hatch, each with its words.
+function weekKey(cls, text) {
+  const k = el("span", "tb-key");
+  k.append(el("i", "wk-key " + cls), text);
+  return k;
+}
+function weekHead() {
+  const head = el("tr"), axis = el("th", "wk-axis"), days = el("div");
+  days.append(...DAYS.map((d) => el("span", "", d)));
+  axis.append(days);
+  head.append(el("th", "", "agent"), el("th", "", "task"), axis);
+  const thead = el("thead");
   thead.append(head);
+  return thead;
+}
+// A case's row: its name and schedule in its own time zone, its last run, and
+// its week; hours that cannot be placed in UTC are hatched.
+function weekRow(r, mark) {
+  const tr = el("tr", r.enabled ? "" : "muted"), name = el("th", "wk-task" + mark(r.node));
+  name.dataset.id = r.node;
+  name.tabIndex = 0;
+  const how = r.fires ? r.zone || "gateway time" : r.everyMs && r.everyMs < DAY_MS ? "" : r.everyMs ? "start unknown" : "not weekly";
+  name.append(el("span", "", r.label), el("small", "", r.when + (how ? " · " + how : "")));
+  if (r.lastRun) name.append(runMark(r));
+  name.title = [r.model && "model " + r.model, r.delivery && "delivery " + r.delivery].filter(Boolean).join(" · ");
+  const week = el("td", "wk-week" + mark(r.node) + (r.fires && r.offset === null ? " wk-float" : ""));
+  week.dataset.id = r.node;
+  if (r.fires && r.offset === null) week.title = r.zone ? "Time zone " + r.zone + " not recognised: its own hours" : "The gateway's time zone, which is not collected: its own hours";
+  week.append(strip(r));
+  tr.append(name, week);
+  return tr;
+}
+// When each scheduled task fires in a week, by the agent it wakes, in the
+// agent id order. Hours are UTC, from each task's time zone at the
+// version's date.
+function renderWeek(box, t, mark) {
+  const bar = el("div", "tb-bar"), utc = el("span", "tb-note", "UTC");
+  utc.title = "Hours in UTC, from each task's time zone on " + when(versions[state.version]).slice(0, 10) + "; a hatched week is in the gateway's time zone, which is not collected";
+  bar.append(el("strong", "tb-title", "Week"), utc, weekKey("wk-fire", "fires in that hour"), weekKey("wk-band", "interval, all week"), weekKey("wk-float", "gateway time"));
+  const table = el("table", "wk"), tbody = el("tbody");
   const agents = [...new Set(t.rows.map((r) => r.agent))].sort((a, b) => a === null ? 1 : b === null ? -1 : a < b ? -1 : 1);
   for (const agent of agents) {
-    const group = el("tr", "wk-agent"), cell = el("th", "", agent === null ? "no agent" : agent);
-    cell.colSpan = 2;
-    group.append(cell);
-    tbody.append(group);
-    for (const r of t.rows.filter((x) => x.agent === agent)) {
-      const tr = el("tr", (r.enabled ? "" : "muted") + mark(r.node));
-      const name = el("th");
-      name.dataset.id = r.node;
-      name.tabIndex = 0;
-      const how = r.fires ? r.zone || "gateway time" : r.everyMs && r.everyMs < DAY_MS ? "" : r.everyMs ? "start unknown" : "not weekly";
-      name.append(el("span", "", r.label), el("small", "", r.when + (how ? " · " + how : "")));
-      // The last run's status (runtime state, never a change) and the model.
-      if (r.lastRun) {
-        const run = el("i", "wk-run " + (r.lastRun === "ok" ? "ok" : "bad"));
-        run.title = "Last run: " + r.lastRun;
-        name.append(run);
-      }
-      name.title = [r.model ? "model " + r.model : "", r.lastRun ? "last run " + r.lastRun : ""].filter(Boolean).join(" · ");
-      // Its strip selects the task too.
-      const td = el("td");
-      td.dataset.id = r.node;
-      td.append(strip(r));
-      tr.append(name, td);
-      tbody.append(tr);
+    const rows = t.rows.filter((r) => r.agent === agent).map((r) => weekRow(r, mark));
+    const who = el("th", "wk-who");
+    who.rowSpan = rows.length;
+    if (agent === null) who.append(el("span", "", "no agent"));
+    else {
+      const id = "agent:" + agent;
+      who.className += mark(id);
+      who.dataset.id = id;
+      who.tabIndex = 0;
+      // An id the instance lacks reads as a dashed reference, as in Tools.
+      const absent = !versions[state.version].labels[id];
+      if (absent) who.classList.add("dashed");
+      who.title = absent ? agent + ": not in this instance" : "agent_" + agent;
+      who.append(el("span", "", agentName(id)));
     }
+    rows[0].classList.add("wk-first");
+    rows[0].prepend(who);
+    tbody.append(...rows);
   }
-  table.append(thead, tbody);
+  table.append(weekHead(), tbody);
   box.replaceChildren(bar, table);
 }
 function sourceIcon() {
@@ -2338,14 +2384,23 @@ canvas.addEventListener("keydown", (e) => {
   e.preventDefault();
 });
 const sheet = document.getElementById("sheet");
-// A table row of a drawn element (a scheduled task's week) frames it.
+// Other tables retain their framing rule for drawn elements.
 const drawn = (id) => Boolean(state.drawn && state.drawn.scene && state.drawn.scene.nodes.some((n) => n.id === id));
+// A week cell selects first, then frames only a node outside the room left
+// by its inspector. Other tables keep their existing selection behaviour.
+function selectFromTable(cell) {
+  const id = cell.dataset.id;
+  if (!cell.closest(".wk")) { select(id, drawn(id)); return; }
+  select(id);
+  const n = state.drawn.nodes.get(id), v = state.viewport, r = room();
+  if (v.x + n.x * v.k < 0 || v.y + n.y * v.k < 0 || v.x + (n.x + n.w) * v.k > r.w || v.y + (n.y + n.h) * v.k > r.h) fitTo(id);
+}
 sheet.addEventListener("click", (e) => {
   const x = e.target.closest("[data-id]");
-  if (x) select(x.dataset.id, drawn(x.dataset.id));
+  if (x) selectFromTable(x);
 });
 sheet.addEventListener("keydown", (e) => {
-  if (e.target.dataset.id && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); select(e.target.dataset.id, drawn(e.target.dataset.id)); }
+  if (e.target.dataset.id && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); selectFromTable(e.target); }
   else if (e.key === "Escape") select(null);
 });
 // Dragging the splitter sets the table's height; a view at Fit fits again.
