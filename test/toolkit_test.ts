@@ -7,6 +7,8 @@ import { runExport } from "../plugin/core.ts";
 import { ExportError } from "../src/error.ts";
 import { installToolkit, toolkitPath } from "../src/toolkit-install.ts";
 import { validate } from "../src/validate.ts";
+import { emit } from "../src/emit.ts";
+import { ASSEMBLY_LIBRARY } from "../src/library.ts";
 import { emitInferred } from "../src/infer.ts";
 import { parseSnapshot } from "../src/snapshot.ts";
 import { createFixture } from "./support/fixture.ts";
@@ -38,7 +40,31 @@ Deno.test({
         files.set(name, await readFile(join(dir, name), "utf8"));
       }
       const started = performance.now();
-      assert.equal((await validate(files, fixture.home)).errors.length, 0);
+      const base = await validate(files, fixture.home);
+      assert.equal(base.errors.length, 0);
+      assert.equal(base.ape!.status, "completed");
+      assert.deepEqual(
+        base.ape!.metrics!.queries.map((q) => [q.code, q.findings]),
+        [
+          ["GRANT_WIDENS_PARENT", 0],
+          ["LINK_CYCLE", 6],
+          ["UNREACHABLE_OPERATOR", 0],
+        ],
+      );
+      assert.deepEqual(
+        base.ape!.findings.filter((f) => f.code === "APE_LINK_CYCLE").map((f) =>
+          f.subject
+        ),
+        [
+          "agent:client",
+          "agent:coach",
+          "agent:devbox",
+          "agent:field",
+          "agent:lead",
+          "agent:secretary",
+        ],
+      );
+      console.log("APE base fixture:", JSON.stringify(base.ape));
       console.log(
         `Fixture validation (worker, hashes, init, library, check): ${
           (performance.now() - started).toFixed(1)
@@ -81,6 +107,41 @@ Deno.test({
       for (const [name, text] of inferred) files.set(name, text);
       const diagnostics = await validate(files, fixture.home);
       assert.equal(diagnostics.errors.length, 0, JSON.stringify(diagnostics));
+      // Add only synthetic cases. Rules see these SysML bytes, never this snapshot.
+      const extended = parseSnapshot(
+        JSON.parse(await readFile(snapshot, "utf8")),
+      );
+      extended.messaging.enabled = false;
+      const trial = new Map([...emit(extended), ...ASSEMBLY_LIBRARY]);
+      trial.set(
+        "ApeTrial.sysml",
+        await readFile(
+          new URL("./fixtures/ape-trial.sysml", import.meta.url),
+          "utf8",
+        ),
+      );
+      const cases = await validate(trial, fixture.home);
+      assert.equal(cases.errors.length, 0, JSON.stringify(cases.errors));
+      const byCode = (code: string) =>
+        cases.ape!.findings.filter((f) => f.code === `APE_${code}`);
+      // Actual reachability finding: external entries reach parent; self does not.
+      assert.deepEqual(byCode("UNREACHABLE_OPERATOR").map((f) => f.subject), [
+        "agent:orphan",
+        "agent:self",
+      ]);
+      assert.deepEqual(byCode("GRANT_WIDENS_PARENT").map((f) => f.subject), [
+        "agent:bridge",
+        "agent:parent",
+      ]);
+      assert.deepEqual(byCode("LINK_CYCLE").map((f) => f.subject), [
+        "agent:client",
+        "agent:coach",
+        "agent:devbox",
+        "agent:field",
+        "agent:lead",
+        "agent:secretary",
+      ]);
+      console.log("APE extended fixture:", JSON.stringify(cases.ape));
       const invalid = await validate(
         new Map([["invalid.sysml", "package Broken { part def ]"]]),
         fixture.home,
@@ -123,17 +184,31 @@ Deno.test({
         new Date("2026-11-02T10:15:00Z"),
       );
       assert.deepEqual(summary.validation, { status: "passed", errors: 0 });
+      assert.deepEqual(summary.ape, { status: "completed", count: 6 });
       assert.ok(summary.inferred!.rules > 0);
-      assert.deepEqual(
-        JSON.parse(
-          await readFile(join(summary.outDir, "validation.json"), "utf8"),
-        ),
-        {
-          validation: summary.validation,
-          errors: [],
-          warnings: [],
-        },
+      const published = JSON.parse(
+        await readFile(join(summary.outDir, "validation.json"), "utf8"),
       );
+      assert.deepEqual(published.validation, summary.validation);
+      assert.deepEqual(published.errors, []);
+      assert.deepEqual(published.warnings, []);
+      const publishedFindings = JSON.parse(
+        await readFile(join(summary.outDir, "findings.json"), "utf8"),
+      );
+      assert.deepEqual(
+        publishedFindings.filter((f: { code: string }) =>
+          f.code.startsWith("APE_")
+        ),
+        published.ape.findings,
+      );
+      for (const severity of ["error", "warning", "info"] as const) {
+        assert.equal(
+          summary.findings[severity],
+          publishedFindings.filter((f: { severity: string }) =>
+            f.severity === severity
+          ).length,
+        );
+      }
       await writeFile(
         join(toolkitPath(fixture.home), "sysmlv2.js"),
         "tampered",

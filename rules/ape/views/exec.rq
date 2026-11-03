@@ -1,0 +1,60 @@
+PREFIX ase: <urn:ase:vocab:>
+PREFIX prop: <urn:ase:vocab:prop:>
+PREFIX ape: <urn:ase:ape:v1:>
+
+CONSTRUCT {
+  ?agent ape:unapprovedHostExec ?unsafe ; ape:execGrant ?grant ;
+    ape:execPosture ?posture ; ape:source ?source .
+} WHERE {
+  GRAPH <urn:ase:ape:v1:view:agents> {
+    ?agent ape:agentId ?agentId ; ape:definition ?agentType .
+  }
+  GRAPH ?build {
+    ?agent prop:definition ?agentType .
+    OPTIONAL {
+      ?agentType prop:ownedMember ?grantReference .
+      ?grantReference prop:definition/ase:qualifiedName "OpenClawImport::ToolGrant" ;
+        prop:ownedMember/prop:referent ?grant .
+      ?grant prop:ownedMember ?toolFeature .
+      ?toolFeature prop:ownedRedefinition/prop:redefinedFeature/ase:qualifiedName
+        "OpenClawImport::ToolGrant::tool" ;
+        prop:ownedMember/(prop:referent|prop:targetFeature) ?tool .
+      ?tool prop:ownedMember ?toolIdFeature, ?originFeature .
+      ?toolIdFeature prop:ownedRedefinition/prop:redefinedFeature/ase:qualifiedName
+        "OpenClawImport::OpenClawTool::toolId" ;
+        prop:ownedMember/prop:value "exec" .
+      ?originFeature prop:ownedRedefinition/prop:redefinedFeature/ase:qualifiedName
+        "OpenClawImport::OpenClawTool::origin" ;
+        prop:ownedMember/prop:referent/ase:qualifiedName
+          "OpenClawImport::ToolOrigin::builtin" .
+      OPTIONAL {
+        ?grant prop:ownedMember ?layerFeature .
+        ?layerFeature prop:ownedRedefinition/prop:redefinedFeature/ase:qualifiedName
+          "OpenClawImport::ToolGrant::layer" ;
+          prop:ownedMember/prop:value ?layer .
+        ?agent prop:ownedMember ?posture .
+        ?posture prop:definition/ase:qualifiedName "OpenClawImport::ExecutionPosture" ;
+          prop:ownedMember ?hostFeature, ?securityFeature, ?askFeature .
+        ?hostFeature prop:ownedRedefinition/prop:redefinedFeature/ase:qualifiedName
+          "OpenClawImport::ExecutionPosture::host" ;
+          prop:ownedMember/prop:value ?host .
+        ?securityFeature prop:ownedRedefinition/prop:redefinedFeature/ase:qualifiedName
+          "OpenClawImport::ExecutionPosture::effectiveSecurity" ;
+          prop:ownedMember/prop:value ?security .
+        ?askFeature prop:ownedRedefinition/prop:redefinedFeature/ase:qualifiedName
+          "OpenClawImport::ExecutionPosture::effectiveAsk" ;
+          prop:ownedMember/prop:value ?ask .
+        VALUES ?layer { "host" "sandbox" }
+        VALUES ?host { "auto" "gateway" "sandbox" "node" }
+        VALUES ?security { "deny" "allowlist" "full" }
+        VALUES ?ask { "off" "on-miss" "always" }
+        BIND(((?host = "gateway" || (?host = "auto" && ?layer = "host")) &&
+          ?security = "full" && ?ask = "off") AS ?knownUnsafe)
+      }
+    }
+  }
+  FILTER(STRSTARTS(STR(?build), "urn:ase:build:"))
+  FILTER(!BOUND(?grant) || BOUND(?knownUnsafe))
+  BIND(IF(BOUND(?grant), ?knownUnsafe, false) AS ?unsafe)
+  BIND(IF(BOUND(?grant), ?posture, ?agentType) AS ?source)
+}

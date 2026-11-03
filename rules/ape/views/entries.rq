@@ -1,0 +1,35 @@
+PREFIX ase: <urn:ase:vocab:>
+PREFIX prop: <urn:ase:vocab:prop:>
+PREFIX meta: <urn:ase:metaclass:>
+PREFIX ape: <urn:ase:ape:v1:>
+
+CONSTRUCT {
+  ?agent ape:reachedBy ?entry .
+  ?entry ape:source ?entry ; ape:hookTargets ?hookTarget .
+} WHERE {
+  GRAPH <urn:ase:ape:v1:view:agents> { ?agent ape:agentId ?agentId . }
+  GRAPH ?build {
+    {
+      ?entry a meta:ConnectionUsage ;
+        prop:definition/ase:qualifiedName "OpenClawImport::AgentBinding" ;
+        prop:sourceFeature ?agent .
+    } UNION {
+      ?entry prop:definition/ase:qualifiedName "OpenClawImport::ScheduledCase" ;
+        prop:ownedMember ?targetFeature .
+      ?targetFeature prop:ownedRedefinition/prop:redefinedFeature/ase:qualifiedName ?role ;
+        prop:ownedMember/prop:referent ?agent .
+      VALUES ?role {
+        "AssemblyCases::CaseType::owner"
+        "OpenClawImport::ScheduledCase::targetAgent"
+      }
+    } UNION {
+      ?entry prop:definition/ase:qualifiedName "OpenClawImport::ExternalTrigger" ;
+        prop:ownedMember ?targetFeature .
+      ?targetFeature prop:ownedRedefinition/prop:redefinedFeature/ase:qualifiedName
+        "OpenClawImport::ExternalTrigger::targetAgent" ;
+        prop:ownedMember/prop:referent ?agent .
+      BIND(?agent AS ?hookTarget)
+    }
+  }
+  FILTER(STRSTARTS(STR(?build), "urn:ase:build:"))
+}

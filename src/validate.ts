@@ -1,5 +1,6 @@
 import { Worker } from "node:worker_threads";
 import { ExportError } from "./error.ts";
+import type { ApeReport } from "./ape-rules.ts";
 
 export interface Diagnostic {
   code: string;
@@ -11,6 +12,7 @@ export interface Diagnostic {
 export interface Diagnostics {
   errors: Diagnostic[];
   warnings: Diagnostic[];
+  ape?: ApeReport;
 }
 export interface ValidationSummary {
   status: "passed" | "failed" | "skipped";
@@ -92,20 +94,29 @@ export async function validate(
 export async function validationReport(
   files: Map<string, string>,
   stateDir: string,
-): Promise<{ validation: ValidationSummary; diagnostics: Diagnostics }> {
+): Promise<
+  { validation: ValidationSummary; diagnostics: Diagnostics; ape: ApeReport }
+> {
   try {
-    const diagnostics = await validate(files, stateDir);
+    const { ape, ...diagnostics } = await validate(files, stateDir);
+    if (!ape) throw toolkitFailure();
     return {
       validation: {
         status: diagnostics.errors.length ? "failed" : "passed",
         errors: diagnostics.errors.length,
       },
       diagnostics,
+      ape,
     };
   } catch (e) {
     const error = e instanceof ExportError ? e : toolkitFailure();
     const skipped = error.code === "TOOLKIT_NOT_INSTALLED";
     return {
+      ape: {
+        status: error.code.startsWith("APE_") ? "failed" : "skipped",
+        code: error.code,
+        findings: [],
+      },
       validation: {
         status: skipped ? "skipped" : "failed",
         errors: skipped ? 0 : 1,

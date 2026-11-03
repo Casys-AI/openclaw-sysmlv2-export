@@ -4,7 +4,8 @@
     "jsr:@logtape/logtape@^2.4.2": "2.4.2",
     "jsr:@logtape/redaction@2.4.2": "2.4.2",
     "npm:diff@9.0.0": "9.0.0",
-    "npm:elkjs@0.9.3": "0.9.3"
+    "npm:elkjs@0.9.3": "0.9.3",
+    "npm:oxigraph@0.5.12": "0.5.12"
   },
   "jsr": {
     "@logtape/logtape@2.4.2": {
@@ -23,13 +24,17 @@
     },
     "elkjs@0.9.3": {
       "integrity": "sha512-f/ZeWvW/BCXbhGEf1Ujp29EASo/lk1FDnETgNKwJrsVvGZhUWCZyg3xLJjAsxfOmt8KjswHmI5EwCQcPMpOYhQ=="
+    },
+    "oxigraph@0.5.12": {
+      "integrity": "sha512-spHJmE45Svg2ic8DyqClqThodYEc4Su62ZTxwNFwWfb32AW66Rlg1K5Yb3dmqSLWLTUjP6YtXWuwyFBoKJ2Mpg=="
     }
   },
   "workspace": {
     "dependencies": [
       "jsr:@logtape/redaction@2.4.2",
       "npm:diff@9.0.0",
-      "npm:elkjs@0.9.3"
+      "npm:elkjs@0.9.3",
+      "npm:oxigraph@0.5.12"
     ]
   }
 }

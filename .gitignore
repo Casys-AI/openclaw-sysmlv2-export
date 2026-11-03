@@ -1,3 +1,5 @@
 .DS_Store
 plugin/core.mjs
 plugin/toolkit-worker.mjs
+plugin/oxigraph_bg.wasm
+plugin/rules/

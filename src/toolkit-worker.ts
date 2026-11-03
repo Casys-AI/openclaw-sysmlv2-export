@@ -1,6 +1,8 @@
 import { Buffer } from "node:buffer";
 import { parentPort, workerData } from "node:worker_threads";
 import { gunzipSync } from "node:zlib";
+import { checkApe } from "./ape.ts";
+import type { ApeReport } from "./ape-rules.ts";
 import { ExportError } from "./error.ts";
 import { readToolkit } from "./toolkit-install.ts";
 import type {
@@ -34,6 +36,8 @@ interface ToolkitModule {
   Session: {
     fromSourcesWithPreparedLibrary(sources: string, library: Library): {
       check(): string;
+      toFullJson(includeLibrary: boolean): string;
+      rows(ids: string, fields: string): string;
       free(): void;
     };
   };
@@ -56,6 +60,15 @@ async function compile(request: ValidationRequest): Promise<Diagnostics> {
   );
   const sources = request.sources.filter((s) => !broken.has(s.name));
   let findings = syntax;
+  let ape: ApeReport = {
+    status: "skipped",
+    code: "APE_INVALID_MODEL",
+    findings: [],
+  };
+  const isError = (finding: Finding) =>
+    finding.severity === "error" ||
+    finding.stage === "referential" &&
+      request.sources.some((s) => s.name === finding.unit);
   if (sources.length) {
     const expand = (name: string) =>
       gunzipSync(files.get(`stdlib/sysml-library.${name}.gz`)!);
@@ -75,6 +88,7 @@ async function compile(request: ValidationRequest): Promise<Diagnostics> {
           ...syntax.filter((d) => d.stage === "parse"),
           ...JSON.parse(session.check()),
         ];
+        if (!findings.some(isError)) ape = await checkApe(session);
       } finally {
         session.free();
       }
@@ -82,7 +96,7 @@ async function compile(request: ValidationRequest): Promise<Diagnostics> {
       library.free();
     }
   }
-  const result: Diagnostics = { errors: [], warnings: [] };
+  const result: Diagnostics = { errors: [], warnings: [], ape };
   for (const finding of findings) {
     const diagnostic: Diagnostic = {
       code: `TOOLKIT_${finding.stage.toUpperCase()}`,
@@ -92,9 +106,7 @@ async function compile(request: ValidationRequest): Promise<Diagnostics> {
       column: finding.col ?? null,
     };
     // Unresolved references in exported sources cannot count as a valid model.
-    const error = finding.severity === "error" ||
-      finding.stage === "referential" &&
-        request.sources.some((s) => s.name === finding.unit);
+    const error = isError(finding);
     result[error ? "errors" : "warnings"].push(diagnostic);
   }
   return result;

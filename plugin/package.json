@@ -25,6 +25,8 @@
     "index.mjs",
     "core.mjs",
     "toolkit-worker.mjs",
+    "oxigraph_bg.wasm",
+    "rules/ape/**/*.rq",
     "openclaw.plugin.json",
     "README.md",
     "LICENSE",

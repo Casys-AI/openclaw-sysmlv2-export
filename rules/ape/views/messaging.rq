@@ -1,0 +1,42 @@
+PREFIX ase: <urn:ase:vocab:>
+PREFIX prop: <urn:ase:vocab:prop:>
+PREFIX ape: <urn:ase:ape:v1:>
+
+CONSTRUCT {
+  ?policy ape:messageTarget ?target ; ape:source ?policy ;
+    ape:from ?from ; ape:to ?target ; ape:wildcardTargets ?wildcard .
+  ?from ape:canMessage ?target ; ape:messagePolicy ?policy .
+} WHERE {
+  GRAPH <urn:ase:ape:v1:view:agents> {
+    ?target ape:agentId ?targetId ; ape:scope ?scope .
+    ?from ape:agentId ?fromId ; ape:scope ?scope .
+  }
+  GRAPH ?build {
+    ?policy prop:definition/ase:qualifiedName "OpenClawImport::MessagingPolicy" ;
+      prop:ownedMember ?enabledFeature ; prop:owner+ ?scope .
+    ?enabledFeature prop:ownedRedefinition/prop:redefinedFeature/ase:qualifiedName
+      "OpenClawImport::MessagingPolicy::enabled" ;
+      prop:ownedMember/prop:value true .
+    {
+      ?policy prop:ownedMember ?targetFeature .
+      ?targetFeature prop:ownedSubsetting/prop:subsettedFeature/ase:qualifiedName
+        "OpenClawImport::MessagingPolicy::targets" ;
+        prop:ownedMember/prop:referent ?target .
+    } UNION {
+      ?policy prop:ownedMember ?wildcardFeature .
+      ?wildcardFeature prop:ownedRedefinition/prop:redefinedFeature/ase:qualifiedName
+        "OpenClawImport::MessagingPolicy::wildcardTargets" ;
+        prop:ownedMember/prop:value true .
+      BIND(true AS ?wildcard)
+    }
+  }
+  FILTER(COALESCE(?wildcard, false) || EXISTS {
+    GRAPH ?build {
+      ?policy prop:ownedMember ?fromFeature .
+      ?fromFeature prop:ownedSubsetting/prop:subsettedFeature/ase:qualifiedName
+        "OpenClawImport::MessagingPolicy::targets" ;
+        prop:ownedMember/prop:referent ?from .
+    }
+  })
+  FILTER(STRSTARTS(STR(?build), "urn:ase:build:"))
+}

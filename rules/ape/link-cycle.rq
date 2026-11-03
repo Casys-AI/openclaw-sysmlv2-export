@@ -1,0 +1,21 @@
+# code: LINK_CYCLE
+# severity: warning
+# pattern: 4.2
+# finding: present
+# context: This agent is in a directed delegation cycle with {related}. Self-delegation alone is excluded.
+# recovery: Review the delegation cycle and make its termination and supervisory intervention explicit.
+
+PREFIX ape: <urn:ase:ape:v1:>
+
+SELECT DISTINCT ?agentId ?relatedAgentId WHERE {
+  GRAPH <urn:ase:ape:v1:view:agents> {
+    ?agent ape:agentId ?agentId .
+    ?other ape:agentId ?relatedAgentId .
+  }
+  GRAPH <urn:ase:ape:v1:view:delegation> {
+    ?agent ape:delegatesTo+ ?other .
+    ?other ape:delegatesTo+ ?agent .
+    FILTER(?agent != ?other)
+  }
+}
+ORDER BY ?agentId
