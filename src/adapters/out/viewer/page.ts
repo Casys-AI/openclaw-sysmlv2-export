@@ -313,7 +313,7 @@ button.et-tile:hover { border-color: var(--line-strong); background: var(--card)
 .et-tile strong { grid-area: figure; font-size: 20px; line-height: 1.2; font-weight: 600; letter-spacing: -.01em; }
 .et-tile small { grid-area: rest; font-size: 11.5px; color: var(--muted); white-space: nowrap; }
 .et-tile strong b { display: inline-flex; align-items: center; gap: 5px; margin-right: 12px; font-weight: 600; color: var(--doc); }
-.et-tile strong b::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--doc); }
+.et-tile strong b::before { content: ""; width: 10px; height: 10px; background: var(--doc); clip-path: var(--shape); }
 .hl .et-sum.changed { box-shadow: inset 3px 0 var(--chg); } .et-sum.selected { background: var(--accent-soft); }
 .et-src button { all: unset; display: grid; place-items: center; width: 22px; height: 18px; border-radius: 5px; cursor: pointer; color: var(--muted); }
 .et-src button:hover { color: var(--ink); background: var(--hover); }
@@ -339,10 +339,14 @@ button.et-tile:hover { border-color: var(--line-strong); background: var(--card)
 .g.b::after { content: ""; position: absolute; left: 1.5px; right: 1.5px; top: 3.6px; height: 1.3px; background: #fff; }
 
 /* Doctor: findings on the elements they concern. */
-.doc-error, [data-doc="error"] { --doc: var(--del); } .doc-warning, [data-doc="warning"] { --doc: var(--warn); } .doc-info { --doc: var(--md-soft); }
-th[data-doc]::before, tr[data-doc] > .et-name:not(:has(span))::before, tr[data-doc] > .et-name > span::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: var(--doc); vertical-align: 1px; }
-.wk th[data-doc]::before { margin-left: -13px; }
-.md-doc circle { fill: var(--doc); stroke: var(--paper); stroke-width: 2; }
+/* A shape per severity, so that colour is not the only cue: a diamond for an
+   error, a triangle for a warning, a dot for a note. */
+.doc-error, [data-doc="error"] { --doc: var(--del); --shape: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); }
+.doc-warning, [data-doc="warning"] { --doc: var(--warn); --shape: polygon(50% 6%, 100% 94%, 0 94%); }
+.doc-info { --doc: var(--md-soft); --shape: circle(42%); }
+.sev, th[data-doc]::before, tr[data-doc] > .et-name:not(:has(span))::before, tr[data-doc] > .et-name > span::before { content: ""; display: inline-block; flex: none; width: 9px; height: 9px; margin-right: 6px; background: var(--doc); clip-path: var(--shape); vertical-align: 0; }
+.wk th[data-doc]::before { margin-left: -15px; }
+.md-doc path { fill: var(--doc); stroke: var(--paper); stroke-width: 2; stroke-linejoin: round; }
 .md-doc text { font-size: 10px; font-weight: 700; fill: #fff !important; text-anchor: middle; }
 .md-findings { list-style: none; margin: 4px 0 12px; padding: 0; }
 .md-inspector .md-findings li { padding: 6px 0 6px 10px; border-top: 1px solid var(--line); box-shadow: inset 2px 0 var(--doc); }
@@ -721,10 +725,15 @@ function drawNode(n, delta) {
   }
   if (doc) {
     const b = sv("g", { class: "md-doc doc-" + doc.worst });
-    b.append(sv("title", {}, doc.codes), sv("circle", { cx: x + 2, cy: y + 2, r: 8 }), txt(x + 2, y + 5.5, "!"));
+    b.append(sv("title", {}, doc.codes), sv("path", { d: severityPath(doc.worst, x + 2, y + 2) }), txt(x + 2, y + (doc.worst === "error" ? 5.5 : 6.5), "!"));
     g.append(b);
   }
   return g;
+}
+// A diamond for an error, a triangle for a warning, around (cx, cy).
+function severityPath(severity, cx, cy) {
+  return severity === "error" ? "M" + cx + "," + (cy - 10) + " L" + (cx + 10) + "," + cy + " L" + cx + "," + (cy + 10) + " L" + (cx - 10) + "," + cy + " Z"
+    : "M" + cx + "," + (cy - 9) + " L" + (cx + 10) + "," + (cy + 8) + " L" + (cx - 10) + "," + (cy + 8) + " Z";
 }
 function drawEdge(e, delta, inner) {
   const cls = ["md-edge", e.kind, inner ? "inner" : "", delta && delta.added.includes(e.id) ? "added" : "", delta && delta.changed.includes(e.id) ? "changed" : ""];
@@ -1381,7 +1390,7 @@ function findingList(findings, vi, withSubject) {
       top.append(button(n.title || nameOf(n), () => stayOn(v.id, f.subject), "md-subject"));
     }
     else if (withSubject) top.append(el("strong", "", f.subject));
-    top.append(el("code", "", f.code));
+    top.append(el("i", "sev"), el("code", "", f.code));
     li.append(top, el("p", "", f.context), el("p", "fix", f.recovery));
     ul.append(li);
   }
