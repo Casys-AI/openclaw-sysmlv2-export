@@ -252,4 +252,12 @@ Deno.test("every element names a declaration of the emitted files", () => {
   const lines = files.get("OpenClawInstance.sysml")!.split("\n");
   assert.match(lines[from - 1], /part 'tool_cli:git' :> tools \{$/);
   assert.equal(lines[to - 1].trim(), "}");
+  const delegation = "OpenClawInstance::Authority::'delegation_lead:coach'";
+  const span = index.get("OpenClawInstance.sysml")!.get(delegation)!;
+  assert.ok(span, delegation);
+  assert.equal(span[0], span[1]);
+  assert.match(
+    lines[span[0] - 1],
+    /connection .* : DelegationRule connect .*;$/,
+  );
 });

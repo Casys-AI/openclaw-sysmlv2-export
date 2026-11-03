@@ -70,16 +70,42 @@ package OpenClawImport {
     attribute def MillisecondEvery :> AssemblyCases::Every { attribute durationMs : Integer; }
     part def ScheduledCase :> AssemblyCases::CaseType {
         attribute id : String; attribute displayName : String;
-        attribute enabled : Boolean; attribute targetAgent : String;
+        attribute enabled : Boolean;
+        ref part targetAgent : OpenClawAgent [0..1];
+        attribute unresolvedTarget : String [0..1];
     }
     part def ExternalTrigger {
-        attribute name : String; attribute targetAgent : String;
+        attribute name : String;
+        ref part targetAgent : OpenClawAgent [0..1];
+        attribute unresolvedTarget : String [0..1];
         attribute deliveryChannel : String;
     }
     part def BundledSkill { attribute name : String; attribute enabled : Boolean; }
     part def InstructionFile { attribute path : String; attribute sha256 : String; attribute bytes : Integer; }
-    part def DelegationRule { attribute fromAgent : String; attribute toAgent : String; }
-    part def MessagingPolicy { attribute enabled : Boolean; attribute allowedTargets : String; }
+    connection def DelegationRule {
+        end fromAgent : OpenClawAgent;
+        end toAgent : OpenClawAgent;
+    }
+    part def DelegationPolicy {
+        doc /* Literal delegation policy provenance. Only known named targets
+         * become directed DelegationRule connections. Wildcards and unresolved
+         * targets remain explicit facts, never fabricated agent endpoints. */
+        ref part fromAgent : OpenClawAgent;
+        attribute allowedTargets : String;
+        attribute wildcardTargets : Boolean;
+        attribute unresolvedTargets : String;
+    }
+    part def MessagingPolicy {
+        doc /* Instance-wide messaging policy, not per-agent delivery edges.
+         * Named targets refer to known agents even when the policy is disabled.
+         * allowedTargets preserves the literal policy, including wildcards and
+         * unresolved names or patterns; only literal '*' sets wildcardTargets. */
+        attribute enabled : Boolean;
+        attribute allowedTargets : String;
+        attribute wildcardTargets : Boolean;
+        attribute unresolvedTargets : String;
+        ref part targets : OpenClawAgent [0..*];
+    }
     part def ModelProvider { attribute name : String; attribute apiKind : String; attribute modelIds : String; }
     part def OpenClawPlugin {
         doc /* Tool provider: its granted tools appear in the tool catalog with

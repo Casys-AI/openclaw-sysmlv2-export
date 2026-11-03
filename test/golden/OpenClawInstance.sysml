@@ -1752,7 +1752,7 @@ package OpenClawInstance {
             attribute :>> id = "heartbeat:lead";
             attribute :>> displayName = "Heartbeat lead";
             attribute :>> enabled = true;
-            attribute :>> targetAgent = "lead";
+            ref part :>> targetAgent = Operators::agent_lead;
             attribute :>> envelope = AssemblyCases::EnvelopeKind::reassessment;
             ref part :>> owner = Operators::agent_lead;
             attribute :>> schedule : MillisecondEvery {
@@ -1765,7 +1765,7 @@ package OpenClawInstance {
             attribute :>> id = "job-1";
             attribute :>> displayName = "Daily digest";
             attribute :>> enabled = false;
-            attribute :>> targetAgent = "main";
+            attribute :>> unresolvedTarget = "main";
             attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
             attribute :>> schedule : CronSchedule {
                 attribute :>> expression = "30 7 * * *";
@@ -1781,8 +1781,8 @@ package OpenClawInstance {
             attribute :>> id = "job-10";
             attribute :>> displayName = "Weekly Retrospective";
             attribute :>> enabled = false;
-            attribute :>> targetAgent = "lead";
             attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
+            ref part :>> targetAgent = Operators::agent_lead;
             ref part :>> owner = Operators::agent_lead;
             attribute :>> schedule : CronSchedule {
                 attribute :>> expression = "0 12 * * 4";
@@ -1797,7 +1797,7 @@ package OpenClawInstance {
             attribute :>> id = "job-2";
             attribute :>> displayName = "Security check";
             attribute :>> enabled = false;
-            attribute :>> targetAgent = "main";
+            attribute :>> unresolvedTarget = "main";
             attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
             attribute :>> schedule : CronSchedule {
                 attribute :>> expression = "0 6,12,18,0 * * *";
@@ -1813,7 +1813,7 @@ package OpenClawInstance {
             attribute :>> id = "job-3";
             attribute :>> displayName = "process-leads";
             attribute :>> enabled = false;
-            attribute :>> targetAgent = "main";
+            attribute :>> unresolvedTarget = "main";
             attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
             attribute :>> schedule : CronSchedule {
                 attribute :>> expression = "0 9 * * *";
@@ -1829,7 +1829,7 @@ package OpenClawInstance {
             attribute :>> id = "job-4";
             attribute :>> displayName = "Daily analytics report";
             attribute :>> enabled = false;
-            attribute :>> targetAgent = "main";
+            attribute :>> unresolvedTarget = "main";
             attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
             attribute :>> schedule : CronSchedule {
                 attribute :>> expression = "0 8 * * *";
@@ -1845,7 +1845,7 @@ package OpenClawInstance {
             attribute :>> id = "job-5";
             attribute :>> displayName = "Weekly scouting A";
             attribute :>> enabled = false;
-            attribute :>> targetAgent = "main";
+            attribute :>> unresolvedTarget = "main";
             attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
             attribute :>> schedule : CronSchedule {
                 attribute :>> expression = "0 1 * * 2,5";
@@ -1861,7 +1861,7 @@ package OpenClawInstance {
             attribute :>> id = "job-6";
             attribute :>> displayName = "Weekly scouting B";
             attribute :>> enabled = false;
-            attribute :>> targetAgent = "main";
+            attribute :>> unresolvedTarget = "main";
             attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
             attribute :>> schedule : CronSchedule {
                 attribute :>> expression = "0 2 * * 1,4";
@@ -1877,8 +1877,8 @@ package OpenClawInstance {
             attribute :>> id = "job-7";
             attribute :>> displayName = "field-usage-daily";
             attribute :>> enabled = false;
-            attribute :>> targetAgent = "lead";
             attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
+            ref part :>> targetAgent = Operators::agent_lead;
             ref part :>> owner = Operators::agent_lead;
             attribute :>> schedule : CronSchedule {
                 attribute :>> expression = "0 22 * * *";
@@ -1894,8 +1894,8 @@ package OpenClawInstance {
             attribute :>> id = "job-8";
             attribute :>> displayName = "field-usage-alert";
             attribute :>> enabled = false;
-            attribute :>> targetAgent = "lead";
             attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
+            ref part :>> targetAgent = Operators::agent_lead;
             ref part :>> owner = Operators::agent_lead;
             attribute :>> schedule : MillisecondEvery {
                 attribute :>> durationMs = 3600000;
@@ -1912,8 +1912,8 @@ package OpenClawInstance {
             attribute :>> id = "job-9";
             attribute :>> displayName = "Daily marketing report";
             attribute :>> enabled = false;
-            attribute :>> targetAgent = "lead";
             attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
+            ref part :>> targetAgent = Operators::agent_lead;
             ref part :>> owner = Operators::agent_lead;
             attribute :>> schedule : CronSchedule {
                 attribute :>> expression = "0 8 * * *";
@@ -2022,8 +2022,8 @@ package OpenClawInstance {
         }
         part 'hook_hook-0' : ExternalTrigger {
             attribute :>> name = "Webhook";
-            attribute :>> targetAgent = "lead";
             attribute :>> deliveryChannel = "whatsapp";
+            ref part :>> targetAgent = Operators::agent_lead;
             part file_template : InstructionFile {
                 attribute :>> path = "openclaw.json#/hooks/mappings/0/messageTemplate";
                 attribute :>> sha256 = "b7b734e170d526bd7f9599afa6eb09455078aeff359e068360fab35e9578fdc5";
@@ -2561,49 +2561,57 @@ package OpenClawInstance {
             attribute :>> commandKind = "safe-bin";
             attribute :>> argsRestricted = true;
         }
-        part 'delegation_client:coach' : DelegationRule {
-            attribute :>> fromAgent = "client";
-            attribute :>> toAgent = "coach";
+        part delegationPolicy_client : DelegationPolicy {
+            ref part :>> fromAgent = Operators::agent_client;
+            attribute :>> allowedTargets = "[\"coach\"]";
+            attribute :>> wildcardTargets = false;
+            attribute :>> unresolvedTargets = "[]";
         }
-        part 'delegation_coach:client' : DelegationRule {
-            attribute :>> fromAgent = "coach";
-            attribute :>> toAgent = "client";
+        connection 'delegation_client:coach' : DelegationRule connect Operators::agent_client to Operators::agent_coach;
+        part delegationPolicy_coach : DelegationPolicy {
+            ref part :>> fromAgent = Operators::agent_coach;
+            attribute :>> allowedTargets = "[\"client\"]";
+            attribute :>> wildcardTargets = false;
+            attribute :>> unresolvedTargets = "[]";
         }
-        part 'delegation_devbox:lead' : DelegationRule {
-            attribute :>> fromAgent = "devbox";
-            attribute :>> toAgent = "lead";
+        connection 'delegation_coach:client' : DelegationRule connect Operators::agent_coach to Operators::agent_client;
+        part delegationPolicy_devbox : DelegationPolicy {
+            ref part :>> fromAgent = Operators::agent_devbox;
+            attribute :>> allowedTargets = "[\"lead\"]";
+            attribute :>> wildcardTargets = false;
+            attribute :>> unresolvedTargets = "[]";
         }
-        part 'delegation_field:lead' : DelegationRule {
-            attribute :>> fromAgent = "field";
-            attribute :>> toAgent = "lead";
+        connection 'delegation_devbox:lead' : DelegationRule connect Operators::agent_devbox to Operators::agent_lead;
+        part delegationPolicy_field : DelegationPolicy {
+            ref part :>> fromAgent = Operators::agent_field;
+            attribute :>> allowedTargets = "[\"lead\"]";
+            attribute :>> wildcardTargets = false;
+            attribute :>> unresolvedTargets = "[]";
         }
-        part 'delegation_lead:client' : DelegationRule {
-            attribute :>> fromAgent = "lead";
-            attribute :>> toAgent = "client";
+        connection 'delegation_field:lead' : DelegationRule connect Operators::agent_field to Operators::agent_lead;
+        part delegationPolicy_lead : DelegationPolicy {
+            ref part :>> fromAgent = Operators::agent_lead;
+            attribute :>> allowedTargets = "[\"client\",\"coach\",\"devbox\",\"field\",\"secretary\"]";
+            attribute :>> wildcardTargets = false;
+            attribute :>> unresolvedTargets = "[]";
         }
-        part 'delegation_lead:coach' : DelegationRule {
-            attribute :>> fromAgent = "lead";
-            attribute :>> toAgent = "coach";
+        connection 'delegation_lead:client' : DelegationRule connect Operators::agent_lead to Operators::agent_client;
+        connection 'delegation_lead:coach' : DelegationRule connect Operators::agent_lead to Operators::agent_coach;
+        connection 'delegation_lead:devbox' : DelegationRule connect Operators::agent_lead to Operators::agent_devbox;
+        connection 'delegation_lead:field' : DelegationRule connect Operators::agent_lead to Operators::agent_field;
+        connection 'delegation_lead:secretary' : DelegationRule connect Operators::agent_lead to Operators::agent_secretary;
+        part delegationPolicy_secretary : DelegationPolicy {
+            ref part :>> fromAgent = Operators::agent_secretary;
+            attribute :>> allowedTargets = "[\"lead\"]";
+            attribute :>> wildcardTargets = false;
+            attribute :>> unresolvedTargets = "[]";
         }
-        part 'delegation_lead:devbox' : DelegationRule {
-            attribute :>> fromAgent = "lead";
-            attribute :>> toAgent = "devbox";
-        }
-        part 'delegation_lead:field' : DelegationRule {
-            attribute :>> fromAgent = "lead";
-            attribute :>> toAgent = "field";
-        }
-        part 'delegation_lead:secretary' : DelegationRule {
-            attribute :>> fromAgent = "lead";
-            attribute :>> toAgent = "secretary";
-        }
-        part 'delegation_secretary:lead' : DelegationRule {
-            attribute :>> fromAgent = "secretary";
-            attribute :>> toAgent = "lead";
-        }
+        connection 'delegation_secretary:lead' : DelegationRule connect Operators::agent_secretary to Operators::agent_lead;
         part messaging : MessagingPolicy {
             attribute :>> enabled = true;
             attribute :>> allowedTargets = "[\"*\"]";
+            attribute :>> wildcardTargets = true;
+            attribute :>> unresolvedTargets = "[]";
         }
         part execApprovals : ExecApprovals {
             attribute :>> defaultSecurity = "allowlist";

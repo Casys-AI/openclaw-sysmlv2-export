@@ -141,12 +141,12 @@ const inferred = (...path: string[]): SysmlRef => ({
 /** Line ranges (1-based, inclusive) of the named declarations of an emitted
  * file, by qualified name as written (`Pkg::part::'quoted name'`). The emitter
  * indents each body by four spaces and closes it alone on its own line, or
- * opens and closes it on one line. */
+ * opens and closes it on one line, or ends a declaration with a semicolon. */
 export function declarations(text: string): Map<string, [number, number]> {
   const lines = text.split("\n"), found = new Map<string, [number, number]>();
   const path: string[] = [];
   const header =
-    /^( *)(?:(?:ref|abstract)\s+)?(?:package|part|item|connection|action|requirement)(?:\s+def)?\s+(?::>>\s*)?('(?:[^'\\]|\\.)*'|[A-Za-z_]\w*)[^{]*\{(.*)$/;
+    /^( *)(?:(?:ref|abstract)\s+)?(?:package|part|item|connection|action|requirement)(?:\s+def)?\s+(?::>>\s*)?('(?:[^'\\]|\\.)*'|[A-Za-z_]\w*)[^\n{;]*(?:\{(.*)|;)$/;
   lines.forEach((line, i) => {
     const m = line.match(header);
     if (!m || m[1].length % 4) return;
@@ -154,7 +154,7 @@ export function declarations(text: string): Map<string, [number, number]> {
     path.length = depth;
     path[depth] = m[2];
     let end = i;
-    if (!m[3].trimEnd().endsWith("}")) {
+    if (m[3] !== undefined && !m[3].trimEnd().endsWith("}")) {
       const close = `${m[1]}}`;
       while (end + 1 < lines.length && lines[end + 1] !== close) end++;
       end++;

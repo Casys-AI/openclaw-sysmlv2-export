@@ -122,6 +122,12 @@ const group = (title: string, doc: string, body: string[]) =>
 
 export function emit(snapshot: Snapshot): Map<string, string> {
   const agents = [...snapshot.agents].sort((a, b) => a.id < b.id ? -1 : 1);
+  const agentIds = new Set(agents.map((a) => a.id));
+  const targetFacts = (targets: string[]) => ({
+    allowedTargets: targets,
+    wildcardTargets: targets.includes("*"),
+    unresolvedTargets: targets.filter((t) => t !== "*" && !agentIds.has(t)),
+  });
   const granted = new Map(agents.map((a) => [a.id, grants(snapshot, a)]));
   const catalog = new Map(
     [...granted.values()].flat().map((g) => [g.tool.key, g.tool]),
@@ -301,8 +307,8 @@ export function emit(snapshot: Snapshot): Map<string, string> {
         id: `heartbeat:${a.id}`,
         displayName: `Heartbeat ${a.id}`,
         enabled: a.heartbeat.everyMs > 0,
-        targetAgent: a.id,
       }),
+      `ref part :>> targetAgent = Operators::${name("agent", a.id)};`,
       "attribute :>> envelope = AssemblyCases::EnvelopeKind::reassessment;",
       `ref part :>> owner = Operators::${name("agent", a.id)};`,
       ...every(a.heartbeat.everyMs),
@@ -318,11 +324,14 @@ export function emit(snapshot: Snapshot): Map<string, string> {
         id: j.id,
         displayName: j.name,
         enabled: j.enabled,
-        targetAgent: j.agentId,
+        unresolvedTarget: owner ? null : j.agentId,
       }),
       "attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;",
       ...(owner
-        ? [`ref part :>> owner = Operators::${name("agent", owner.id)};`]
+        ? [
+          `ref part :>> targetAgent = Operators::${name("agent", owner.id)};`,
+          `ref part :>> owner = Operators::${name("agent", owner.id)};`,
+        ]
         : []),
       ...(j.schedule.kind === "every"
         ? every(j.schedule.everyMs!)
@@ -373,9 +382,12 @@ export function emit(snapshot: Snapshot): Map<string, string> {
     entries.push(...block(`part ${name("hook", h.id)} : ExternalTrigger`, [
       ...attrs({
         name: h.name,
-        targetAgent: h.agentId,
+        unresolvedTarget: agentIds.has(h.agentId) ? null : h.agentId,
         deliveryChannel: h.channel,
       }),
+      ...(agentIds.has(h.agentId)
+        ? [`ref part :>> targetAgent = Operators::${name("agent", h.agentId)};`]
+        : []),
       ...(h.template
         ? file(h.template, "part file_template : InstructionFile")
         : []),
@@ -398,15 +410,38 @@ export function emit(snapshot: Snapshot): Map<string, string> {
     }
   }
   for (const a of agents) {
+    authority.push(...block(
+      `part ${name("delegationPolicy", a.id)} : DelegationPolicy`,
+      [
+        `ref part :>> fromAgent = Operators::${name("agent", a.id)};`,
+        ...attrs(targetFacts(a.delegation)),
+      ],
+    ));
     for (const to of a.delegation) {
-      authority.push(...block(
-        `part ${name("delegation", `${a.id}:${to}`)} : DelegationRule`,
-        attrs({ fromAgent: a.id, toAgent: to }),
-      ));
+      if (to === "*" || !agentIds.has(to)) continue;
+      authority.push(
+        `connection ${
+          name("delegation", `${a.id}:${to}`)
+        } : DelegationRule connect Operators::${
+          name("agent", a.id)
+        } to Operators::${name("agent", to)};`,
+      );
     }
   }
   authority.push(
-    ...block("part messaging : MessagingPolicy", attrs(snapshot.messaging)),
+    ...block("part messaging : MessagingPolicy", [
+      ...attrs({
+        enabled: snapshot.messaging.enabled,
+        ...targetFacts(snapshot.messaging.allowedTargets),
+      }),
+      ...snapshot.messaging.allowedTargets.filter((to) =>
+        to !== "*" && agentIds.has(to)
+      ).map((to) =>
+        `ref part ${name("messagingTarget", to)} :> targets = Operators::${
+          name("agent", to)
+        };`
+      ),
+    ]),
   );
   if (snapshot.execApprovals !== null) {
     const { defaults, wildcardCommands } = snapshot.execApprovals;

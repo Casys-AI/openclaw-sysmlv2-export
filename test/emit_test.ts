@@ -100,6 +100,90 @@ Deno.test("memory emission omits unset metadata while keeping empty inventory co
   }
 });
 
+Deno.test("agent links reference known parts and retain wildcard, unresolved, and absent targets", async () => {
+  const fixture = await createFixture();
+  try {
+    const snapshot = await collect(fixture.home);
+    const lead = snapshot.agents.find((a) => a.id === "lead")!;
+    lead.delegation = ["coach", "*", "missing"];
+    snapshot.agents = [lead, snapshot.agents.find((a) => a.id === "coach")!];
+    snapshot.agents[1].delegation = [];
+    snapshot.messaging = {
+      enabled: false,
+      allowedTargets: ["coach", "*", "missing"],
+    };
+    snapshot.hooks = ["coach", "missing"].map((agentId) => ({
+      id: agentId,
+      name: agentId,
+      agentId,
+      channel: null,
+      template: null,
+    }));
+    snapshot.cron = ["coach", "missing", null].map((agentId, i) => ({
+      ...snapshot.cron[0],
+      id: `link-${i}`,
+      agentId,
+    }));
+    const instance = emit(snapshot).get("OpenClawInstance.sysml")!;
+    const body = (header: string) => {
+      const start = instance.indexOf(`${header} {`);
+      assert.ok(start >= 0, header);
+      return instance.slice(start, instance.indexOf("\n        }", start));
+    };
+    assert.deepEqual(
+      instance.match(/connection .* : DelegationRule connect .*;/g),
+      [
+        "connection 'delegation_lead:coach' : DelegationRule connect Operators::agent_lead to Operators::agent_coach;",
+      ],
+    );
+    const delegation = body("part delegationPolicy_lead : DelegationPolicy");
+    assert.match(delegation, /ref part :>> fromAgent = Operators::agent_lead;/);
+    assert.match(delegation, /attribute :>> wildcardTargets = true;/);
+    assert.ok(delegation.includes(
+      'attribute :>> unresolvedTargets = "[\\"missing\\"]";',
+    ));
+    const messaging = body("part messaging : MessagingPolicy");
+    assert.match(messaging, /attribute :>> enabled = false;/);
+    assert.match(messaging, /attribute :>> wildcardTargets = true;/);
+    assert.match(
+      messaging,
+      /ref part messagingTarget_coach :> targets = Operators::agent_coach;/,
+    );
+    assert.doesNotMatch(messaging, /messagingTarget_(?:missing|\*)/);
+    for (
+      const header of [
+        "part hook_coach : ExternalTrigger",
+        "part 'cron_link-0' : ScheduledCase",
+        "part heartbeat_lead : ScheduledCase",
+      ]
+    ) {
+      assert.match(
+        body(header),
+        /ref part :>> targetAgent = Operators::agent_/,
+      );
+      assert.doesNotMatch(
+        body(header),
+        /attribute :>> (?:targetAgent|unresolvedTarget)/,
+      );
+    }
+    for (
+      const header of [
+        "part hook_missing : ExternalTrigger",
+        "part 'cron_link-1' : ScheduledCase",
+      ]
+    ) {
+      assert.match(body(header), /attribute :>> unresolvedTarget = "missing";/);
+      assert.doesNotMatch(body(header), /ref part :>> (?:targetAgent|owner)/);
+    }
+    assert.doesNotMatch(
+      body("part 'cron_link-2' : ScheduledCase"),
+      /targetAgent|unresolvedTarget|ref part :>> owner/,
+    );
+  } finally {
+    await fixture.cleanup();
+  }
+});
+
 Deno.test("granted tools are catalogued once by origin; CLI commands are granted on exec's layer", async () => {
   const fixture = await createFixture();
   try {
