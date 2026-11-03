@@ -334,6 +334,9 @@ button.et-tile:hover { border-color: var(--line-strong); background: var(--card)
 .wk tbody th small { margin-left: 8px; color: var(--muted); }
 .wk-agent th { padding-top: 8px; font: 600 11.5px var(--mono); }
 .wk tr.muted th { color: var(--muted); }
+.wk td[data-id] { cursor: pointer; }
+.wk-run { display: inline-block; width: 7px; height: 7px; margin-left: 8px; border-radius: 50%; background: var(--md-soft); vertical-align: 1px; }
+.wk-run.ok { background: var(--add); } .wk-run.bad { background: var(--del); }
 .wk tr th.selected { --sel: inset 0 1px var(--ink), inset 0 -1px var(--ink); }
 .wk-strip { display: block; overflow: visible; }
 .wk-strip text { font-size: 10px; fill: var(--muted); }
@@ -1896,7 +1899,16 @@ function renderWeek(box, t, mark) {
       name.tabIndex = 0;
       const how = r.fires ? r.zone || "gateway time" : r.everyMs && r.everyMs < 86400000 ? "" : r.everyMs ? "start unknown" : "not weekly";
       name.append(el("span", "", r.label), el("small", "", r.when + (how ? " · " + how : "")));
+      // The last run's status (runtime state, never a change) and the model.
+      if (r.lastRun) {
+        const run = el("i", "wk-run " + (r.lastRun === "ok" ? "ok" : "bad"));
+        run.title = "Last run: " + r.lastRun;
+        name.append(run);
+      }
+      name.title = [r.model ? "model " + r.model : "", r.lastRun ? "last run " + r.lastRun : ""].filter(Boolean).join(" · ");
+      // Its strip selects the task too.
       const td = el("td");
+      td.dataset.id = r.node;
       td.append(strip(r));
       tr.append(name, td);
       tbody.append(tr);
