@@ -87,8 +87,7 @@ main > section[hidden] { display: none; }
 .tb-bar .tb-tabs button[aria-pressed="true"] { color: var(--ink); background: var(--accent-soft); }
 .et td.et-num { text-align: right; font-variant-numeric: tabular-nums; }
 .et-name small.et-tag { margin-left: 8px; padding: 0 6px; border-radius: 999px; font: 600 10.5px var(--font); color: var(--doc); background: var(--warn-bg); white-space: nowrap; }
-.md-tools { display: flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
-.md-tools { margin-left: auto; }
+.md-tools { display: flex; gap: 2px; margin-left: auto; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
 .md-tools[hidden] { display: none; }
 .md-tools button { all: unset; cursor: pointer; padding: 3px 9px; border-radius: 7px; font-size: 12px; font-weight: 500; color: var(--muted); }
 .md-tools button:hover { color: var(--ink); background: var(--hover); }
@@ -160,7 +159,6 @@ main > section[hidden] { display: none; }
 .md-edge.escalation text { fill: var(--warn); }
 .md-mark-line { fill: none; stroke: var(--md-edge); stroke-width: 1.25; stroke-linejoin: round; }
 #md-arrow-warn .md-mark-line { stroke: var(--warn); }
-.md-mark-fill { fill: var(--md-edge); }
 
 /* A selection dims what it does not relate to; the selected or hovered
    element's own edges stand out, whatever their width. */
@@ -475,6 +473,9 @@ const data = JSON.parse(document.getElementById("data").textContent);
 const versions = data.versions;
 const M = __METRICS__;
 const NS = "http://www.w3.org/2000/svg";
+// The canvas's gestures: the zoom's step and bounds, the largest scale Fit
+// gives, the pan of an arrow key, and the narrowest sidebar.
+const ZOOM_STEP = 1.25, MIN_ZOOM = 0.15, MAX_ZOOM = 3, MAX_FIT = 1.25, PAN_STEP = 40, MIN_SIDEBAR = 300;
 const KEYWORDS = new Set(("about abstract accept action alias attribute bind calc case comment" +
   " connect connection constraint def doc else end enum exhibit false first flow for from if" +
   " import in inout interface item library metadata not null occurrence or out package part" +
@@ -523,6 +524,7 @@ function sv(tag, attrs, text) {
   return e;
 }
 const when = (v) => v.createdAt.slice(0, 19).replace("T", " ");
+const plural = (n, word) => n + " " + word + (n === 1 ? "" : "s");
 const viewsOf = (i) => (versions[i] && versions[i].views) || null;
 const payload = (entry) => data.views[entry.view];
 const entryOf = (i, id) => (viewsOf(i) || []).find((e) => payload(e).id === id);
@@ -729,12 +731,11 @@ function drawFrame(g, n) {
   if (n.title) { g.append(txt(n.x + 16, y + 12, n.title, "md-name", null, n.w - 32)); y += M.headH + 2; }
   for (const line of n.head || []) { g.append(txt(n.x + 16, y + 11, line, "md-sect", null, n.w - 32)); y += M.headH; }
 }
-function drawNode(n, delta) {
+function drawNode(n, mark) {
+  const change = mark(n.id).trim();
   const classes = ["md-node", n.shape, n.shape === "frame" || n.shape === "group" ? "container" : "leaf",
-    n.kw && /def»$/.test(n.kw) ? "def" : "", n.muted ? "muted" : "", n.dashed ? "dashed" : "",
-    delta && delta.added.includes(n.id) ? "added" : "", delta && delta.changed.includes(n.id) ? "changed" : "",
-    delta && delta.touched.includes(n.id) ? "touched" : ""];
-  const doc = state.doc.get(n.id), status = delta && delta.added.includes(n.id) ? "added" : delta && delta.changed.includes(n.id) ? "changed" : "";
+    n.kw && /def»$/.test(n.kw) ? "def" : "", n.muted ? "muted" : "", n.dashed ? "dashed" : "", change];
+  const doc = state.doc.get(n.id), status = change === "touched" ? "" : change;
   const g = sv("g", { class: classes.filter(Boolean).join(" "), "data-id": n.id, tabindex: 0, role: "button",
     "aria-label": [(n.kw || n.shape) + " " + labelOf(n), status, doc && "worst finding " + doc.worst].filter(Boolean).join(", ") });
   g.append(sv("title", {}, labelOf(n)));
@@ -779,10 +780,10 @@ function drawNode(n, delta) {
     }
     default: drawBlock(g, n);
   }
-  const mark = delta && (delta.added.includes(n.id) ? "add" : delta.changed.includes(n.id) ? "chg" : "");
-  if (mark && n.shape !== "initial" && n.shape !== "final") {
-    const b = sv("g", { class: "md-badge " + mark });
-    b.append(sv("circle", { cx: x + w - 2, cy: y + 2, r: 8 }), txt(x + w - 2, y + 5.5, mark === "add" ? "+" : "~"));
+  const badge = { added: "add", changed: "chg" }[change];
+  if (badge && n.shape !== "initial" && n.shape !== "final") {
+    const b = sv("g", { class: "md-badge " + badge });
+    b.append(sv("circle", { cx: x + w - 2, cy: y + 2, r: 8 }), txt(x + w - 2, y + 5.5, badge === "add" ? "+" : "~"));
     g.append(b);
   }
   if (doc) {
@@ -797,8 +798,8 @@ function severityPath(severity, cx, cy) {
   return severity === "error" ? "M" + cx + "," + (cy - 10) + " L" + (cx + 10) + "," + cy + " L" + cx + "," + (cy + 10) + " L" + (cx - 10) + "," + cy + " Z"
     : "M" + cx + "," + (cy - 9) + " L" + (cx + 10) + "," + (cy + 8) + " L" + (cx - 10) + "," + (cy + 8) + " Z";
 }
-function drawEdge(e, delta, inner) {
-  const cls = ["md-edge", e.kind, inner ? "inner" : "", delta && delta.added.includes(e.id) ? "added" : "", delta && delta.changed.includes(e.id) ? "changed" : ""];
+function drawEdge(e, mark, inner) {
+  const cls = ["md-edge", e.kind, inner ? "inner" : "", mark(e.id).trim()];
   const g = sv("g", { class: cls.filter(Boolean).join(" "), "data-id": e.id });
   const arrow = e.kind === "connection" ? null : e.kind === "escalation" ? "md-arrow-warn" : "md-arrow";
   // A pair that delegates both ways is one edge with an arrowhead at each end.
@@ -834,7 +835,7 @@ function renderPicker(entries, shown) {
     const v = payload(e);
     if (!groups.has(v.group)) groups.set(v.group, []);
     const n = marked(e, v) ? e.delta.count : 0;
-    const o = el("option", "", v.title + (e.delta && e.delta.isNew ? " · new" : n ? " · " + n + (n === 1 ? " change" : " changes") : ""));
+    const o = el("option", "", v.title + (e.delta && e.delta.isNew ? " · new" : n ? " · " + plural(n, "change") : ""));
     o.value = v.id;
     groups.get(v.group).push(o);
   }
@@ -961,20 +962,22 @@ function showChanges(cur) {
 function renderLegend(view) {
   const box = document.getElementById("legend");
   const items = view.scene ? LEGENDS[view.id] || LEGENDS[view.group] || [] : [];
+  // The diagram's --md-stroke, --md-soft and --md-edge, which an SVG attribute cannot read.
+  const ink = "#2b2b2d", soft = "#8e8b85", edge = "#4b4b4f";
   const keys = items.map(([kind, text]) => {
     const s = el("span");
     const g = sv("svg", { viewBox: "0 0 26 14", "aria-hidden": "true" });
     const add = (tag, a) => g.append(sv(tag, a));
-    if (kind === "usage" || kind === "dashed") add("rect", { x: 1, y: 1, width: 24, height: 12, rx: 4, fill: "#fff", stroke: kind === "dashed" ? "#8e8b85" : "#2b2b2d", "stroke-dasharray": kind === "dashed" ? "3 2" : null });
-    if (kind === "connection") add("path", { d: "M1,7 H25", stroke: "#4b4b4f", "stroke-width": 1.3 });
-    if (kind === "owner" || kind === "succession" || kind === "delegation") add("path", { d: "M1,7 H24 M19,3 L24,7 L19,11", stroke: "#4b4b4f", fill: "none", "stroke-width": 1.3 });
-    if (kind === "mutual") add("path", { d: "M2,7 H24 M19,3 L24,7 L19,11 M7,3 L2,7 L7,11", stroke: "#4b4b4f", fill: "none", "stroke-width": 1.3 });
-    if (kind === "trigger") add("path", { d: "M1,7 H22 M19,3 L24,7 L19,11", stroke: "#4b4b4f", fill: "none", "stroke-width": 1.4, "stroke-dasharray": "0.1 3.2", "stroke-linecap": "round" });
-    if (kind === "target") add("path", { d: "M1,7 H24 M19,3 L24,7 L19,11", stroke: "#8e8b85", fill: "none", "stroke-dasharray": "2 2" });
-    if (kind === "initial") add("circle", { cx: 13, cy: 7, r: 5, fill: "#2b2b2d" });
-    if (kind === "final") { add("circle", { cx: 13, cy: 7, r: 6, fill: "#fff", stroke: "#2b2b2d" }); add("circle", { cx: 13, cy: 7, r: 3, fill: "#2b2b2d" }); }
-    if (kind === "decision") add("path", { d: "M13,0 L20,7 L13,14 L6,7 Z", fill: "#fff", stroke: "#2b2b2d" });
-    if (kind === "send") add("path", { d: "M2,1 H18 L24,7 L18,13 H2 Z", fill: "#fff", stroke: "#2b2b2d" });
+    if (kind === "usage" || kind === "dashed") add("rect", { x: 1, y: 1, width: 24, height: 12, rx: 4, fill: "#fff", stroke: kind === "dashed" ? soft : ink, "stroke-dasharray": kind === "dashed" ? "3 2" : null });
+    if (kind === "connection") add("path", { d: "M1,7 H25", stroke: edge, "stroke-width": 1.3 });
+    if (kind === "owner" || kind === "succession" || kind === "delegation") add("path", { d: "M1,7 H24 M19,3 L24,7 L19,11", stroke: edge, fill: "none", "stroke-width": 1.3 });
+    if (kind === "mutual") add("path", { d: "M2,7 H24 M19,3 L24,7 L19,11 M7,3 L2,7 L7,11", stroke: edge, fill: "none", "stroke-width": 1.3 });
+    if (kind === "trigger") add("path", { d: "M1,7 H22 M19,3 L24,7 L19,11", stroke: edge, fill: "none", "stroke-width": 1.4, "stroke-dasharray": "0.1 3.2", "stroke-linecap": "round" });
+    if (kind === "target") add("path", { d: "M1,7 H24 M19,3 L24,7 L19,11", stroke: soft, fill: "none", "stroke-dasharray": "2 2" });
+    if (kind === "initial") add("circle", { cx: 13, cy: 7, r: 5, fill: ink });
+    if (kind === "final") { add("circle", { cx: 13, cy: 7, r: 6, fill: "#fff", stroke: ink }); add("circle", { cx: 13, cy: 7, r: 3, fill: ink }); }
+    if (kind === "decision") add("path", { d: "M13,0 L20,7 L13,14 L6,7 Z", fill: "#fff", stroke: ink });
+    if (kind === "send") add("path", { d: "M2,1 H18 L24,7 L18,13 H2 Z", fill: "#fff", stroke: ink });
     s.append(g, text);
     return s;
   });
@@ -1002,9 +1005,10 @@ function inferredIn(view) {
 }
 function subtitle(view) {
   const t = view.table;
-  if (view.group === "Behaviour" && inferredIn(view)) {
-    const at = versions.find((v) => v.id === inferredIn(view));
-    return "inferred " + (at ? when(at) : inferredIn(view)) + " · sources unchanged";
+  const earlier = view.group === "Behaviour" && inferredIn(view);
+  if (earlier) {
+    const at = versions.find((v) => v.id === earlier);
+    return "inferred " + (at ? when(at) : earlier) + " · sources unchanged";
   }
   if (t && t.kind === "matrix") {
     return t.rows.filter((r) => r.shape === "tool" && !r.dashed).length + " tools × " + t.columns.length + " agents · SysML allocation matrix";
@@ -1015,36 +1019,38 @@ function subtitle(view) {
   ].join(" · ");
 }
 
+// A version whose snapshot this viewer cannot read has no diagram.
+function renderNoDiagrams() {
+  document.getElementById("view-title").textContent = "Diagrams";
+  document.getElementById("view-sub").textContent = "";
+  document.getElementById("view").replaceChildren();
+  document.getElementById("legend").hidden = true;
+  document.getElementById("stage").hidden = false;
+  document.getElementById("sheet").hidden = true;
+  document.getElementById("split").hidden = true;
+  document.getElementById("canvas").replaceChildren(el("p", "md-empty", "No diagrams for this version: its snapshot uses a schema this viewer does not read. Its files are under Files."));
+  state.drawn = null;
+  collapse();
+}
+// Behaviour's authority: where exec runs and what the agent may send through.
+function renderAuthority(view) {
+  const chip = document.getElementById("authority"), a = view.authority;
+  chip.hidden = !a;
+  if (!a) return;
+  chip.textContent = a.text;
+  chip.title = "exec runs " + (a.exec.join(", ") || "nowhere: not granted") + (a.ask ? " · ask " + a.ask : "") +
+    (a.outbound.length ? " · may send through " + a.outbound.join(", ") : "");
+}
 function renderDiagram(keepViewport) {
   const canvas = document.getElementById("canvas"), stage = document.getElementById("stage"), sheet = document.getElementById("sheet");
   const cur = currentView();
-  const entries = viewsOf(state.version);
   renderRail(cur);
-  if (!cur) {
-    document.getElementById("view-title").textContent = "Diagrams";
-    document.getElementById("view-sub").textContent = "";
-    document.getElementById("view").replaceChildren();
-    document.getElementById("legend").hidden = true;
-    stage.hidden = false;
-    sheet.hidden = true;
-    document.getElementById("split").hidden = true;
-    canvas.replaceChildren(el("p", "md-empty", "No diagrams for this version: its snapshot uses a schema this viewer does not read. Its files are under Files."));
-    state.drawn = null;
-    collapse();
-    return;
-  }
+  if (!cur) return renderNoDiagrams();
   const { view } = cur;
-  renderPicker(entries, view.id);
+  renderPicker(viewsOf(state.version), view.id);
   document.getElementById("view-title").textContent = view.title;
   document.getElementById("view-sub").textContent = subtitle(view);
-  // Behaviour's authority: where exec runs and what the agent may send through.
-  const authority = document.getElementById("authority");
-  authority.hidden = !view.authority;
-  if (view.authority) {
-    authority.textContent = view.authority.text;
-    authority.title = "exec runs " + (view.authority.exec.join(", ") || "nowhere: not granted") + (view.authority.ask ? " · ask " + view.authority.ask : "") +
-      (view.authority.outbound.length ? " · may send through " + view.authority.outbound.join(", ") : "");
-  }
+  renderAuthority(view);
   renderLegend(view);
   const keep = keepViewport && state.drawn && state.drawn.view === view.id, kept = keep && state.drawn.scene;
   if (!keep) { state.selected = null; state.filter = ""; state.facet = null; state.sort = null; }
@@ -1086,10 +1092,11 @@ function drawScene(view, delta, keep) {
   const nodes = new Map(scene.nodes.map((n) => [n.id, n]));
   // A procedure's steps, and the edges between them, fold away when zoomed out.
   const step = (id) => { const p = nodes.get(nodes.get(id).parent); return Boolean(p && p.shape === "frame"); };
-  for (const n of scene.nodes.filter((n) => n.shape === "frame" || n.shape === "group")) world.append(drawNode(n, delta));
-  for (const e of scene.edges) world.append(drawEdge(e, delta, step(e.s) && step(e.t)));
+  const mark = marker(delta);
+  for (const n of scene.nodes.filter((n) => n.shape === "frame" || n.shape === "group")) world.append(drawNode(n, mark));
+  for (const e of scene.edges) world.append(drawEdge(e, mark, step(e.s) && step(e.t)));
   for (const n of scene.nodes.filter((n) => n.shape !== "frame" && n.shape !== "group")) {
-    const g = drawNode(n, delta);
+    const g = drawNode(n, mark);
     if (step(n.id)) g.classList.add("step");
     world.append(g);
   }
@@ -1112,8 +1119,8 @@ function fit() {
   const d = state.drawn, box = document.getElementById("canvas").getBoundingClientRect();
   if (!d || !d.scene) return;
   const margin = 24, kw = (box.width - 2 * margin) / Math.max(d.scene.w, 1);
-  const whole = Math.min(kw, (box.height - 2 * margin) / Math.max(d.scene.h, 1), 1.25);
-  const tall = d.scene.h > d.scene.w && whole < READABLE, k = tall ? Math.min(kw, 1.25) : whole;
+  const whole = Math.min(kw, (box.height - 2 * margin) / Math.max(d.scene.h, 1), MAX_FIT);
+  const tall = d.scene.h > d.scene.w && whole < READABLE, k = tall ? Math.min(kw, MAX_FIT) : whole;
   state.viewport = { k, x: (box.width - d.scene.w * k) / 2, y: tall ? margin : (box.height - d.scene.h * k) / 2 };
   state.fitK = whole;
   state.fitted = state.viewport;
@@ -1192,11 +1199,11 @@ function zoomedOutLabels(scene, delta) {
   const box = el("div", "md-labels");
   box.setAttribute("aria-hidden", "true");
   box.hidden = true;
-  const touched = new Set(delta ? [...delta.added, ...delta.changed] : []);
+  const altered = new Set(delta ? [...delta.added, ...delta.changed] : []);
   for (const n of scene.nodes) {
     if (n.shape === "frame") {
       const steps = scene.nodes.filter((x) => x.parent === n.id && x.shape !== "initial" && x.shape !== "final");
-      const label = el("div", "md-lod-frame" + (steps.some((x) => touched.has(x.id)) ? " changed" : ""));
+      const label = el("div", "md-lod-frame" + (steps.some((x) => altered.has(x.id)) ? " changed" : ""));
       label.append(el("strong", "", n.title || n.name), el("span", "", plural(steps.length, "step")));
       label.dataset.id = n.id;
       box.append(label);
@@ -1221,8 +1228,8 @@ function zoom(f, cx, cy) {
   const v = state.viewport, box = document.getElementById("canvas").getBoundingClientRect();
   if (!v) return;
   const x = cx === undefined ? box.width / 2 : cx, y = cy === undefined ? box.height / 2 : cy;
-  // Zooming out stops at 0.15, or at Fit when Fit is smaller.
-  const k = Math.max(Math.min(0.15, state.fitK), Math.min(3, v.k * f));
+  // Zooming out stops at MIN_ZOOM, or at Fit when Fit is smaller.
+  const k = Math.max(Math.min(MIN_ZOOM, state.fitK), Math.min(MAX_ZOOM, v.k * f));
   state.viewport = { k, x: x - (x - v.x) * k / v.k, y: y - (y - v.y) * k / v.k };
   applyViewport();
 }
@@ -1328,13 +1335,13 @@ function openPanel(name) {
   else if (state.selected) select(state.selected, false);
   else showPanel("inspector", [el("p", "md-side-empty", "Select an element in the diagram or the table.")]);
 }
-// Fills the sidebar with one panel and opens it if it was collapsed.
 // A panel's entries mark the selection.
 function markEntries() {
   for (const e of document.querySelectorAll("#inspector [data-subject]")) e.classList.toggle("active", e.dataset.subject === state.selected);
 }
-// Each panel, for a version and view (and the inspector, for an element),
-// opens again where it was scrolled to.
+// Fills the sidebar with one panel and opens it if it was collapsed. Each
+// panel, for a version and view (and the inspector, for an element), opens
+// again where it was scrolled to.
 function showPanel(name, parts, tools, element) {
   const box = document.getElementById("inspector");
   document.getElementById("side-title").textContent = PANELS[name];
@@ -1373,10 +1380,8 @@ function attributes(now, before, onlyChanged) {
   return dl;
 }
 function inspect(vi, view, id, status) {
-  const n = headOf(view, id);
-  const info = view.elements[id] || { a: [], s: [] };
+  const n = headOf(view, id), info = view.elements[id] || { a: [], s: [] };
   let refs = info.s.slice();
-  if (!n) return;
   // Its readable name, and its declared name and type when they differ.
   const h = el("h3", "", labelOf(n)), declared = (n.name || "") + (n.type || "");
   if (labelOf(n) === nameOf(n) && n.type) h.append(el("span", "", n.type));
@@ -1425,7 +1430,7 @@ function inspect(vi, view, id, status) {
       const lines = fileText(vi, file).split("\n").slice(from - 1, to);
       const indent = Math.min(...lines.filter((l) => l.trim()).map((l) => l.length - l.trimStart().length));
       const src = el("details", "md-src"), summary = el("summary");
-      const b = button(file + ":" + from + (to > from ? "–" + to : ""), () => showLines(vi, file, from, to));
+      const b = button(linesOf(file, from, to), () => showLines(vi, file, from, to));
       b.title = "Show in Files";
       summary.append(el("code", "", lines[0].trim()), b);
       src.open = refs.length === 1;
@@ -1475,7 +1480,6 @@ function alsoIn(view, id) {
 }
 // ---- Doctor
 const SEVERITIES = ["error", "warning", "info"];
-const plural = (n, word) => n + " " + word + (n === 1 ? "" : "s");
 // The worst error or warning per element of a version (notes mark nothing),
 // with the codes of its errors and warnings, worst first, as a tooltip.
 function marks(vi) {
@@ -1636,13 +1640,7 @@ function subjectChip(g, s, own) {
   if (tagged("new")) chip.append(el("small", "doc-new", "new"));
   else if (tagged("newRule")) chip.append(el("small", "doc-new", "new rule"));
   const ref = v && v.elements[s.id] && v.elements[s.id].s[0];
-  if (ref) {
-    const src = button("", () => showLines(vi, ref[0], ref[1], ref[2]), "doc-src");
-    src.title = ref[0] + ":" + ref[1] + (ref[2] > ref[1] ? "–" + ref[2] : "") + " · Show in Files";
-    src.setAttribute("aria-label", src.title);
-    src.append(sourceIcon());
-    chip.append(src);
-  }
+  if (ref) chip.append(sourceButton(vi, ref, "doc-src"));
   return chip;
 }
 // What the last checked version had and this one no longer has; an element
@@ -1662,6 +1660,16 @@ function resolvedList(d) {
 function showLines(vi, file, from, to) {
   navigate({ version: vi, tab: "files", file, range: [from, to] });
 }
+// A declaration's place: its file and lines.
+const linesOf = (file, from, to) => file + ":" + from + (to > from ? "–" + to : "");
+// An icon button that shows a declaration's lines in Files.
+function sourceButton(vi, [file, from, to], cls) {
+  const b = button("", (e) => { e.stopPropagation(); showLines(vi, file, from, to); }, cls);
+  b.title = linesOf(file, from, to) + " · Show in Files";
+  b.setAttribute("aria-label", b.title);
+  b.append(sourceIcon());
+  return b;
+}
 
 // ---- Tables
 function renderTable(box, view, delta) {
@@ -1680,7 +1688,7 @@ function sheetTabs(view) {
   tabs.append(...[["rules", "Rules", view.table.rows.length], ["procedures", "Procedures", view.procedures.length]].map(([key, label, n]) => {
     const b = button(label + " " + n, () => keepFocus(() => { state.sheetTab = key; renderTable(document.getElementById("sheet"), view, changeMarks()); applyFocus(); }));
     b.dataset.key = "sheet-tab:" + key;
-    b.setAttribute("aria-pressed", String((state.sheetTab === "procedures") === (key === "procedures")));
+    b.setAttribute("aria-pressed", String(state.sheetTab === key));
     return b;
   }));
   return tabs;
@@ -1921,13 +1929,7 @@ function renderElements(box, view, t, mark) {
       }
       // Its own declaration; the inspector lists the others.
       const src = el("td", "et-src");
-      for (const [file, from, to] of view.elements[r.id].s.slice(0, 1)) {
-        const b = button("", (e) => { e.stopPropagation(); showLines(state.version, file, from, to); });
-        b.title = file + ":" + from + (to > from ? "–" + to : "") + " · Show in Files";
-        b.setAttribute("aria-label", b.title);
-        b.append(sourceIcon());
-        src.append(b);
-      }
+      for (const ref of view.elements[r.id].s.slice(0, 1)) src.append(sourceButton(state.version, ref));
       tr.append(src);
       return tr;
     }));
@@ -1940,12 +1942,12 @@ function renderElements(box, view, t, mark) {
 // When each scheduled task fires in a week, hour by hour, under the agent it
 // wakes. Hours are in each task's own time zone; an interval under a day fires
 // all week, from an unknown start.
-const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], HOUR = 5, DAY = 24 * HOUR + 4;
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], HOUR = 5, DAY = 24 * HOUR + 4, WEEK_W = 7 * DAY - 4, DAY_MS = 86400000;
 function strip(row) {
-  const g = sv("svg", { class: "wk-strip", width: 7 * DAY - 4, height: 16, "aria-hidden": "true" });
+  const g = sv("svg", { class: "wk-strip", width: WEEK_W, height: 16, "aria-hidden": "true" });
   DAYS.forEach((_, d) => g.append(sv("rect", { class: "wk-day", x: d * DAY, y: 0, width: 24 * HOUR, height: 16 })));
-  if (row.everyMs && row.everyMs < 86400000) {
-    const band = sv("rect", { class: "wk-band", x: 0, y: 5, width: 7 * DAY - 4, height: 6 });
+  if (row.everyMs && row.everyMs < DAY_MS) {
+    const band = sv("rect", { class: "wk-band", x: 0, y: 5, width: WEEK_W, height: 6 });
     band.append(sv("title", {}, row.when + ", all week"));
     g.append(band);
   }
@@ -1969,7 +1971,7 @@ function renderWeek(box, t, mark) {
   const local = el("span", "tb-note", "local hours");
   local.title = "Hours in each task's own time zone";
   bar.append(el("strong", "tb-title", "Week"), local, key("wk-fire", "fires in that hour"), key("wk-band", "interval, all week"));
-  const table = el("table", "wk"), head = el("tr"), axis = sv("svg", { class: "wk-strip", width: 7 * DAY - 4, height: 16, "aria-hidden": "true" });
+  const table = el("table", "wk"), head = el("tr"), axis = sv("svg", { class: "wk-strip", width: WEEK_W, height: 16, "aria-hidden": "true" });
   DAYS.forEach((name, d) => {
     axis.append(sv("text", { x: d * DAY + 12 * HOUR, y: 11, "text-anchor": "middle" }, name));
     for (const h of [6, 12, 18]) axis.append(sv("line", { x1: d * DAY + h * HOUR, x2: d * DAY + h * HOUR, y1: 13, y2: 16 }));
@@ -1990,7 +1992,7 @@ function renderWeek(box, t, mark) {
       const name = el("th");
       name.dataset.id = r.node;
       name.tabIndex = 0;
-      const how = r.fires ? r.zone || "gateway time" : r.everyMs && r.everyMs < 86400000 ? "" : r.everyMs ? "start unknown" : "not weekly";
+      const how = r.fires ? r.zone || "gateway time" : r.everyMs && r.everyMs < DAY_MS ? "" : r.everyMs ? "start unknown" : "not weekly";
       name.append(el("span", "", r.label), el("small", "", r.when + (how ? " · " + how : "")));
       // The last run's status (runtime state, never a change) and the model.
       if (r.lastRun) {
@@ -2062,6 +2064,9 @@ function openCount(view, group) {
 function indented(text) {
   try { return JSON.stringify(JSON.parse(text), null, 2); } catch { return text; }
 }
+// A code view's line height and top padding (the .code rules), and how far
+// above the lines shown the page scrolls.
+const CODE_LINE = 18, CODE_PAD = 8, CODE_CONTEXT = 96;
 function renderFiles() {
   const v = versions[state.version], names = Object.keys(v.files), box = document.getElementById("files");
   if (!names.includes(state.file)) state.file = names[0];
@@ -2080,14 +2085,14 @@ function renderFiles() {
     body.append(el("pre", "gutter", Array.from({ length: count }, (_, i) => i + 1).join("\n")),
       state.file.endsWith(".sysml") ? sysml(text) : el("pre", "", text));
     if (state.range) {
-      const band = el("div", "band");
-      band.style.top = (8 + (state.range[0] - 1) * 18) + "px";
-      band.style.height = ((state.range[1] - state.range[0] + 1) * 18) + "px";
+      const band = el("div", "band"), [from, to] = state.range;
+      band.style.top = (CODE_PAD + (from - 1) * CODE_LINE) + "px";
+      band.style.height = ((to - from + 1) * CODE_LINE) + "px";
       body.append(band);
     }
   }
   box.replaceChildren(el("h2", "", when(v) + " UTC — files"), nav, body);
-  if (state.range) box.scrollTop = body.offsetTop + 8 + (state.range[0] - 1) * 18 - 96;
+  if (state.range) box.scrollTop = body.offsetTop + CODE_PAD + (state.range[0] - 1) * CODE_LINE - CODE_CONTEXT;
 }
 // What changed since the previous version: per element first (viewer.ts's
 // diff.subjects), then the files by group, folded except the instance's and
@@ -2200,7 +2205,7 @@ function sideWidth(w) {
   if (w) md.style.setProperty("--side-w", w + "px"); else md.style.removeProperty("--side-w");
   store(WIDTH_KEY, w ? String(w) : null);
 }
-const clampWidth = (w) => Math.round(Math.max(300, Math.min(document.getElementById("md").getBoundingClientRect().width * 0.6, w)));
+const clampWidth = (w) => Math.round(Math.max(MIN_SIDEBAR, Math.min(document.getElementById("md").getBoundingClientRect().width * 0.6, w)));
 grip.addEventListener("pointerdown", (e) => { grip.setPointerCapture(e.pointerId); grip.dataset.drag = "1"; });
 grip.addEventListener("pointermove", (e) => { if (grip.dataset.drag) sideWidth(clampWidth(side.getBoundingClientRect().right - e.clientX)); });
 for (const type of ["pointerup", "pointercancel", "lostpointercapture"]) grip.addEventListener(type, () => { delete grip.dataset.drag; });
@@ -2210,15 +2215,15 @@ grip.addEventListener("keydown", (e) => {
   e.preventDefault();
   sideWidth(clampWidth(side.offsetWidth + (e.key === "ArrowLeft" ? 24 : -24)));
 });
-if (Number(stored(WIDTH_KEY)) >= 300) document.getElementById("md").style.setProperty("--side-w", stored(WIDTH_KEY) + "px");
+if (Number(stored(WIDTH_KEY)) >= MIN_SIDEBAR) document.getElementById("md").style.setProperty("--side-w", stored(WIDTH_KEY) + "px");
 document.getElementById("fit").onclick = fit;
 // Frames the selection, or fits the whole scene when nothing drawn is selected.
 function frame() {
   if (state.drawn && state.drawn.nodes && state.drawn.nodes.has(state.selected)) fitTo(state.selected); else fit();
 }
 document.getElementById("fit-selection").onclick = frame;
-document.getElementById("zoom-in").onclick = () => zoom(1.25);
-document.getElementById("zoom-out").onclick = () => zoom(0.8);
+document.getElementById("zoom-in").onclick = () => zoom(ZOOM_STEP);
+document.getElementById("zoom-out").onclick = () => zoom(1 / ZOOM_STEP);
 const canvas = document.getElementById("canvas");
 // The gestures' hint goes once the canvas has been used.
 const hint = document.querySelector(".md-hint");
@@ -2316,10 +2321,10 @@ canvas.addEventListener("keydown", (e) => {
   if (e.key === "Escape") select(null);
   else if (e.key === "0") fit();
   else if (e.key === "f" || e.key === "F") frame();
-  else if (e.key === "+" || e.key === "=") zoom(1.25);
-  else if (e.key === "-") zoom(0.8);
+  else if (e.key === "+" || e.key === "=") zoom(ZOOM_STEP);
+  else if (e.key === "-") zoom(1 / ZOOM_STEP);
   else if (v && e.key.startsWith("Arrow")) {
-    state.viewport = { ...v, x: v.x + (e.key === "ArrowLeft" ? 40 : e.key === "ArrowRight" ? -40 : 0), y: v.y + (e.key === "ArrowUp" ? 40 : e.key === "ArrowDown" ? -40 : 0) };
+    state.viewport = { ...v, x: v.x + (e.key === "ArrowLeft" ? PAN_STEP : e.key === "ArrowRight" ? -PAN_STEP : 0), y: v.y + (e.key === "ArrowUp" ? PAN_STEP : e.key === "ArrowDown" ? -PAN_STEP : 0) };
     applyViewport();
   } else return;
   e.preventDefault();
