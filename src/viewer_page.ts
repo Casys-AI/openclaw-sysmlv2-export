@@ -265,6 +265,28 @@ svg.md-focus .md-edge.lit .md-line { stroke-width: 1.8; }
 .g.s { background: linear-gradient(to bottom right, transparent 50%, var(--md-stroke) 50%); }
 .g.b::after { content: ""; position: absolute; left: 1.5px; right: 1.5px; top: 3.6px; height: 1.3px; background: #fff; }
 
+/* Doctor: findings on the elements they concern. */
+.doc-error, [data-doc="error"] { --doc: var(--del); } .doc-warning, [data-doc="warning"] { --doc: var(--warn); } .doc-info { --doc: var(--md-soft); }
+.doc-dot { display: inline-block; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--doc); }
+th[data-doc]::before, tr[data-doc] > .et-name:not(:has(span))::before, tr[data-doc] > .et-name > span::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 6px; border-radius: 50%; background: var(--doc); vertical-align: 1px; }
+.wk th[data-doc]::before { margin-left: -13px; }
+.doc-chip { all: unset; flex: none; display: inline-flex; align-items: center; gap: 10px; padding: 4px 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); font-size: 12px; color: var(--muted); cursor: pointer; white-space: nowrap; }
+.doc-chip[hidden] { display: none; }
+.doc-chip:hover { color: var(--ink); border-color: var(--line-strong); }
+.doc-chip > span:first-child { font-weight: 600; color: var(--ink); }
+.doc-chip .doc-error, .doc-chip .doc-warning { display: inline-flex; align-items: center; gap: 5px; color: var(--doc); font-weight: 600; }
+.md-doc circle { fill: var(--doc); stroke: var(--paper); stroke-width: 2; }
+.md-doc text { font-size: 10px; font-weight: 700; fill: #fff !important; text-anchor: middle; }
+.md-findings { list-style: none; margin: 4px 0 12px; padding: 0; }
+.md-inspector .md-findings li { padding: 6px 0 6px 10px; border-top: 1px solid var(--line); box-shadow: inset 2px 0 var(--doc); }
+.md-findings button.md-subject { display: inline; width: auto; padding: 0; border: 0; margin-right: 8px; font-weight: 600; }
+.md-findings button.md-subject:hover { text-decoration: underline; }
+.md-findings strong { margin-right: 8px; }
+.md-findings code { font: 10.5px var(--mono); color: var(--doc); }
+.md-findings p { margin: 2px 0 0; }
+.md-findings .fix { color: var(--muted); }
+.md-notes summary { margin: 4px 0; cursor: pointer; font-size: 11.5px; color: var(--muted); }
+
 /* Files and changes */
 nav.files { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 10px; }
 nav.files button { padding: 2px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--card); cursor: pointer; }
@@ -290,6 +312,7 @@ pre { padding: 8px 10px; }
 <div class="brand"><i aria-hidden="true"></i><h1>OpenClaw <span>→ SysML v2</span></h1></div>
 <select id="version" aria-label="Version"></select>
 <span class="meta" id="meta"></span>
+<button type="button" class="doc-chip" id="doctor" hidden></button>
 <nav class="tabs" aria-label="Pages"><button data-tab="diagrams">Diagrams</button><button data-tab="files">Files</button><button data-tab="changes">Changes</button></nav>
 </header>
 <main>
@@ -336,7 +359,7 @@ const LEGENDS = {
 
 const state = { version: 0, tab: "diagrams", view: "overview", file: "OpenClawInstance.sysml", range: null,
   // An element to select once its view is shown.
-  selected: null, focus: null, hover: null, viewport: null, highlight: true, drawn: null,
+  selected: null, focus: null, hover: null, viewport: null, highlight: true, drawn: null, doc: new Map(),
   // Tables: the text filter, folded groups, the facet value shown, the sort,
   // and the height a table under a diagram was dragged to.
   filter: "", folded: new Set(), facet: null, sort: null, sheetH: null };
@@ -399,6 +422,7 @@ function renderHeader() {
     v.inferred ? "inferred " + v.inferred.procedures + " procedures, " + v.inferred.rules + " rules" : "no inference",
     v.changes ? v.changes.length + " file" + (v.changes.length === 1 ? "" : "s") + " changed" : "first version",
   ].join(" · ");
+  renderDoctorChip();
   for (const b of document.querySelectorAll(".tabs button")) {
     if (b.dataset.tab === state.tab) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
   }
@@ -512,6 +536,12 @@ function drawNode(n, delta) {
   if (mark && n.shape !== "initial" && n.shape !== "final") {
     const b = sv("g", { class: "md-badge " + mark });
     b.append(sv("circle", { cx: x + w - 2, cy: y + 2, r: 8 }), txt(x + w - 2, y + 5.5, mark === "add" ? "+" : "~"));
+    g.append(b);
+  }
+  const doc = state.doc.get(n.id);
+  if (doc) {
+    const b = sv("g", { class: "md-doc doc-" + doc });
+    b.append(sv("circle", { cx: x + 2, cy: y + 2, r: 8 }), txt(x + 2, y + 5.5, "!"));
     g.append(b);
   }
   return g;
@@ -710,6 +740,7 @@ function renderDiagram(keepViewport) {
   sheet.style.height = view.scene && state.sheetH ? state.sheetH + "px" : "";
   sheet.style.maxHeight = view.scene && state.sheetH ? "none" : "";
   state.drawn = { view: view.id, svg: null, world: null, scene: view.scene, payload: view };
+  state.doc = marks(state.version);
   // The table first: the diagram fits in the room it leaves.
   if (view.table) {
     const at = [sheet.scrollTop, sheet.scrollLeft];
@@ -788,7 +819,11 @@ function applyFocus() {
     for (const g of d.world.querySelectorAll(".md-edge")) g.classList.toggle("lit", Boolean(r && r.edges.has(g.dataset.id)));
   }
   const sheet = document.getElementById("sheet");
-  for (const e of sheet.querySelectorAll("[data-id]")) e.classList.toggle("selected", e.dataset.id === state.selected);
+  for (const e of sheet.querySelectorAll("[data-id]")) {
+    e.classList.toggle("selected", e.dataset.id === state.selected);
+    const doc = state.doc.get(e.dataset.id);
+    if (doc) e.dataset.doc = doc; else delete e.dataset.doc;
+  }
   // A selected matrix column marks its cells.
   const column = sheet.querySelector("th.mx-col.selected"), c = column ? column.dataset.col : null;
   for (const e of sheet.querySelectorAll("td[data-col]")) e.classList.toggle("on", e.dataset.col === c);
@@ -872,6 +907,8 @@ function inspect(vi, view, id, status) {
       button("All changes", () => showChanges(currentView()), "md-back"));
     parts.push(line);
   }
+  const mine = (versions[vi].findings || []).filter((f) => f.subject === id);
+  if (mine.length) parts.push(findingList(mine, vi, false));
   const prev = status === "changed" && entryOf(vi + 1, view.id), was = prev && payload(prev).elements[id];
   if (info.a.length) parts.push(attributes(info.a, was ? was.a : null, false));
   if (vi === state.version && state.drawn && state.drawn.scene) {
@@ -911,6 +948,71 @@ function inspect(vi, view, id, status) {
   const canvas = document.getElementById("canvas").getBoundingClientRect();
   const v = state.viewport;
   showPanel(parts, Boolean(vi === state.version && n.w && v && v.x + (n.x + n.w / 2) * v.k > canvas.width / 2 + 120));
+}
+// ---- Doctor
+const SEVERITIES = ["error", "warning", "info"];
+const plural = (n, word) => n + " " + word + (n === 1 ? "" : "s");
+// The worst error or warning per element of a version; notes mark nothing.
+function marks(vi) {
+  const m = new Map();
+  for (const f of versions[vi].findings || []) {
+    const s = m.get(f.subject);
+    if (f.severity !== "info" && (!s || SEVERITIES.indexOf(f.severity) < SEVERITIES.indexOf(s))) m.set(f.subject, f.severity);
+  }
+  return m;
+}
+// The view of a version that shows an element: the current one if it does.
+function viewOf(vi, id) {
+  const entries = viewsOf(vi) || [];
+  const e = [entries.find((x) => payload(x).id === state.view), ...entries].find((x) => x && headOf(payload(x), id));
+  return e ? payload(e) : null;
+}
+function findingList(findings, vi, withSubject) {
+  const ul = el("ul", "md-findings");
+  for (const f of findings) {
+    const li = el("li", "doc-" + f.severity), top = el("div");
+    const v = withSubject && viewOf(vi, f.subject), n = v && headOf(v, f.subject);
+    if (n) top.append(button(n.title || nameOf(n), () => v.id === state.view ? select(f.subject, true) : go(v.id, f.subject), "md-subject"));
+    else if (withSubject) top.append(el("strong", "", f.subject));
+    top.append(el("code", "", f.code));
+    li.append(top, el("p", "", f.context), el("p", "fix", f.recovery));
+    ul.append(li);
+  }
+  return ul;
+}
+function renderDoctorChip() {
+  const findings = versions[state.version].findings, chip = document.getElementById("doctor");
+  chip.hidden = !findings;
+  if (!findings) return;
+  chip.replaceChildren(el("span", "", "Doctor"));
+  for (const s of SEVERITIES) {
+    const n = findings.filter((f) => f.severity === s).length, c = el("span", "doc-" + s);
+    if (!n) continue;
+    if (s !== "info") c.append(el("i", "doc-dot"));
+    c.append(plural(n, s === "info" ? "note" : s));
+    chip.append(c);
+  }
+  if (!findings.length) chip.append(el("span", "", "no finding"));
+  chip.title = "What the doctor found in this version";
+}
+// Every finding of this version, errors first; notes fold away.
+function showDoctor() {
+  const findings = versions[state.version].findings || [];
+  const of = (s) => findings.filter((f) => f.severity === s);
+  const errors = of("error"), warnings = of("warning"), notes = of("info");
+  const parts = [closer(), el("p", "md-kicker", "Doctor"),
+    el("h3", "", errors.length || warnings.length ? [errors.length ? plural(errors.length, "error") : "", warnings.length ? plural(warnings.length, "warning") : ""].filter(Boolean).join(" · ") : "No error or warning")];
+  for (const [label, list] of [["Errors", errors], ["Warnings", warnings]]) {
+    if (list.length) parts.push(el("p", "md-kicker", label + " · " + list.length), findingList(list, state.version, true));
+  }
+  if (notes.length) {
+    const d = el("details", "md-notes");
+    d.append(el("summary", "", plural(notes.length, "note")), findingList(notes, state.version, true));
+    parts.push(d);
+  }
+  state.selected = null;
+  applyFocus();
+  showPanel(parts, false);
 }
 function showLines(vi, file, from, to) {
   state.version = vi;
@@ -1235,6 +1337,7 @@ function render(keepViewport) {
 document.getElementById("version").onchange = (e) => { state.version = +e.target.value; state.range = null; state.sort = null; state.facet = null; render(true); };
 document.getElementById("view").onchange = (e) => { state.view = e.target.value; render(); };
 for (const b of document.querySelectorAll(".tabs button")) b.onclick = () => { state.tab = b.dataset.tab; render(true); };
+document.getElementById("doctor").onclick = () => { state.tab = "diagrams"; render(true); showDoctor(); };
 document.getElementById("fit").onclick = fit;
 document.getElementById("zoom-in").onclick = () => zoom(1.25);
 document.getElementById("zoom-out").onclick = () => zoom(0.8);
