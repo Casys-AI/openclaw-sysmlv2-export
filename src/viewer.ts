@@ -1,7 +1,8 @@
 import { structuredPatch } from "diff";
+import { doctor } from "./doctor.ts";
 import type { Inference } from "./infer.ts";
 import { layoutView, METRICS, type Scene } from "./layout.ts";
-import { parseSnapshot } from "./snapshot.ts";
+import { parseSnapshot, type Snapshot } from "./snapshot.ts";
 import { drawing, type TableData, tableData } from "./tables.ts";
 import type { VersionEntry } from "./versions.ts";
 import { PAGE } from "./viewer_page.ts";
@@ -87,8 +88,8 @@ interface VersionView {
 async function versionViews(
   files: Record<string, string>,
   scenes: Map<string, Scene>,
+  snapshot: Snapshot | null,
 ): Promise<VersionView[] | null> {
-  const snapshot = snapshotOf(files);
   if (!snapshot) return null;
   const index = new Map<string, Map<string, [number, number]>>();
   const locate = (refs: SysmlRef[]) =>
@@ -203,8 +204,11 @@ export async function viewerPage(versions: ViewerVersion[]): Promise<string> {
     return kept.get(key)!;
   };
   const scenes = new Map<string, Scene>();
+  const snapshots = versions.map((v) => snapshotOf(v.files));
   const views: (VersionView[] | null)[] = [];
-  for (const v of versions) views.push(await versionViews(v.files, scenes));
+  for (const [i, v] of versions.entries()) {
+    views.push(await versionViews(v.files, scenes, snapshots[i]));
+  }
   const data = {
     texts,
     views: payloads,
@@ -212,6 +216,7 @@ export async function viewerPage(versions: ViewerVersion[]): Promise<string> {
       const previous = versions[i + 1], before = views[i + 1];
       return {
         ...v.entry,
+        findings: snapshots[i] ? doctor(snapshots[i]) : null,
         files: Object.fromEntries(
           Object.entries(v.files).sort(([a], [b]) => a < b ? -1 : 1)
             .map(([name, text]) => [name, ref(text)]),

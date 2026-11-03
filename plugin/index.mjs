@@ -85,6 +85,14 @@ function summarize(s) {
     `SysML v2 export: ${s.agents} agents → ${s.outDir}`,
     `Viewer: ${s.viewer}`,
   ];
+  const findings = [
+    [s.findings.error, "error"],
+    [s.findings.warning, "warning"],
+    [s.findings.info, "note"],
+  ].filter(([count]) => count).map(([count, label]) =>
+    `${count} ${label}${count === 1 ? "" : "s"}`
+  );
+  lines.push(`Doctor: ${findings.length ? findings.join(", ") : "no finding"}`);
   if (s.inferred) {
     lines.push(
       `Inferred (proposals, not admitted): ${s.inferred.procedures} procedures, ${s.inferred.rules} rules`,

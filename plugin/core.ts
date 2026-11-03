@@ -10,6 +10,7 @@ import {
 import { join, resolve, sep } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { collect } from "../src/collect.ts";
+import { doctor } from "../src/doctor.ts";
 import { emit } from "../src/emit.ts";
 import { ExportError } from "../src/error.ts";
 import {
@@ -28,7 +29,12 @@ import {
   type Cron,
   type FileRef,
 } from "../src/snapshot.ts";
-import { type VersionEntry, versionId, withVersion } from "../src/versions.ts";
+import {
+  type FindingSummary,
+  type VersionEntry,
+  versionId,
+  withVersion,
+} from "../src/versions.ts";
 import { viewerPage } from "../src/viewer.ts";
 import { validationReport, type ValidationSummary } from "../src/validate.ts";
 export { installToolkit, toolkitStatus } from "../src/toolkit-install.ts";
@@ -48,6 +54,7 @@ export interface ExportSummary {
   agents: number;
   inferred: { procedures: number; rules: number; failed: string[] } | null;
   validation: ValidationSummary;
+  findings: FindingSummary;
 }
 
 /** Rereads an instruction file only if it is still inside the workspace and
@@ -235,8 +242,12 @@ export async function runExport(
   now: Date,
 ): Promise<ExportSummary> {
   const snapshot = await collect(stateDir, pluginList);
+  const findings = doctor(snapshot);
+  const findingSummary: FindingSummary = { error: 0, warning: 0, info: 0 };
+  for (const finding of findings) findingSummary[finding.severity]++;
   const files = new Map([
     ["snapshot.json", canonical(snapshot)],
+    ["findings.json", canonical(findings)],
     ...emit(snapshot),
     ...ASSEMBLY_LIBRARY,
   ]);
@@ -319,6 +330,7 @@ export async function runExport(
     createdAt: now.toISOString(),
     agents: snapshot.agents.length,
     validation,
+    findings: findingSummary,
     inferred: inferred && {
       procedures: inferred.procedures,
       rules: inferred.rules,
@@ -342,6 +354,7 @@ export async function runExport(
     viewer,
     agents: snapshot.agents.length,
     validation,
+    findings: findingSummary,
     inferred,
   };
 }

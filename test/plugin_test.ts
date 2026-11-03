@@ -3,8 +3,10 @@ import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pluginList, runExport } from "../plugin/core.ts";
+import { doctor } from "../src/doctor.ts";
 import { ExportError } from "../src/error.ts";
 import { ASSEMBLY_LIBRARY } from "../src/library.ts";
+import { canonical, parseSnapshot } from "../src/snapshot.ts";
 import { createFixture } from "./support/fixture.ts";
 
 /** One inferred rule for `field`, nothing for the other agents. */
@@ -43,6 +45,14 @@ Deno.test("plugin runs are kept as versions", async (t) => {
       recovery: "openclaw sysmlv2-toolkit install",
     };
     assert.deepEqual(first.validation, skipped);
+    const findings = doctor(parseSnapshot(
+      JSON.parse(await readFile(join(first.outDir, "snapshot.json"), "utf8")),
+    ));
+    assert.equal(
+      await readFile(join(first.outDir, "findings.json"), "utf8"),
+      canonical(findings),
+    );
+    assert.deepEqual(first.findings, { error: 0, warning: 15, info: 34 });
     assert.deepEqual(
       JSON.parse(await readFile(join(first.outDir, "validation.json"), "utf8")),
       {
@@ -67,8 +77,7 @@ Deno.test("plugin runs are kept as versions", async (t) => {
     await t.step("versions.json lists the runs newest first", async () => {
       assert.equal(first.outDir, join(out, "2026-11-02T10-15-00Z"));
       assert.equal(second.version, "2026-11-02T10-20-00Z");
-      // Doctor findings are not part of the plugin's export in 0.1.0.
-      assert.ok(!("findings" in first) && !("findings" in second));
+      assert.deepEqual(second.findings, first.findings);
       assert.deepEqual(
         JSON.parse(await readFile(join(out, "versions.json"), "utf8")),
         [{
@@ -76,12 +85,14 @@ Deno.test("plugin runs are kept as versions", async (t) => {
           createdAt: "2026-11-02T10:20:00.000Z",
           agents: 6,
           validation: skipped,
+          findings: first.findings,
           inferred: { procedures: 0, rules: 1, failed: 0 },
         }, {
           id: "2026-11-02T10-15-00Z",
           createdAt: "2026-11-02T10:15:00.250Z",
           agents: 6,
           validation: skipped,
+          findings: first.findings,
           inferred: null,
         }],
       );
@@ -96,6 +107,7 @@ Deno.test("plugin runs are kept as versions", async (t) => {
           "OpenClawInstance.sysml",
           "cases.sysml",
           "core.sysml",
+          "findings.json",
           "inference.json",
           "skills.sysml",
           "snapshot.json",
@@ -113,10 +125,6 @@ Deno.test("plugin runs are kept as versions", async (t) => {
       async () => {
         assert.equal(second.viewer, join(out, "index.html"));
         const page = await readFile(second.viewer, "utf8");
-        assert.doesNotMatch(
-          page.replace(/<script id="data".*?<\/script>/s, ""),
-          /findings/i,
-        );
         const data = JSON.parse(
           page.match(
             /<script id="data" type="application\/json">(.*?)<\/script>/s,
@@ -127,6 +135,7 @@ Deno.test("plugin runs are kept as versions", async (t) => {
           first.version,
         ]);
         assert.equal(data.versions[1].changes, null);
+        assert.deepEqual(data.versions[1].findings, findings);
         const instance = data.versions[0].changes.find((c: { file: string }) =>
           c.file === "OpenClawInstance.sysml"
         );
@@ -161,6 +170,46 @@ Deno.test("the plugin inventory command must succeed and print JSON", () => {
       (error: unknown) =>
         error instanceof ExportError &&
         ["PLUGIN_LIST_FAILED", "INVALID_INPUT"].includes(error.code),
+    );
+  }
+});
+
+Deno.test("the plugin Doctor summary names counts and an empty result", async () => {
+  const source = await readFile(
+    new URL("../plugin/index.mjs", import.meta.url),
+    "utf8",
+  );
+  // Exercise the entry's actual formatter without loading the OpenClaw SDK.
+  const summarize = new Function(
+    source.slice(
+      source.indexOf("function summarize(s)"),
+      source.indexOf("export default"),
+    ) +
+      ";return summarize;",
+  )();
+  const summary = {
+    agents: 1,
+    outDir: "out",
+    viewer: "index.html",
+    inferred: null,
+    validation: { status: "skipped", errors: 0 },
+  };
+  for (
+    const [findings, expected] of [
+      [
+        { error: 1, warning: 4, info: 30 },
+        "Doctor: 1 error, 4 warnings, 30 notes",
+      ],
+      [{ error: 0, warning: 1, info: 0 }, "Doctor: 1 warning"],
+      [{ error: 0, warning: 0, info: 1 }, "Doctor: 1 note"],
+      [{ error: 0, warning: 0, info: 0 }, "Doctor: no finding"],
+    ]
+  ) {
+    assert.equal(
+      summarize({ ...summary, findings }).split("\n").find((line: string) =>
+        line.startsWith("Doctor:")
+      ),
+      expected,
     );
   }
 });

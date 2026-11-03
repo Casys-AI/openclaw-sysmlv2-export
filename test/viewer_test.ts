@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import { doctor } from "../src/doctor.ts";
 import { emit } from "../src/emit.ts";
 import { emitInferred, type Inference } from "../src/infer.ts";
 import { canonical, parseSnapshot, type Snapshot } from "../src/snapshot.ts";
@@ -52,6 +53,25 @@ Deno.test("viewer data can neither close its script nor open a comment", async (
 Deno.test("the same versions give the same page", async () => {
   const versions = [version("2026-11-02T10-15-00Z", snapshot)];
   assert.equal(await viewerPage(versions), await viewerPage(versions));
+});
+
+Deno.test("viewer findings are computed from each snapshot, including older entries", async () => {
+  const previous = version("2026-11-02T10-15-00Z", snapshot);
+  // An older entry has no summary, and its findings file may be stale.
+  previous.files["findings.json"] = "[]";
+  const next = structuredClone(snapshot);
+  next.messaging.enabled = false;
+  const current = version("2026-11-02T10-20-00Z", next);
+  current.entry.findings = { error: 99, warning: 99, info: 99 };
+  current.files["findings.json"] = "invalid JSON";
+  const data = dataOf(await viewerPage([current, previous]));
+  assert.deepEqual(
+    data.versions.map((v: { findings: unknown }) => v.findings),
+    [
+      doctor(next),
+      doctor(snapshot),
+    ],
+  );
 });
 
 Deno.test("an element added since the previous version is highlighted", async () => {
@@ -141,5 +161,6 @@ Deno.test("a version whose snapshot this viewer cannot read keeps its files", as
   });
   const data = dataOf(await viewerPage([old]));
   assert.equal(data.versions[0].views, null);
+  assert.equal(data.versions[0].findings, null);
   assert.ok(data.versions[0].files["OpenClawInstance.sysml"] >= 0);
 });
