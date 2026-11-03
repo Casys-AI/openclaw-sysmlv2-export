@@ -78,6 +78,8 @@ The summary and `versions.json` count them. In the viewer, the Doctor chip in
 the header lists them, and the elements concerned carry a mark. Findings never
 block an export or change the instance.
 
+![The Doctor panel: each finding with the element it concerns and its fix](docs/screenshots/doctor.png)
+
 [Diagnostics](docs/diagnostics.md) lists every code, its source in OpenClaw and
 its fix. To check a snapshot on its own, run
 `deno task doctor --snapshot snapshot.json`.
