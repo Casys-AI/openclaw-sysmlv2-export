@@ -12,9 +12,11 @@ export const PAGE = String.raw`<!doctype html>
 :root {
   color-scheme: light;
   --desk: #f3f2ef; --paper: #f6f5f2; --card: #fff; --surface: rgb(255 255 255 / 94%);
-  --ink: #1d1d1f; --muted: #75716a; --faint: #9a9a9f; --line: #e3e0da; --line-strong: #d6d2c9;
+  --ink: #1d1d1f; --muted: #6f6b64; --faint: #9a9a9f; --line: #e3e0da; --line-strong: #d6d2c9;
   --hover: rgb(0 0 0 / 4%); --accent-soft: #efede8;
   --add: #19743c; --add-bg: #e3f1e7; --del: #b13c42; --del-bg: #f7e4e4; --warn: #8a642a; --warn-bg: #f6eedd;
+  /* What changed since the previous version: its own hue, apart from the Doctor's. */
+  --chg: #2f6aa8; --chg-bg: #e8eef7;
   --font: -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", sans-serif;
   --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
   --diagram: Helvetica, Arial, "Liberation Sans", sans-serif;
@@ -112,13 +114,13 @@ main > section[hidden] { display: none; }
 .md-badge circle { stroke: var(--paper); stroke-width: 2; }
 .md-badge text { font-size: 10px; font-weight: 700; fill: #fff !important; text-anchor: middle; }
 .hl .md-node.added > .md-body { stroke: var(--add); stroke-width: 2; }
-.hl .md-node.changed > .md-body { stroke: var(--warn); stroke-width: 2; }
+.hl .md-node.changed > .md-body { stroke: var(--chg); stroke-width: 2; }
 .hl .md-node.added.group > .md-body, .hl .md-node.added.frame > .md-body { stroke-dasharray: none; }
 .md-badge { display: none; }
 .hl .md-badge { display: inline; }
-.md-badge.add circle { fill: var(--add); } .md-badge.chg circle { fill: var(--warn); }
+.md-badge.add circle { fill: var(--add); } .md-badge.chg circle { fill: var(--chg); }
 .hl .md-edge.added .md-line { stroke: var(--add); stroke-width: 2; }
-.hl .md-edge.changed .md-line { stroke: var(--warn); stroke-width: 2; }
+.hl .md-edge.changed .md-line { stroke: var(--chg); stroke-width: 2; }
 
 .md-edge { transition: opacity .18s ease; pointer-events: none; }
 .md-line { fill: none; stroke: var(--md-edge); stroke-width: 1.25; }
@@ -155,6 +157,7 @@ svg.md-focus .md-edge.lit .md-line { stroke-width: 1.8; }
 .md-rail svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .md-rail b { position: absolute; top: -1px; right: -3px; min-width: 15px; height: 15px; padding: 0 4px; border-radius: 999px; font: 600 9.5px/15px var(--font); text-align: center; color: #fff; background: var(--doc, var(--md-soft)); }
 .md-rail b:empty { display: none; }
+.md-rail [data-panel="changes"] b { background: var(--chg); }
 .md-inspector { flex: 1 1 0; min-height: 0; overflow: auto; padding: 12px 16px 16px; font-size: 12px; }
 .md-side-empty { margin: 8px 0; color: var(--muted); }
 .md-side-note { margin: 0 0 12px; font-size: 11px; color: var(--muted); }
@@ -170,7 +173,7 @@ svg.md-focus .md-edge.lit .md-line { stroke-width: 1.8; }
 .md-inspector li button:hover .md-other { text-decoration: underline; }
 .md-kind { min-width: 92px; color: var(--muted); }
 .md-status { display: inline-block; margin-top: 6px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
-.md-status.added { color: var(--add); background: var(--add-bg); } .md-status.changed { color: var(--warn); background: var(--warn-bg); } .md-status.removed { color: var(--del); background: var(--del-bg); }
+.md-status.added { color: var(--add); background: var(--add-bg); } .md-status.changed { color: var(--chg); background: var(--chg-bg); } .md-status.removed { color: var(--del); background: var(--del-bg); }
 .md-src { margin: 0; } .md-src[open] { margin-bottom: 8px; }
 .md-src button { all: unset; cursor: pointer; font: 11.5px var(--mono); color: var(--ink); text-decoration: underline; text-decoration-color: var(--line-strong); }
 .md-src button:hover { text-decoration-color: var(--ink); }
@@ -200,11 +203,11 @@ svg.md-focus .md-edge.lit .md-line { stroke-width: 1.8; }
 .tb-bar button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--line-strong); }
 .tb-key { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
 .tb-note { margin-left: auto; font-style: italic; }
-.hl tr.added > th, .hl tr.added > td { background: rgb(227 241 231 / 60%); }
-.hl tr.changed > th, .hl tr.changed > td { background: rgb(246 238 221 / 60%); }
-.hl tr.added > :first-child { box-shadow: inset 3px 0 var(--add); } .hl tr.changed > :first-child { box-shadow: inset 3px 0 var(--warn); }
-.hl th.added { box-shadow: inset 0 -3px var(--add); } .hl th.changed { box-shadow: inset 0 -3px var(--warn); }
-.hl td.added { box-shadow: inset 0 0 0 2px var(--add); } .hl td.changed { box-shadow: inset 0 0 0 2px var(--warn); }
+.hl tr.added > th, .hl tr.added > td { background: color-mix(in srgb, var(--add-bg) 60%, var(--card)); }
+.hl tr.changed > th, .hl tr.changed > td { background: color-mix(in srgb, var(--chg-bg) 60%, var(--card)); }
+.hl tr.added > :first-child { box-shadow: inset 3px 0 var(--add); } .hl tr.changed > :first-child { box-shadow: inset 3px 0 var(--chg); }
+.hl th.added { box-shadow: inset 0 -3px var(--add); } .hl th.changed { box-shadow: inset 0 -3px var(--chg); }
+.hl td.added { box-shadow: inset 0 0 0 2px var(--add); } .hl td.changed { box-shadow: inset 0 0 0 2px var(--chg); }
 .mx { border-collapse: separate; border-spacing: 0; font-size: 12px; }
 .mx th, .mx td { border-bottom: 1px solid var(--line); background: var(--card); }
 .mx thead th { position: sticky; top: 0; z-index: 2; padding: 6px 4px; vertical-align: bottom; font-weight: 500; border-bottom: 1px solid var(--line-strong); }
@@ -252,7 +255,7 @@ svg.md-focus .md-edge.lit .md-line { stroke-width: 1.8; }
 .et-sum div { display: flex; flex-direction: column; gap: 2px; min-width: 120px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
 .et-sum span { font-size: 11px; color: var(--muted); }
 .et-sum strong { font-size: 13px; font-weight: 600; }
-.hl .et-sum.changed div { border-color: var(--warn); } .et-sum.selected div { border-color: var(--ink); }
+.hl .et-sum.changed div { border-color: var(--chg); } .et-sum.selected div { border-color: var(--ink); }
 .et-src button { all: unset; display: block; cursor: pointer; font: 11px var(--mono); text-decoration: underline; text-decoration-color: var(--line-strong); }
 .et-src button:hover { text-decoration-color: var(--ink); }
 .wk { border-collapse: separate; border-spacing: 0; font-size: 12px; }
@@ -300,7 +303,7 @@ pre { padding: 8px 10px; }
 .code { position: relative; display: grid; grid-template-columns: auto minmax(0, 1fr); border: 1px solid var(--line); border-radius: 8px; background: var(--card); font: 12px/18px var(--mono); }
 .code pre { border: 0; border-radius: 0; background: none; padding: 8px 10px; font: inherit; overflow: visible; }
 .code .gutter { color: var(--faint); text-align: right; user-select: none; border-right: 1px solid var(--line); }
-.code .band { position: absolute; left: 0; right: 0; background: rgb(138 100 42 / 12%); border-left: 3px solid var(--warn); pointer-events: none; }
+.code .band { position: absolute; left: 0; right: 0; background: rgb(29 29 31 / 6%); border-left: 3px solid var(--md-soft); pointer-events: none; }
 .diff div { padding: 0 10px; white-space: pre; }
 .add { background: #e6ffec; } .del { background: #ffebe9; } .hunk { background: #eaeef2; color: var(--muted); }
 .k { color: #8250df; } .s { color: #0a3069; } .c { color: #6e7781; }
