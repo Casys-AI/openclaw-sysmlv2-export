@@ -25,15 +25,12 @@ The snapshot schema stays `openclaw-snapshot/5`, with one optional field,
   `unresolvedTargets`). Consumers of the former String attributes must follow
   the new form.
 
-- **Diagnostics.** Every export runs the doctor and writes `findings.json`; the
-  summary, the reply and `versions.json` count its errors, warnings and notes.
-  In the viewer, the Doctor panel lists the findings and the elements concerned
-  carry a mark. Each rule follows the OpenClaw 2026.10.9 sources and was checked
-  on a real instance; [Diagnostics](docs/diagnostics.md) gives every code with
-  its fix. New: a scheduled task aimed at a missing agent, a binding to an
-  unavailable account, a plaintext credential where a SecretRef fits. Exec
-  without approval now needs a route to the host, and backup or skill-layout
-  remarks became notes. Findings never block an export or change the instance.
+- **Diagnostics.** Sixteen OpenClaw configuration checks and three portable APE
+  checks run as SHACL rules on the compiled SysML model. The Doctor panel
+  displays the findings and collector notes. With no Toolkit, model checks are
+  skipped and collector notes remain available; no TypeScript fallback runs.
+  `CRON_FAILING` is dropped because runtime health is not emitted. The
+  `diagnose` CLI checks an existing export without writing to it.
 
 - **Model validation.** `openclaw sysmlv2-toolkit install` installs the pinned
   sysml-toolkit 0.10.10 WebAssembly release, downloaded or from a local copy

@@ -17,6 +17,6 @@
 Inference parsing receives its redaction policy through injection. Domain errors
 carry codes; technical error sanitation is handled in infrastructure.
 
-The shipped rules remain in [`rules/ape/ape.ttl`](../rules/ape/ape.ttl), and
-packaging copies them into the plugin. See
-[contribution boundaries](../CONTRIBUTING.md).
+The shipped rules are [`rules/ape/ape.ttl`](../rules/ape/ape.ttl) and
+[`rules/openclaw/openclaw.ttl`](../rules/openclaw/openclaw.ttl); packaging
+copies both into the plugin. See [contribution boundaries](../CONTRIBUTING.md).

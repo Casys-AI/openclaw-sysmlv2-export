@@ -22,10 +22,10 @@ The export reads an OpenClaw instance without changing it and turns it into:
 Each plugin run is kept as a version, browsable and comparable in an offline
 viewer.
 
-The **doctor** (§7.2) reads the same snapshot and reports coded configuration
-findings. Every plugin export writes them to `findings.json`; the Deno CLI can
-also check an existing snapshot. Findings do not change the instance or block
-export.
+With the Toolkit installed, model checks (§7.2) run OpenClaw and APE SHACL rules
+on the compiled SysML. Exports retain collector notes if model checks are
+skipped; findings do not change the instance or block export. The Deno CLI can
+check an existing export.
 
 **Targets.** OpenClaw 2026.10.x, following the 2026.10.9 documentation. The
 collector also reads 2026.6.10 configurations (`agents.list`, legacy memory
@@ -44,7 +44,7 @@ calls the next.
 | -------- | -------------------------------------- | ----------------------------------------------------------------------------- |
 | collect  | `collect(home, pluginList) → Snapshot` | The only step that reads the instance. Read-only.                             |
 | emit     | `emit(snapshot) → Map<path, text>`     | Deterministic SysML text: `OpenClawImport.sysml`, `OpenClawInstance.sysml`.   |
-| doctor   | `doctor(snapshot) → Finding[]`         | Collector findings plus configuration rules (§7.2); plugin and Deno CLI.      |
+| diagnose | Model checks and collector notes       | Toolkit validation and SHACL rules (§7.2); plugin and Deno CLI.               |
 | diff     | `diff(a, b) → Change[]`                | Structural changes between two snapshots (§8).                                |
 | validate | `validate(files) → Diagnostics`        | Compiles written files with the explicitly installed pinned WASM Toolkit.     |
 | views    | `diagramViews(snapshot, inference)`    | The viewer's model: nodes and edges per view, each with its SysML; its table. |
@@ -54,9 +54,9 @@ calls the next.
 | infer    | `parseAgentInference`, `emitInferred`  | Validates a model's answer and emits `OpenClawInferred.sysml` (§9).           |
 
 A plugin run is: list plugins (`openclaw plugins list --json`) → collect → emit
-→ doctor → optionally infer → write a new version directory → validate → update
+→ optionally infer → write a new version directory → validate and check → update
 `versions.json` → regenerate `index.html`. The Deno CLI exposes collect, export
-(emit plus library), doctor and diff separately (§10.7).
+(emit plus library), diagnose and diff separately (§10.7).
 
 The collector uses only `node:` APIs (`fs`, `path`, `crypto`, `sqlite`), so the
 same code runs under Deno and, bundled, inside OpenClaw's Node runtime.
@@ -117,7 +117,7 @@ plugin code.
   skipped with `SKILL_SYMLINK_OUTSIDE_ROOT`; broken links and a
   `skills/SKILL.md` at the root are recorded as malformed. Dot-directories and
   `node_modules` are skipped. This legacy metadata does not establish invalid
-  skills; the doctor ignores the root `SKILL.md` entry.
+  skills; the collector ignores the root `SKILL.md` entry.
 
 ### 3.4 Memory
 
@@ -154,7 +154,7 @@ plugin code.
   time zone, `every` milliseconds, or `at` instant), session target, wake mode,
   payload kind and model, delivery mode/channel/account, the prompt as a
   reference, and runtime state (last status and time, consecutive errors,
-  presence of a last error, creation time). Runtime state serves the doctor and
+  presence of a last error, creation time). Runtime state serves collection and
   the diff; it is never emitted.
 
 ## 4. Snapshot contract
@@ -189,8 +189,8 @@ reference whose path is a JSON pointer, such as
 
 - Keys are sorted, entity arrays are sorted by id, sets are sorted and
   deduplicated; model fallbacks and bind modes keep their order. Collect, emit,
-  doctor and diff read no clock and no locale: the same instance gives the same
-  bytes.
+  model checks and diff read no clock and no locale: the same instance gives the
+  same bytes.
 - `parseSnapshot` validates every snapshot at the trust boundary: exact shape,
   no unknown field, enumerations, finite non-negative numbers, unique ids per
   array, and no string containing `CANARY-`, an e-mail address or a JWT. Inside
@@ -226,7 +226,7 @@ reference whose path is a JSON pointer, such as
   `${NAME}` references and secret-reference objects (`{ source, id }`) do not.
   This legacy `/5` counter includes arbitrary environment and header strings and
   retains no field paths. It cannot establish a supported credential surface and
-  does not produce a doctor finding (§7.2).
+  does not produce a model finding (§7.2).
 - **Audited credential paths.** `plaintextCredentialPaths` records only paths,
   never values, for non-empty plaintext strings on four audited SecretRef
   families: `channels.discord.accounts.*.token`,
@@ -248,6 +248,13 @@ using the OpenMBEE SysML namespace `https://www.omg.org/spec/SysML#` and native
 boundaries are documented in [the APE rules profile](rules/ape/README.md). This
 does not change the SysML source mapping below.
 
+`safeBins`, `safeBinProfiles` and `searchSources` are native String collections,
+not JSON-encoded lists. `InstanceInventory` holds the OpenClaw version and
+backup count; `ExecCommand` records command, kind and whether arguments are
+restricted; `WorkspaceEntry` records an unresolved path. `BindingConfiguration`
+records binding configuration, and `CredentialPath` records an audited path with
+an optional account reference.
+
 ### 5.1 Packages
 
 - `OpenClawImport.sysml` defines the import vocabulary. It specializes
@@ -266,8 +273,8 @@ does not change the SysML source mapping below.
   commit). They are written into every export directory, so each one compiles
   alone.
 - Names are `<prefix>_<id>` when that is a valid identifier, otherwise a quoted
-  name. Attributes with a null value are left unset; lists and objects are
-  serialized as JSON strings.
+  name. Attributes with a null value are left unset; remaining lists and objects
+  may be serialized as JSON strings except for the native collections above.
 
 ### 5.2 Operators
 
@@ -531,16 +538,16 @@ export cannot settle, instead of guessing.
 | `SUBMINUTE_SCHEDULE`               | cron job | An `every` interval that is not a whole number of minutes; kept in `durationMs` only.                                      |
 | `CRON_AGENT_UNRESOLVED`            | cron job | The job names no agent; OpenClaw resolves it at run time (memory-core's dreaming sweep, for one).                          |
 
-### 7.2 Doctor rules
+### 7.2 Model checks and collector notes
 
-`doctor(snapshot)` returns the collector infos above plus the configuration
-checks below. Legacy collector copies of `UNRESOLVED_AGENT_REFERENCE`,
-`UNRESOLVED_BINDING_REFERENCE` and `SAFE_BINS_DEFAULT_UNRESOLVED` are recomputed
-here, so old `/5` snapshots follow the same rules. This table is the full
-current code catalog, including collector infos. Sources beginning `docs/` or
-`dist/` refer to OpenClaw 2026.10.9; `src/` and `sysml/` name this adapter's own
-projection choices, not OpenClaw faults. [Diagnostics](docs/diagnostics.md)
-explains the meaning and recovery of every code.
+The Toolkit-backed model checks comprise 16 OpenClaw rules and three portable
+APE rules. Collector notes are retained in snapshot `ambiguities`; legacy
+unresolved-reference notes may coexist with check infos, and
+`SAFE_BINS_DEFAULT_UNRESOLVED` is a collector note. `CRON_FAILING` is dropped:
+runtime job health is not emitted into the model. This table includes collector
+notes. Sources beginning `docs/` or `dist/` refer to OpenClaw 2026.10.9; `src/`
+and `sysml/` name this adapter's projection choices.
+[Diagnostics](docs/diagnostics.md) explains each code and recovery.
 
 | Code                               | Severity                                    | Subject                    | Condition                                                                                                                                                                             | Source                                                                                                                           |
 | ---------------------------------- | ------------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
@@ -552,10 +559,9 @@ explains the meaning and recovery of every code.
 | `SAFE_BIN_INTERPRETER_UNPROFILED`  | warning                                     | agent                      | An interpreter or runtime in `safeBins` has no explicit argv profile. Paths, executable suffixes and versioned interpreter names are normalized.                                      | `dist/exec-safe-bin-runtime-policy-CgvU47MQ.mjs`; `dist/exec-safe-bin-trust-tdUplWO7.mjs`                                        |
 | `EXEC_ALLOWLIST_WILDCARD`          | warning                                     | agent or instance          | An agent command or instance wildcard-approval command has basename `*`; any directory restriction is omitted.                                                                        | `docs/tools/exec-approvals.md`                                                                                                   |
 | `MEMORY_SESSIONS_INDEXED`          | warning                                     | agent                      | Memory search is enabled and either `sources` includes `sessions` or `rememberAcrossConversations` is true.                                                                           | `docs/reference/memory-config.md`                                                                                                |
-| `CRON_FAILING`                     | warning                                     | cron                       | An enabled job has at least three consecutive errors. Disabled jobs do not trigger this rule.                                                                                         | `dist/cron-2TRTJPLC.mjs, CHRONIC_FAILURE_MIN_CONSECUTIVE_ERRORS and inspectCronJobHealth`                                        |
 | `BINDING_ACCOUNT_UNAVAILABLE`      | warning                                     | account, agent or instance | A binding has no matching enabled channel account. `channel:*` matches any account on that channel.                                                                                   | `docs/channels/channel-routing.md`; `dist/server-channels-eZDWbzoS.mjs, startChannelProcessOwned`                                |
 | `UNRESOLVED_AGENT_REFERENCE`       | error if enabled on 2026.10; info otherwise | cron                       | A job explicitly targets an absent agent. OpenClaw 2026.10 fails the run; older behavior is unverified. A missing agentId is CRON_AGENT_UNRESOLVED.                                   | `dist/server-cron-DmxBCDVE.mjs, resolveCronAgent`                                                                                |
-| `UNRESOLVED_BINDING_REFERENCE`     | info                                        | account, agent or instance | A binding names an absent agent, so no exported connection is drawn. Account availability is checked separately.                                                                      | `docs/concepts/multi-agent.md`; `src/domain/model/diagnostics/doctor.ts (export endpoint check)`                                 |
+| `UNRESOLVED_BINDING_REFERENCE`     | info                                        | account, agent or instance | A binding names an absent agent, so no exported connection is drawn. Account availability is checked separately.                                                                      | `docs/concepts/multi-agent.md`; `rules/openclaw/openclaw.ttl`                                                                    |
 | `WORKSPACE_UNVERSIONED`            | info                                        | agent                      | No `.git` entry was recorded at the workspace root. Parent repositories are not checked; this does not establish that the workspace lacks version control.                            | `docs/gateway/doctor/workspace-and-dreams.md, section 19`; `src/adapters/out/openclaw/collector.ts (root marker only)`           |
 | `MALFORMED_SKILLS_DIR`             | info                                        | agent                      | Entries under `skills/` could not be resolved by the collector. The accepted root `skills/SKILL.md` is excluded; this does not establish invalid skills.                              | `dist/skill-root-discovery-B5Jg-4aX.mjs, discoverSkillCandidates`; `src/adapters/out/openclaw/collector.ts (unresolved entries)` |
 | `MCP_SANDBOX_GATE`                 | info                                        | agent                      | A sandbox is active and MCP servers are enabled, but no enabled-server MCP tool has a sandbox-layer grant.                                                                            | `docs/gateway/config-tools/tool-policy.md`                                                                                       |
@@ -604,14 +610,10 @@ is to replace the value at that path with the structured env SecretRef
 environment variable on the gateway. A `null` path list produces no finding; it
 is not evidence that an older export contains no plaintext credentials.
 
-The plugin writes the canonical sorted array to `findings.json`. Its export
-summary and each new `versions.json` entry have
-`findings: {error, warning, info}` counts, including zeroes. Older entries
-without counts remain valid. Chat and tool replies render nonzero counts as
-errors, warnings and notes. The viewer payload instead uses
-`findings: Finding[]` recomputed from each readable snapshot, plus that
-version's APE findings read from its `findings.json` (§10.6), or `null` if the
-snapshot cannot be read; `[]` means a check ran with no findings.
+The plugin writes the canonical sorted findings and collector notes to
+`findings.json`; summary and `versions.json` counts include them. Model checks
+are skipped without the Toolkit, with no TypeScript fallback. The viewer's
+Doctor panel displays the available findings and their status.
 
 ## 8. Diff
 
@@ -841,11 +843,12 @@ exactly `openclaw sysmlv2-toolkit install`. Compilation errors, tampering and
 timeouts fail validation without discarding the export. These diagnostics are
 informational to the export result.
 
-**APE rules on the model graph.** After a passing check, the worker projects the
-compiled Toolkit element graph (`toFullJson`) to the `openmbee-v2` RDF subset
-and loads it in batches into Oxigraph 0.5.12 (WebAssembly). Five ordered, global
-run-once SPARQL rules materialize views; three SELECT constraints produce
-standard SHACL validation results, which the APE adapter maps to findings. The
+**Model rules on the model graph.** After a passing check, the worker projects
+the compiled Toolkit element graph (`toFullJson`) to the `openmbee-v2` RDF
+subset and loads it in batches into Oxigraph 0.5.12 (WebAssembly). Five ordered,
+global run-once APE SPARQL rules materialize views; OpenClaw views follow them.
+The three APE and 16 OpenClaw SELECT constraints produce standard SHACL
+validation results, which the APE adapter maps to findings. The
 [profile and graph contract](rules/ape/README.md) describe the named build,
 shapes, view and report graphs, supported targets and restricted SPARQL forms.
 The subset uses `sysml:type` and expression values aligned with the
@@ -860,24 +863,25 @@ The test-only oracle uses `OPENSYSML_ARCHIVE` and `SYSML_TOOLKIT_WASM_ARCHIVE`
 with `deno task test:opensysml`; CI verifies the pinned Linux archive, and the
 helper verifies supported archive hashes before use.
 
-This is not a full SHACL implementation. Findings start with `APE_`, retain
-`pattern` and `finding`, and join the doctor's findings and counts.
+This is not a full SHACL implementation. Portable APE findings retain their
+`APE_` codes, `pattern` and `finding`; OpenClaw codes remain unprefixed.
 
-A completed analysis writes `ape-report.ttl` once as a SHACL validation report.
-`validation.json` adds an `ape` summary with status, findings and count metrics;
-it omits the report RDF. Status is `completed`, `skipped` (no Toolkit or a
-failed check), or `failed`; a failure carries `code`, `stage` (projection,
-loading, view or rule), `file` and `cause`, separate from Toolkit diagnostics.
-APE has its own default 10-second deadline; `APE_TIMEOUT` fails APE alone and
-preserves the settled compile result. Persisted metrics contain counts, not
-timings. The rules read only the compiled model, never the snapshot.
+A completed analysis writes `ape-report.ttl` once as a SHACL validation report
+for both rule sets. The report name and `ape` result field remain for
+compatibility. `validation.json` adds an `ape` summary with status, findings and
+count metrics; it omits the report RDF. Status is `completed`, `skipped` (no
+Toolkit or a failed check), or `failed`; a failure carries `code`, `stage`
+(projection, loading, view or rule), `file` and `cause`, separate from Toolkit
+diagnostics. APE has its own default 10-second deadline; `APE_TIMEOUT` fails APE
+alone and preserves the settled compile result. Persisted metrics contain
+counts, not timings. The rules read only the compiled model, never the snapshot.
 
 ### 10.7 Deno CLI
 
 ```text
 deno task collect --home <dir> [--plugins <file>] --out <file>
 deno task export  --snapshot <file> --out <dir>
-deno task doctor  --snapshot <file>     # configuration findings (§7.2)
+deno task diagnose --export <version-dir> --state-dir <Toolkit-install-state-dir>
 deno task diff    <a> <b>
 ```
 
@@ -982,10 +986,9 @@ Failures are `{ code, context, recovery }` errors, never findings.
     apart from the explicit optional `/5` diagnostic metadata exception in §4.2,
     and older ones are rejected. Why: a snapshot's meaning must not depend on
     the code that reads it; uncollected credential paths remain unknown.
-13. **Diagnostics from the exported snapshot.** Plugin exports and the Deno CLI
-    share the same read-only doctor. Why: findings can name the model's exact
-    elements, expose static limits and point to OpenClaw sources without
-    changing the instance or preventing an export.
+13. **Diagnostics from the exported model.** Plugin exports and the Deno CLI use
+    Toolkit-backed SHACL checks. Collector notes preserve unresolved facts;
+    neither check changes the instance or prevents export.
 14. **Diagrams laid out at export time.** The plugin lays the views out with
     elkjs and embeds their geometry. Why: the page stays small and works from
     `file://` without a 1.6 MB layout engine in every page, and the same input
@@ -1003,7 +1006,8 @@ Failures are `{ code, context, recovery }` errors, never findings.
   `CANARY-*` marker; no snapshot, SysML, finding or change may contain one.
 - **Determinism and goldens.** Collecting and emitting twice gives identical
   bytes, equal to the reviewed goldens in `test/golden/`.
-- **Doctor.** Each rule has a positive and a negative case.
+- **Model checks.** The test contract covers positive and negative cases for
+  each migrated rule.
 - **Toolkit.** An export directory of the fixture, with an inferred package,
   compiles alone with the pinned public sysml-wasm 0.10.10 archive, without an
   Assembly checkout. CI downloads it and checks its SHA-256 before running

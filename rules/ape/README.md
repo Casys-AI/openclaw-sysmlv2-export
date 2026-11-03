@@ -1,8 +1,9 @@
 # APE RDF views and rules
 
-[`ape.ttl`](ape.ttl) is the single source for five global SHACL SPARQL rules and
-three SPARQL constraints. The Toolkit supplies the compiled element graph; the
-rules materialize the derived views below. The APE adapter maps standard
+[`ape.ttl`](ape.ttl) defines five global SHACL SPARQL rules and three SPARQL
+constraints. The companion [OpenClaw rules](../openclaw/README.md) run in the
+same engine after these views. The Toolkit supplies the compiled element graph;
+the rules materialize the derived views below. The APE adapter maps standard
 validation results and shape annotations to findings.
 
 ## Native graph and selection
@@ -100,12 +101,13 @@ are rejected explicitly. Active focus nodes must be IRIs. Property shapes,
 custom constraint components, ASK constraints, PATH substitution, and general
 fixpoint inference are outside this profile. To keep results deterministic,
 CONSTRUCT templates that create blank nodes are rejected. Shape, constraint, and
-rule identifiers must be IRIs. A global rule’s `sh:order` must be a valid
-`xsd:integer`. Report values must be IRIs or literals; blank nodes are
-unsupported because parsing the report would change their identity.
+rule identifiers must be IRIs. Global CONSTRUCT views can use aggregates such as
+COUNT; batched SELECT constraints reject aggregates. A global rule’s `sh:order`
+must be a valid `xsd:integer`. Report values must be IRIs or literals; blank
+nodes are unsupported because parsing the report would change their identity.
 
-Shapes occupy `urn:ase:ape:v1:shapes`; views use the named graphs above; results
-use `urn:ase:ape:v1:report`, with report node
+The APE shapes occupy `urn:ase:ape:v1:shapes`; views use the named graphs above;
+results use `urn:ase:ape:v1:report`, with report node
 `urn:ase:ape:v1:validation-report`. Evaluation sees the union of build and view
 graphs as its default graph and can address them by name; shapes and report
 graphs are excluded. Each constraint executes once for all focus nodes with

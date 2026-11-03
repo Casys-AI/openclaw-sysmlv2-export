@@ -1,12 +1,14 @@
 # Diagnostics
 
-Every plugin export checks its sanitized snapshot, writes the sorted findings
-array to `findings.json`, and continues exporting. The doctor reads no private
-file bodies, calls no model and changes no OpenClaw setting. The standalone
-command checks an existing snapshot:
+With the Toolkit installed, each plugin export compiles its SysML model and runs
+the OpenClaw and APE SHACL rules. The sorted findings and collector notes are
+written to `findings.json`; export continues even if checks fail. Without the
+Toolkit, model checks are skipped and snapshot `ambiguities` remain as collector
+notes. No TypeScript fallback runs. The standalone command checks an existing
+export without writing files or updating the model:
 
 ```sh
-deno task doctor --snapshot snapshot.json
+deno task diagnose --export <version-dir> --state-dir <Toolkit-install-state-dir>
 ```
 
 Each finding has `code`, `severity`, `subject`, `context` and `recovery`. Errors
@@ -16,10 +18,8 @@ configuration, not proof of runtime execution or a completed security audit.
 Review the context before changing settings.
 
 The export summary and `versions.json` store `findings: {error, warning, info}`
-counts. Chat and tool replies show nonzero counts. Viewer data contains a fresh
-findings array for each readable snapshot, including older exports without a
-`findings.json` file, or `null` for an unreadable snapshot. An empty array means
-no findings; null means unavailable.
+counts. The viewer's Doctor panel displays the findings available for each
+version; model-check status distinguishes skipped checks from an empty result.
 
 Subjects match the model's stable element IDs: `agent:<id>`, `cron:<id>`,
 `heartbeat:<agentId>`, `account:<id>`, `grant:<agentId>:<tool>` and `instance`.
@@ -27,8 +27,8 @@ A binding finding uses the existing account, otherwise the existing agent,
 otherwise the instance. IDs retain source identifier parts exactly. Findings are
 ordered by code, then subject, with the path breaking ties for
 `PLAINTEXT_CREDENTIAL`. Collector infos also remain in the snapshot's
-`ambiguities`; old collector reference notes are replaced by the doctor's
-current reference checks.
+`ambiguities`. Legacy collector reference notes may coexist with new check
+infos; `SAFE_BINS_DEFAULT_UNRESOLVED` is a collector note.
 
 Sources below beginning `docs/` or `dist/` refer to the OpenClaw 2026.10.9
 package. Sources under `src/` or `sysml/` describe this adapter's limits or
@@ -37,10 +37,10 @@ projection choices. The complete contract is in
 
 ## Model rules (APE)
 
-With the Toolkit installed, every export also checks APE good practices on the
-graph of the exported SysML model, with SPARQL on Oxigraph. These rules follow
-links between agents, which the configuration checks below do not. Their codes
-start with `APE_`. Rules and views are in [`rules/ape/`](../rules/ape/).
+With the Toolkit installed, every export checks APE good practices on the graph
+of the exported SysML model, with SPARQL on Oxigraph. These rules follow links
+between agents. Their codes start with `APE_`. Rules and views are in
+[`rules/ape/`](../rules/ape/).
 
 ### `APE_GRANT_WIDENS_PARENT`
 
@@ -78,6 +78,11 @@ Review or recovery: Model the agent's intended entry or supervision path, or
 remove the agent.
 
 ## Configuration checks
+
+These 16 checks are defined in
+[`rules/openclaw/openclaw.ttl`](../rules/openclaw/openclaw.ttl). The former
+`CRON_FAILING` check is deliberately dropped: runtime job health is not emitted
+into the model.
 
 ### `PLAINTEXT_CREDENTIAL`
 
@@ -204,19 +209,6 @@ against the intended privacy boundary.
 
 Source: `docs/reference/memory-config.md`.
 
-### `CRON_FAILING`
-
-Severity: warning. Subject: cron.
-
-An enabled job has at least three consecutive errors. Disabled jobs do not
-trigger this rule.
-
-Review or recovery: Inspect the job execution locally; error bodies are excluded
-from the export.
-
-Source:
-`dist/cron-2TRTJPLC.mjs, CHRONIC_FAILURE_MIN_CONSECUTIVE_ERRORS and inspectCronJobHealth`.
-
 ### `BINDING_ACCOUNT_UNAVAILABLE`
 
 Severity: warning. Subject: account, agent or instance.
@@ -253,8 +245,7 @@ availability is checked separately.
 Review or recovery: Set the binding agentId to an existing agent or remove the
 obsolete binding.
 
-Source: `docs/concepts/multi-agent.md`;
-`src/domain/model/diagnostics/doctor.ts (export endpoint check)`.
+Source: `docs/concepts/multi-agent.md`; `rules/openclaw/openclaw.ttl`.
 
 ### `WORKSPACE_UNVERSIONED`
 

@@ -72,23 +72,18 @@ Beside the run folders, `versions.json` lists the runs, newest first, and
 
 ## Check the system
 
-Every export runs the doctor on its snapshot and writes `findings.json`: errors,
-warnings and notes, each with a code, the element concerned and how to fix it.
-The summary and `versions.json` count them. In the viewer, the Doctor panel of
-the sidebar lists them, and the elements concerned carry a mark. Findings never
-block an export or change the instance.
-
-With the Toolkit installed, the export also checks APE good practices on the
-graph of the model itself, with SPARQL on Oxigraph: an agent that can reach
-unapproved host exec through delegation, delegation cycles, agents that nothing
-reaches. These rules follow links between agents; the configuration checks do
-not.
+With the Toolkit installed, each export checks its SysML model with OpenClaw
+configuration rules and portable APE rules using SHACL SPARQL on Oxigraph. It
+writes findings with codes, affected elements and recovery advice; the Doctor
+panel lists them. Findings do not block an export or change the instance.
+Without the Toolkit, model checks are skipped and collector notes from the
+snapshot remain available.
 
 ![The Doctor panel: each finding with the element it concerns and its fix](docs/screenshots/doctor.png)
 
 [Diagnostics](docs/diagnostics.md) lists every code, its source in OpenClaw and
-its fix. To check a snapshot on its own, run
-`deno task doctor --snapshot snapshot.json`.
+its fix. To check an exported model without changing it, run
+`deno task diagnose --export <version-dir> --state-dir <Toolkit-install-state-dir>`.
 
 ## Validate the model
 
@@ -217,11 +212,11 @@ openclaw plugins list --json > plugins.json             # optional inventory
 deno task collect --home ~/.openclaw --plugins plugins.json --out snapshot.json
 deno task export --snapshot snapshot.json --out exported
 deno task diff before.json after.json
-deno task doctor --snapshot snapshot.json
+deno task diagnose --export <version-dir> --state-dir <Toolkit-install-state-dir>
 ```
 
 Snapshots use the `openclaw-snapshot/5` schema; older schemas are rejected, so
-collect again after upgrading. The doctor also runs on every plugin export.
+collect again after upgrading. Model checks require the installed Toolkit.
 
 The test fixture is an anonymized, generic OpenClaw instance in which every
 secret is a `CANARY-*` marker that no output may contain. CI runs the checks,

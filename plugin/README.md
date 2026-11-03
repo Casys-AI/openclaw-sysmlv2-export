@@ -40,12 +40,11 @@ Each run writes `<state dir>/sysmlv2-export/<UTC time>/` with `snapshot.json`,
 
 ## Check the system
 
-Every export checks its snapshot with the doctor and writes `findings.json`:
-errors, warnings and notes, each naming the element concerned and how to fix it.
-With the Toolkit installed, APE rules also check the model's graph: delegation
-that reaches unapproved host exec, delegation cycles, unreachable agents. The
-summary counts them, and the viewer's Doctor panel lists them. Findings never
-block an export or change the instance.
+With the Toolkit installed, every export checks the SysML model with OpenClaw
+and APE SHACL rules. The summary counts findings and the viewer's Doctor panel
+lists them. If the Toolkit is unavailable, model checks are skipped and
+collector notes remain available. Findings do not block an export or change the
+instance.
 
 See the
 [diagnostics guide](https://github.com/Casys-AI/openclaw-sysmlv2-export/blob/main/docs/diagnostics.md)
