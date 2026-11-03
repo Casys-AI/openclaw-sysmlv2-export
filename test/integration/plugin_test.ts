@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import process from "node:process";
 import { pluginList, runExport } from "../../src/composition/openclaw.ts";
 import { ExportError } from "../../src/infrastructure/error.ts";
 import { ASSEMBLY_LIBRARY } from "../../src/adapters/out/sysml/library.ts";
@@ -10,6 +11,9 @@ import { canonical } from "../../src/infrastructure/canonical-json.ts";
 import { parseSnapshot } from "../../src/infrastructure/snapshot-codec.ts";
 import { createFixture } from "../support/fixture.ts";
 
+const unexpected = () => {
+  throw new Error("Unexpected service call");
+};
 /** One inferred rule for `field`, nothing for the other agents. */
 const complete = (_prompt: string, agentId: string) =>
   Promise.resolve({
@@ -258,9 +262,6 @@ Deno.test("plugin owner tool binds the injected inventory parser", async () => {
   const plugins = { plugins: [] };
   const calls: unknown[] = [];
   let toolFactory: (context: unknown) => { execute(): Promise<unknown> };
-  const unexpected = () => {
-    throw new Error("Unexpected service call");
-  };
   const entry = createPluginEntry((definition: unknown) => definition, {
     toolkitStatus: unexpected,
     completeWith: unexpected,
@@ -307,4 +308,62 @@ Deno.test("plugin owner tool binds the injected inventory parser", async () => {
   });
   await toolFactory!({ senderIsOwner: true, sandboxed: false }).execute();
   assert.deepEqual(calls, ["inventory", "export"]);
+});
+
+Deno.test("the toolkit command only verifies the bundled files", async () => {
+  const commands: string[] = [], actions = new Map<string, () => unknown>();
+  const node = (path: string) => {
+    commands.push(path);
+    const self = {
+      command: (name: string) => node(`${path} ${name}`.trim()),
+      description: () => self,
+      option: () => self,
+      action: (run: () => unknown) => (actions.set(path, run), self),
+    };
+    return self;
+  };
+  let setup: (context: { program: ReturnType<typeof node> }) => void;
+  let descriptors: { name: string }[] = [];
+  const status = {
+    version: "0.10.10",
+    path: "/plugin/toolkit",
+    verified: true,
+  };
+  const entry = createPluginEntry((definition: unknown) => definition, {
+    pluginList: unexpected,
+    runExport: unexpected,
+    completeWith: unexpected,
+    toolkitStatus: () => Promise.resolve(status),
+  });
+  entry.register({
+    registerCommand() {},
+    registerTool() {},
+    registerCli(
+      register: typeof setup,
+      options: { descriptors: typeof descriptors },
+    ) {
+      setup = register;
+      descriptors = options.descriptors;
+    },
+  });
+  setup!({ program: node("") });
+  assert.deepEqual(commands.slice(1), [
+    "sysmlv2-toolkit",
+    "sysmlv2-toolkit status",
+    "sysmlv2-export",
+  ]);
+  assert.deepEqual(descriptors.map((d) => d.name), [
+    "sysmlv2-export",
+    "sysmlv2-toolkit",
+  ]);
+  const write = process.stdout.write;
+  let printed = "";
+  process.stdout.write =
+    ((text: string) => (printed += text, true)) as typeof write;
+  try {
+    await actions.get("sysmlv2-toolkit status")!();
+  } finally {
+    process.stdout.write = write;
+  }
+  assert.deepEqual(JSON.parse(printed), status);
 });
