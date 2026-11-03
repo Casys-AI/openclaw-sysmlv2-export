@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 — 2026-11-03
 
 The snapshot schema stays `openclaw-snapshot/5`, with one optional field,
 `plaintextCredentialPaths`; the inference contract is unchanged.
