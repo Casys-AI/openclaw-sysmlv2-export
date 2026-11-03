@@ -16,6 +16,15 @@ project's projection, not a claim of identical output to another exporter.
 References to omitted elements retain their native IDs; catalog completion uses
 explicit library classification. No property defaults are inferred.
 
+The pinned
+[Toolkit SDK](https://github.com/Open-MBEE/sysml-toolkit/blob/v0.10.10/SDK.md#2-navigation)
+uses interchange UUIDs for navigation and JSON output. The projection's
+`[A-Za-z0-9_-]` alphabet mirrors
+[Flexo `requireValidId`](https://github.com/Open-MBEE/flexo-mms-sysmlv2/blob/24f256378a0c54fa7cf99b5c43c9b7f6c190dfbf/src/main/kotlin/org/openmbee/flexo/sysmlv2/infrastructure/IdValidation.kt),
+as referenced by the
+[OpenSysML RDF mapping namespace rules](https://runtime.opensysml.org/reference/rdf-mapping/#namespaces).
+The 2048-character limit is a plugin boundary, not a Toolkit ID length claim.
+
 The syntactic slice retains the metaclasses and properties enumerated in
 [`src/ape-elements.ts`](../../src/ape-elements.ts), including compiled derived
 properties when supplied by the Toolkit. Nulls and empty lists are omitted. RDF
@@ -77,8 +86,10 @@ its supported subset of draft forms. Unsupported or non-partitionable features
 are rejected explicitly. Active focus nodes must be IRIs. Property shapes,
 custom constraint components, ASK constraints, PATH substitution, and general
 fixpoint inference are outside this profile. To keep results deterministic,
-CONSTRUCT templates that create blank nodes are rejected. A global rule’s
-`sh:order` must be a valid finite `xsd:integer` or `xsd:decimal`.
+CONSTRUCT templates that create blank nodes are rejected. Shape, constraint, and
+rule identifiers must be IRIs. A global rule’s `sh:order` must be a valid
+`xsd:integer`. Report values must be IRIs or literals; blank nodes are
+unsupported because parsing the report would change their identity.
 
 Shapes occupy `urn:ase:ape:v1:shapes`; views use the named graphs above; results
 use `urn:ase:ape:v1:report`, with report node
@@ -90,6 +101,10 @@ scoped `VALUES` bindings. An outer-only binding fails the W3C pre-binding 002,
 graph without fetching imports over the network. The canonical
 [W3C test inventory](../../test/shacl_w3c_test.ts) records the 15 applicable
 cases and the eight individual skips with reasons.
+
+The scoped `VALUES` inside `EXISTS` is evaluated per outer row and remains O(N)
+in the number of focus nodes. This approach suits scopes below about 1000
+agents; that figure is not a guaranteed threshold.
 
 A local synthetic comparison with OpenSysML 0.11.0 found seven common standard
 library UUIDs matching. By default OpenSysML used qualified-name-derived IDs for

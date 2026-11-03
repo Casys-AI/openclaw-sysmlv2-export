@@ -240,7 +240,6 @@ SELECT DISTINCT $this ?value ?relatedAgentId WHERE {
   }
   GRAPH <urn:ase:ape:v1:view:delegation> { $this ape:delegatesTo+ ?value . }
 }
-ORDER BY ?agentId
 """ .
 
 ape:LINK_CYCLE a sh:NodeShape ;
@@ -265,7 +264,6 @@ SELECT DISTINCT $this ?value ?relatedAgentId WHERE {
     FILTER($this != ?value)
   }
 }
-ORDER BY ?agentId
 """ .
 
 ape:UNREACHABLE_OPERATOR a sh:NodeShape ;
@@ -297,5 +295,4 @@ SELECT DISTINCT $this WHERE {
     }
   }
 }
-ORDER BY ?agentId
 """ .

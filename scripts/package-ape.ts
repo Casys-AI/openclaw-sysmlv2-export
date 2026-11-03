@@ -5,18 +5,11 @@ await Deno.copyFile(wasm, new URL("oxigraph_bg.wasm", plugin));
 
 const source = new URL("../rules/ape/", import.meta.url);
 const target = new URL("rules/ape/", plugin);
-async function queries(directory: URL, prefix = ""): Promise<string[]> {
+async function queries(directory: URL): Promise<string[]> {
   const paths: string[] = [];
   for await (const entry of Deno.readDir(directory)) {
-    if (entry.isDirectory) {
-      paths.push(
-        ...await queries(
-          new URL(`${entry.name}/`, directory),
-          `${prefix}${entry.name}/`,
-        ),
-      );
-    } else if (entry.isFile && entry.name.endsWith(".ttl")) {
-      paths.push(`${prefix}${entry.name}`);
+    if (entry.isFile && entry.name.endsWith(".ttl")) {
+      paths.push(entry.name);
     }
   }
   return paths;
@@ -31,7 +24,6 @@ try {
 await Deno.mkdir(target, { recursive: true });
 for (const name of rules.sort()) {
   const destination = new URL(name, target);
-  await Deno.mkdir(new URL(".", destination), { recursive: true });
   await Deno.copyFile(new URL(name, source), destination);
 }
 console.log(`Packaged Oxigraph WASM and ${rules.length} APE shapes`);
