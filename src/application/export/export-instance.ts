@@ -9,9 +9,11 @@ import {
   type AgentInference,
   behaviourFiles,
   cronSources,
+  type InferenceInput,
   inferenceInput,
   inferencePrompt,
 } from "../../domain/model/inference.ts";
+import type { Agent, Snapshot } from "../../domain/model/snapshot.ts";
 import { json } from "../../domain/primitives/input.ts";
 import {
   type FindingSummary,
@@ -59,13 +61,15 @@ function jsonObject(text: string): unknown {
   return json(text.slice(start, end + 1));
 }
 
+type StoredInference = { model: string; agents: Record<string, unknown>[] };
+
 /** The inference of the newest kept version that has one: its model and the
- * agents' entries as stored, which `runExport` validates before reusing. */
+ * agents' entries as stored, which `carriedInference` validates before reusing. */
 async function lastInference(
   ports: ExportPorts,
   outDir: string,
   versions: VersionEntry[],
-): Promise<{ model: string; agents: unknown[] } | null> {
+): Promise<StoredInference | null> {
   const last = versions.find((v) => v.inferred);
   if (!last) return null;
   const stored = await ports.output.readInference(
@@ -73,8 +77,40 @@ async function lastInference(
   );
   return isRecord(stored) && typeof stored.model === "string" &&
       Array.isArray(stored.agents)
-    ? { model: stored.model, agents: stored.agents }
+    ? { model: stored.model, agents: stored.agents.filter(isRecord) }
     : null;
+}
+
+/** An agent's inference from an earlier version, when what the model is sent
+ * is unchanged and the stored answer still validates; null otherwise, and the
+ * model is asked again. */
+function carriedInference(
+  ports: ExportPorts,
+  earlier: StoredInference | null,
+  snapshot: Snapshot,
+  agent: Agent,
+  input: InferenceInput,
+): AgentInference | null {
+  const before = earlier?.agents.find((a) => a.agentId === agent.id);
+  if (
+    typeof before?.inferredIn !== "string" || before.input === undefined ||
+    ports.serialize(before.input) !== ports.serialize(input)
+  ) return null;
+  try {
+    return {
+      ...ports.inference.parse(
+        before,
+        snapshot,
+        agent.id,
+        input.files.map((f) => f.file),
+      ),
+      input,
+      inferredIn: before.inferredIn,
+    };
+  } catch (e) {
+    if (!(e instanceof ExportError)) throw e;
+    return null;
+  }
 }
 
 /** The plugin inventory from a run of `openclaw plugins list --json` through
@@ -129,33 +165,17 @@ export async function runExport(
         agent.workspace.path,
       );
       try {
-        // The model is asked again only when what it is sent has changed.
-        const before = earlier?.agents.find((a) =>
-          isRecord(a) && a.agentId === agent.id
+        const carried = carriedInference(
+          ports,
+          earlier,
+          snapshot,
+          agent,
+          input,
         );
-        if (
-          isRecord(before) && typeof before.inferredIn === "string" &&
-          before.input !== undefined &&
-          ports.serialize(before.input) === ports.serialize(input)
-        ) {
-          try {
-            const carried = {
-              ...ports.inference.parse(
-                before,
-                snapshot,
-                agent.id,
-                input.files.map((f) => f.file),
-              ),
-              input,
-              inferredIn: before.inferredIn,
-            };
-            agents.push(carried);
-            reused.push(carried);
-            continue;
-          } catch (e) {
-            // A stored answer that no longer validates is asked again.
-            if (!(e instanceof ExportError)) throw e;
-          }
+        if (carried) {
+          agents.push(carried);
+          reused.push(carried);
+          continue;
         }
         const sources = [
           ...await Promise.all(
@@ -259,10 +279,10 @@ export async function runExport(
       procedures: inferred.procedures,
       rules: inferred.rules,
       failed: inferred.failed.length,
-      ...(inferred.reused
+      ...(reused.length
         ? {
           reused: {
-            agents: inferred.reused.length,
+            agents: reused.length,
             from: [...new Set(reused.map((a) => a.inferredIn!))].sort(),
           },
         }
