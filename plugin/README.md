@@ -9,7 +9,7 @@ the procedures and rules its instruction files describe.
 Every run is kept as a version and shown in an offline page: an overview of the
 agents, the system, a tools allocation matrix, scheduled tasks over a week and
 the inferred behaviour. Click any element to read its SysML text; what changed
-since the previous run is highlighted.
+since the previous run is highlighted and listed, value by value.
 
 Status: preview. Requires OpenClaw 2026.10.9 or later.
 

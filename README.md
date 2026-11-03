@@ -117,9 +117,10 @@ and its diagrams are laid out when the export runs. Pick a version, then a view.
   table with the lines they come from.
 
 Click an element, a row or a cell to see its attributes and its exact SysML
-text. What was added or changed since the previous version is highlighted, and
-what was removed is listed. The Files and Changes tabs show each file and its
-diff against the previous version.
+text. What was added or changed since the previous version is highlighted; the
+change counts open a list of what was added, changed and removed, with each
+changed value shown before and after. The Files and Changes tabs show each file
+and its diff against the previous version.
 
 ![Overview: one row per agent under the instance's totals](docs/screenshots/overview.png)
 

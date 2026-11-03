@@ -32,6 +32,12 @@ The snapshot schema and the inference contract are unchanged.
   listed as not weekly.
 - A table under a diagram can be resized, and schedules in words also read day
   ranges and names (`MON-FRI`).
+- **Readable changes.** The change counts open one list of what was added,
+  changed and removed, with each changed value before and after; the inspector
+  strikes the old value above the new one. The inspector sits beside the table
+  instead of over it, scrolls as one panel and folds each piece of SysML to its
+  first line. View and version pickers show a larger, styled list where the
+  browser allows it.
 
 ## 0.1.0 — preview
 

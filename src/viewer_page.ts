@@ -44,10 +44,21 @@ main > section[hidden] { display: none; }
 .sheet h2 { margin: 0 0 10px; font-size: 15px; }
 .sheet h3 { margin: 16px 0 6px; font-size: 13px; }
 .muted { color: var(--muted); }
+/* Pickers: a readable list where the browser lets a page style it. */
+@supports (appearance: base-select) {
+  select, ::picker(select) { appearance: base-select; }
+  select { cursor: pointer; }
+  ::picker(select) { margin-top: 4px; padding: 6px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); box-shadow: 0 12px 32px rgb(0 0 0 / 12%); }
+  optgroup { padding-top: 6px; font-size: 11px; font-weight: 600; letter-spacing: .03em; color: var(--muted); }
+  option { padding: 7px 12px; border-radius: 7px; font-size: 13.5px; font-weight: 400; letter-spacing: 0; color: var(--ink); }
+  option::checkmark { display: none; }
+  option:hover, option:focus-visible { background: var(--hover); outline: none; }
+  option:checked { background: var(--accent-soft); font-weight: 500; }
+}
 
 /* Diagrams: Assembly's SysML page, as one sheet. */
-.md { position: relative; height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr); }
-.md-main { min-height: 0; display: flex; flex-direction: column; }
+.md { position: relative; height: 100%; display: grid; grid-template: auto minmax(0, 1fr) / minmax(0, 1fr); }
+.md-main { grid-row: 2; grid-column: 1; min-height: 0; display: flex; flex-direction: column; }
 .md-stage { position: relative; flex: 1 1 0; min-height: 0; }
 .md-stage[hidden], .md-sheet[hidden], .md-split[hidden] { display: none; }
 .md-split { flex: none; height: 9px; margin: 0 12px; cursor: row-resize; touch-action: none; position: relative; }
@@ -63,8 +74,9 @@ main > section[hidden] { display: none; }
 .md-chips:empty { display: none; }
 .md-tools { margin-left: auto; }
 .md-tools[hidden] { display: none; }
-.md-chips button, .md-tools button, .md-chips span { all: unset; cursor: pointer; padding: 3px 9px; border-radius: 7px; font-size: 12px; font-weight: 500; color: var(--muted); }
-.md-chips span { cursor: default; }
+.md-chips button, .md-tools button, .md-chips > span { all: unset; cursor: pointer; padding: 3px 9px; border-radius: 7px; font-size: 12px; font-weight: 500; color: var(--muted); }
+.md-chips > span { cursor: default; }
+.md-chips button span + span { margin-left: 8px; }
 .md-chips button:hover, .md-tools button:hover { color: var(--ink); background: var(--hover); }
 .md-chips .add { color: var(--add); } .md-chips .chg { color: var(--warn); } .md-chips .del { color: var(--del); }
 .md-chips button[aria-pressed="false"] { text-decoration: line-through; }
@@ -130,8 +142,8 @@ svg.md-focus .md-node.leaf:not(.lit) { opacity: .28; }
 svg.md-focus .md-edge.lit .md-line { stroke-width: 1.8; }
 
 /* Inspector */
-.md-inspector { position: absolute; z-index: 3; right: 14px; bottom: 12px; width: 380px; max-height: min(560px, calc(100% - 70px)); overflow: auto; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); backdrop-filter: blur(8px); font-size: 12px; box-shadow: 0 10px 30px rgb(0 0 0 / 6%); }
-.md-inspector.is-left { left: 14px; right: auto; }
+.md-inspector { grid-row: 2; grid-column: 1; justify-self: end; align-self: start; position: relative; z-index: 3; width: 380px; max-height: calc(100% - 20px); margin: 8px 12px 12px; overflow: auto; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); backdrop-filter: blur(8px); font-size: 12px; box-shadow: 0 10px 30px rgb(0 0 0 / 6%); }
+.md.inspect-left .md-inspector { justify-self: start; }
 .md-inspector[hidden] { display: none; }
 .md-inspector h3 { margin: 2px 26px 0 0; font-size: 15px; font-weight: 600; word-break: break-word; }
 .md-inspector h3 span { font-weight: 400; color: var(--muted); }
@@ -147,19 +159,29 @@ svg.md-focus .md-edge.lit .md-line { stroke-width: 1.8; }
 .md-close { all: unset; position: absolute; top: 8px; right: 12px; cursor: pointer; font-size: 17px; color: var(--muted); }
 .md-status { display: inline-block; margin-top: 6px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
 .md-status.added { color: var(--add); background: var(--add-bg); } .md-status.changed { color: var(--warn); background: var(--warn-bg); } .md-status.removed { color: var(--del); background: var(--del-bg); }
-.md-src { margin: 8px 0 4px; }
+.md-src { margin: 0; } .md-src[open] { margin-bottom: 8px; }
 .md-src button { all: unset; cursor: pointer; font: 11.5px var(--mono); color: var(--ink); text-decoration: underline; text-decoration-color: var(--line-strong); }
 .md-src button:hover { text-decoration-color: var(--ink); }
-.md-inspector pre { max-height: 260px; margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 11px; }
+.md-inspector pre { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 11px; }
+.md-src summary { display: flex; gap: 6px; padding: 4px 0; border-top: 1px solid var(--line); cursor: pointer; list-style: none; }
+.md-src summary::-webkit-details-marker { display: none; }
+.md-src summary::before { content: "▸"; flex: none; width: 10px; font-size: 12px; line-height: 15px; color: var(--muted); } .md-src[open] summary::before { content: "▾"; }
+.md-src[open] summary code, .md-src:not([open]) summary button { display: none; }
+.md-src summary code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 11px var(--mono); }
+.md-inspector del, .md-inspector ins { display: block; text-decoration: none; }
+.md-inspector del { color: var(--del); text-decoration: line-through; text-decoration-color: rgb(177 60 66 / 45%); }
+.md-inspector ins { color: var(--add); }
+.md-changes dl { margin: 2px 0 8px; }
+.md-inspector h3 + .md-kicker { margin-top: 12px; }
+.md-back { all: unset; margin-left: 10px; cursor: pointer; font-size: 11.5px; color: var(--muted); text-decoration: underline; text-decoration-color: var(--line-strong); }
+.md-back:hover { color: var(--ink); }
+.md-changes + .md-back { display: block; margin: -4px 0 12px; }
 .md.inspecting .md-legend { display: none; }
-.md.inspecting .md-sheet { padding-right: 396px; }
-.md-pop { position: absolute; z-index: 3; top: 52px; right: 16px; width: 300px; max-height: 50%; overflow: auto; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); box-shadow: 0 10px 30px rgb(0 0 0 / 6%); }
-.md-pop[hidden] { display: none; }
-.md-pop button { all: unset; display: block; width: 100%; padding: 4px 0; border-top: 1px solid var(--line); cursor: pointer; font: 11.5px var(--mono); color: var(--del); }
+.md.inspecting .md-sheet { margin-right: 404px; } .md.inspect-left .md-sheet { margin: 0 12px 12px 404px; }
 .md-canvas:focus-visible, button:focus-visible, select:focus-visible, [role="button"]:focus-visible { outline: 2px solid #797369; outline-offset: 2px; }
 
 /* Tables: a view's elements in rows, under its diagram or alone. */
-.md-sheet { flex: 0 0 auto; max-height: 42%; overflow: auto; margin: 0 12px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+.md-sheet { flex: 0 0 auto; max-height: 42%; overflow: auto; isolation: isolate; margin: 0 12px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
 .md-sheet.alone { flex: 1 1 0; max-height: none; margin-top: 8px; }
 .tb-bar { position: sticky; left: 0; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; padding: 10px 14px; border-bottom: 1px solid var(--line); background: var(--card); font-size: 12px; color: var(--muted); }
 .tb-bar input { width: 220px; padding: 4px 9px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); font: inherit; color: var(--ink); }
@@ -258,7 +280,8 @@ pre { padding: 8px 10px; }
 .k { color: #8250df; } .s { color: #0a3069; } .c { color: #6e7781; }
 @media (max-width: 760px) {
   .top { flex-wrap: wrap; height: auto; padding: 8px 12px; } .meta { display: none; }
-  .md-inspector { left: 8px; right: 8px; width: auto; max-height: 55%; } .md-legend, .md-hint { display: none; }
+  .md-inspector { justify-self: stretch; align-self: end; width: auto; max-height: 55%; margin: 0 8px 8px; } .md-legend, .md-hint { display: none; }
+  .md.inspecting .md-sheet { margin: 0 12px 12px; }
 }
 </style>
 </head>
@@ -286,7 +309,6 @@ pre { padding: 8px 10px; }
 <div class="md-split" id="split" role="separator" aria-orientation="horizontal" aria-label="Resize the table" title="Drag to resize" hidden></div>
 <div class="md-sheet" id="sheet" hidden></div>
 </div>
-<div class="md-pop" id="removed" hidden></div>
 <aside class="md-inspector" id="inspector" aria-label="Element" hidden></aside>
 </div></section>
 <section id="files" class="sheet" hidden></section>
@@ -573,12 +595,11 @@ function marker(delta) {
 function renderDelta(cur) {
   const box = document.getElementById("delta"), d = cur.delta;
   box.replaceChildren();
-  document.getElementById("removed").hidden = true;
   if (!d) return;
   if (d.isNew) { box.append(el("span", "add", "New in this version")); return; }
-  const count = (ids) => ids.filter((id) => cur.view.elements[id] || headOf(cur.view, id)).length;
-  const added = count(d.added), changed = count(d.changed);
-  if (!added && !changed && !d.removed.length) { box.append(el("span", "", "No change since " + when(versions[state.version + 1]))); return; }
+  const before = payload(entryOf(state.version + 1, state.view));
+  const added = shown(d.added, cur.view), changed = shown(d.changed, cur.view), removed = shown(d.removed, before);
+  if (!added.length && !changed.length && !removed.length) { box.append(el("span", "", "No change since " + when(versions[state.version + 1]))); return; }
   const toggle = button("Changes", () => {
     state.highlight = !state.highlight;
     toggle.setAttribute("aria-pressed", String(state.highlight));
@@ -586,30 +607,42 @@ function renderDelta(cur) {
   });
   toggle.title = "Highlight what changed since " + when(versions[state.version + 1]);
   toggle.setAttribute("aria-pressed", String(state.highlight));
-  box.append(toggle);
-  const cycle = (ids, cls, label) => {
+  const list = button("", () => showChanges(cur));
+  list.title = "List what changed";
+  if (added.length) list.append(el("span", "add", "+" + added.length + " added"));
+  if (changed.length) list.append(el("span", "chg", "~" + changed.length + " changed"));
+  if (removed.length) list.append(el("span", "del", "−" + removed.length + " removed"));
+  box.append(toggle, list);
+}
+// The ids of a delta that this view shows.
+const shown = (ids, view) => ids.filter((id) => headOf(view, id));
+// What was added, changed and removed since the previous version, with the
+// values that changed; each entry opens its element.
+function showChanges(cur) {
+  const d = cur.delta, before = payload(entryOf(state.version + 1, state.view));
+  const parts = [closer(), el("p", "md-kicker", "Since " + when(versions[state.version + 1])), el("h3", "", "Changes")];
+  const group = (label, ids, view, open, diff) => {
     if (!ids.length) return;
-    let at = -1;
-    box.append(button(label, () => {
-      const shown = ids.filter((id) => headOf(cur.view, id));
-      if (!shown.length) return;
-      at = (at + 1) % shown.length;
-      select(shown[at], true);
-    }, cls));
+    const ul = el("ul", "md-changes");
+    let sysmlOnly = 0;
+    for (const id of ids) {
+      const n = headOf(view, id), b = button("", () => open(id)), li = el("li");
+      b.append(el("span", "md-other", n.title || nameOf(n)), el("span", "md-kind", n.kw || n.shape || ""));
+      li.append(b);
+      const dl = diff && attributes((view.elements[id] || { a: [] }).a, (before.elements[id] || { a: [] }).a, true);
+      if (dl && dl.childElementCount) li.append(dl);
+      else if (dl) sysmlOnly++;
+      ul.append(li);
+    }
+    parts.push(el("p", "md-kicker", label + " · " + ids.length), ul);
+    if (sysmlOnly) parts.push(button(sysmlOnly + " changed in their SysML only: show the file diff", () => { state.tab = "changes"; render(); }, "md-back"));
   };
-  cycle(d.added, "add", "+" + added + " added");
-  cycle(d.changed, "chg", "~" + changed + " changed");
-  if (d.removed.length) {
-    box.append(button("−" + d.removed.length + " removed", () => {
-      const pop = document.getElementById("removed");
-      pop.hidden = !pop.hidden;
-      const before = payload(entryOf(state.version + 1, state.view));
-      pop.replaceChildren(el("p", "md-kicker", "Removed since " + when(versions[state.version + 1])), ...d.removed.map((id) => {
-        const n = headOf(before, id);
-        return button(n ? nameOf(n) : id, () => inspect(state.version + 1, before, id, "removed"));
-      }));
-    }, "del"));
-  }
+  group("Added", shown(d.added, cur.view), cur.view, (id) => select(id, true), false);
+  group("Changed", shown(d.changed, cur.view), cur.view, (id) => select(id, true), true);
+  group("Removed", shown(d.removed, before), before, (id) => inspect(state.version + 1, before, id, "removed"), false);
+  state.selected = null;
+  applyFocus();
+  showPanel(parts, false);
 }
 function renderLegend(view) {
   const box = document.getElementById("legend");
@@ -794,26 +827,53 @@ function reveal(id) {
 function closeInspector() {
   const box = document.getElementById("inspector");
   box.hidden = true;
-  box.parentElement.classList.remove("inspecting");
+  box.parentElement.classList.remove("inspecting", "inspect-left");
+}
+function closer() {
+  const close = button("×", () => select(null), "md-close");
+  close.title = "Close";
+  close.setAttribute("aria-label", "Close inspector");
+  return close;
+}
+// The panel beside the table, over the diagram: an element, or the changes.
+function showPanel(parts, left) {
+  const box = document.getElementById("inspector");
+  box.replaceChildren(...parts);
+  box.hidden = false;
+  box.scrollTop = 0;
+  box.parentElement.classList.add("inspecting");
+  box.parentElement.classList.toggle("inspect-left", left);
+}
+// An element's attributes; against the previous version's, a changed value
+// shows struck through above the new one. Only the differences when asked.
+function attributes(now, before, onlyChanged) {
+  const is = new Map(now), was = new Map(before || now), dl = el("dl");
+  for (const k of new Set([...is.keys(), ...was.keys()])) {
+    const a = was.get(k), b = is.get(k);
+    if (onlyChanged && a === b) continue;
+    const dd = el("dd", "", a === b ? b : "");
+    if (a !== b && a !== undefined) dd.append(el("del", "", a));
+    if (a !== b && b !== undefined) dd.append(el("ins", "", b));
+    dl.append(el("dt", "", k), dd);
+  }
+  return dl;
 }
 function inspect(vi, view, id, status) {
-  const box = document.getElementById("inspector");
   const n = headOf(view, id);
   const info = view.elements[id] || { a: [], s: [] };
   let refs = info.s.slice();
   if (!n) return;
-  const close = button("×", () => select(null), "md-close");
-  close.title = "Close";
-  close.setAttribute("aria-label", "Close inspector");
   const h = el("h3", "", nameOf(n));
   if (n.type) h.append(el("span", "", n.type));
-  const parts = [close, el("p", "md-kicker", n.kw || n.shape), h];
-  if (status) parts.push(el("span", "md-status " + status, status === "removed" ? "removed since " + when(versions[vi]) : status + " since " + when(versions[vi + 1])));
-  if (info.a.length) {
-    const dl = el("dl");
-    for (const [k, v] of info.a) dl.append(el("dt", "", k), el("dd", "", v));
-    parts.push(dl);
+  const parts = [closer(), el("p", "md-kicker", n.kw || n.shape), h];
+  if (status) {
+    const line = el("div");
+    line.append(el("span", "md-status " + status, status === "removed" ? "removed since " + when(versions[vi]) : status + " since " + when(versions[vi + 1])),
+      button("All changes", () => showChanges(currentView()), "md-back"));
+    parts.push(line);
   }
+  const prev = status === "changed" && entryOf(vi + 1, view.id), was = prev && payload(prev).elements[id];
+  if (info.a.length) parts.push(attributes(info.a, was ? was.a : null, false));
   if (vi === state.version && state.drawn && state.drawn.scene) {
     const rel = state.drawn.scene.edges.filter((e) => e.s === id || e.t === id);
     if (rel.length) {
@@ -833,24 +893,24 @@ function inspect(vi, view, id, status) {
       parts.push(el("p", "md-kicker", "Relationships · " + rel.length), ul);
     }
   }
+  // Each piece of SysML folds to its first line; a lone piece shows open.
   if (refs.length) {
-    parts.push(el("p", "md-kicker", "SysML"));
+    parts.push(el("p", "md-kicker", "SysML · " + refs.length));
     for (const [file, from, to] of refs) {
-      const src = el("div", "md-src");
-      const b = button(file + ":" + from + (to > from ? "–" + to : ""), () => showLines(vi, file, from, to));
-      b.title = "Show in Files";
       const lines = fileText(vi, file).split("\n").slice(from - 1, to);
       const indent = Math.min(...lines.filter((l) => l.trim()).map((l) => l.length - l.trimStart().length));
-      src.append(b, sysml(lines.map((l) => l.slice(indent)).join("\n")));
+      const src = el("details", "md-src"), summary = el("summary");
+      const b = button(file + ":" + from + (to > from ? "–" + to : ""), () => showLines(vi, file, from, to));
+      b.title = "Show in Files";
+      summary.append(el("code", "", lines[0].trim()), b);
+      src.open = refs.length === 1;
+      src.append(summary, sysml(lines.map((l) => l.slice(indent)).join("\n")));
       parts.push(src);
     }
   }
-  box.replaceChildren(...parts);
-  box.hidden = false;
-  box.parentElement.classList.add("inspecting");
   const canvas = document.getElementById("canvas").getBoundingClientRect();
   const v = state.viewport;
-  box.classList.toggle("is-left", Boolean(vi === state.version && n.w && v && v.x + (n.x + n.w / 2) * v.k > canvas.width / 2 + 120));
+  showPanel(parts, Boolean(vi === state.version && n.w && v && v.x + (n.x + n.w / 2) * v.k > canvas.width / 2 + 120));
 }
 function showLines(vi, file, from, to) {
   state.version = vi;
