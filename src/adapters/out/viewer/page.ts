@@ -1843,7 +1843,7 @@ function figureCell(column, f, value) {
   // Channels show their types; context its non-zero parts; a tool count's
   // split by origin stays in the tooltip.
   if (column === "channels") td.append(...(f.parts || []).map(([type, n]) => el("small", "et-chip", type + (n > 1 ? " " + n : ""))));
-  else if (column === "context") td.append(el("small", "", f.parts.filter(([, n]) => n).map(([label, n]) => n + " " + label).join(" · ")));
+  else if (column === "context") td.append(el("small", "", f.parts.filter(([, n]) => n).map(([label, n]) => n + " " + (n === 1 ? label.replace(/s$/, "") : label)).join(" · ")));
   for (const flag of f.flags || []) {
     const [glyph, words] = FLAGS[flag] || [flag, flag];
     const g = el("small", "et-flag", glyph);
