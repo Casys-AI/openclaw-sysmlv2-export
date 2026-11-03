@@ -79,3 +79,17 @@ Deno.test("a Behaviour view with many procedures wraps them into rows", async ()
   assert.equal(scene.edges.length, view.edges.length);
   assert.ok(scene.edges.every((e) => e.pts.length > 0));
 });
+
+Deno.test("Scheduled tasks lays its cases out above the agents they wake, wider than tall", async () => {
+  const view = drawing(
+    diagramViews(snapshot, inference).find((v) => v.id === "schedules")!,
+  );
+  const scene = await layoutView(view);
+  const at = new Map(scene.nodes.map((n) => [n.id, n]));
+  const owners = scene.edges.filter((e) => e.kind === "owner");
+  assert.ok(owners.length > 0);
+  for (const e of owners) {
+    assert.ok(at.get(e.s)!.y < at.get(e.t)!.y, e.id);
+  }
+  assert.ok(scene.w > 2 * scene.h, `${scene.w} × ${scene.h}`);
+});

@@ -465,14 +465,17 @@ function settings(view: DiagramView): Settings {
     };
   }
   if (view.id === "schedules") {
+    // Cases above the agent they wake, each agent's cluster packed into rows
+    // as wide as the strip of canvas the week table leaves.
     return {
       max: 300,
       options: {
         ...BASE,
-        "elk.direction": "RIGHT",
+        "elk.direction": "DOWN",
+        "elk.aspectRatio": "3.5",
         "elk.spacing.nodeNode": "16",
         "elk.spacing.componentComponent": "48",
-        "elk.layered.spacing.nodeNodeBetweenLayers": "96",
+        "elk.layered.spacing.nodeNodeBetweenLayers": "72",
       },
     };
   }
