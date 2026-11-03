@@ -7,11 +7,11 @@ validation results and shape annotations to findings.
 
 ## Native graph and selection
 
-Projection `openmbee-v1` uses `sysml: <https://www.omg.org/spec/SysML#>` for
+Projection `openmbee-v2` uses `sysml: <https://www.omg.org/spec/SysML#>` for
 metaclasses and retained properties, and `urn:sysmlv2:element:<nativeId>` for
 both user and library elements. Every retained element has an explicit
 `sysml:isLibraryElement` boolean. The build graph is
-`urn:ase:ape:openmbee:v1:build:<artifactDigest>`; `openmbee-v1` identifies this
+`urn:ase:ape:openmbee:v2:build:<artifactDigest>`; `openmbee-v2` identifies this
 project's projection, not a claim of identical output to another exporter.
 References to omitted elements retain their native IDs; catalog completion uses
 explicit library classification. No property defaults are inferred.
@@ -27,17 +27,29 @@ The 2048-character limit is a plugin boundary, not a Toolkit ID length claim.
 
 The syntactic slice retains the metaclasses and properties enumerated in
 [`src/adapters/out/sysml-toolkit/compilation/ape-elements.ts`](../../src/adapters/out/sysml-toolkit/compilation/ape-elements.ts),
-including compiled derived properties when supplied by the Toolkit. Nulls and
-empty lists are omitted. RDF values are unordered; the views do not require
+including compiled derived properties when supplied by the Toolkit. Native
+`type`, `owner`, `ownedSpecialization`, `general`, `ownedRedefinition`,
+`redefinedFeature`, `ownedSubsetting` and `subsettedFeature` are retained
+without inventing inferences. Toolkit `FeatureValue.featureWithValue` and
+`FeatureValue.value` become a feature’s `sysml:value` expression. Structural
+`ownedMember` links remain; an assigned expression is removed from them. Nulls
+and empty lists are omitted. RDF values are unordered; the views do not require
 collection order and the projection emits no JSON collection annotations. For
 example:
 
 ```sparql
 ?feature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName ?role ;
-         sysml:ownedMember/sysml:value ?value .
+         sysml:value/sysml:value ?value .
 ```
 
 ## Derived vocabulary
+
+The views follow `sysml:value/sysml:value` for literals and
+`sysml:value/sysml:referent` or
+`sysml:value/(sysml:referent|sysml:targetFeature)` for references and chains.
+They follow specialization transitively and recognize a root package by the
+absence of a Package parent, covering Toolkit Namespace ownership and OpenSysML
+rootless packages. They do not rely on ordered JSON mirrors.
 
 All predicates in this section use `ape: <urn:ase:ape:v1:>`. The five global
 rules have unique ascending `sh:order` values and `sh:runOnce true`; they
@@ -107,10 +119,20 @@ The scoped `VALUES` inside `EXISTS` is evaluated per outer row and remains O(N)
 in the number of focus nodes. This approach suits scopes below about 1000
 agents; that figure is not a guaranteed threshold.
 
-A local synthetic comparison with OpenSysML 0.11.0 found seven common standard
-library UUIDs matching. By default OpenSysML used qualified-name-derived IDs for
-user elements, whereas the Toolkit supplied UUIDs. Its output had no
-`sysml:definition` triples in the comparison and used `sysml:type`; ownership
-and expression structures also differed. Consequently these views are not
-claimed to run unchanged on raw OpenSysML Turtle. Neither OpenSysML nor rudof is
-a runtime dependency.
+The same shapes were exercised on the Toolkit projection and unmodified Turtle
+from
+[OpenSysML v0.11.0](https://github.com/Open-MBEE/OpenSysML/releases/tag/v0.11.0).
+The synthetic baseline and extended fixtures produced the same findings and
+related pairs: six cycles in the baseline; two unreachable operators, two grant
+widenings and six cycles in the extended fixture. This is parity for those
+fixtures, not graph identity. Toolkit native UUIDs use `urn:sysmlv2:element:`,
+while OpenSysML uses derived element and expression IDs, including
+`urn:opensysml:expr:`. The projection is a subset in one named build graph; full
+native Turtle also contains additional derived and library facts. See the
+[OpenSysML RDF mapping](https://runtime.opensysml.org/reference/rdf-mapping/).
+
+The oracle is test-only. Set `OPENSYSML_ARCHIVE` to the pinned platform archive
+and `SYSML_TOOLKIT_WASM_ARCHIVE` to the pinned Toolkit archive, then run
+`deno task test:opensysml`. The helper verifies SHA-256 before extraction and
+supports macOS arm64 and Linux amd64. CI downloads the pinned Linux archive and
+checks its SHA-256. Neither OpenSysML nor rudof is a runtime dependency.

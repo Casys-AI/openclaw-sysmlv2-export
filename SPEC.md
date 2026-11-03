@@ -842,12 +842,24 @@ timeouts fail validation without discarding the export. These diagnostics are
 informational to the export result.
 
 **APE rules on the model graph.** After a passing check, the worker projects the
-compiled Toolkit element graph (`toFullJson`) to the `openmbee-v1` RDF subset
+compiled Toolkit element graph (`toFullJson`) to the `openmbee-v2` RDF subset
 and loads it in batches into Oxigraph 0.5.12 (WebAssembly). Five ordered, global
 run-once SPARQL rules materialize views; three SELECT constraints produce
 standard SHACL validation results, which the APE adapter maps to findings. The
 [profile and graph contract](rules/ape/README.md) describe the named build,
 shapes, view and report graphs, supported targets and restricted SPARQL forms.
+The subset uses `sysml:type` and expression values aligned with the
+[OpenSysML RDF mapping](https://runtime.opensysml.org/reference/rdf-mapping/);
+the build graph is `urn:ase:ape:openmbee:v2:build:<digest>`, while the derived
+APE namespace remains `urn:ase:ape:v1:`. Synthetic baseline and extended
+fixtures produced the same findings and related pairs on this projection and
+unmodified
+[OpenSysML v0.11.0](https://github.com/Open-MBEE/OpenSysML/releases/tag/v0.11.0)
+Turtle. This checks those fixtures, not equality of full native graphs or IDs.
+The test-only oracle uses `OPENSYSML_ARCHIVE` and `SYSML_TOOLKIT_WASM_ARCHIVE`
+with `deno task test:opensysml`; CI verifies the pinned Linux archive, and the
+helper verifies supported archive hashes before use.
+
 This is not a full SHACL implementation. Findings start with `APE_`, retain
 `pattern` and `finding`, and join the doctor's findings and counts.
 
