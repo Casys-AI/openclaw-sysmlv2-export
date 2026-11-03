@@ -391,6 +391,15 @@ pre { padding: 8px 10px; }
 .code .band { position: absolute; left: 0; right: 0; background: rgb(29 29 31 / 6%); border-left: 3px solid var(--md-soft); pointer-events: none; }
 .diff div { padding: 0 10px; white-space: pre; }
 .add { background: #e6ffec; } .del { background: #ffebe9; } .hunk { background: #eaeef2; color: var(--muted); }
+.chg-verdict { margin: -4px 0 14px; color: var(--muted); }
+.chg-subjects { list-style: none; margin: 0 0 18px; padding: 0; max-width: 760px; }
+.chg-subjects > li { padding: 8px 0; border-top: 1px solid var(--line); }
+.chg-subject { all: unset; font-weight: 600; } button.chg-subject { cursor: pointer; } button.chg-subject:hover { text-decoration: underline; }
+.chg-subjects ul { list-style: none; margin: 4px 0 0; padding: 0; }
+.chg-subjects ul li { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: baseline; padding: 1px 0; }
+.chg-subjects del { color: var(--del); text-decoration-color: rgb(177 60 66 / 45%); } .chg-subjects ins { color: var(--add); text-decoration: none; }
+.chg-files { margin: 0 0 8px; } .chg-files > summary { padding: 6px 0; cursor: pointer; font-weight: 600; }
+.chg-files section { margin: 4px 0 12px; } .chg-files h3 { margin: 8px 0 4px; font-size: 12px; font-weight: 500; color: var(--muted); }
 .k { color: #8250df; } .s { color: #0a3069; } .c { color: #6e7781; }
 @media (max-width: 760px) {
   .top { flex-wrap: wrap; height: auto; padding: 8px 12px; } .meta { display: none; }
@@ -1911,24 +1920,70 @@ function renderFiles() {
   box.replaceChildren(el("h2", "", when(v) + " UTC — files"), nav, body);
   if (state.range) box.scrollTop = body.offsetTop + 8 + (state.range[0] - 1) * 18 - 96;
 }
+// What changed since the previous version: per element first (viewer.ts's
+// diff.subjects), then the files by group, folded except the instance's and
+// the inferred SysML when short.
 function renderChanges() {
   const v = versions[state.version], previous = versions[state.version + 1], box = document.getElementById("changes");
   const head = el("h2", "", when(v) + " UTC" + (previous ? " — since " + when(previous) : ""));
   if (!v.changes) return box.replaceChildren(head, el("p", "muted", "First version: nothing to compare."));
-  if (!v.changes.length) return box.replaceChildren(head, el("p", "muted", "No file changed since the previous version."));
-  box.replaceChildren(head, ...v.changes.map((c) => {
-    const lines = c.hunks.flatMap((h) => h.lines);
-    const added = lines.filter((l) => l[0] === "+").length, removed = lines.filter((l) => l[0] === "-").length;
-    const section = el("section");
-    section.append(el("h3", "", c.file + " — " + c.status + "  +" + added + " −" + removed));
-    const diff = el("div", "diff");
-    for (const h of c.hunks) {
-      diff.append(el("div", "hunk", h.header));
-      for (const l of h.lines) diff.append(el("div", l[0] === "+" ? "add" : l[0] === "-" ? "del" : "", l));
-    }
-    section.append(diff);
-    return section;
-  }));
+  const said = verdict(v);
+  box.replaceChildren(head, el("p", "chg-verdict", said.words + (said.detail ? ": " + said.detail : "")), ...subjectChanges(v), ...fileGroups(v));
+}
+function subjectChanges(v) {
+  const subjects = v.diff && v.diff.subjects;
+  if (!subjects) return [];
+  if (!subjects.length) return [el("p", "muted", "No configuration difference.")];
+  const ul = el("ul", "chg-subjects");
+  for (const s of subjects) {
+    const li = el("li"), view = viewOf(state.version, s.id);
+    li.append(view ? button(s.label, () => go(view.id, s.id), "chg-subject") : el("strong", "chg-subject", s.label));
+    const bullets = el("ul");
+    bullets.append(...s.bullets.map(bullet));
+    li.append(bullets);
+    ul.append(li);
+  }
+  return [ul];
+}
+// One change of an element: what changed (the field, or the change's kind),
+// a value struck through above the new one, items added and removed.
+function bullet(b) {
+  const li = el("li"), what = b.field || b.kind.split(".").slice(1).join(" ");
+  li.append(el("span", "md-kind", what));
+  if (b.before !== undefined) li.append(el("del", "", b.before), " → ", el("ins", "", b.after));
+  if (b.added && b.added.length) li.append(el("ins", "", "+ " + b.added.join(", ")));
+  if (b.removed && b.removed.length) li.append(el("del", "", "− " + b.removed.join(", ")));
+  return li;
+}
+const GROUP_TITLES = { instance: "Instance", inferred: "Inferred behaviour", library: "Library", data: "Data", diagnostics: "Diagnostics" };
+function fileGroups(v) {
+  const groups = v.diff ? v.diff.groups : [{ group: "files", files: v.changes.map((c) => c.file) }];
+  return groups.map((g) => {
+    const files = g.files.map((name) => v.changes.find((c) => c.file === name)).filter(Boolean);
+    const size = files.reduce((n, c) => n + c.hunks.reduce((k, h) => k + h.lines.length, 0), 0);
+    const d = el("details", "chg-files");
+    d.open = (g.group === "instance" || g.group === "inferred") && size <= 400;
+    d.append(el("summary", "", (GROUP_TITLES[g.group] || "Files") + " · " + files.map(fileLine).join(", ")), ...files.map(fileDiff));
+    return d;
+  });
+}
+// A file's count of lines added and removed; inference that did not run is
+// not a removal.
+function fileLine(c) {
+  const lines = c.hunks.flatMap((h) => h.lines);
+  if (c.status === "removed" && !versions[state.version].inferred && /^(OpenClawInferred\.sysml|inference\.json)$/.test(c.file)) return c.file + " (inference not run)";
+  return c.file + " +" + lines.filter((l) => l[0] === "+").length + " −" + lines.filter((l) => l[0] === "-").length;
+}
+function fileDiff(c) {
+  const section = el("section");
+  section.append(el("h3", "", c.file + " — " + c.status));
+  const diff = el("div", "diff");
+  for (const h of c.hunks) {
+    diff.append(el("div", "hunk", h.header));
+    for (const l of h.lines) diff.append(el("div", l[0] === "+" ? "add" : l[0] === "-" ? "del" : "", l));
+  }
+  section.append(diff);
+  return section;
 }
 
 function render(keepViewport) {
