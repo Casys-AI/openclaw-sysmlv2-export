@@ -1,0 +1,159 @@
+import assert from "node:assert/strict";
+import {
+  type Element,
+  prepareApeElements,
+  selectApeElements,
+} from "../src/ape-elements.ts";
+import { ExportError } from "../src/error.ts";
+
+Deno.test("APE slice preserves whole retained values and occurrence order while omitting unused nodes and properties", () => {
+  const ordered = [
+    { "@id": "omitted" },
+    { "@id": "kept" },
+    { "@id": "omitted" },
+    null,
+  ];
+  const retained = {
+    "@id": "kept",
+    "@type": "PartUsage",
+    isLibraryElement: false,
+    declaredName: "SysML::UserName",
+    owner: { "@id": "omitted" },
+    ownedMember: ordered,
+    ownedSpecialization: [{ "@id": "specialization" }],
+    definition: [{ "@id": "definition" }],
+    redefinedFeature: { "@id": "old" },
+    sourceFeature: [{ "@id": "source" }],
+    targetFeature: [{ "@id": "target" }],
+    value: { "@id": "expression", extra: [null, "unchanged"] },
+  };
+  const source: Element[] = [
+    {
+      ...retained,
+      qualifiedName: null,
+      relatedFeature: [],
+      unused: ["discard"],
+    },
+    { "@id": "omitted", "@type": "Comment", isLibraryElement: true },
+    {
+      "@id": "expression",
+      "@type": "LiteralString",
+      value: "",
+      isLibraryElement: false,
+    },
+    {
+      "@id": "boolean",
+      "@type": "LiteralBoolean",
+      value: false,
+      isLibraryElement: false,
+    },
+  ];
+  const selected = selectApeElements(source);
+  assert.deepEqual(selected, [retained, source[2], source[3]]);
+  assert.notEqual(selected[0], source[0]);
+  assert.equal(selected[0].ownedMember, ordered);
+  assert.deepEqual(source[0].relatedFeature, []);
+  assert.equal(source[0].qualifiedName, null);
+});
+
+Deno.test("catalog completion fetches only absent references retained by the slice and classifies native IDs explicitly", () => {
+  const raw = [
+    {
+      "@id": "user",
+      "@type": "PartUsage",
+      isLibraryElement: false,
+      declaredName: "SysML::LooksLikeALibraryName",
+      ownedMember: [{ "@id": "omitted-lib" }, { "@id": "omitted-user" }, {
+        "@id": "external",
+      }],
+      ignored: { "@id": "never-fetch" },
+    },
+    {
+      "@id": "omitted-lib",
+      "@type": "FunctionDefinition",
+      isLibraryElement: true,
+    },
+    {
+      "@id": "omitted-user",
+      "@type": "Comment",
+      isLibraryElement: false,
+      owner: { "@id": "also-never-fetch" },
+    },
+  ];
+  const calls: string[][] = [];
+  const prepared = prepareApeElements({
+    toFullJson(includeLibrary) {
+      assert.equal(includeLibrary, false);
+      return JSON.stringify(raw);
+    },
+    rows(ids, fields) {
+      const requested = JSON.parse(ids);
+      calls.push(requested);
+      assert.deepEqual(JSON.parse(fields), [
+        "name",
+        "qualifiedName",
+        "metaclass",
+        "isLibraryElement",
+        "owner",
+      ]);
+      return JSON.stringify(requested.map((id: string) => ({
+        name: id,
+        qualifiedName: `Native::${id}`,
+        metaclass: id === "external" ? "DataType" : "Package",
+        isLibraryElement: true,
+        owner: id === "external" ? "scope" : "omitted-lib",
+      })));
+    },
+  });
+  assert.deepEqual(calls, [["external"], ["scope"]]);
+  assert.equal(prepared.sourceElementCount, 3);
+  assert.deepEqual(prepared.libraryNativeIds, [
+    "external",
+    "omitted-lib",
+    "scope",
+  ]);
+  assert.deepEqual(prepared.elements.map((element) => element["@id"]), [
+    "user",
+    "external",
+    "scope",
+  ]);
+  assert.deepEqual(prepared.elements[0].ownedMember, raw[0].ownedMember);
+  assert.equal(prepared.elements[1]["@type"], "DataType");
+  assert.deepEqual(prepared.elements[2].owner, { "@id": "omitted-lib" });
+  assert.equal(prepared.elements[0].isLibraryElement, false);
+  assert.equal(prepared.elements[0].ignored, undefined);
+});
+
+Deno.test("preparation preserves the source exception and distinguishes malformed native interchange", () => {
+  const cause = new Error("synthetic Toolkit extraction failed");
+  assert.throws(() =>
+    prepareApeElements({
+      toFullJson() {
+        throw cause;
+      },
+      rows() {
+        throw new Error("unexpected catalog read");
+      },
+    }), (error: unknown) => {
+    assert(error instanceof ExportError);
+    assert.equal(error.cause, cause);
+    assert(error.context.includes(cause.message));
+    return true;
+  });
+  assert.throws(() =>
+    prepareApeElements({
+      toFullJson() {
+        return '[{"@id":"bad","@type":"PartUsage"}]';
+      },
+      rows() {
+        throw new Error("unexpected catalog read");
+      },
+    }), (error: unknown) => {
+    assert(error instanceof ExportError);
+    assert.equal(
+      error.context,
+      "Malformed Toolkit full interchange for the APE graph",
+    );
+    return true;
+  });
+});
