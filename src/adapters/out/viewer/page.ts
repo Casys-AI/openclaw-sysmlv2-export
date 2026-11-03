@@ -150,6 +150,18 @@ main > section[hidden] { display: none; }
 svg.md-focus .md-edge:not(.lit):not(.hot) { opacity: .12; }
 svg.md-focus .md-node.leaf:not(.lit):not(.hot) { opacity: .28; }
 .md-edge.hot .md-line { stroke-width: calc(var(--w, 1.25) + .9); }
+/* Zoomed out: steps, the edges between them, frame tabs and all diagram text
+   fold away; screen-sized labels name each procedure and party. */
+svg.md-lod :is(.md-node > text, .md-edge text, .md-tab, .md-node.step, .md-edge.inner) { display: none; }
+svg.md-lod .md-edge:not(.hot) { opacity: .3; }
+.md-labels { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.md-labels[hidden] { display: none; }
+.md-labels > div { position: absolute; left: 0; top: 0; }
+.md-lod-frame { padding: 6px 6px 0; font-size: 11px; line-height: 1.25; overflow-wrap: break-word; hyphens: auto; }
+.md-lod-frame strong { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; overflow: hidden; font-weight: 600; }
+.md-lod-frame span { display: block; margin-top: 2px; font-size: 10px; color: var(--muted); }
+.hl .md-lod-frame.changed span::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 4px; border-radius: 50%; background: var(--chg); vertical-align: 1px; }
+.md-lod-leaf { font-size: 10.5px; color: var(--muted); white-space: nowrap; }
 
 /* Inspector */
 /* Sidebar: one panel at a time beside the diagram, picked from the icon rail. */
@@ -221,6 +233,11 @@ svg.md-focus .md-node.leaf:not(.lit):not(.hot) { opacity: .28; }
 .tb-bar button[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--line-strong); }
 .tb-key { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
 .tb-note { margin-left: auto; font-style: italic; }
+.tb-bar .tb-fold { margin-left: auto; border-color: transparent; color: var(--muted); }
+.tb-bar .tb-fold:hover { color: var(--ink); }
+.md-sheet.folded { flex: none; }
+.md-sheet.folded > :not(.tb-bar), .md-sheet.folded .tb-bar > :not(.tb-title, .tb-fold) { display: none; }
+.md-sheet.folded .tb-bar { border-bottom: 0; }
 .hl tr.added > th, .hl tr.added > td { background: color-mix(in srgb, var(--add-bg) 60%, var(--card)); }
 .hl tr.changed > th, .hl tr.changed > td { background: color-mix(in srgb, var(--chg-bg) 60%, var(--card)); }
 /* A cell's marks compose: what changed (--bar) and what is selected (--sel). */
@@ -396,11 +413,11 @@ const LEGENDS = {
 const state = { version: 0, tab: "diagrams", view: "overview", file: "OpenClawInstance.sysml", range: null,
   // An element to select once its view is shown.
   selected: null, focus: null, hover: null, viewport: null, highlight: true, drawn: null, doc: new Map(), panel: null,
-  // The scale Fit gave the drawn scene.
-  fitK: 1,
+  // The scale Fit gave the drawn scene, and the viewport it set.
+  fitK: 1, fitted: null,
   // Tables: the text filter, folded groups, the facet value shown, the sort,
   // and the height a table under a diagram was dragged to.
-  filter: "", folded: new Set(), facet: null, sort: null, sheetH: null,
+  filter: "", folded: new Set(), facet: null, sort: null, sheetH: null, sheetFolded: false,
   // What the last link named that the page lacks (see follow).
   note: null };
 
@@ -647,8 +664,8 @@ function drawNode(n, delta) {
   }
   return g;
 }
-function drawEdge(e, delta) {
-  const cls = ["md-edge", e.kind, delta && delta.added.includes(e.id) ? "added" : "", delta && delta.changed.includes(e.id) ? "changed" : ""];
+function drawEdge(e, delta, inner) {
+  const cls = ["md-edge", e.kind, inner ? "inner" : "", delta && delta.added.includes(e.id) ? "added" : "", delta && delta.changed.includes(e.id) ? "changed" : ""];
   const g = sv("g", { class: cls.filter(Boolean).join(" "), "data-id": e.id });
   const arrow = e.kind === "connection" ? null : e.kind === "escalation" ? "md-arrow-warn" : "md-arrow";
   for (const p of e.pts) g.append(sv("path", { class: "md-line", d: rounded(p), "marker-end": arrow ? "url(#" + arrow + ")" : undefined }));
@@ -840,15 +857,18 @@ function renderDiagram(keepViewport) {
   stage.hidden = !view.scene && Boolean(view.table);
   sheet.hidden = !view.table;
   sheet.classList.toggle("alone", !view.scene);
-  document.getElementById("split").hidden = !(view.scene && view.table);
-  sheet.style.height = view.scene && state.sheetH ? state.sheetH + "px" : "";
-  sheet.style.maxHeight = view.scene && state.sheetH ? "none" : "";
+  const folded = Boolean(view.scene && state.sheetFolded);
+  document.getElementById("split").hidden = !(view.scene && view.table) || folded;
+  sheet.classList.toggle("folded", folded);
+  sheet.style.height = view.scene && state.sheetH && !folded ? state.sheetH + "px" : "";
+  sheet.style.maxHeight = view.scene && state.sheetH && !folded ? "none" : "";
   state.drawn = { view: view.id, svg: null, world: null, scene: view.scene, payload: view };
   state.doc = marks(state.version);
   // The table first: the diagram fits in the room it leaves.
   if (view.table) {
     const at = [sheet.scrollTop, sheet.scrollLeft];
     renderTable(sheet, view, delta);
+    if (view.scene) sheet.querySelector(".tb-bar").append(foldButton(folded));
     if (keep) [sheet.scrollTop, sheet.scrollLeft] = at;
   }
   if (view.scene) drawScene(view, delta, kept);
@@ -863,22 +883,28 @@ function renderDiagram(keepViewport) {
   if (state.panel) openPanel(state.panel);
 }
 function drawScene(view, delta, keep) {
-  const canvas = document.getElementById("canvas");
+  const canvas = document.getElementById("canvas"), scene = view.scene;
   const svg = sv("svg", { role: "group", "aria-label": view.title + " diagram" });
   const world = sv("g", {});
   svg.append(defs(), world);
-  for (const n of view.scene.nodes.filter((n) => n.shape === "frame" || n.shape === "group")) world.append(drawNode(n, delta));
-  for (const e of view.scene.edges) world.append(drawEdge(e, delta));
-  for (const n of view.scene.nodes.filter((n) => n.shape !== "frame" && n.shape !== "group")) world.append(drawNode(n, delta));
-  canvas.replaceChildren(svg);
+  const nodes = new Map(scene.nodes.map((n) => [n.id, n]));
+  // A procedure's steps, and the edges between them, fold away when zoomed out.
+  const step = (id) => { const p = nodes.get(nodes.get(id).parent); return Boolean(p && p.shape === "frame"); };
+  for (const n of scene.nodes.filter((n) => n.shape === "frame" || n.shape === "group")) world.append(drawNode(n, delta));
+  for (const e of scene.edges) world.append(drawEdge(e, delta, step(e.s) && step(e.t)));
+  for (const n of scene.nodes.filter((n) => n.shape !== "frame" && n.shape !== "group")) {
+    const g = drawNode(n, delta);
+    if (step(n.id)) g.classList.add("step");
+    world.append(g);
+  }
+  const labels = zoomedOutLabels(scene, delta);
+  canvas.replaceChildren(svg, labels);
   // Text measured at export may still overflow with another font: squeeze it.
   for (const t of svg.querySelectorAll("text[data-max]")) {
     const max = +t.dataset.max;
     if (t.getComputedTextLength() > max) { t.setAttribute("textLength", max); t.setAttribute("lengthAdjust", "spacingAndGlyphs"); }
   }
-  state.drawn.svg = svg;
-  state.drawn.nodes = new Map(view.scene.nodes.map((n) => [n.id, n]));
-  state.drawn.world = world;
+  Object.assign(state.drawn, { svg, world, nodes, labels, lod: false, framed: scene.nodes.some((n) => n.shape === "frame") });
   if (keep && state.viewport) applyViewport(); else fit();
 }
 
@@ -894,7 +920,22 @@ function fit() {
   const tall = d.scene.h > d.scene.w && whole < READABLE, k = tall ? Math.min(kw, 1.25) : whole;
   state.viewport = { k, x: (box.width - d.scene.w * k) / 2, y: tall ? margin : (box.height - d.scene.h * k) / 2 };
   state.fitK = whole;
+  state.fitted = state.viewport;
   applyViewport();
+}
+// Fits again after the canvas changed size, unless the user moved the view.
+function refit() {
+  if (state.viewport === state.fitted) fit();
+}
+// Folds the table under a diagram to its bar, for every view, and back.
+function foldButton(folded) {
+  const b = button(folded ? "Show table" : "Hide table", () => {
+    state.sheetFolded = !folded;
+    render(true);
+    refit();
+  }, "tb-fold");
+  b.setAttribute("aria-expanded", String(!folded));
+  return b;
 }
 // The part of the canvas the sidebar leaves visible; a narrow window lays
 // the sidebar over the canvas.
@@ -904,11 +945,12 @@ function room() {
   return { w: (over ? Math.min(c.right, side.getBoundingClientRect().left) : c.right) - c.left, h: c.height };
 }
 // Frames an element in the visible room: a step frames its procedure, at
-// most at 1:1; a frame taller than the room shows from its top, readable.
+// most at 1:1; a frame taller than the room shows from its top, at a scale
+// its steps read at (0.75), and the wheel scrolls down it.
 function fitTo(id) {
   const n = state.drawn.nodes.get(scopeOf(id)), r = room(), margin = 32;
   const kw = (r.w - 2 * margin) / n.w, whole = Math.min(kw, (r.h - 2 * margin) / n.h);
-  const k = Math.min(1, Math.max(whole, Math.min(READABLE, kw))), over = n.h * k > r.h - 2 * margin;
+  const k = Math.min(1, Math.max(whole, Math.min(0.75, kw))), over = n.h * k > r.h - 2 * margin;
   state.viewport = { k, x: (r.w - n.w * k) / 2 - n.x * k, y: over ? margin - n.y * k : (r.h - n.h * k) / 2 - n.y * k };
   applyViewport();
 }
@@ -921,7 +963,52 @@ function keepInView(n) {
 }
 function applyViewport() {
   const d = state.drawn, v = state.viewport;
-  if (d && d.world && v) d.world.setAttribute("transform", "translate(" + v.x + "," + v.y + ") scale(" + v.k + ")");
+  if (!(d && d.world && v)) return;
+  d.world.setAttribute("transform", "translate(" + v.x + "," + v.y + ") scale(" + v.k + ")");
+  semanticZoom(d, v);
+}
+// ---- Semantic zoom: zoomed out under LOD_IN, a view of procedures shows
+// them as titled frames, steps folded, until it zooms back in past LOD_OUT.
+const LOD_IN = 0.4, LOD_OUT = 0.46;
+function semanticZoom(d, v) {
+  const lod = d.framed && (v.k < LOD_IN || d.lod && v.k <= LOD_OUT);
+  if (lod !== d.lod) {
+    d.lod = lod;
+    d.svg.classList.toggle("md-lod", lod);
+    d.labels.hidden = !lod;
+  }
+  if (lod) placeLabels(d, v);
+}
+// Each procedure's title and step count, and the name of each party, in
+// screen-sized text over the diagram.
+function zoomedOutLabels(scene, delta) {
+  const box = el("div", "md-labels");
+  box.setAttribute("aria-hidden", "true");
+  box.hidden = true;
+  const touched = new Set(delta ? [...delta.added, ...delta.changed] : []);
+  for (const n of scene.nodes) {
+    if (n.shape === "frame") {
+      const steps = scene.nodes.filter((x) => x.parent === n.id && x.shape !== "initial" && x.shape !== "final");
+      const label = el("div", "md-lod-frame" + (steps.some((x) => touched.has(x.id)) ? " changed" : ""));
+      label.append(el("strong", "", n.title || n.name), el("span", "", plural(steps.length, "step")));
+      label.dataset.id = n.id;
+      box.append(label);
+    } else if (!n.parent) {
+      const label = el("div", "md-lod-leaf", nameOf(n));
+      label.dataset.id = n.id;
+      box.append(label);
+    }
+  }
+  return box;
+}
+function placeLabels(d, v) {
+  for (const label of d.labels.children) {
+    const n = d.nodes.get(label.dataset.id), x = v.x + n.x * v.k, y = v.y + n.y * v.k, w = n.w * v.k;
+    // A frame's label fills its top; a party's sits under it.
+    label.style.transform = label.classList.contains("md-lod-frame")
+      ? "translate(" + x + "px," + y + "px)" : "translate(" + (x + w / 2) + "px," + (y + n.h * v.k + 3) + "px) translateX(-50%)";
+    if (label.classList.contains("md-lod-frame")) label.style.width = w + "px";
+  }
 }
 function zoom(f, cx, cy) {
   const v = state.viewport, box = document.getElementById("canvas").getBoundingClientRect();
@@ -937,12 +1024,14 @@ function zoom(f, cx, cy) {
 function related(id) {
   const scene = state.drawn.scene, up = (x) => state.drawn.nodes.get(x).parent;
   const within = (x) => { for (let p = x; p; p = up(p)) if (p === id) return true; return false; };
-  const nodes = new Set([id]), edges = new Set();
+  const nodes = new Set([id]), edges = new Set(), out = new Set();
   for (const e of scene.edges) {
-    if (within(e.s) || within(e.t)) { edges.add(e.id); nodes.add(e.s); nodes.add(e.t); }
+    const from = within(e.s), to = within(e.t);
+    if (from || to) { edges.add(e.id); nodes.add(e.s); nodes.add(e.t); }
+    if (from !== to) out.add(e.id);
   }
   for (const n of scene.nodes) if (within(n.id)) nodes.add(n.id);
-  return { nodes, edges };
+  return { nodes, edges, out };
 }
 // The procedure frame a step sits in, or the element itself.
 function scopeOf(id) {
@@ -957,7 +1046,7 @@ function applyFocus() {
   if (d.svg) {
     const sel = d.nodes.has(state.selected) ? state.selected : null;
     const r = sel ? related(scopeOf(sel)) : null;
-    const hot = new Set(d.scene.edges.filter((e) => [e.s, e.t].some((x) => x && (x === sel || x === state.hover))).map((e) => e.id));
+    const hot = new Set([sel, d.nodes.has(state.hover) ? state.hover : null].flatMap((x) => x ? [...related(x).out] : []));
     d.svg.classList.toggle("md-focus", Boolean(r));
     for (const g of d.world.querySelectorAll(".md-node")) {
       g.classList.toggle("lit", Boolean(r && r.nodes.has(g.dataset.id)));
@@ -1587,7 +1676,8 @@ canvas.addEventListener("pointercancel", (e) => { release(e); press = null; });
 canvas.addEventListener("click", (e) => {
   const g = !panned && e.target.closest(".md-node");
   panned = false;
-  if (g) select(g.dataset.id, false);
+  // Zoomed out, a click also frames what it selects, to read it.
+  if (g) select(g.dataset.id, state.drawn.lod);
 });
 // Safari pinches with gesture events rather than ctrl + wheel.
 let gesture = 1;
@@ -1602,7 +1692,7 @@ function hover(id) {
   if (id !== state.hover) { state.hover = id; applyFocus(); }
 }
 canvas.addEventListener("pointerover", (e) => {
-  const g = e.target.closest(".md-node.leaf");
+  const g = e.target.closest(state.drawn && state.drawn.lod ? ".md-node.leaf, .md-node.frame" : ".md-node.leaf");
   hover(g ? g.dataset.id : null);
 });
 canvas.addEventListener("pointerleave", () => hover(null));
@@ -1645,9 +1735,9 @@ split.addEventListener("pointermove", (e) => {
   sheet.style.maxHeight = "none";
 });
 for (const type of ["pointerup", "pointercancel", "lostpointercapture"]) {
-  split.addEventListener(type, () => { if (split.dataset.drag) { delete split.dataset.drag; fit(); } });
+  split.addEventListener(type, () => { if (split.dataset.drag) { delete split.dataset.drag; refit(); } });
 }
-window.addEventListener("resize", () => { if (state.tab === "diagrams") fit(); });
+window.addEventListener("resize", () => { if (state.tab === "diagrams") refit(); });
 window.addEventListener("hashchange", follow);
 follow();
 </script>
