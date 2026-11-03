@@ -13,6 +13,15 @@ export async function readVersions(outDir: string): Promise<VersionEntry[]> {
   }
 }
 
+/** A kept version's inference.json, parsed; null when absent or unreadable. */
+export async function readInference(dir: string): Promise<unknown> {
+  try {
+    return JSON.parse(await readFile(join(dir, "inference.json"), "utf8"));
+  } catch {
+    return null;
+  }
+}
+
 /** A kept version's exported files by name (other files, such as a .DS_Store
  * left by a file browser, are not part of it). */
 export async function versionFiles(
@@ -43,5 +52,6 @@ export const exportFiles = {
   mkdir,
   writeFile,
   readVersions,
+  readInference,
   versionFiles,
 };

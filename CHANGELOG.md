@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+The snapshot schema and the inference contract (`openclaw-inference/1`) are
+unchanged: every new field is optional, so older exports, `inference.json` files
+and `versions.json` entries still read.
+
 - **Viewer data tells the truth.** Each version says whether its model checks
   ran (`verified`, `not-run`, `failed`, `unrecorded`, with the export's recovery
   and the failed inferences), whether its configuration, its inference or only
@@ -20,6 +24,32 @@
 - **APE findings name their related agents.** `findings.json` rows of
   `APE_LINK_CYCLE` and `APE_GRANT_WIDENS_PARENT` carry an optional sorted
   `related` list of `agent:<id>`; older versions read as before.
+- **Reach view.** Who can reach whom: agents with their posture, delegation as
+  one edge per pair (double-ended when both ways), hooks as nodes, the messaging
+  policy as a block. It has its own layout; System keeps its first layer.
+- **Hook mappings in System**, in a group of their own with an edge to the agent
+  each starts, dashed when the agent is absent.
+- **Posture.** One helper states where exec runs, network, workspace access,
+  external binds and elevated, in System, Overview, Tools and Reach. A host exec
+  policy is never attached to an exec that runs in the sandbox.
+- **Exported facts shown.** The Overview totals name the SysML they rest on;
+  fallback models, inferred role, task model and delivery are attributes;
+  `ScheduledCase` emits `primaryModel`; Overview rows carry `figures`; display
+  names are the readable names on blocks.
+- **Tools matrix data.** Built-in tools sit in the capability groups of the
+  recorded OpenClaw version, rows state their holder count and groups a host
+  marker; plugin profiles and MCP OAuth and filters are attributes.
+- **Behaviour.** A list of procedures with trigger and step count; the agent's
+  authority (where exec runs, ask policy, outbound tools) on each rule.
+- **`PROSE_NOT_ENFORCED`.** A new warning: an inferred exec prohibition or
+  constraint that the configuration does not enforce. It needs inference; a rule
+  now carries an optional `concern` (`exec`), and `OpenClawInferred` gains an
+  `InferredConcern` part for it.
+- **Stable inference.** An agent keeps its earlier inference when what the model
+  is sent is unchanged; `versions.json` says how many agents (`inferred.reused`)
+  and each version records the plugin version and a digest of the shipped
+  shapes.
+- `UNRESOLVED_AGENT_REFERENCE` messages name the absent agent.
 
 ## 0.2.0 — 2026-11-03
 

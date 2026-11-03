@@ -1,8 +1,16 @@
 import { name } from "./sysml-name.ts";
 import { elementId } from "./element-id.ts";
 import { type Grant, grants, ORIGINS } from "../openclaw/tool-grants.ts";
+import { capabilityGroups } from "../openclaw/policy.ts";
 import type { Inference } from "./inference.ts";
-import type { Agent, Snapshot } from "./snapshot.ts";
+import {
+  type Authority,
+  authority,
+  authorityAttributes,
+  postureAttributes,
+  runsOn,
+} from "./posture.ts";
+import type { Agent, Cron, Snapshot } from "./snapshot.ts";
 
 /** Diagram model of one version: the viewer's views (Overview, System, Tools,
  * Scheduled tasks and, with inference, one Behaviour view per agent) as nodes
@@ -39,6 +47,20 @@ export interface SysmlRef {
   file: string;
   qname: string;
 }
+/** A count that an Overview row states, for the page to align and annotate. */
+export interface Figure {
+  /** The number to align: a count, or the enabled count when `of` is given.
+   * Absent when the figure only splits (context). */
+  n?: number;
+  /** The count it is out of. */
+  of?: number;
+  /** Its split, in order: tools by origin, channel accounts by channel. */
+  parts?: [label: string, n: number][];
+  /** What the count stands for, for a tooltip: the fallback models. */
+  names?: string[];
+  /** Codes for glyphs: what memory holds (`search`, `curated`, `daily`). */
+  flags?: string[];
+}
 export interface DiagramNode {
   id: string;
   parent: string | null;
@@ -48,11 +70,14 @@ export interface DiagramNode {
   /** Declared name (without quotes), or a group's label. */
   name: string;
   type: string | null;
-  /** A step's or decision's text; an agent's display name. */
+  /** A step's or decision's text; the display name of an agent, a task or a
+   * hook, which reads better than its declared name. */
   text: string | null;
   compartments: Compartment[];
   /** Shown by the inspector, in order. */
   attributes: [string, string][];
+  /** An Overview row's counts by column, beside the text the table shows. */
+  figures?: Record<string, Figure>;
   sysml: SysmlRef[];
   /** Disabled, or an unresolved reference. */
   muted: boolean;
@@ -67,13 +92,20 @@ export type EdgeKind =
   | "owner"
   | "target"
   /** A tool allocated to an agent: its grants, on one layer or both. */
-  | "grant";
+  | "grant"
+  /** An agent that may delegate to another (a `DelegationRule`). */
+  | "delegation"
+  /** A hook that starts an agent. */
+  | "trigger";
 export interface DiagramEdge {
   id: string;
   kind: EdgeKind;
   source: string;
   target: string;
   label: string | null;
+  /** A delegation edge that stands for both directions: the rule exists from
+   * `source` to `target` and from `target` to `source`. */
+  mutual?: true;
   /** Shown by the inspector, in order. */
   attributes: [string, string][];
   sysml: SysmlRef[];
@@ -89,6 +121,10 @@ export interface WeekRow {
   enabled: boolean;
   /** A cron schedule's time zone; null for the gateway host's. */
   zone: string | null;
+  /** The task's own model, or null. */
+  model: string | null;
+  /** Status of its last run (runtime state, not configuration), or null. */
+  lastRun: string | null;
   /** [hour of the week from Monday 00:00, times it fires in that hour], or
    * null unless it repeats weekly (see `cronWeek`). */
   fires: [number, number][] | null;
@@ -119,6 +155,14 @@ export type ViewTable =
     derived: boolean;
   }
   | { kind: "week"; rows: WeekRow[] };
+/** A procedure of a Behaviour view, listed beside its drawing. */
+export interface ProcedureItem {
+  /** The id of its frame, which the page frames. */
+  id: string;
+  title: string;
+  trigger: string;
+  steps: number;
+}
 export interface DiagramView {
   id: string;
   title: string;
@@ -126,7 +170,15 @@ export interface DiagramView {
   nodes: DiagramNode[];
   edges: DiagramEdge[];
   table: ViewTable | null;
+  /** A Behaviour view's procedures, in drawing order. */
+  procedures?: ProcedureItem[];
+  /** A Behaviour view's agent: what its configuration lets it do. */
+  authority?: Authority;
 }
+
+/** Attribute names that state runtime state, not configuration: the inspector
+ * shows them, but a change in them is not a change of the element. */
+export const RUNTIME_ATTRIBUTES: readonly string[] = ["last run"];
 
 export const INSTANCE_FILE = "OpenClawInstance.sysml";
 export const INFERRED_FILE = "OpenClawInferred.sysml";
@@ -183,6 +235,21 @@ function node(
 }
 const quoted = (v: string) => JSON.stringify(v);
 const list = (values: string[]) => values.length ? values.join(", ") : "none";
+/** Capability groups of the built-in tools, those that reach furthest first
+ * (OpenClaw's hardened baseline denies automation, runtime, fs and sessions). */
+const CAPABILITY_ORDER = [
+  "runtime",
+  "fs",
+  "automation",
+  "sessions",
+  "messaging",
+  "nodes",
+  "web",
+  "memory",
+  "ui",
+  "agents",
+  "media",
+];
 const ORIGIN_LABEL = {
   builtin: "built-in",
   plugin: "plugin",
@@ -331,6 +398,7 @@ function agentBlock(a: Agent, granted: Grant[]): DiagramNode {
     keyword: "part",
     name: `agent_${a.id}`,
     type: `Agent_${a.id}`,
+    text: a.name,
     compartments: [
       {
         title: "attributes",
@@ -361,10 +429,7 @@ function agentBlock(a: Agent, granted: Grant[]): DiagramNode {
       ["primaryModel", a.model.primary ?? "—"],
       ["fallbackModels", list(a.model.fallbacks)],
       ["sandbox", a.sandbox.mode],
-      [
-        "exec",
-        `${a.execution.effective.security} · ask ${a.execution.effective.ask}`,
-      ],
+      ...postureAttributes(a),
       ["delegates to", list(a.delegation)],
       ["instructions", list(a.workspace.instructions.map((f) => f.path))],
       ["skills", list(skills)],
@@ -386,6 +451,7 @@ function instanceTotals(
 ): DiagramNode {
   const sum = (count: (a: Inference["agents"][number]) => number) =>
     inference!.agents.reduce((n, a) => n + count(a), 0);
+  const sandboxed = s.agents.filter((a) => a.sandbox.mode !== "off");
   return node({
     id: elementId("instance"),
     shape: "block",
@@ -407,6 +473,9 @@ function instanceTotals(
         ] as [string, string]]
         : []),
       ["channel accounts", enabledOf(s.accounts.map((a) => a.enabled))],
+      ...(s.hooks.length
+        ? [["hook mappings", String(s.hooks.length)] as [string, string]]
+        : []),
       [
         "scheduled tasks",
         enabledOf([
@@ -416,6 +485,14 @@ function instanceTotals(
           ...s.cron.map((j) => j.enabled),
         ]),
       ],
+      ...(sandboxed.length
+        ? [[
+          "elevated exec",
+          `${
+            sandboxed.filter((a) => a.execution.elevated).length
+          } of ${sandboxed.length} sandboxed`,
+        ] as [string, string]]
+        : []),
       ...(inference
         ? [[
           "inferred",
@@ -426,16 +503,19 @@ function instanceTotals(
         ] as [string, string]]
         : []),
     ],
+    // What the instance-level findings stand on: the inventory, the policies
+    // and the providers that no agent row names.
+    sysml: [
+      inst("inventory"),
+      inst("Authority", "messaging"),
+      ...(s.execApprovals ? [inst("Authority", "execApprovals")] : []),
+      inst("Context", "memoryBackend"),
+      ...s.providers.map((p) => inst("Operators", name("provider", p.id))),
+    ],
   });
 }
 const inferredText = (procedures: number, rules: number) =>
   `${plural(procedures, "procedure")} · ${plural(rules, "rule")}`;
-
-const RUNS_ON = {
-  off: "host",
-  all: "sandbox",
-  "non-main": "sandbox, except the main session",
-} as const;
 
 /** The instance at a glance: one row per agent summing up what the other
  * views show of it, each naming the declarations it sums up, and the
@@ -466,7 +546,13 @@ function overviewView(
     inference?.agents.find((x) => x.agentId === agentId);
   const rows = agents.map((a) => {
     const id = elementId("agent", a.id), inferred = inferredOf(a.id);
-    const accounts = bound(a.id);
+    const accounts = bound(a.id), tasks = cases(a.id);
+    const hooks = s.hooks.filter((h) => h.agentId === a.id);
+    const mine = granted.get(a.id)!, origins = toolsByOrigin(mine);
+    const channels = new Map<string, number>();
+    for (const { account } of accounts) {
+      channels.set(account.channel, (channels.get(account.channel) ?? 0) + 1);
+    }
     return node({
       id,
       shape: "block",
@@ -484,8 +570,8 @@ function overviewView(
               : []),
           ].join(" · "),
         ],
-        ["runs on", RUNS_ON[a.sandbox.mode]],
-        ["tools", toolCount(granted.get(a.id)!)],
+        ["runs on", runsOn(a)],
+        ["tools", toolCount(mine)],
         [
           "channels",
           list(
@@ -494,7 +580,7 @@ function overviewView(
             ),
           ),
         ],
-        ["scheduled tasks", enabledOf(cases(a.id).map((c) => c.enabled))],
+        ["scheduled tasks", enabledOf(tasks.map((c) => c.enabled))],
         [
           "context",
           `${plural(a.workspace.instructions.length, "instruction")} · ${
@@ -502,12 +588,49 @@ function overviewView(
           } · memory ${memoryText(a)}`,
         ],
         ...(inferred
-          ? [[
-            "inferred",
-            inferredText(inferred.procedures.length, inferred.rules.length),
-          ] as [string, string]]
+          ? [
+            [
+              "inferred",
+              inferredText(inferred.procedures.length, inferred.rules.length),
+            ] as [string, string],
+            ["inferred role", inferred.role] as [string, string],
+          ]
           : []),
+        ...(a.model.fallbacks.length
+          ? [["fallback models", list(a.model.fallbacks)] as [string, string]]
+          : []),
+        ...postureAttributes(a),
       ],
+      figures: {
+        model: { n: a.model.fallbacks.length, names: a.model.fallbacks },
+        tools: {
+          n: origins.reduce((sum, [, ids]) => sum + ids.length, 0),
+          parts: origins.map(([origin, ids]) => [origin, ids.length]),
+        },
+        channels: {
+          n: accounts.filter(({ account }) => account.enabled).length,
+          of: accounts.length,
+          parts: [...channels],
+        },
+        "scheduled tasks": {
+          n: tasks.filter((c) => c.enabled).length,
+          of: tasks.length,
+        },
+        context: {
+          parts: [
+            ["instructions", a.workspace.instructions.length],
+            ["skills", a.workspace.skills.length],
+            ["daily notes", a.memory.daily.count],
+          ],
+          flags: [
+            ...(a.memory.search.enabled ? ["search"] : []),
+            ...(a.workspace.instructions.some((f) => f.path === "MEMORY.md")
+              ? ["curated"]
+              : []),
+            ...(a.memory.daily.count ? ["daily"] : []),
+          ],
+        },
+      },
       sysml: [
         inst("Operators", name("Agent", a.id)),
         inst("Operators", name("agent", a.id)),
@@ -515,7 +638,8 @@ function overviewView(
           inst("Entries", name("binding", binding.id)),
           inst("Entries", name("account", account.id)),
         ]),
-        ...cases(a.id).map((c) => c.ref),
+        ...hooks.map((h) => inst("Entries", name("hook", h.id))),
+        ...tasks.map((c) => c.ref),
       ],
     });
   });
@@ -553,6 +677,80 @@ function overviewView(
       derived: true,
     },
   };
+}
+
+/** An agent id that no agent of the instance has, drawn as a dashed reference. */
+function missingAgent(id: string): DiagramNode {
+  return node({
+    id: elementId("agent", id),
+    shape: "block",
+    keyword: "ref part",
+    name: id,
+    compartments: [{ title: "unresolved", rows: ["no agent with this id"] }],
+    attributes: [["targetAgent", id], ["agent", "not in this instance"]],
+    muted: true,
+    dashed: true,
+  });
+}
+
+/** The hook mappings: a block per hook and an edge from it to the agent it
+ * starts, or to a dashed reference when the instance has no such agent. A
+ * hook delivers to a channel but is not part of one. */
+function hookParts(s: Snapshot, known: Set<string>, parent: string | null) {
+  const nodes: DiagramNode[] = [], edges: DiagramEdge[] = [];
+  const absent = new Set<string>();
+  for (const h of s.hooks) {
+    const id = elementId("hook", h.id),
+      ref = inst("Entries", name("hook", h.id));
+    nodes.push(node({
+      id,
+      parent,
+      shape: "block",
+      keyword: "part",
+      name: `hook_${h.id}`,
+      type: "ExternalTrigger",
+      text: h.name,
+      compartments: [{
+        title: "attributes",
+        rows: [
+          `name = ${quoted(h.name)}`,
+          ...(h.channel ? [`deliveryChannel = ${quoted(h.channel)}`] : []),
+        ],
+      }],
+      attributes: [
+        ["name", h.name],
+        ["target agent", h.agentId],
+        ["delivery channel", h.channel ?? "last (default)"],
+        ...(h.template
+          ? [
+            [
+              "message template",
+              `${h.template.path} · ${h.template.bytes} bytes`,
+            ] as [
+              string,
+              string,
+            ],
+          ]
+          : []),
+      ],
+      sysml: [ref],
+    }));
+    const resolved = known.has(h.agentId);
+    if (!resolved && !absent.has(h.agentId)) {
+      absent.add(h.agentId);
+      nodes.push(missingAgent(h.agentId));
+    }
+    edges.push({
+      id: `trigger:${h.id}`,
+      kind: resolved ? "trigger" : "target",
+      source: id,
+      target: elementId("agent", h.agentId),
+      label: null,
+      attributes: [],
+      sysml: [ref],
+    });
+  }
+  return { nodes, edges };
 }
 
 function systemView(s: Snapshot, granted: Map<string, Grant[]>): DiagramView {
@@ -608,6 +806,20 @@ function systemView(s: Snapshot, granted: Map<string, Grant[]>): DiagramView {
       attributes: [],
       sysml: [inst("Entries", name("binding", b.id))],
     }));
+  if (s.hooks.length) {
+    nodes.push(node({
+      id: elementId("hooks"),
+      shape: "group",
+      name: "hook mappings",
+    }));
+    const hooks = hookParts(
+      s,
+      new Set(s.agents.map((a) => a.id)),
+      elementId("hooks"),
+    );
+    nodes.push(...hooks.nodes);
+    edges.push(...hooks.edges);
+  }
   return {
     id: "system",
     title: "System",
@@ -648,6 +860,7 @@ function toolsView(s: Snapshot, granted: Map<string, Grant[]>): DiagramView {
         ["displayName", a.name],
         ["host grants", String(count("host"))],
         ["sandbox grants", String(count("sandbox"))],
+        ...postureAttributes(a),
       ],
       sysml: [inst("Operators", name("Agent", a.id))],
     });
@@ -663,6 +876,11 @@ function toolsView(s: Snapshot, granted: Map<string, Grant[]>): DiagramView {
   };
   const tool = (t: Grant["tool"], parent: string) => {
     const byAgent = holders.get(t.key)!;
+    const server = t.origin === "mcp"
+      ? s.mcpServers.find((m) => m.id === t.provider)
+      : undefined;
+    const exposed = (names: string[]) =>
+      names.map((n) => `${server!.toolPrefix}__${n}`).join(", ");
     rows.push(node({
       id: elementId("tool", t.key),
       parent,
@@ -674,6 +892,19 @@ function toolsView(s: Snapshot, granted: Map<string, Grant[]>): DiagramView {
         ["origin", t.origin],
         ["provider", t.provider ?? "—"],
         ["optional", String(t.optional)],
+        // The grant stays the whole server's: a filter narrows what it exposes.
+        ...(server?.toolFilter.include.length
+          ? [["exposed", exposed(server.toolFilter.include)] as [
+            string,
+            string,
+          ]]
+          : []),
+        ...(server?.toolFilter.exclude.length
+          ? [["excluded", exposed(server.toolFilter.exclude)] as [
+            string,
+            string,
+          ]]
+          : []),
         ...agents.filter((a) => byAgent.has(a.id)).map((a) =>
           [`grant ${a.id}`, layersOf(byAgent.get(a.id)!).join(", ")] as [
             string,
@@ -716,8 +947,32 @@ function toolsView(s: Snapshot, granted: Map<string, Grant[]>): DiagramView {
       t.origin === origin && (provider === undefined || t.provider === provider)
     );
   if (of("builtin").length) {
-    const g = group("builtin");
-    for (const t of of("builtin")) tool(t, g);
+    const g = group("builtin"), left = new Set(of("builtin"));
+    // Built-in tools by the capability groups their OpenClaw version names,
+    // the ones that reach furthest first; a tool joins the first group naming it.
+    const named = new Map(capabilityGroups(s.openclawVersion));
+    const names = [
+      ...CAPABILITY_ORDER.filter((n) => named.has(`group:${n}`)),
+      ...[...named.keys()].map((k) => k.slice(6)).filter((n) =>
+        !CAPABILITY_ORDER.includes(n)
+      ),
+      "other",
+    ];
+    for (const n of names) {
+      const members = named.get(`group:${n}`);
+      const here = of("builtin").filter((t) =>
+        left.has(t) && (members ? members.includes(t.toolId) : true)
+      );
+      if (!here.length) continue;
+      const id = elementId("capability", n);
+      rows.push(
+        node({ id, parent: g, shape: "group", name: `capability = ${n}` }),
+      );
+      for (const t of here) {
+        left.delete(t);
+        tool(t, id);
+      }
+    }
   }
   if (s.plugins?.length) {
     const g = group("plugin");
@@ -735,6 +990,13 @@ function toolsView(s: Snapshot, granted: Map<string, Grant[]>): DiagramView {
           ["enabled", String(p.enabled)],
           ["tools", list(p.tools)],
           ["optionalTools", list(p.optionalTools)],
+          ...(p.toolProfiles.length
+            ? [[
+              "toolProfiles",
+              p.toolProfiles.map((t) => `${t.id}: ${t.profiles.join(", ")}`)
+                .join("; "),
+            ] as [string, string]]
+            : []),
         ],
         sysml: [inst("Tools", name("plugin", p.id))],
         muted: !p.enabled,
@@ -759,6 +1021,16 @@ function toolsView(s: Snapshot, granted: Map<string, Grant[]>): DiagramView {
           ["toolPrefix", m.toolPrefix],
           ["enabled", String(m.enabled)],
           ["transport", m.transport],
+          ["oauth", String(m.oauth)],
+          ...(m.oauthIdentity
+            ? [["oauthIdentity", m.oauthIdentity] as [string, string]]
+            : []),
+          ...(m.toolFilter.include.length
+            ? [["toolInclude", list(m.toolFilter.include)] as [string, string]]
+            : []),
+          ...(m.toolFilter.exclude.length
+            ? [["toolExclude", list(m.toolFilter.exclude)] as [string, string]]
+            : []),
         ],
         sysml: [inst("Tools", name("mcp", m.id))],
         muted: !m.enabled,
@@ -785,6 +1057,14 @@ function toolsView(s: Snapshot, granted: Map<string, Grant[]>): DiagramView {
       cells: ids(cells),
     },
   };
+}
+
+/** Where a task's result goes: its mode and the channel, with the account. */
+function deliveryText(d: Cron["delivery"]): string {
+  const channel = d.channel && d.accountId
+    ? `${d.channel}:${d.accountId}`
+    : d.channel;
+  return [d.mode, channel].filter(Boolean).join(" · ") || "—";
 }
 
 function schedulesView(s: Snapshot): DiagramView | null {
@@ -839,6 +1119,8 @@ function schedulesView(s: Snapshot): DiagramView | null {
       when: scheduleText("every", null, a.heartbeat.everyMs) ?? "never",
       enabled: a.heartbeat.everyMs > 0,
       zone: null,
+      model: null,
+      lastRun: null,
       fires: null,
       everyMs: a.heartbeat.everyMs > 0 ? a.heartbeat.everyMs : null,
     });
@@ -856,6 +1138,7 @@ function schedulesView(s: Snapshot): DiagramView | null {
       keyword: "part",
       name: `cron_${j.id}`,
       type: "ScheduledCase",
+      text: j.name,
       compartments: [{
         title: "attributes",
         rows: [
@@ -872,6 +1155,8 @@ function schedulesView(s: Snapshot): DiagramView | null {
         ["envelope", "deterministic"],
         ...(words ? [["in words", words] as [string, string]] : []),
         ["targetAgent", j.agentId ?? "—"],
+        ["primaryModel", j.model ?? "—"],
+        ["delivery", deliveryText(j.delivery)],
         ["session", j.sessionTarget],
         ["wake mode", j.wakeMode],
         ["payload", j.payloadKind],
@@ -887,6 +1172,8 @@ function schedulesView(s: Snapshot): DiagramView | null {
       when: words ?? raw,
       enabled: j.enabled,
       zone: sc.kind === "cron" ? sc.timezone : null,
+      model: j.model,
+      lastRun: j.runtime.lastRunStatus,
       fires: sc.kind === "cron" ? cronWeek(sc.expression ?? "") : null,
       everyMs: sc.kind === "every" ? sc.everyMs : null,
     });
@@ -903,6 +1190,7 @@ function schedulesView(s: Snapshot): DiagramView | null {
           keyword: "part",
           name: `agent_${id}`,
           type: `Agent_${id}`,
+          text: a.name,
           compartments: [{
             title: "attributes",
             rows: [`displayName = ${quoted(a.name)}`],
@@ -910,19 +1198,7 @@ function schedulesView(s: Snapshot): DiagramView | null {
           attributes: [["displayName", a.name]],
           sysml: [inst("Operators", name("agent", id))],
         })
-        : node({
-          id: elementId("agent", id),
-          shape: "block",
-          keyword: "ref part",
-          name: id,
-          compartments: [{
-            title: "unresolved",
-            rows: ["no agent with this id"],
-          }],
-          attributes: [["targetAgent", id], ["agent", "not in this instance"]],
-          muted: true,
-          dashed: true,
-        }),
+        : missingAgent(id),
     );
   }
   return {
@@ -1039,6 +1315,7 @@ function behaviourView(
         }),
     );
   }
+  const auth = authority(agent);
   for (const r of inference.rules) {
     const rule = flowName(agent.id, r.id);
     nodes.push(node({
@@ -1050,6 +1327,8 @@ function behaviourView(
         ["kind", r.kind],
         ["text", r.text],
         ["source", cite(r.source)],
+        ...(r.concern ? [["concern", r.concern] as [string, string]] : []),
+        ...authorityAttributes(auth),
       ],
       sysml: [inferred(rule)],
     }));
@@ -1060,6 +1339,13 @@ function behaviourView(
     group: "Behaviour",
     nodes,
     edges,
+    procedures: inference.procedures.map((p) => ({
+      id: `procedure:${p.id}`,
+      title: p.title,
+      trigger: p.trigger,
+      steps: p.steps.length,
+    })),
+    authority: auth,
     table: inference.rules.length
       ? {
         kind: "elements",
@@ -1087,6 +1373,127 @@ function succession(source: string, target: string): DiagramEdge {
   };
 }
 
+/** Who can reach whom: the agents with their posture, the delegation between
+ * them (one double-ended edge for a pair that delegates both ways), the hooks
+ * that start them, and the instance-wide messaging policy as a block of its
+ * own. A view of its own, not part of System, whose agents are all in the
+ * first layer. Null when nothing links an agent to anything. */
+function reachView(s: Snapshot): DiagramView | null {
+  const agents = byId(s.agents), known = new Set(agents.map((a) => a.id));
+  const wants = new Map(agents.map((a) => [
+    a.id,
+    new Set(a.delegation.filter((t) => t !== a.id && known.has(t))),
+  ]));
+  const rule = (from: string, to: string) =>
+    inst("Authority", name("delegation", `${from}:${to}`));
+  const edges: DiagramEdge[] = [];
+  for (const a of agents) {
+    for (const to of [...wants.get(a.id)!].sort()) {
+      const both = wants.get(to)!.has(a.id);
+      if (both && to < a.id) continue;
+      edges.push({
+        id: elementId("delegation", a.id, to),
+        kind: "delegation",
+        source: elementId("agent", a.id),
+        target: elementId("agent", to),
+        label: null,
+        ...(both ? { mutual: true as const } : {}),
+        attributes: [
+          ["from", a.id],
+          ["to", to],
+          ...(both ? [["both ways", "yes"] as [string, string]] : []),
+        ],
+        sysml: [rule(a.id, to), ...(both ? [rule(to, a.id)] : [])],
+      });
+    }
+  }
+  const nodes = agents.map((a) => {
+    const channels = s.bindings.filter((b) => b.agentId === a.id).length;
+    const tasks = (a.heartbeat ? 1 : 0) +
+      s.cron.filter((j) => j.agentId === a.id).length;
+    const hooks = s.hooks.filter((h) => h.agentId === a.id).length;
+    const unknown = a.delegation.filter((t) =>
+      t !== "*" && t !== a.id && !known.has(t)
+    );
+    const delegatedBy = agents.filter((x) => wants.get(x.id)!.has(a.id))
+      .map((x) => x.id);
+    return node({
+      id: elementId("agent", a.id),
+      shape: "block",
+      keyword: "part",
+      name: `agent_${a.id}`,
+      type: `Agent_${a.id}`,
+      text: a.name,
+      compartments: [
+        {
+          title: "posture",
+          rows: postureAttributes(a).map(([k, v]) => `${k}: ${v}`),
+        },
+        {
+          title: "inputs",
+          rows: [`${plural(channels, "channel")} · ${plural(tasks, "task")}`],
+        },
+        ...(a.delegation.includes("*") || unknown.length
+          ? [{
+            title: "delegates to",
+            rows: [
+              ...(a.delegation.includes("*") ? ["any agent (*)"] : []),
+              ...(unknown.length ? [`unknown: ${unknown.join(", ")}`] : []),
+            ],
+          }]
+          : []),
+      ],
+      attributes: [
+        ["id", a.id],
+        ["displayName", a.name],
+        ...postureAttributes(a),
+        ["delegates to", list(a.delegation.filter((t) => t !== a.id))],
+        ["delegated by", list(delegatedBy)],
+        ["channels", String(channels)],
+        ["scheduled tasks", String(tasks)],
+        ["hooks", String(hooks)],
+      ],
+      sysml: [
+        inst("Operators", name("Agent", a.id)),
+        inst("Operators", name("agent", a.id)),
+        inst("Authority", name("delegationPolicy", a.id)),
+      ],
+    });
+  });
+  const hooks = hookParts(s, known, null);
+  const messaging = s.messaging.enabled
+    ? [node({
+      id: elementId("messaging"),
+      shape: "block",
+      keyword: "part",
+      name: "messaging",
+      type: "MessagingPolicy",
+      compartments: [{
+        title: "attributes",
+        rows: [`allowedTargets = ${list(s.messaging.allowedTargets)}`],
+      }],
+      attributes: [
+        ["enabled", "true"],
+        ["allowedTargets", list(s.messaging.allowedTargets)],
+        ["scope", "instance-wide"],
+      ],
+      sysml: [inst("Authority", "messaging")],
+    })]
+    : [];
+  const wildcard = agents.some((a) => a.delegation.includes("*"));
+  if (!edges.length && !hooks.nodes.length && !messaging.length && !wildcard) {
+    return null;
+  }
+  return {
+    id: "reach",
+    title: "Reach",
+    group: "Structure",
+    nodes: [...nodes, ...hooks.nodes, ...messaging],
+    edges: [...edges, ...hooks.edges],
+    table: null,
+  };
+}
+
 /** The views of one version, in picker order, the Overview first. Behaviour
  * views exist only with inference, one per agent with at least one procedure
  * or rule. */
@@ -1097,7 +1504,10 @@ export function diagramViews(
   const granted = new Map(
     snapshot.agents.map((a) => [a.id, grants(snapshot, a)]),
   );
-  const views = [systemView(snapshot, granted), toolsView(snapshot, granted)];
+  const views = [systemView(snapshot, granted)];
+  const reach = reachView(snapshot);
+  if (reach) views.push(reach);
+  views.push(toolsView(snapshot, granted));
   const cases = schedulesView(snapshot);
   if (cases) views.push(cases);
   const inferred = [...inference?.agents ?? []].sort((a, b) =>

@@ -3,6 +3,7 @@ import type { Complete } from "../application/export/export-instance.ts";
 import { collect } from "../adapters/out/openclaw/collector.ts";
 import * as instructions from "../adapters/out/openclaw/instruction-reader.ts";
 import { exportFiles } from "../adapters/out/filesystem/export-files.ts";
+import { producer } from "../adapters/out/filesystem/producer.ts";
 import { emit } from "../adapters/out/sysml/emitter.ts";
 import { ASSEMBLY_LIBRARY } from "../adapters/out/sysml/library.ts";
 import { emitInferred } from "../adapters/out/sysml/inferred.ts";
@@ -35,6 +36,7 @@ export function runExport(
       collect,
       serialize: canonical,
       modelError,
+      producer,
       instructions,
       inference: { parse: parseAgentInference },
       sysml: { emit, library: ASSEMBLY_LIBRARY, emitInferred },

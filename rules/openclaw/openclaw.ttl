@@ -147,6 +147,38 @@ SELECT DISTINCT $this WHERE {
   FILTER(?security="full")
 } """ .
 
+oc:PROSE_NOT_ENFORCED0 a sh:NodeShape;
+   sh:targetSubjectsOf ape:agentId;
+   ape:code "PROSE_NOT_ENFORCED";
+   ape:recovery "Set tools.exec.mode to ask or auto, or tighten the execution host's approvals policy, so the configuration holds what the instructions say; or reword the rule.";
+   dct:source "OpenClaw 2026.10.9 docs/tools/exec-approvals.md; rules inferred into OpenClawInferred";
+   sh:sparql oc:PROSE_NOT_ENFORCED0-constraint.
+oc:PROSE_NOT_ENFORCED0-constraint sh:severity sh:Warning;
+   sh:message "The inferred rule {$value} limits exec, but the configuration does not enforce it: exec can run on the host with security full and ask off.";
+   sh:prefixes oc:Prefixes;
+   sh:select """
+SELECT DISTINCT $this ?value WHERE {
+  $this ape:agentId ?agentId;
+  oc:owns ?posture.
+  ?posture oc:kind "OpenClawImport::ExecutionPosture".
+  $this ape:definition ?definition.
+  ?definition oc:owns/oc:assignedValue ?grant.
+  ?grant f:ToolGrant::tool ?tool;
+  f:ToolGrant::layer ?layer.
+  ?tool f:OpenClawTool::toolId "exec".
+  ?posture f:ExecutionPosture::host ?host;
+  f:ExecutionPosture::effectiveSecurity ?security.
+  FILTER(?host="gateway" || (?host="auto" && ?layer="host"))
+?posture f:ExecutionPosture::effectiveAsk "off".
+  FILTER(?security="full")
+?concern oc:kind "OpenClawImport::InferredConcern";
+  f:InferredConcern::agentId ?agentId;
+  f:InferredConcern::topic "exec";
+  f:InferredConcern::ruleKind ?ruleKind;
+  f:InferredConcern::ruleId ?value.
+  FILTER(?ruleKind="prohibition" || ?ruleKind="constraint")
+} """ .
+
 oc:AGENT_WITHOUT_SANDBOX0 a sh:NodeShape;
    sh:targetSubjectsOf ape:agentId;
    ape:code "AGENT_WITHOUT_SANDBOX";
@@ -392,7 +424,7 @@ oc:UNRESOLVED_AGENT_REFERENCE0 a sh:NodeShape;
    dct:source "OpenClaw 2026.10.9 dist/server-cron-DmxBCDVE.mjs resolveCronAgent; dist/zod-schema-2kniG8D0.mjs explicitTargets";
    sh:sparql oc:UNRESOLVED_AGENT_REFERENCE0-constraint.
 oc:UNRESOLVED_AGENT_REFERENCE0-constraint sh:severity sh:Violation;
-   sh:message "The scheduled task targets an absent agent and fails when run.";
+   sh:message "The scheduled task targets the absent agent {$value} and fails when run.";
    sh:prefixes oc:Prefixes;
    sh:select """
 SELECT DISTINCT $this ?value WHERE {
@@ -415,7 +447,7 @@ oc:UNRESOLVED_AGENT_REFERENCE1 a sh:NodeShape;
    dct:source "OpenClaw 2026.10.9 dist/server-cron-DmxBCDVE.mjs resolveCronAgent; dist/zod-schema-2kniG8D0.mjs explicitTargets";
    sh:sparql oc:UNRESOLVED_AGENT_REFERENCE1-constraint.
 oc:UNRESOLVED_AGENT_REFERENCE1-constraint sh:severity sh:Info;
-   sh:message "The disabled task targets an absent agent and will fail if run.";
+   sh:message "The disabled task targets the absent agent {$value} and will fail if run.";
    sh:prefixes oc:Prefixes;
    sh:select """
 SELECT DISTINCT $this ?value WHERE {
@@ -438,7 +470,7 @@ oc:UNRESOLVED_AGENT_REFERENCE2 a sh:NodeShape;
    dct:source "OpenClaw 2026.10.9 dist/server-cron-DmxBCDVE.mjs resolveCronAgent; dist/zod-schema-2kniG8D0.mjs explicitTargets";
    sh:sparql oc:UNRESOLVED_AGENT_REFERENCE2-constraint.
 oc:UNRESOLVED_AGENT_REFERENCE2-constraint sh:severity sh:Info;
-   sh:message "The task targets an absent agent; runtime behavior is unverified for the recorded OpenClaw version.";
+   sh:message "The task targets the absent agent {$value}; runtime behavior is unverified for the recorded OpenClaw version.";
    sh:prefixes oc:Prefixes;
    sh:select """
 SELECT DISTINCT $this ?value WHERE {

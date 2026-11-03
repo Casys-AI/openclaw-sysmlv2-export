@@ -1,6 +1,6 @@
 # OpenClaw model checks
 
-[`openclaw.ttl`](openclaw.ttl) defines 16 OpenClaw configuration checks, with
+[`openclaw.ttl`](openclaw.ttl) defines 17 OpenClaw configuration checks, with
 OpenClaw 2026.10.9 source citations. The shared SHACL engine executes their
 views after the five APE views and evaluates both sets of constraints over the
 compiled SysML graph. See the [APE execution profile](../ape/README.md) and

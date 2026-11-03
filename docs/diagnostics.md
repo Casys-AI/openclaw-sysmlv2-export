@@ -118,7 +118,7 @@ remove the agent.
 
 ## Configuration checks
 
-These 16 checks are defined in
+These 17 checks are defined in
 [`rules/openclaw/openclaw.ttl`](../rules/openclaw/openclaw.ttl). The former
 `CRON_FAILING` check is deliberately dropped: runtime job health is not emitted
 into the model.
@@ -172,6 +172,25 @@ Review or recovery: Use exec mode `ask` or `auto`, or tighten the execution host
 approvals policy.
 
 Source: `docs/tools/exec-approvals.md`.
+
+### `PROSE_NOT_ENFORCED`
+
+Severity: warning. Subject: agent. Only in an export with inference.
+
+The model inferred a prohibition or constraint about running commands (a rule
+with concern `exec`) from the agent's instructions, but exec can run on the host
+with effective security `full` and ask `off`: the configuration does not enforce
+what the prose says. The context names the rule's id. It reuses the reachability
+join of `EXEC_WITHOUT_APPROVAL`, so it only fires for an agent that rule also
+flags. The finding rests on an inferred proposal, which is never admitted; the
+viewer labels it "not enforced by config", not as a contradiction, since the
+agent may still follow its instructions.
+
+Review or recovery: Use exec mode `ask` or `auto`, or tighten the execution host
+approvals policy, so the configuration holds what the instructions say; or
+reword the rule.
+
+Source: `docs/tools/exec-approvals.md`; rules inferred into `OpenClawInferred`.
 
 ### `AGENT_WITHOUT_SANDBOX`
 
@@ -265,9 +284,9 @@ Source: `docs/channels/channel-routing.md`;
 
 Severity: error if enabled on OpenClaw 2026.10; info otherwise. Subject: cron.
 
-A job explicitly targets an absent agent. OpenClaw 2026.10 fails the run. Older
-runtime behavior is unverified. A missing agentId is instead
-`CRON_AGENT_UNRESOLVED`.
+A job explicitly targets an absent agent, which the context names. OpenClaw
+2026.10 fails the run. Older runtime behavior is unverified. A missing agentId
+is instead `CRON_AGENT_UNRESOLVED`.
 
 Review or recovery: Set `agentId` to an existing agent, restore that agent, or
 delete the obsolete task.

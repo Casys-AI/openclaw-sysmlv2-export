@@ -118,19 +118,30 @@ skipped, with the command that installs it.
 and its diagrams are laid out when the export runs. Pick a version, then a view.
 
 - **Overview**, the landing view: one row per agent, with its model, where it
-  runs (host or sandbox), its tools by origin, channel accounts, scheduled
-  tasks, context and inferred behaviour, under the instance's totals. Each row
-  links to the agent in the other views.
+  runs (host or sandbox, and whether elevated exec is configured), its tools by
+  origin, channel accounts, scheduled tasks, context and inferred behaviour,
+  under the instance's totals. Each row links to the agent in the other views.
 - **System**: each agent as a part with its context and granted tools, connected
-  to its channel accounts through its bindings.
+  to its channel accounts through its bindings; hook mappings sit in a group of
+  their own, with an edge to the agent each one starts. An agent's inspector
+  states its isolation: where exec runs, network, workspace access, external
+  binds and elevated.
+- **Reach**: who can reach whom. The agents with their posture, delegation as
+  one edge per pair (a double arrow when both ways), the hooks that start them,
+  and the instance-wide messaging policy.
 - **Tools**: a SysML allocation matrix of the tool catalog, by origin and
-  provider, against the agents. Each cell is a grant, on the host, in the
+  provider, against the agents; built-in tools sit in OpenClaw's capability
+  groups for the recorded version. Each cell is a grant, on the host, in the
   sandbox or both. Groups fold, and a filter narrows the tools.
 - **Scheduled tasks**: cron jobs and heartbeats linked to the agent they wake,
-  above a week strip of the hours each one fires in.
+  above a week strip of the hours each one fires in; a task shows its model,
+  delivery and last run in the inspector.
 - **Behaviour**, with inference: an agent's proposed procedures as action flows,
   with decisions, hand-offs and escalations, and its rules in a requirements
-  table with the lines they come from.
+  table with the lines they come from, read beside what the agent's
+  configuration lets it do. An exec rule that the configuration does not enforce
+  raises `PROSE_NOT_ENFORCED`. A new export reuses an agent's inference when
+  what the model is sent has not changed.
 
 The icon rail on the right opens three panels in a sidebar that you can collapse
 and resize. The Inspector shows the attributes and exact SysML text of the

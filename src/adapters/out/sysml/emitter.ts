@@ -296,6 +296,7 @@ export function emit(snapshot: Snapshot): Map<string, string> {
         kind: "cron",
         displayName: j.name,
         enabled: j.enabled,
+        primaryModel: j.model,
         unresolvedTarget: owner ? null : j.agentId,
       }),
       "attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;",

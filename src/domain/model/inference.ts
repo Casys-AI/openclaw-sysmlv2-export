@@ -35,12 +35,33 @@ export interface Rule {
   text: string;
   kind: "permission" | "constraint" | "prohibition";
   source: Source;
+  /** What the rule is about, when the configuration can enforce it: `exec`
+   * for how the agent may run commands. Absent otherwise, and in files that
+   * predate it. */
+  concern?: "exec";
+}
+/** What the model is sent about an agent, by digest and setting: an inference
+ * can be reused exactly when it is unchanged. */
+export interface InferenceInput {
+  /** Who the model may name as a hand-off target: `id` or `id (name)`. */
+  roster: string[];
+  files: {
+    file: string;
+    sha256: string;
+    schedule?: Cron["schedule"];
+    enabled?: boolean;
+  }[];
 }
 export interface AgentInference {
   agentId: string;
   role: string;
   procedures: Procedure[];
   rules: Rule[];
+  /** What the model was sent; absent in files that predate it. */
+  input?: InferenceInput;
+  /** The version whose run asked the model, kept when a later version reuses
+   * this inference. */
+  inferredIn?: string;
 }
 export interface Inference {
   schema: "openclaw-inference/1";
@@ -114,13 +135,19 @@ export const AGENT_INFERENCE_SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["id", "text", "kind", "source"],
+        required: ["id", "text", "kind", "concern", "source"],
         properties: {
           id: { type: "string", pattern: SLUG },
           text: { type: "string" },
           kind: {
             type: "string",
             enum: ["permission", "constraint", "prohibition"],
+          },
+          concern: {
+            type: ["string", "null"],
+            enum: ["exec", null],
+            description:
+              "exec when the rule limits how the agent may run commands; otherwise null.",
           },
           source: sourceSchema,
         },
@@ -135,6 +162,49 @@ export function cronSources(snapshot: Snapshot, agentId: string): Cron[] {
     job.agentId === agentId && job.payloadKind === "agentTurn" &&
     job.prompt !== null
   );
+}
+
+/** Workspace sources are behavior files: bootstrap-style names (AGENTS.md,
+ * SOUL.md, TOOLS.md…), never the agent's memory or its owner's profile, nor
+ * other notes kept in the workspace. */
+export function behaviourFiles(agent: Agent): FileRef[] {
+  return agent.workspace.instructions.filter((f) =>
+    /^[A-Z_]+\.md$/.test(f.path) && !["MEMORY.md", "USER.md"].includes(f.path)
+  );
+}
+
+/** What the model is sent about an agent, from the collected digests. */
+export function inferenceInput(
+  snapshot: Snapshot,
+  agent: Agent,
+): InferenceInput {
+  return {
+    roster: snapshot.agents.map((a) =>
+      a.name === a.id ? a.id : `${a.id} (${a.name})`
+    ),
+    files: [
+      ...behaviourFiles(agent).map((f) => ({ file: f.path, sha256: f.sha256 })),
+      ...cronSources(snapshot, agent.id).map((job) => ({
+        file: `cron:${job.id}`,
+        sha256: job.prompt!.sha256,
+        schedule: job.schedule,
+        enabled: job.enabled,
+      })),
+      ...(agent.heartbeat?.prompt
+        ? [{
+          file: "heartbeat",
+          sha256: agent.heartbeat.prompt.sha256,
+          schedule: {
+            kind: "every" as const,
+            everyMs: agent.heartbeat.everyMs,
+            expression: null,
+            timezone: null,
+          },
+          enabled: agent.heartbeat.everyMs > 0,
+        }]
+        : []),
+    ],
+  };
 }
 
 /** Stable labels resolve to collected digests, never to prompt bodies. */
@@ -185,6 +255,7 @@ export function inferencePrompt(
     "Extract its procedures as ordered steps, and its rules (permissions, constraints, prohibitions).",
     "For a scheduled task (cron or heartbeat), use its schedule as the procedure trigger, including expression and time zone or interval. Preserve disabled status; a null time zone is unknown, not UTC.",
     "Mark a step as handoff or escalation when work goes to another agent, the owner or the customer, and name that target.",
+    'For a rule that limits how the agent may run commands (the exec tool, a shell, processes), set concern to "exec"; otherwise set it to null.',
     `A target is one of these ids, written without the name in parentheses: ${
       targets.join(", ")
     }. Use null otherwise.`,
@@ -296,6 +367,9 @@ export function parseAgentInference(
           "constraint",
           "prohibition",
         ], "constraint"),
+        // Lenient: an unknown or absent concern is none, not a reason to
+        // drop the agent's whole inference.
+        ...(ro.concern === "exec" ? { concern: "exec" as const } : {}),
         source: source(ro.source, files),
       };
     }),

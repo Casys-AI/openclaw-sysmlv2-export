@@ -389,42 +389,42 @@
   },
   {
     "code": "UNRESOLVED_AGENT_REFERENCE",
-    "context": "The task targets an absent agent; runtime behavior is unverified for the recorded OpenClaw version.",
+    "context": "The task targets the absent agent main; runtime behavior is unverified for the recorded OpenClaw version.",
     "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
     "severity": "info",
     "subject": "cron:job-1"
   },
   {
     "code": "UNRESOLVED_AGENT_REFERENCE",
-    "context": "The task targets an absent agent; runtime behavior is unverified for the recorded OpenClaw version.",
+    "context": "The task targets the absent agent main; runtime behavior is unverified for the recorded OpenClaw version.",
     "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
     "severity": "info",
     "subject": "cron:job-2"
   },
   {
     "code": "UNRESOLVED_AGENT_REFERENCE",
-    "context": "The task targets an absent agent; runtime behavior is unverified for the recorded OpenClaw version.",
+    "context": "The task targets the absent agent main; runtime behavior is unverified for the recorded OpenClaw version.",
     "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
     "severity": "info",
     "subject": "cron:job-3"
   },
   {
     "code": "UNRESOLVED_AGENT_REFERENCE",
-    "context": "The task targets an absent agent; runtime behavior is unverified for the recorded OpenClaw version.",
+    "context": "The task targets the absent agent main; runtime behavior is unverified for the recorded OpenClaw version.",
     "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
     "severity": "info",
     "subject": "cron:job-4"
   },
   {
     "code": "UNRESOLVED_AGENT_REFERENCE",
-    "context": "The task targets an absent agent; runtime behavior is unverified for the recorded OpenClaw version.",
+    "context": "The task targets the absent agent main; runtime behavior is unverified for the recorded OpenClaw version.",
     "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
     "severity": "info",
     "subject": "cron:job-5"
   },
   {
     "code": "UNRESOLVED_AGENT_REFERENCE",
-    "context": "The task targets an absent agent; runtime behavior is unverified for the recorded OpenClaw version.",
+    "context": "The task targets the absent agent main; runtime behavior is unverified for the recorded OpenClaw version.",
     "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
     "severity": "info",
     "subject": "cron:job-6"

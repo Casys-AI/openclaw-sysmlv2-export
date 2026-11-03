@@ -18,6 +18,8 @@ export interface SceneNode {
   type?: string;
   /** A frame's tab width, and a procedure's title and trigger lines. */
   tab?: number;
+  /** A frame's title; on a block, the name to show whole (the display name,
+   * else the declared name) when `name` is cut or differs. */
   title?: string;
   head?: string[];
   comps?: [string, string[]][];
@@ -35,6 +37,8 @@ export interface SceneEdge {
   kind: EdgeKind;
   s: string;
   t: string;
+  /** Delegation both ways: draw an arrowhead at each end. */
+  mutual?: true;
   /** One polyline per section, as [x0, y0, x1, y1, …]. */
   pts: number[][];
   label?: SceneLabel;

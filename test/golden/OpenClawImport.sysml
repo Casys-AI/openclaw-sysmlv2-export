@@ -83,6 +83,7 @@ package OpenClawImport {
         attribute kind : String;
         attribute id : String; attribute displayName : String;
         attribute enabled : Boolean;
+        attribute primaryModel : String [0..1];
         ref part targetAgent : OpenClawAgent [0..1];
         attribute unresolvedTarget : String [0..1];
     }
@@ -91,6 +92,13 @@ package OpenClawImport {
         ref part targetAgent : OpenClawAgent [0..1];
         attribute unresolvedTarget : String [0..1];
         attribute deliveryChannel : String;
+    }
+    part def InferredConcern {
+        doc /* A rule inferred from an agent's instructions about something the
+         * configuration can enforce. topic is exec: how the agent may run
+         * commands. Proposals are not admitted; this only lets checks read them. */
+        attribute agentId : String; attribute ruleId : String;
+        attribute ruleKind : String; attribute topic : String;
     }
     part def BundledSkill { attribute name : String; attribute enabled : Boolean; }
     part def InstructionFile { attribute path : String; attribute sha256 : String; attribute bytes : Integer; }

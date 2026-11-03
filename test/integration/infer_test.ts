@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { collect } from "../../src/adapters/out/openclaw/collector.ts";
 import { ExportError } from "../../src/infrastructure/error.ts";
-import { inferencePrompt } from "../../src/domain/model/inference.ts";
+import {
+  inferenceInput,
+  inferencePrompt,
+} from "../../src/domain/model/inference.ts";
 import { emitInferred } from "../../src/adapters/out/sysml/inferred.ts";
 import { parseAgentInference } from "../../src/adapters/out/llm/inference.ts";
 import { createFixture } from "../support/fixture.ts";
@@ -128,4 +131,83 @@ Deno.test("long texts are shortened and citations stay within the files sent", a
     () => parseAgentInference(valid, s, "field", ["AGENTS.md"]),
     ExportError,
   );
+});
+
+Deno.test("a rule keeps an exec concern; an unknown or absent one is dropped, not an error", async () => {
+  const s = await snapshot();
+  const rule = (concern: unknown) =>
+    parseAgentInference(
+      { ...valid, rules: [{ ...valid.rules[0], concern }] },
+      s,
+      "field",
+    ).rules[0];
+  assert.equal(rule("exec").concern, "exec");
+  for (const other of ["network", null, 3, undefined]) {
+    assert.ok(!("concern" in rule(other)), String(other));
+  }
+});
+
+Deno.test("an inference can be reused exactly when what the model is sent is unchanged", async () => {
+  const s = await snapshot();
+  const lead = s.agents.find((a) => a.id === "lead")!;
+  const input = inferenceInput(s, lead);
+  assert.deepEqual(inferenceInput(s, lead), input);
+  assert.ok(input.files.some((f) => f.file === "AGENTS.md"));
+  assert.ok(
+    input.files.some((f) =>
+      f.file === "cron:job-10" && f.enabled === false && f.schedule
+    ),
+  );
+  assert.ok(
+    input.roster.includes("lead (Lead)") || input.roster.includes("lead"),
+  );
+  const edited = structuredClone(s);
+  edited.agents.find((a) => a.id === "lead")!.workspace.instructions.find((f) =>
+    f.path === "AGENTS.md"
+  )!.sha256 = "0".repeat(64);
+  assert.notDeepEqual(
+    inferenceInput(edited, edited.agents.find((a) => a.id === "lead")!),
+    input,
+  );
+  const renamed = structuredClone(s);
+  renamed.agents.find((a) => a.id === "coach")!.name = "Someone else";
+  assert.notDeepEqual(
+    inferenceInput(renamed, renamed.agents.find((a) => a.id === "lead")!),
+    input,
+  );
+  // Memory and owner profile files are not sources.
+  const notes = structuredClone(s);
+  notes.agents.find((a) => a.id === "lead")!.workspace.instructions.find((f) =>
+    f.path === "MEMORY.md"
+  )!.sha256 = "1".repeat(64);
+  assert.deepEqual(
+    inferenceInput(notes, notes.agents.find((a) => a.id === "lead")!),
+    input,
+  );
+});
+
+Deno.test("only a rule with a concern gets a part the checks can read", async () => {
+  const s = await snapshot();
+  const field = parseAgentInference(
+    {
+      ...valid,
+      rules: [
+        { ...valid.rules[0], concern: "exec" },
+        { ...valid.rules[0], id: "plain" },
+      ],
+    },
+    s,
+    "field",
+  );
+  const text = emitInferred(s, {
+    schema: "openclaw-inference/1",
+    model: "test",
+    agents: [field],
+  })
+    .get("OpenClawInferred.sysml")!;
+  assert.match(text, /private import OpenClawImport::\*;/);
+  assert.equal(text.match(/: InferredConcern \{/g)?.length, 1);
+  assert.match(text, /part concern_field_no_payments : InferredConcern \{/);
+  assert.match(text, /attribute :>> topic = "exec";/);
+  assert.match(text, /attribute :>> ruleId = "no-payments";/);
 });
