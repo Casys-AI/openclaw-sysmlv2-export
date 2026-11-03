@@ -35,6 +35,8 @@ button, select { font: inherit; color: inherit; }
 .brand h1 span { color: var(--muted); font-weight: 400; }
 .top select { max-width: 330px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--card); }
 .meta { min-width: 0; color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.meta-verdict { all: unset; cursor: pointer; text-decoration: underline; text-decoration-color: var(--line-strong); }
+.meta-verdict:hover { color: var(--ink); } .meta-verdict:disabled { cursor: default; text-decoration: none; }
 .note { display: inline-flex; align-items: center; gap: 8px; min-width: 0; padding: 2px 4px 2px 10px; border: 1px solid var(--line-strong); border-radius: 999px; background: var(--card); font-size: 12px; white-space: nowrap; }
 .note[hidden] { display: none; }
 .note span { overflow: hidden; text-overflow: ellipsis; }
@@ -130,6 +132,9 @@ main > section[hidden] { display: none; }
 .hl .md-node.added > .md-body { stroke: var(--add); stroke-width: 2; }
 .hl .md-node.changed > .md-body { stroke: var(--chg); stroke-width: 2; }
 .hl .md-node.added.group > .md-body, .hl .md-node.added.frame > .md-body { stroke-dasharray: none; }
+/* Changed only in its SysML: marked fainter, without a badge. */
+.hl .md-node.touched > .md-body { stroke: color-mix(in srgb, var(--chg) 55%, var(--paper)); stroke-width: 1.6; }
+.hl tr.touched > :first-child { --bar: inset 2px 0 color-mix(in srgb, var(--chg) 45%, var(--card)); }
 .md-badge { display: none; }
 .hl .md-badge { display: inline; }
 .md-badge.add circle { fill: var(--add); } .md-badge.chg circle { fill: var(--chg); }
@@ -225,6 +230,9 @@ svg.md-lod .md-edge:not(.hot) { opacity: .3; }
 .md-back { all: unset; margin-left: 10px; cursor: pointer; font-size: 11.5px; color: var(--muted); text-decoration: underline; text-decoration-color: var(--line-strong); }
 .md-back:hover { color: var(--ink); }
 .md-changes + .md-back { display: block; margin: -4px 0 12px; }
+.md-verdict { all: unset; display: block; margin: 4px 0 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); cursor: pointer; font-size: 12.5px; }
+.md-verdict:hover { border-color: var(--line-strong); }
+.md-verdict::after { content: " →"; color: var(--muted); }
 /* :root lifts buttons over the all: unset of their families. */
 .md-canvas:focus-visible, :root button:focus-visible, select:focus-visible, [role="button"]:focus-visible { outline: 2px solid #797369; outline-offset: 2px; }
 /* A clicked element shows its selection, not the browser's focus ring. */
@@ -557,20 +565,40 @@ function store(key, value) {
 }
 
 // ---- Header
+// What went into a version against the previous one (viewer.ts's inputs), as
+// a glyph for the version picker and words for the header.
+function verdict(v) {
+  const reemitted = v.diff && v.diff.groups.some((g) => g.group !== "diagnostics");
+  const touched = (v.views || []).reduce((n, e) => n + (e.delta && e.delta.touched ? e.delta.touched.length : 0), 0);
+  if (v.inputs === "changed") return { glyph: "●", words: "Configuration changed" };
+  if (v.inputs === "inference") return { glyph: "◆", words: "Inference changed" };
+  if (v.inputs === "schema") return { glyph: "◇", words: "Not comparable", detail: "The previous version's snapshot uses a format this viewer does not read." };
+  if (v.inputs === "same") return reemitted ? { glyph: "◆", words: "Same configuration · SysML re-emitted (" + (touched || v.changes.length) + ")" } : { glyph: "○", words: "Same configuration" };
+  return { glyph: "", words: "First version" };
+}
+// The inference of a version, and whether its model checks ran.
+function inferenceWords(v) {
+  if (!v.inferred) return "inference not run";
+  const failed = v.inferred.failed ? " · inference failed: " + v.inferred.failed : "";
+  if (v.inferred.reused) return "inferred " + v.inferred.reused.from.map((id) => when(versions.find((x) => x.id === id) || { createdAt: id })).join(", ") + " · sources unchanged" + failed;
+  return "inferred " + plural(v.inferred.procedures, "procedure") + ", " + plural(v.inferred.rules, "rule") + failed;
+}
+const CHECKS_WORDS = { "not-run": "checks not run", failed: "checks failed", unrecorded: "checks not recorded" };
 function renderHeader() {
   const select = document.getElementById("version");
   select.replaceChildren(...versions.map((v, i) => {
-    const o = el("option", "", when(v) + " UTC" + (i === 0 ? " · latest" : ""));
+    const c = v.checks && v.checks.state !== "verified" ? " · not checked" : "", f = v.inferred && v.inferred.failed ? " · inference failed" : "";
+    const o = el("option", "", (verdict(v).glyph || " ") + " " + when(v) + " UTC" + (i === 0 ? " · latest" : "") + c + f);
     o.value = String(i);
     return o;
   }));
   select.value = String(state.version);
-  const v = versions[state.version];
-  document.getElementById("meta").textContent = [
-    v.agents + " agent" + (v.agents === 1 ? "" : "s"),
-    v.inferred ? "inferred " + v.inferred.procedures + " procedures, " + v.inferred.rules + " rules" : "no inference",
-    v.changes ? v.changes.length + " file" + (v.changes.length === 1 ? "" : "s") + " changed" : "first version",
-  ].join(" · ");
+  const v = versions[state.version], said = verdict(v);
+  const go = button(said.words, () => navigate({ tab: "changes" }), "meta-verdict");
+  go.title = (said.detail ? said.detail + " " : "") + "Show the file diff";
+  go.disabled = !v.changes;
+  const checks = v.checks && CHECKS_WORDS[v.checks.state];
+  document.getElementById("meta").replaceChildren(go, " · " + inferenceWords(v), ...checks ? [" · ", button(checks, () => { navigate({ tab: "diagrams" }); openPanel("doctor"); }, "meta-verdict")] : []);
   for (const b of document.querySelectorAll(".tabs button")) {
     if (b.dataset.tab === state.tab) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
   }
@@ -638,7 +666,8 @@ function drawFrame(g, n) {
 function drawNode(n, delta) {
   const classes = ["md-node", n.shape, n.shape === "frame" || n.shape === "group" ? "container" : "leaf",
     n.kw && /def»$/.test(n.kw) ? "def" : "", n.muted ? "muted" : "", n.dashed ? "dashed" : "",
-    delta && delta.added.includes(n.id) ? "added" : "", delta && delta.changed.includes(n.id) ? "changed" : ""];
+    delta && delta.added.includes(n.id) ? "added" : "", delta && delta.changed.includes(n.id) ? "changed" : "",
+    delta && delta.touched.includes(n.id) ? "touched" : ""];
   const doc = state.doc.get(n.id), status = delta && delta.added.includes(n.id) ? "added" : delta && delta.changed.includes(n.id) ? "changed" : "";
   const g = sv("g", { class: classes.filter(Boolean).join(" "), "data-id": n.id, tabindex: 0, role: "button",
     "aria-label": [(n.kw || n.shape) + " " + nameOf(n), status, doc && "worst finding " + doc.worst].filter(Boolean).join(", ") });
@@ -731,7 +760,7 @@ function renderPicker(entries, shown) {
   for (const e of entries) {
     const v = payload(e);
     if (!groups.has(v.group)) groups.set(v.group, []);
-    const n = e.delta ? e.delta.added.length + e.delta.changed.length + e.delta.removed.length : 0;
+    const n = marked(e, v) ? e.delta.count : 0;
     const o = el("option", "", v.title + (e.delta && e.delta.isNew ? " · new" : n ? " · " + n + (n === 1 ? " change" : " changes") : ""));
     o.value = v.id;
     groups.get(v.group).push(o);
@@ -769,15 +798,22 @@ function button(text, onclick, cls) {
   return b;
 }
 function marker(delta) {
-  const added = new Set(delta ? delta.added : []), changed = new Set(delta ? delta.changed : []);
-  return (id) => added.has(id) ? " added" : changed.has(id) ? " changed" : "";
+  const added = new Set(delta ? delta.added : []), changed = new Set(delta ? delta.changed : []), touched = new Set(delta ? delta.touched : []);
+  return (id) => added.has(id) ? " added" : changed.has(id) ? " changed" : touched.has(id) ? " touched" : "";
+}
+// The changes the shown view marks (see marked); what changed only in its
+// SysML is marked, fainter, only when the configuration changed.
+function changeMarks() {
+  const cur = currentView();
+  if (!cur || !marked(cur.entry, cur.view)) return null;
+  return { ...cur.delta, touched: versions[state.version].inputs === "changed" ? cur.delta.touched : [] };
 }
 
 // The rail's counts: what changed in this view, and the doctor's errors and
 // warnings, coloured by the worst.
 function renderRail(cur) {
   const d = cur && cur.delta, before = d && !d.isNew && payload(entryOf(state.version + 1, cur.view.id));
-  const n = before ? shown(d.added, cur.view).length + shown(d.changed, cur.view).length + shown(d.removed, before).length : 0;
+  const n = cur && marked(cur.entry, cur.view) ? d.count : 0;
   const changes = rail("changes");
   changes.querySelector("b").textContent = n ? String(n) : "";
   changes.title = d && d.isNew ? "Changes: new in this version" : before ? "Changes since " + when(versions[state.version + 1]) : "Changes";
@@ -789,6 +825,13 @@ function renderRail(cur) {
   doctor.title = "Doctor: " + plural(errors, "error") + ", " + plural(warnings, "warning");
 }
 const rail = (name) => document.querySelector('.md-rail [data-panel="' + name + '"]');
+// Whether a view's changes are marked: not when the configuration is the same
+// or not comparable, and only Behaviour when only the inference changed.
+function marked(entry, view) {
+  const inputs = versions[state.version].inputs;
+  return Boolean(entry.delta && !entry.delta.isNew && inputs !== "same" && inputs !== "schema" &&
+    (inputs !== "inference" || view.group === "Behaviour"));
+}
 // The ids of a delta that this view shows.
 const shown = (ids, view) => ids.filter((id) => headOf(view, id));
 // What was added, changed and removed since the previous version, with the
@@ -799,12 +842,19 @@ function showChanges(cur) {
     showPanel("changes", [el("p", "md-side-empty", d ? "New in this version: the previous one has no such view." : "First version: nothing to compare.")]);
     return;
   }
-  const before = payload(entryOf(state.version + 1, cur.view.id));
+  const before = payload(entryOf(state.version + 1, cur.view.id)), v = versions[state.version];
   const parts = [el("p", "md-side-note", "Since " + when(versions[state.version + 1]))];
+  // With the same configuration, or only another inference outside Behaviour,
+  // nothing is listed: one line says so and leads to the file diff.
+  if (!marked(cur.entry, cur.view)) {
+    const said = v.inputs === "inference" ? { words: "Same configuration · inference changed" } : verdict(v);
+    parts.push(button(said.words, () => navigate({ tab: "changes" }), "md-verdict"));
+    showPanel("changes", parts);
+    return;
+  }
   const group = (label, ids, view, open, diff) => {
     if (!ids.length) return;
     const ul = el("ul", "md-changes");
-    let sysmlOnly = 0;
     for (const id of ids) {
       const n = headOf(view, id), b = button("", () => open(id)), li = el("li");
       if (view === cur.view) li.dataset.subject = id;
@@ -812,16 +862,16 @@ function showChanges(cur) {
       li.append(b);
       const dl = diff && attributes((view.elements[id] || { a: [] }).a, (before.elements[id] || { a: [] }).a, true);
       if (dl && dl.childElementCount) li.append(dl);
-      else if (dl) sysmlOnly++;
       ul.append(li);
     }
     parts.push(el("p", "md-kicker", label + " · " + ids.length), ul);
-    if (sysmlOnly) parts.push(button(sysmlOnly + " changed in their SysML only: show the file diff", () => navigate({ tab: "changes" }), "md-back"));
   };
   group("Added", shown(d.added, cur.view), cur.view, (id) => stayOn(cur.view.id, id), false);
   group("Changed", shown(d.changed, cur.view), cur.view, (id) => stayOn(cur.view.id, id), true);
   group("Removed", shown(d.removed, before), before, (id) => inspect(state.version + 1, before, id, "removed"), false);
+  const touched = shown(d.touched, cur.view).length;
   if (parts.length === 1) parts.push(el("p", "md-side-empty", "No change in this view."));
+  if (touched) parts.push(button(touched + " changed in their SysML only: show the file diff", () => navigate({ tab: "changes" }), "md-back"));
   const highlight = button("Highlight", () => {
     state.highlight = !state.highlight;
     highlight.setAttribute("aria-pressed", String(state.highlight));
@@ -892,7 +942,7 @@ function renderDiagram(keepViewport) {
     collapse();
     return;
   }
-  const { view, delta } = cur;
+  const { view } = cur;
   renderPicker(entries, view.id);
   document.getElementById("view-title").textContent = view.title;
   document.getElementById("view-sub").textContent = subtitle(view);
@@ -914,10 +964,10 @@ function renderDiagram(keepViewport) {
   // The table first: the diagram fits in the room it leaves.
   if (view.table) {
     const at = [sheet.scrollTop, sheet.scrollLeft];
-    renderTable(sheet, view, delta);
+    renderTable(sheet, view, changeMarks());
     if (keep) [sheet.scrollTop, sheet.scrollLeft] = at;
   }
-  if (view.scene) drawScene(view, delta, kept);
+  if (view.scene) drawScene(view, changeMarks(), kept);
   else canvas.replaceChildren(...view.table ? [] : [el("p", "md-empty", "Nothing to show in this view for this version.")]);
   // An element opened from elsewhere shows in the inspector; otherwise the
   // open panel follows the version and the view.
@@ -1148,7 +1198,7 @@ function reveal(id) {
     state.filter = "";
     state.facet = null;
     state.folded.clear();
-    renderTable(sheet, state.drawn.payload, currentView().delta);
+    renderTable(sheet, state.drawn.payload, changeMarks());
     applyFocus();
   }
   const e = find();
@@ -1174,10 +1224,12 @@ function showPanel(name, parts, tools, element) {
   const box = document.getElementById("inspector");
   document.getElementById("side-title").textContent = PANELS[name];
   document.getElementById("side-tools").replaceChildren(...tools || []);
-  const inside = box.contains(document.activeElement);
+  const inside = box.contains(document.activeElement), side = document.getElementById("side"), opened = side.hidden;
   box.replaceChildren(...parts);
-  document.getElementById("side").hidden = false;
+  side.hidden = false;
   if (inside) box.focus({ preventScroll: true });
+  // A diagram at Fit fits the room the sidebar leaves.
+  if (opened && state.tab === "diagrams") refit();
   state.panelKey = [name, state.version, name === "doctor" ? "" : shownView(), element || ""].join("|");
   box.scrollTop = state.scrolls.get(state.panelKey) || 0;
   markEntries();
@@ -1185,9 +1237,11 @@ function showPanel(name, parts, tools, element) {
   for (const b of document.querySelectorAll(".md-rail [data-panel]")) b.setAttribute("aria-pressed", String(b.dataset.panel === name));
 }
 function collapse() {
-  document.getElementById("side").hidden = true;
+  const side = document.getElementById("side"), closed = side.hidden;
+  side.hidden = true;
   state.panel = null;
   for (const b of document.querySelectorAll(".md-rail [data-panel]")) b.setAttribute("aria-pressed", "false");
+  if (!closed && state.tab === "diagrams") refit();
 }
 // An element's attributes; against the previous version's, a changed value
 // shows struck through above the new one. Only the differences when asked.
@@ -1480,7 +1534,7 @@ function renderElements(box, view, t, mark) {
     const values = [null, ...new Set(t.rows.map((r) => r.values[facet]))];
     bar.append(...values.map((v) => {
       const n = t.rows.filter((r) => v === null || r.values[facet] === v).length;
-      const b = button((v === null ? "all" : v) + " " + n, () => keepFocus(() => { state.facet = v; renderTable(box, view, currentView().delta); applyFocus(); }));
+      const b = button((v === null ? "all" : v) + " " + n, () => keepFocus(() => { state.facet = v; renderTable(box, view, changeMarks()); applyFocus(); }));
       b.dataset.key = "facet:" + v;
       b.setAttribute("aria-pressed", String(state.facet === v));
       return b;
@@ -1492,7 +1546,7 @@ function renderElements(box, view, t, mark) {
     const sorted = state.sort && state.sort.col === c;
     const th = button(c < 0 ? "name" : t.columns[c], () => keepFocus(() => {
       state.sort = sorted && state.sort.dir > 0 ? { col: c, dir: -1 } : sorted ? null : { col: c, dir: 1 };
-      renderTable(box, view, currentView().delta);
+      renderTable(box, view, changeMarks());
       applyFocus();
     }));
     th.dataset.key = "sort:" + c;
