@@ -19,6 +19,9 @@
     "finding": "present",
     "pattern": "4.2",
     "recovery": "Review the delegation cycle and make its termination and supervisory intervention explicit.",
+    "related": [
+      "agent:coach"
+    ],
     "severity": "warning",
     "subject": "agent:client"
   },
@@ -28,6 +31,9 @@
     "finding": "present",
     "pattern": "4.2",
     "recovery": "Review the delegation cycle and make its termination and supervisory intervention explicit.",
+    "related": [
+      "agent:client"
+    ],
     "severity": "warning",
     "subject": "agent:coach"
   },
@@ -37,6 +43,11 @@
     "finding": "present",
     "pattern": "4.2",
     "recovery": "Review the delegation cycle and make its termination and supervisory intervention explicit.",
+    "related": [
+      "agent:field",
+      "agent:lead",
+      "agent:secretary"
+    ],
     "severity": "warning",
     "subject": "agent:devbox"
   },
@@ -46,6 +57,11 @@
     "finding": "present",
     "pattern": "4.2",
     "recovery": "Review the delegation cycle and make its termination and supervisory intervention explicit.",
+    "related": [
+      "agent:devbox",
+      "agent:lead",
+      "agent:secretary"
+    ],
     "severity": "warning",
     "subject": "agent:field"
   },
@@ -55,6 +71,11 @@
     "finding": "present",
     "pattern": "4.2",
     "recovery": "Review the delegation cycle and make its termination and supervisory intervention explicit.",
+    "related": [
+      "agent:devbox",
+      "agent:field",
+      "agent:secretary"
+    ],
     "severity": "warning",
     "subject": "agent:lead"
   },
@@ -64,6 +85,11 @@
     "finding": "present",
     "pattern": "4.2",
     "recovery": "Review the delegation cycle and make its termination and supervisory intervention explicit.",
+    "related": [
+      "agent:devbox",
+      "agent:field",
+      "agent:lead"
+    ],
     "severity": "warning",
     "subject": "agent:secretary"
   },

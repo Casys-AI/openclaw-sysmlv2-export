@@ -3,6 +3,10 @@ import type { Finding } from "../snapshot.ts";
 export interface ApeFinding extends Finding {
   pattern?: string;
   finding?: "present" | "absent" | "indeterminate";
+  /** The agents the context names (`agent:<id>`, sorted): a cycle's other
+   * members, the agent whose host exec a delegation reaches. Only the rules
+   * whose message has a related agent set it. */
+  related?: string[];
 }
 export type ApeStage = "projection" | "loading" | "view" | "rule";
 export interface ApeReport {

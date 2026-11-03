@@ -1,5 +1,26 @@
 # Changelog
 
+## Unreleased
+
+- **Viewer data tells the truth.** Each version says whether its model checks
+  ran (`verified`, `not-run`, `failed`, `unrecorded`, with the export's recovery
+  and the failed inferences), whether its configuration, its inference or only
+  the export changed since the previous version (`same`, `inference`, `changed`,
+  `schema`), and gives readable labels, the Doctor's findings grouped by
+  severity, code and recovery, and the new and resolved findings against the
+  last version whose APE analysis completed. A view's delta splits `changed` (a
+  shown value) from `touched` (only the SysML), counts once what the panel lists
+  and leaves initial and final nodes out. The Changes tab can list, per element,
+  what changed, and the changed files by group.
+- **`diff` covers more and ignores the instance running.** It compares accounts,
+  hooks, agent names, policy, providers, bundled skills, messaging and
+  environment, and leaves out a task's last run, the memory notes and backups
+  that pile up, and a binding's position in its id. A binding is known by its
+  agent, account and peer, so a peer kind change is a removal and an addition.
+- **APE findings name their related agents.** `findings.json` rows of
+  `APE_LINK_CYCLE` and `APE_GRANT_WIDENS_PARENT` carry an optional sorted
+  `related` list of `agent:<id>`; older versions read as before.
+
 ## 0.2.0 — 2026-11-03
 
 The snapshot schema stays `openclaw-snapshot/5`, with one optional field,

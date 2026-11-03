@@ -136,8 +136,13 @@ The icon rail on the right opens three panels in a sidebar that you can collapse
 and resize. The Inspector shows the attributes and exact SysML text of the
 element, row or cell you click. Changes lists what was added, changed and
 removed since the previous version, each changed value before and after, and the
-diagram and table highlight it. Doctor lists the findings. The Files and Changes
-tabs show each file and its diff against the previous version.
+diagram and table highlight it. Doctor lists the findings, grouped, and says
+when the model checks did not run instead of showing a clean list; against the
+last version that was checked, it also says which findings are new and which are
+resolved. Each version knows whether its configuration or only the export
+changed since the previous one, so a re-emitted export does not read as a change
+of your instance. The Files and Changes tabs show each file and its diff against
+the previous version.
 
 ![Overview: one row per agent under the instance's totals](docs/screenshots/overview.png)
 

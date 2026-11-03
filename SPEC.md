@@ -615,25 +615,35 @@ The plugin writes the canonical sorted findings and collector notes to
 are skipped without the Toolkit, with no TypeScript fallback. The viewer's
 Doctor panel displays the available findings and their status.
 
+A finding may also have a `related` list, optional, of the agents its context
+names (`agent:<id>`, sorted): a delegation cycle's other members, the agent
+whose host exec a delegation reaches. Only the two APE rules with a related
+agent write it; readers ignore its absence.
+
 ## 8. Diff
 
 `diff(a, b)` compares two snapshots and returns changes (`kind`, `subject`,
 `before`, `after`) sorted by kind then subject. Values are snapshot values, so
-never secrets.
+never secrets. It compares configuration. Left out are the collector's notes
+(`ambiguities`), what piles up on the host as the instance runs (`backupCount`,
+`memory.daily`, `memory.otherCount`) and a task's last run (`cron[].runtime`); a
+binding is known by its agent, account and peer, not by its id, which ends with
+its position in the list; the credential paths count only when both snapshots
+recorded them.
 
-| Kind                                                                                                                     | Subject              |
-| ------------------------------------------------------------------------------------------------------------------------ | -------------------- |
-| `agent.added`, `agent.removed`                                                                                           | agent                |
-| `agent.model`, `agent.grants`, `agent.sandbox`, `agent.execution`, `agent.memory`, `agent.delegation`, `agent.heartbeat` | agent                |
-| `skill:<agent>.added`, `skill:<agent>.removed`, `skill.digest`                                                           | skill, `agent:skill` |
-| `instruction:<agent>.added`, `instruction:<agent>.removed`, `instruction.digest`                                         | file, `agent:file`   |
-| `binding.*`, `plugin.*`, `mcp.*` (`added`, `removed`, `changed`)                                                         | entity               |
-| `cron.added`, `cron.removed`, `cron.schedule`, `cron.job`                                                                | cron job             |
-| `exec.approvals`, `memory.backend`                                                                                       | `instance`           |
+| Kind                                                                                                                                                                                                       | Subject              |
+| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------- |
+| `agent.added`, `agent.removed`                                                                                                                                                                             | agent                |
+| `agent.name`, `agent.emoji`, `agent.implicit`, `agent.model`, `agent.grants`, `agent.policy`, `agent.sandbox`, `agent.execution`, `agent.memory`, `agent.workspace`, `agent.delegation`, `agent.heartbeat` | agent                |
+| `skill:<agent>.added`, `skill:<agent>.removed`, `skill.digest`                                                                                                                                             | skill, `agent:skill` |
+| `instruction:<agent>.added`, `instruction:<agent>.removed`, `instruction.digest`                                                                                                                           | file, `agent:file`   |
+| `account.*`, `binding.*`, `hook.*`, `provider.*`, `bundledSkill.*`, `plugin.*`, `mcp.*` (`added`, `removed`, `changed`; a binding only added or removed)                                                   | entity               |
+| `cron.added`, `cron.removed`, `cron.schedule`, `cron.job`                                                                                                                                                  | cron job             |
+| `exec.approvals`, `memory.backend`, `messaging`, `instance.version`, `instance.environment`, `instance.credentials`                                                                                        | `instance`           |
 
 `agent.execution` carries the configured, approval and effective postures and
 the commands, so a change shows which side of the policy moved even when the
-effective result stays the same.
+effective result stays the same. `agent.memory` is the memory search settings.
 
 ## 9. Inference
 
@@ -790,11 +800,34 @@ unified diff of each file since the previous version.
   is a band over the whole week, its start being unknown; one-shot, date-bound
   and longer schedules are listed as not weekly.
 - **Changes.** Against the previous version, an element is added when its id is
-  new, changed when its attributes or SysML text differ (frames by their
-  attributes; an Overview row, which sums declarations up, by their SysML only,
-  so a new inference does not mark it), removed when it is gone; table rows,
-  columns and cells count as elements, so a new grant is a new cell and marks
-  its tool's row as changed. A view the previous version lacked is new.
+  new and removed when it is gone; table rows, columns and cells count as
+  elements, so a new grant is a new cell and marks its tool's row as changed. It
+  is `changed` when a value it shows differs (its name, attributes or
+  compartments, an Overview row's name included; attributes that start with
+  `inferred` are the inference's and mark nothing), and `touched` when only its
+  SysML text differs: a version re-emitted by a newer plugin touches elements
+  without changing what they show. A drawn container (a frame, a group), whose
+  SysML spans its contents, is never touched. Drawn edges are listed so the
+  diagram can mark them, never as removed or touched; a view's `count` is added,
+  changed and removed without them, once for the picker, the rail and the panel,
+  and initial and final nodes are in no list. A view the previous version lacked
+  is new.
+- **Inputs.** Each version but the oldest says what its inputs are against the
+  previous one: `same` (the configuration and inference are the same, so the
+  files differ only by the export), `inference`, `changed` (the configuration),
+  or `schema` (a snapshot is unreadable here, so no comparison). The
+  configuration is the whole snapshot but the collector's notes, the host's
+  piles (`backupCount`, `memory.daily`, `memory.otherCount`), a task's last run
+  and a binding's position; credential paths count when both versions recorded
+  them. The inference is the agents' roles, procedures and rules, not the run's
+  metadata. The semantic diff (§8) lists, per element, what changed between two
+  readable snapshots, and the changed files are grouped as instance, inferred,
+  library, data and diagnostics.
+- **Checks and findings.** Each version has a `checks` state (`verified`,
+  `not-run`, `failed`, `unrecorded`), its readable labels by element id, its
+  findings grouped by severity, code and recovery, and, against the last older
+  version whose APE analysis completed, its new and resolved findings; see
+  [Diagnostics](docs/diagnostics.md#whether-the-checks-ran).
 - **Unreadable snapshots.** A version whose snapshot fails this viewer's schema
   check keeps its files and diffs, without diagrams.
 - **Determinism and size.** Same versions, same bytes. File texts and view
@@ -938,8 +971,9 @@ Failures are `{ code, context, recovery }` errors, never findings.
 - **Diagnostics.** Static configuration checks do not establish runtime
   execution, actual embedding transmission, parent Git repositories or skill
   validity. Findings do not repair the configuration or block export.
-- **Diff** does not compare agent names, raw policies, channel accounts, hooks,
-  providers, bundled skills, the messaging policy or secret counts.
+- **Diff** compares configuration only: it reports what an agent's skills or
+  instructions digest to, not what they say, and it cannot tell a renamed entity
+  from a removed one and an added one.
 
 ## 13. Design decisions
 
