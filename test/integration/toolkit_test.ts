@@ -5,10 +5,7 @@ import { join } from "node:path";
 import { run } from "../../cli.ts";
 import { runExport } from "../../src/composition/openclaw.ts";
 import { ExportError } from "../../src/infrastructure/error.ts";
-import {
-  installToolkit,
-  toolkitPath,
-} from "../../src/adapters/out/sysml-toolkit/install.ts";
+import { extractToolkit } from "../../src/adapters/out/sysml-toolkit/extract.ts";
 import { validate } from "../../src/adapters/out/sysml-toolkit/worker-client.ts";
 import { emit } from "../../src/adapters/out/sysml/emitter.ts";
 import { ASSEMBLY_LIBRARY } from "../../src/adapters/out/sysml/library.ts";
@@ -31,7 +28,8 @@ Deno.test({
     const fixture = await createFixture({ git: true, backups: 2 });
     const output = await mkdtemp(join(tmpdir(), "openclaw-toolkit-test-"));
     try {
-      await installToolkit(fixture.home, { from: archive });
+      const toolkit = join(output, "toolkit");
+      await extractToolkit(archive, toolkit);
       const snapshot = join(output, "snapshot.json"), dir = join(output, "out");
       await run([
         "collect",
@@ -48,7 +46,7 @@ Deno.test({
         files.set(name, await readFile(join(dir, name), "utf8"));
       }
       const started = performance.now();
-      const base = await validate(files, fixture.home);
+      const base = await validate(files, toolkit);
       assert.equal(base.errors.length, 0);
       assert.equal(base.ape.status, "completed");
       assert.deepEqual(
@@ -122,7 +120,7 @@ Deno.test({
         },
       );
       for (const [name, text] of inferred) files.set(name, text);
-      const diagnostics = await validate(files, fixture.home);
+      const diagnostics = await validate(files, toolkit);
       assert.equal(diagnostics.errors.length, 0, JSON.stringify(diagnostics));
       // Add only synthetic cases. Rules see these SysML bytes, never this snapshot.
       const extended = parseSnapshot(
@@ -137,7 +135,7 @@ Deno.test({
           "utf8",
         ),
       );
-      const cases = await validate(trial, fixture.home);
+      const cases = await validate(trial, toolkit);
       assert.equal(cases.errors.length, 0, JSON.stringify(cases.errors));
       const byCode = (code: string) =>
         cases.ape.findings.filter((f) => f.code === `APE_${code}`);
@@ -164,7 +162,7 @@ Deno.test({
       );
       const invalid = await validate(
         new Map([["invalid.sysml", "package Broken { part def ]"]]),
-        fixture.home,
+        toolkit,
       );
       assert.ok(invalid.errors.length > 0);
       assert.equal(invalid.ape.status, "skipped");
@@ -178,7 +176,7 @@ Deno.test({
       });
       const unresolved = await validate(
         new Map([["unknown.sysml", "package Unknown { part p : Missing; }"]]),
-        fixture.home,
+        toolkit,
       );
       assert.ok(
         unresolved.errors.some((d) => d.code === "TOOLKIT_REFERENTIAL"),
@@ -204,6 +202,7 @@ Deno.test({
             }),
           }),
         new Date("2026-11-02T10:15:00Z"),
+        toolkit,
       );
       assert.deepEqual(summary.validation, { status: "passed", errors: 0 });
       assert.equal(summary.ape.status, "completed");
@@ -292,12 +291,9 @@ Deno.test({
           ).length,
         );
       }
-      await writeFile(
-        join(toolkitPath(fixture.home), "sysmlv2.js"),
-        "tampered",
-      );
+      await writeFile(join(toolkit, "sysmlv2.js"), "tampered");
       await assert.rejects(
-        validate(files, fixture.home),
+        validate(files, toolkit),
         (e: unknown) =>
           e instanceof ExportError && e.code === "TOOLKIT_INTEGRITY",
       );
@@ -307,6 +303,7 @@ Deno.test({
         versionOut,
         null,
         new Date("2026-11-02T10:16:00Z"),
+        toolkit,
       );
       assert.equal(damaged.validation.status, "failed");
       assert.equal(damaged.validation.code, "TOOLKIT_INTEGRITY");

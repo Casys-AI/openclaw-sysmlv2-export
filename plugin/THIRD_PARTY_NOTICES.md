@@ -1,7 +1,8 @@
 # Third-party notices
 
 `core.mjs`, `toolkit-worker.mjs`, and `oxigraph_bg.wasm` include the following
-packages. Their notices and licenses follow.
+packages. Their notices and licenses follow, after the notice for the Toolkit
+files in `toolkit/`.
 
 | Package | Version | License | Source |
 | --- | --- | --- | --- |
@@ -16,6 +17,34 @@ The source code of elkjs 0.9.3 is available at
 <https://github.com/kieler/elkjs/tree/0.9.3> and in the npm package
 `elkjs@0.9.3`. It is distributed here unmodified, under the Eclipse Public
 License 2.0.
+
+## sysml-toolkit 0.10.10
+
+The `toolkit/` directory of this package carries, unmodified, the files of the
+public sysml-wasm 0.10.10 release of sysml-toolkit that the plugin loads to
+compile SysML v2: `sysmlv2.js`, `sysmlv2_bg.wasm` and the `stdlib/` files. The
+plugin checks each against a pinned SHA-256 whenever it loads them.
+
+| Component | License | In this package |
+| --- | --- | --- |
+| sysml-toolkit 0.10.10 (npm name `@sysml/wasm`) | Apache-2.0 | `toolkit/LICENSE` |
+| SysML v2 standard library, and the snapshots derived from it | EPL-2.0 | `toolkit/LICENSE-EPL-2.0` |
+
+The Toolkit's own notices, including the upstream licensing notice of the
+standard library, are in `toolkit/THIRD-PARTY-NOTICES.md`.
+
+Source of the Toolkit: <https://github.com/Open-MBEE/sysml-toolkit>, release
+`v0.10.10`
+(<https://github.com/Open-MBEE/sysml-toolkit/releases/tag/v0.10.10>; archive
+`sysml-wasm-0.10.10.tgz`, SHA-256
+`93d6ef0a2140fceabc3115cd95d629146bc004c3959bfa23d715cce8b06cc13c`). The
+Eclipse Public License 2.0 part is the SysML v2 standard library:
+`toolkit/stdlib/sysml-library.json.gz` holds its unmodified source text, taken
+from <https://github.com/Systems-Modeling/SysML-v2-Release> at revision
+`de1070ae8e79c21532b8004fc663d47b35d0e9fa`, and is the source form of
+`sysml-library.libcache.gz` and `sysml-library.prepared.gz`, which are
+resolution snapshots derived from it. The same source is also at the upstream
+address above.
 
 ## elkjs 0.9.3
 

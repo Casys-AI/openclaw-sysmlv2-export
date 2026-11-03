@@ -19,17 +19,20 @@ export type {
   ExportSummary,
 } from "../application/export/export-instance.ts";
 import {
-  installToolkit,
-  toolkitStatus,
-} from "../adapters/out/sysml-toolkit/install.ts";
-export { installToolkit, toolkitStatus };
+  bundledToolkit,
+  toolkitStatus as status,
+} from "../adapters/out/sysml-toolkit/bundled.ts";
+export const toolkitStatus = () => status(bundledToolkit);
 
+/** `toolkit` is the Toolkit directory: the one bundled with the plugin, unless
+ * a test supplies another. */
 export function runExport(
   stateDir: string,
   plugins: unknown,
   outDir: string,
   complete: Complete | null,
   now: Date,
+  toolkit = bundledToolkit,
 ) {
   return run(
     {
@@ -41,7 +44,7 @@ export function runExport(
       inference: { parse: parseAgentInference },
       sysml: { emit, library: ASSEMBLY_LIBRARY, emitInferred },
       output: exportFiles,
-      validationReport,
+      validationReport: (files) => validationReport(files, toolkit),
       viewerPage,
     },
     stateDir,
@@ -59,7 +62,6 @@ export function createPluginEntry(
   definePluginEntry: Parameters<typeof createEntry>[0],
 ) {
   return createEntry(definePluginEntry, {
-    installToolkit,
     pluginList,
     runExport,
     toolkitStatus,

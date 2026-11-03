@@ -12,7 +12,7 @@ export interface CliDependencies {
   mkdir(path: string): Promise<unknown>;
   join(...parts: string[]): string;
   collect(home: string, plugins: unknown): Promise<Snapshot>;
-  diagnose(directory: string, stateDir: string): Promise<unknown>;
+  diagnose(directory: string, toolkit: string): Promise<unknown>;
   diff(a: Snapshot, b: Snapshot): Change[];
   emit(snapshot: Snapshot): Map<string, string>;
   ASSEMBLY_LIBRARY: ReadonlyMap<string, string>;
@@ -40,7 +40,7 @@ export function createCli(
       throw new ExportError(
         "CLI_USAGE",
         "Invalid command or arguments",
-        "Use collect --home DIR [--plugins FILE] --out FILE; export --snapshot FILE --out DIR; diagnose --export DIR --state-dir DIR; diff A B.",
+        "Use collect --home DIR [--plugins FILE] --out FILE; export --snapshot FILE --out DIR; diagnose --export DIR --toolkit DIR; diff A B.",
       );
     };
     const flags = (expected: string[], optional: string[] = []) => {
@@ -91,8 +91,8 @@ export function createCli(
       return { files: [...files.keys()] };
     }
     if (command === "diagnose") {
-      const f = flags(["--export", "--state-dir"]);
-      return await diagnose(f["--export"], f["--state-dir"]);
+      const f = flags(["--export", "--toolkit"]);
+      return await diagnose(f["--export"], f["--toolkit"]);
     }
     if (command === "diff") {
       if (rest.length !== 2 || rest.some((x) => x.startsWith("--"))) {

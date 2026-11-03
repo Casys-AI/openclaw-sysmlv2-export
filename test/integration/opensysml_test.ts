@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { installToolkit } from "../../src/adapters/out/sysml-toolkit/install.ts";
+import { extractToolkit } from "../../src/adapters/out/sysml-toolkit/extract.ts";
 import { emit } from "../../src/adapters/out/sysml/emitter.ts";
 import { ASSEMBLY_LIBRARY } from "../../src/adapters/out/sysml/library.ts";
 import { parseSnapshot } from "../../src/infrastructure/snapshot-codec.ts";
@@ -110,7 +110,7 @@ Deno.test({
     );
     const dir = await Deno.makeTempDir({ prefix: "ape-compiler-parity-" });
     try {
-      await installToolkit(dir, { from: toolkitArchive });
+      await extractToolkit(toolkitArchive, dir);
       await initOxigraph();
       for (const extended of [false, true]) {
         await t.step(

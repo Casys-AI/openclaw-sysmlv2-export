@@ -74,7 +74,6 @@ export interface ExportPorts extends OpenClawStateReader {
   output: ExportFiles;
   validationReport(
     files: Map<string, string>,
-    stateDir: string,
   ): Promise<
     {
       validation: ValidationSummary;

@@ -1,15 +1,15 @@
 import { Buffer } from "node:buffer";
 import { gunzipSync } from "node:zlib";
-import { readToolkit } from "../../src/adapters/out/sysml-toolkit/install.ts";
+import { readToolkit } from "../../src/adapters/out/sysml-toolkit/bundled.ts";
 import type { ElementSession } from "../../src/application/model/diagnostics/ports/out/toolkit-elements.port.ts";
 
 /** Test-only access to the same pinned, fully checked compiler session as runtime. */
 export async function withToolkitModel<T>(
-  stateDir: string,
+  toolkit: string,
   sources: Map<string, string>,
   inspect: (session: ElementSession) => T | Promise<T>,
 ): Promise<T> {
-  const files = await readToolkit(stateDir);
+  const files = await readToolkit(toolkit);
   const module = await import(
     `data:text/javascript;base64,${
       Buffer.from(files.get("sysmlv2.js")!).toString("base64")

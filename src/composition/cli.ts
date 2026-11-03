@@ -16,7 +16,7 @@ export const { run, main } = createCli({
   mkdir,
   join,
   collect,
-  async diagnose(directory, stateDir) {
+  async diagnose(directory, toolkit) {
     const sources = new Map<string, string>();
     for (
       const entry of (await readdir(directory, { withFileTypes: true })).sort((
@@ -33,7 +33,7 @@ export const { run, main } = createCli({
     }
     const { validation, diagnostics, ape } = await validationReport(
       sources,
-      stateDir,
+      toolkit,
     );
     return { validation, ...diagnostics, ape: persistedApeReport(ape) };
   },

@@ -19,4 +19,8 @@ carry codes; technical error sanitation is handled in infrastructure.
 
 The shipped rules are [`rules/ape/ape.ttl`](../rules/ape/ape.ttl) and
 [`rules/openclaw/openclaw.ttl`](../rules/openclaw/openclaw.ttl); packaging
-copies both into the plugin. See [contribution boundaries](../CONTRIBUTING.md).
+copies both into the plugin. It also writes the pinned Toolkit into
+`plugin/toolkit/` (`adapters/out/sysml-toolkit/`: `extract.ts` at build time,
+`bundled.ts` to read and verify it at run time) from the archive that
+`SYSML_TOOLKIT_WASM_ARCHIVE` names. See
+[contribution boundaries](../CONTRIBUTING.md).

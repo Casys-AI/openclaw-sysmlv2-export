@@ -12,7 +12,6 @@ export async function validationReport(
   toolkit: ToolkitValidationPort,
   failure: (cause: unknown) => ExportError,
   files: Map<string, string>,
-  stateDir: string,
 ): Promise<
   {
     validation: ValidationSummary;
@@ -21,7 +20,7 @@ export async function validationReport(
   }
 > {
   try {
-    const { ape, ...diagnostics } = await toolkit.validate(files, stateDir);
+    const { ape, ...diagnostics } = await toolkit.validate(files);
     return {
       validation: {
         status: diagnostics.errors.length ? "failed" : "passed",
@@ -32,17 +31,16 @@ export async function validationReport(
     };
   } catch (e) {
     const error = e instanceof ExportError ? e : failure(e);
-    const skipped = error.code === "TOOLKIT_NOT_INSTALLED";
     return {
       ape: { status: "skipped", code: error.code, findings: [] },
       validation: {
-        status: skipped ? "skipped" : "failed",
-        errors: skipped ? 0 : 1,
+        status: "failed",
+        errors: 1,
         code: error.code,
         recovery: error.recovery,
       },
       diagnostics: {
-        errors: skipped ? [] : [{
+        errors: [{
           code: error.code,
           message: error.context,
           file: null,
