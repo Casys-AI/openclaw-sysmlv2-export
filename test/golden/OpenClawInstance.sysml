@@ -1868,6 +1868,7 @@ package OpenClawInstance {
             attribute :>> kind = "cron";
             attribute :>> displayName = "Daily digest";
             attribute :>> enabled = false;
+            attribute :>> primaryModel = "anthropic/claude-opus-4-6";
             attribute :>> unresolvedTarget = "main";
             attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
             attribute :>> schedule : CronSchedule {
@@ -1885,6 +1886,7 @@ package OpenClawInstance {
             attribute :>> kind = "cron";
             attribute :>> displayName = "Weekly Retrospective";
             attribute :>> enabled = false;
+            attribute :>> primaryModel = "anthropic/claude-opus-4-6";
             attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
             ref part :>> targetAgent = Operators::agent_lead;
             ref part :>> owner = Operators::agent_lead;
@@ -1902,6 +1904,7 @@ package OpenClawInstance {
             attribute :>> kind = "cron";
             attribute :>> displayName = "Security check";
             attribute :>> enabled = false;
+            attribute :>> primaryModel = "anthropic/claude-opus-4-6";
             attribute :>> unresolvedTarget = "main";
             attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
             attribute :>> schedule : CronSchedule {
@@ -1919,6 +1922,7 @@ package OpenClawInstance {
             attribute :>> kind = "cron";
             attribute :>> displayName = "process-leads";
             attribute :>> enabled = false;
+            attribute :>> primaryModel = "anthropic/claude-haiku-4-5";
             attribute :>> unresolvedTarget = "main";
             attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
             attribute :>> schedule : CronSchedule {
@@ -1936,6 +1940,7 @@ package OpenClawInstance {
             attribute :>> kind = "cron";
             attribute :>> displayName = "Daily analytics report";
             attribute :>> enabled = false;
+            attribute :>> primaryModel = "anthropic/claude-haiku-4-5";
             attribute :>> unresolvedTarget = "main";
             attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
             attribute :>> schedule : CronSchedule {
@@ -1953,6 +1958,7 @@ package OpenClawInstance {
             attribute :>> kind = "cron";
             attribute :>> displayName = "Weekly scouting A";
             attribute :>> enabled = false;
+            attribute :>> primaryModel = "anthropic/claude-opus-4-6";
             attribute :>> unresolvedTarget = "main";
             attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
             attribute :>> schedule : CronSchedule {
@@ -1970,6 +1976,7 @@ package OpenClawInstance {
             attribute :>> kind = "cron";
             attribute :>> displayName = "Weekly scouting B";
             attribute :>> enabled = false;
+            attribute :>> primaryModel = "anthropic/claude-haiku-4-5";
             attribute :>> unresolvedTarget = "main";
             attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
             attribute :>> schedule : CronSchedule {
@@ -1987,6 +1994,7 @@ package OpenClawInstance {
             attribute :>> kind = "cron";
             attribute :>> displayName = "field-usage-daily";
             attribute :>> enabled = false;
+            attribute :>> primaryModel = "anthropic/claude-haiku-4-5";
             attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
             ref part :>> targetAgent = Operators::agent_lead;
             ref part :>> owner = Operators::agent_lead;
@@ -2005,6 +2013,7 @@ package OpenClawInstance {
             attribute :>> kind = "cron";
             attribute :>> displayName = "field-usage-alert";
             attribute :>> enabled = false;
+            attribute :>> primaryModel = "anthropic/claude-haiku-4-5";
             attribute :>> envelope = AssemblyCases::EnvelopeKind::deterministic;
             ref part :>> targetAgent = Operators::agent_lead;
             ref part :>> owner = Operators::agent_lead;

@@ -1,3 +1,7 @@
+import { emit } from "../../src/adapters/out/sysml/emitter.ts";
+import { emitInferred } from "../../src/adapters/out/sysml/inferred.ts";
+import { ASSEMBLY_LIBRARY } from "../../src/adapters/out/sysml/library.ts";
+import type { Inference } from "../../src/domain/model/inference.ts";
 import type { Snapshot } from "../../src/domain/model/snapshot.ts";
 
 /** Public synthetic mutations covering the migrated configuration diagnostics. */
@@ -89,7 +93,52 @@ export function openclawShapesFixture(base: Snapshot): Snapshot {
   return snapshot;
 }
 
+/** Instructions that limit exec: one prohibition and one permission, so only
+ * the prohibition is not enforced by a host exec that runs unprompted. */
+function inferenceFor(snapshot: Snapshot): Inference {
+  const source = { file: "AGENTS.md", fromLine: 1, toLine: 1 };
+  return {
+    schema: "openclaw-inference/1",
+    model: "synthetic",
+    agents: [{
+      agentId: snapshot.agents[0].id,
+      role: "Synthetic.",
+      procedures: [],
+      rules: [
+        {
+          id: "ask-before-commands",
+          text: "Never run a command without asking first.",
+          kind: "prohibition",
+          concern: "exec",
+          source,
+        },
+        {
+          id: "may-run-tests",
+          text: "May run the test suite.",
+          kind: "permission",
+          concern: "exec",
+          source,
+        },
+      ],
+    }],
+  };
+}
+
+/** The files a case compiles: the export, the library and, in the cases that
+ * have one, the inferred package. */
+export function openclawShapesSources(
+  snapshot: Snapshot,
+  withInference: boolean,
+): Map<string, string> {
+  return new Map([
+    ...emit(snapshot),
+    ...withInference ? emitInferred(snapshot, inferenceFor(snapshot)) : [],
+    ...ASSEMBLY_LIBRARY,
+  ]);
+}
+
 export const MIGRATED_CODES = new Set([
+  "PROSE_NOT_ENFORCED",
   "EXEC_ALLOWLIST_WILDCARD",
   "MCP_SANDBOX_GATE",
   "SAFE_BIN_INTERPRETER_UNPROFILED",
@@ -117,8 +166,9 @@ export function openclawShapesCases(baseline: Snapshot) {
   unverified.agents[0].workspace.malformedSkills = ["skills/SKILL.md"];
   unverified.agents[0].memory.search.enabled = false;
   unverified.agents[0].memory.search.rememberAcrossConversations = true;
-  return [["baseline", baseline], ["extended", extended], [
+  return [["baseline", baseline, false], ["extended", extended, true], [
     "unverified-and-negative",
     unverified,
+    true,
   ]] as const;
 }

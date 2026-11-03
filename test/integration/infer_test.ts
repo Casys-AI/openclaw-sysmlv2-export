@@ -185,3 +185,29 @@ Deno.test("an inference can be reused exactly when what the model is sent is unc
     input,
   );
 });
+
+Deno.test("only a rule with a concern gets a part the checks can read", async () => {
+  const s = await snapshot();
+  const field = parseAgentInference(
+    {
+      ...valid,
+      rules: [
+        { ...valid.rules[0], concern: "exec" },
+        { ...valid.rules[0], id: "plain" },
+      ],
+    },
+    s,
+    "field",
+  );
+  const text = emitInferred(s, {
+    schema: "openclaw-inference/1",
+    model: "test",
+    agents: [field],
+  })
+    .get("OpenClawInferred.sysml")!;
+  assert.match(text, /private import OpenClawImport::\*;/);
+  assert.equal(text.match(/: InferredConcern \{/g)?.length, 1);
+  assert.match(text, /part concern_field_no_payments : InferredConcern \{/);
+  assert.match(text, /attribute :>> topic = "exec";/);
+  assert.match(text, /attribute :>> ruleId = "no-payments";/);
+});

@@ -16,6 +16,7 @@ export function emitInferred(
   const lines = [
     "package OpenClawInferred {",
     "    private import ScalarValues::*;",
+    "    private import OpenClawImport::*;",
     `    ${
       doc(
         `Proposals inferred by ${inference.model} from agent instruction sources. Not admitted: accept or decline each one.`,
@@ -68,6 +69,20 @@ export function emitInferred(
         }`,
         "    }",
       );
+      // The requirement def holds prose; a rule about exec also gets a part
+      // that the checks can read.
+      if (r.concern) {
+        lines.push(
+          `    part ${
+            name("concern", `${a.agentId}_${r.id.replaceAll("-", "_")}`)
+          } : InferredConcern {`,
+          `        attribute :>> agentId = ${JSON.stringify(a.agentId)};`,
+          `        attribute :>> ruleId = ${JSON.stringify(r.id)};`,
+          `        attribute :>> ruleKind = ${JSON.stringify(r.kind)};`,
+          `        attribute :>> topic = ${JSON.stringify(r.concern)};`,
+          "    }",
+        );
+      }
     }
   }
   lines.push("}");

@@ -2,7 +2,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { collect } from "../src/adapters/out/openclaw/collector.ts";
 import { emit } from "../src/adapters/out/sysml/emitter.ts";
-import { ASSEMBLY_LIBRARY } from "../src/adapters/out/sysml/library.ts";
 import { installToolkit } from "../src/adapters/out/sysml-toolkit/install.ts";
 import { validate } from "../src/adapters/out/sysml-toolkit/worker-client.ts";
 import { compareFindings } from "../src/domain/model/diagnostics/findings.ts";
@@ -11,6 +10,7 @@ import { createFixture } from "./support/fixture.ts";
 import {
   MIGRATED_CODES,
   openclawShapesCases,
+  openclawShapesSources,
 } from "./support/openclaw-shapes-fixture.ts";
 
 const archive = Deno.env.get("SYSML_TOOLKIT_WASM_ARCHIVE");
@@ -22,9 +22,9 @@ try {
   const snapshot = await collect(fixture.home, fixture.plugins);
   const cases: Record<string, unknown> = {};
   let baseFindings: unknown;
-  for (const [name, input] of openclawShapesCases(snapshot)) {
+  for (const [name, input, inferred] of openclawShapesCases(snapshot)) {
     const result = await validate(
-      new Map([...emit(input), ...ASSEMBLY_LIBRARY]),
+      openclawShapesSources(input, inferred),
       state,
     );
     if (result.errors.length || result.ape.status !== "completed") {
