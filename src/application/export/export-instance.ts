@@ -1,7 +1,4 @@
-import {
-  compareFindings,
-  doctor,
-} from "../../domain/model/diagnostics/doctor.ts";
+import { compareFindings } from "../../domain/model/diagnostics/findings.ts";
 import {
   type ApeSummary,
   persistedApeReport,
@@ -91,7 +88,7 @@ export async function runExport(
   now: Date,
 ): Promise<ExportSummary> {
   const snapshot = await ports.collect(stateDir, pluginList);
-  const findings = doctor(snapshot);
+  const findings = snapshot.ambiguities.map((finding) => ({ ...finding }));
   const findingSummary: FindingSummary = { error: 0, warning: 0, info: 0 };
   const files = new Map([
     ["snapshot.json", ports.serialize(snapshot)],

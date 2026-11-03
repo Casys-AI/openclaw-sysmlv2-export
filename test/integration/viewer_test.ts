@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import type { ApeFinding } from "../../src/adapters/out/shacl/diagnostics.ts";
-import { doctor } from "../../src/domain/model/diagnostics/doctor.ts";
+import { compareFindings } from "../../src/domain/model/diagnostics/findings.ts";
 import { emit } from "../../src/adapters/out/sysml/emitter.ts";
 import { type Inference } from "../../src/domain/model/inference.ts";
 import { emitInferred } from "../../src/adapters/out/sysml/inferred.ts";
@@ -62,22 +62,21 @@ Deno.test("the same versions give the same page", async () => {
   assert.equal(await viewerPage(versions), await viewerPage(versions));
 });
 
-Deno.test("viewer findings are computed from each snapshot, including older entries", async () => {
+Deno.test("viewer uses persisted findings and falls back to collector notes when absent", async () => {
   const previous = version("2026-11-02T10-15-00Z", snapshot);
-  // An older entry has no summary, and its findings file may be stale.
-  previous.files["findings.json"] = "[]";
-  const next = structuredClone(snapshot);
-  next.messaging.enabled = false;
-  const current = version("2026-11-02T10-20-00Z", next);
-  current.entry.findings = { error: 99, warning: 99, info: 99 };
-  current.files["findings.json"] = canonical(doctor(snapshot));
+  const current = version("2026-11-02T10-20-00Z", snapshot);
+  const persisted = [{
+    code: "TEST",
+    severity: "warning",
+    subject: "instance",
+    context: "Stored.",
+    recovery: "Review.",
+  }];
+  current.files["findings.json"] = canonical(persisted);
   const data = dataOf(await viewerPage([current, previous]));
   assert.deepEqual(
     data.versions.map((v: { findings: unknown }) => v.findings),
-    [
-      doctor(next),
-      doctor(snapshot),
-    ],
+    [persisted, [...snapshot.ambiguities].sort(compareFindings)],
   );
 });
 
@@ -103,8 +102,11 @@ Deno.test("each version merges its stored APE findings, even without a readable 
   current.files["findings.json"] = canonical([
     ...currentApe,
     {
-      ...doctor(snapshot)[0],
-      context: "Stale doctor context must be recomputed.",
+      code: "TEST",
+      severity: "info",
+      subject: "instance",
+      context: "Persisted context.",
+      recovery: "Review.",
     },
   ]);
   previous.files["findings.json"] = canonical(previousApe);
@@ -121,11 +123,12 @@ Deno.test("each version merges its stored APE findings, even without a readable 
       legacyApe,
     ],
   );
+  assert.equal(
+    data.versions[0].findings.find((f: { code: string }) => f.code === "TEST")
+      .context,
+    "Persisted context.",
+  );
   for (const v of data.versions.slice(0, 2)) {
-    assert.deepEqual(
-      v.findings.filter((row: ApeFinding) => !row.code.startsWith("APE_")),
-      doctor(snapshot),
-    );
     const keys = v.findings.map((row: ApeFinding) =>
       `${row.code}:${row.subject}`
     );
@@ -175,7 +178,10 @@ Deno.test("unreadable findings remain local to their version", async () => {
     );
     assert.equal(warning.severity, "warning");
     assert.equal(warning.subject, "instance");
-    assert.match(warning.context, /2026-11-02T10-20-00Z.*APE.*unreadable/);
+    assert.match(
+      warning.context,
+      /2026-11-02T10-20-00Z.*findings.*unreadable/i,
+    );
     assert.doesNotMatch(
       warning.context,
       /private parser input|Unexpected|severity/,
@@ -190,7 +196,7 @@ Deno.test("unreadable findings remain local to their version", async () => {
       data.versions[1].findings.filter((f: { code: string }) =>
         f.code !== warning.code
       ),
-      doctor(snapshot),
+      [],
     );
     assert.equal(data.versions[2].findings[0].subject, "agent:legacy");
     assert.equal(data.versions[2].views, null);

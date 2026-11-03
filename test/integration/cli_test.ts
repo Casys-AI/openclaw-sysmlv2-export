@@ -6,7 +6,7 @@ import { main, run } from "../../src/composition/cli.ts";
 import { ExportError } from "../../src/infrastructure/error.ts";
 import { createFixture } from "../support/fixture.ts";
 
-Deno.test("CLI collect/export/doctor/diff compose with deterministic sanitized output", async () => {
+Deno.test("CLI collect/export/diagnose/diff compose with deterministic sanitized output", async () => {
   const fixture = await createFixture();
   const output = await mkdtemp(join(tmpdir(), "openclaw-cli-test-"));
   try {
@@ -27,16 +27,25 @@ Deno.test("CLI collect/export/doctor/diff compose with deterministic sanitized o
     const snapshotText = await readFile(first, "utf8");
     assert.equal(snapshotText, await readFile(second, "utf8"));
     assert.deepEqual(await run(["diff", first, second]), []);
-    assert.deepEqual(
-      await run(["doctor", "--snapshot", first]),
-      await run(["doctor", "--snapshot", second]),
-    );
     const exported = join(output, "exported"),
       repeated = join(output, "repeated");
     assert.deepEqual(
       await run(["export", "--snapshot", first, "--out", exported]),
       await run(["export", "--snapshot", second, "--out", repeated]),
     );
+    const beforeDiagnosis = (await readdir(exported)).sort();
+    const diagnosis = await run([
+      "diagnose",
+      "--export",
+      exported,
+      "--state-dir",
+      output,
+    ]);
+    assert.equal(
+      (diagnosis as { validation: { status: string } }).validation.status,
+      "skipped",
+    );
+    assert.deepEqual((await readdir(exported)).sort(), beforeDiagnosis);
     const files = await readdir(exported);
     assert.ok(files.length > 0);
     for (const file of files) {
@@ -75,7 +84,7 @@ Deno.test("CLI collect/export/doctor/diff compose with deterministic sanitized o
 
 Deno.test("CLI rejects unknown flags and invalid snapshot boundaries", async () => {
   await assert.rejects(
-    () => run(["doctor", "--unknown", "x"]),
+    () => run(["doctor", "--snapshot", "x"]),
     (error: unknown) =>
       error instanceof ExportError && error.code === "CLI_USAGE",
   );
@@ -96,7 +105,7 @@ Deno.test("CLI rejects unknown flags and invalid snapshot boundaries", async () 
     ) {
       await writeFile(path, JSON.stringify(bad));
       for (
-        const args of [["doctor", "--snapshot", path], ["diff", path, path], [
+        const args of [["diff", path, path], [
           "export",
           "--snapshot",
           path,

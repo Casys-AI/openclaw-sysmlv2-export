@@ -4,7 +4,6 @@ import { mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pluginList, runExport } from "../../src/composition/openclaw.ts";
-import { doctor } from "../../src/domain/model/diagnostics/doctor.ts";
 import { ExportError } from "../../src/infrastructure/error.ts";
 import { ASSEMBLY_LIBRARY } from "../../src/adapters/out/sysml/library.ts";
 import { canonical } from "../../src/infrastructure/canonical-json.ts";
@@ -52,14 +51,21 @@ Deno.test("plugin runs are kept as versions", async (t) => {
       count: 0,
       code: "TOOLKIT_NOT_INSTALLED",
     });
-    const findings = doctor(parseSnapshot(
+    const findings = parseSnapshot(
       JSON.parse(await readFile(join(first.outDir, "snapshot.json"), "utf8")),
-    ));
+    ).ambiguities.sort((a, b) =>
+      a.code.localeCompare(b.code) || a.subject.localeCompare(b.subject) ||
+      a.context.localeCompare(b.context)
+    );
     assert.equal(
       await readFile(join(first.outDir, "findings.json"), "utf8"),
       canonical(findings),
     );
-    assert.deepEqual(first.findings, { error: 0, warning: 21, info: 34 });
+    assert.deepEqual(first.findings, {
+      error: 0,
+      warning: 0,
+      info: findings.length,
+    });
     assert.deepEqual(
       JSON.parse(await readFile(join(first.outDir, "validation.json"), "utf8")),
       {
@@ -182,7 +188,7 @@ Deno.test("the plugin inventory command must succeed and print JSON", () => {
   }
 });
 
-Deno.test("the plugin summary names combined counts and the APE execution status", async () => {
+Deno.test("the plugin summary names combined counts and the model checks status", async () => {
   const source = await readFile(
     new URL("../../src/adapters/in/openclaw/plugin.mjs", import.meta.url),
     "utf8",
@@ -209,7 +215,7 @@ Deno.test("the plugin summary names combined counts and the APE execution status
       findings: { error: 0, warning: 0, info: 0 },
       ape: { status: "completed", count: 1 },
     }),
-    /APE: completed \(1 finding\)/,
+    /Checks: completed \(1 finding\)/,
   );
   for (
     const [findings, expected] of [
@@ -230,7 +236,7 @@ Deno.test("the plugin summary names combined counts and the APE execution status
     );
     assert.match(
       summarize({ ...summary, findings }),
-      /APE: completed \(12 findings\)/,
+      /Checks: completed \(12 findings\)/,
     );
   }
 });

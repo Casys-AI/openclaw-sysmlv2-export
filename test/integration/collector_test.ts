@@ -12,7 +12,6 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { EMAIL_ADDRESS_PATTERN, JWT_PATTERN } from "@logtape/redaction";
 import { collect } from "../../src/adapters/out/openclaw/collector.ts";
-import { doctor } from "../../src/domain/model/diagnostics/doctor.ts";
 import { ExportError } from "../../src/infrastructure/error.ts";
 import type { Snapshot } from "../../src/domain/model/snapshot.ts";
 import { canonical } from "../../src/infrastructure/canonical-json.ts";
@@ -851,12 +850,6 @@ Deno.test("exec replaces agent lists, merges profile keys and leaves default saf
       snapshot.agents.every((a) =>
         !a.execution.commands.some((c) => c.kind === "safe-bin")
       ),
-    );
-    assert.deepEqual(
-      doctor(snapshot).filter((f) => f.code === "SAFE_BINS_DEFAULT_UNRESOLVED")
-        .map((f) => f.subject).sort(),
-      snapshot.agents.filter((a) => a.grants.some((g) => g.tool === "exec"))
-        .map((a) => `agent:${a.id}`).sort(),
     );
   } finally {
     await fixture.cleanup();

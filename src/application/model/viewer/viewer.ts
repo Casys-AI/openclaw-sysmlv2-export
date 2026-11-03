@@ -4,10 +4,7 @@ import {
   type PersistedApeReport,
   persistedApeReport,
 } from "../../../domain/model/diagnostics/ape.ts";
-import {
-  compareFindings,
-  doctor,
-} from "../../../domain/model/diagnostics/doctor.ts";
+import { compareFindings } from "../../../domain/model/diagnostics/findings.ts";
 import { elementId } from "../../../domain/model/element-id.ts";
 import { isRecord } from "../../../domain/primitives/error.ts";
 import type { Inference } from "../../../domain/model/inference.ts";
@@ -57,49 +54,52 @@ export function createViewer(
       return null;
     }
   }
-  /** Persisted APE findings belong to this version; doctor rows are recomputed. */
+  /** Findings belong to their saved version; missing archives retain collector notes only. */
   function findingsOf(version: ViewerVersion, snapshot: Snapshot | null) {
     let persisted: Finding[] = [];
     if (Object.hasOwn(version.files, "findings.json")) {
       try {
         const value: unknown = JSON.parse(version.files["findings.json"]);
         if (
-          !Array.isArray(value) ||
-          value.some((row) =>
-            !row || typeof row !== "object" || Array.isArray(row) ||
-            typeof row.code !== "string" ||
-            (row.code.startsWith("APE_") && (
-              !["error", "warning", "info"].includes(row.severity) ||
-              ["subject", "context", "recovery", "pattern"].some((field) =>
+          !Array.isArray(value) || value.some((row) => {
+            if (
+              !isRecord(row) ||
+              !["error", "warning", "info"].includes(String(row.severity)) ||
+              ["code", "subject", "context", "recovery"].some((field) =>
                 typeof row[field] !== "string" || !row[field]
-              ) ||
-              !["present", "absent", "indeterminate"].includes(row.finding)
-            ))
-          )
-        ) {
-          throw new Error(
-            "Expected an array of findings with valid APE fields",
-          );
-        }
-        persisted = (value as Finding[]).filter((row) =>
-          row.code.startsWith("APE_")
-        );
+              )
+            ) return true;
+            const metadata = row.pattern !== undefined ||
+              row.finding !== undefined;
+            return ((row.code as string).startsWith("APE_") || metadata) && (
+              typeof row.pattern !== "string" || !row.pattern ||
+              !["present", "absent", "indeterminate"].includes(
+                String(row.finding),
+              )
+            );
+          })
+        ) throw new Error("Expected an array of valid findings");
+        persisted = value as Finding[];
       } catch {
         persisted = [{
           code: "VIEWER_FINDINGS_INVALID",
           severity: "warning",
           subject: elementId("instance"),
           context:
-            `Version ${version.entry.id}: APE findings in findings.json are unreadable.`,
+            `Version ${version.entry.id}: Findings in findings.json are unreadable.`,
           recovery:
             "Restore this version's findings.json as a valid findings array, then rebuild the viewer.",
         }];
       }
     }
-    if (!snapshot && !persisted.length) return null;
-    return [...snapshot ? doctor(snapshot) : [], ...persisted].sort(
-      compareFindings,
-    );
+    if (Object.hasOwn(version.files, "findings.json")) {
+      return persisted.sort(compareFindings);
+    }
+    return snapshot
+      ? snapshot.ambiguities.map((finding) => ({ ...finding })).sort(
+        compareFindings,
+      )
+      : null;
   }
 
   /** Admit only the APE fields consumed by the counts-only archival normalizer. */
@@ -162,7 +162,7 @@ export function createViewer(
 
   /** A version's views, laid out, each element located in the version's own
    * SysML files; null when this viewer cannot read its snapshot (an older
-   * schema): its files and persisted APE findings remain available. */
+   * schema): its files and persisted findings remain available. */
   async function versionViews(
     files: Record<string, string>,
     scenes: Map<string, Scene>,

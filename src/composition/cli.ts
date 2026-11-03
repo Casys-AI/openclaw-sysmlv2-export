@@ -1,7 +1,8 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { collect } from "../adapters/out/openclaw/collector.ts";
-import { doctor } from "../domain/model/diagnostics/doctor.ts";
+import { validationReport } from "./model-validation.ts";
+import { persistedApeReport } from "../domain/model/diagnostics/ape.ts";
 import { diff as domainDiff } from "../domain/model/diff.ts";
 import { emit } from "../adapters/out/sysml/emitter.ts";
 import { ASSEMBLY_LIBRARY } from "../adapters/out/sysml/library.ts";
@@ -15,7 +16,27 @@ export const { run, main } = createCli({
   mkdir,
   join,
   collect,
-  doctor,
+  async diagnose(directory, stateDir) {
+    const sources = new Map<string, string>();
+    for (
+      const entry of (await readdir(directory, { withFileTypes: true })).sort((
+        a,
+        b,
+      ) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0)
+    ) {
+      if (entry.isFile() && entry.name.endsWith(".sysml")) {
+        sources.set(
+          entry.name,
+          await readFile(join(directory, entry.name), "utf8"),
+        );
+      }
+    }
+    const { validation, diagnostics, ape } = await validationReport(
+      sources,
+      stateDir,
+    );
+    return { validation, ...diagnostics, ape: persistedApeReport(ape) };
+  },
   diff: (a, b) => domainDiff(a, b, canonical),
   emit,
   ASSEMBLY_LIBRARY,

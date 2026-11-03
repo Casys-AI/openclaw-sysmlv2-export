@@ -4,7 +4,6 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { collect } from "../../src/adapters/out/openclaw/collector.ts";
 import { diff } from "../../src/domain/model/diff.ts";
-import { doctor } from "../../src/domain/model/diagnostics/doctor.ts";
 import { ExportError } from "../../src/infrastructure/error.ts";
 import { canonical } from "../../src/infrastructure/canonical-json.ts";
 import { createFixture } from "../support/fixture.ts";
@@ -114,7 +113,6 @@ Deno.test("SQLite host policy tightens exec and preserves each side in snapshot 
     try {
       store({ defaults: { security: "full", ask: "off" } });
       const open = await collect(f.home);
-      assert.ok(doctor(open).some((f) => f.code === "EXEC_WITHOUT_APPROVAL"));
       store({
         defaults: { security: "deny", ask: "off" },
         agents: { "*": { security: "allowlist" }, main: { ask: "always" } },
@@ -126,9 +124,6 @@ Deno.test("SQLite host policy tightens exec and preserves each side in snapshot 
       assert.equal(ex.ask, "off");
       assert.deepEqual(ex.approvals, { security: "allowlist", ask: "always" });
       assert.deepEqual(ex.effective, ex.approvals);
-      assert.ok(
-        !doctor(guarded).some((f) => f.code === "EXEC_WITHOUT_APPROVAL"),
-      );
       const hostChange = diff(open, guarded, canonical).find((d) =>
         d.kind === "agent.execution"
       )!;

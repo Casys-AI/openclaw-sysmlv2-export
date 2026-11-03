@@ -14,6 +14,60 @@
     "subject": "agent:lead"
   },
   {
+    "code": "APE_LINK_CYCLE",
+    "context": "This agent is in a directed delegation cycle with coach. Self-delegation alone is excluded.",
+    "finding": "present",
+    "pattern": "4.2",
+    "recovery": "Review the delegation cycle and make its termination and supervisory intervention explicit.",
+    "severity": "warning",
+    "subject": "agent:client"
+  },
+  {
+    "code": "APE_LINK_CYCLE",
+    "context": "This agent is in a directed delegation cycle with client. Self-delegation alone is excluded.",
+    "finding": "present",
+    "pattern": "4.2",
+    "recovery": "Review the delegation cycle and make its termination and supervisory intervention explicit.",
+    "severity": "warning",
+    "subject": "agent:coach"
+  },
+  {
+    "code": "APE_LINK_CYCLE",
+    "context": "This agent is in a directed delegation cycle with field, lead, secretary. Self-delegation alone is excluded.",
+    "finding": "present",
+    "pattern": "4.2",
+    "recovery": "Review the delegation cycle and make its termination and supervisory intervention explicit.",
+    "severity": "warning",
+    "subject": "agent:devbox"
+  },
+  {
+    "code": "APE_LINK_CYCLE",
+    "context": "This agent is in a directed delegation cycle with devbox, lead, secretary. Self-delegation alone is excluded.",
+    "finding": "present",
+    "pattern": "4.2",
+    "recovery": "Review the delegation cycle and make its termination and supervisory intervention explicit.",
+    "severity": "warning",
+    "subject": "agent:field"
+  },
+  {
+    "code": "APE_LINK_CYCLE",
+    "context": "This agent is in a directed delegation cycle with devbox, field, secretary. Self-delegation alone is excluded.",
+    "finding": "present",
+    "pattern": "4.2",
+    "recovery": "Review the delegation cycle and make its termination and supervisory intervention explicit.",
+    "severity": "warning",
+    "subject": "agent:lead"
+  },
+  {
+    "code": "APE_LINK_CYCLE",
+    "context": "This agent is in a directed delegation cycle with devbox, field, lead. Self-delegation alone is excluded.",
+    "finding": "present",
+    "pattern": "4.2",
+    "recovery": "Review the delegation cycle and make its termination and supervisory intervention explicit.",
+    "severity": "warning",
+    "subject": "agent:secretary"
+  },
+  {
     "code": "BINDING_ACCOUNT_UNAVAILABLE",
     "context": "A binding has no matching enabled channel account in the snapshot.",
     "recovery": "Enable its channel and account, correct match.accountId, or remove the obsolete binding.",

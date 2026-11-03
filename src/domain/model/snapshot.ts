@@ -233,7 +233,7 @@ export function unique(values: string[]): string[] {
 }
 
 // A dependency-free schema for the serialized trust boundary. Inside the pipeline
-// Snapshot is trusted; emit/doctor/diff do not revalidate it.
+// Snapshot is trusted; emit/diff do not revalidate it.
 type Shape =
   | "string"
   | "number"

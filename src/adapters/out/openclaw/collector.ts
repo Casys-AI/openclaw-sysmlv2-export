@@ -807,6 +807,17 @@ export async function collect(
       // safeBinProfiles overrides individual keys. Only directory counts survive.
       const rawEx = { ...obj(rawGlobal.exec), ...obj(rawTools.exec) };
       const safeBins = ex.safeBins === undefined ? null : strings(ex.safeBins);
+      if (
+        safeBins === null &&
+        resolved.grants.some((grant) => grant.tool === "exec")
+      ) {
+        findings.push(info(
+          "SAFE_BINS_DEFAULT_UNRESOLVED",
+          elementId("agent", id),
+          "Safe bins are unset; this collector does not expand runtime defaults into command grants.",
+          "Set tools.exec.safeBins explicitly if command-level grants are needed; docs/tools/exec-approvals-advanced.md.",
+        ));
+      }
       // docs/tools/exec-approvals-advanced.md: argv policy restricts safe bins;
       // awk, sed and jq are always denied, even when explicitly configured.
       const safeCommands: ExecCommand[] = unique(safeBins ?? [])

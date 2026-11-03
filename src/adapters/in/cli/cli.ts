@@ -1,6 +1,6 @@
 import { ExportError } from "../../../domain/primitives/error.ts";
 import { json } from "../../../domain/primitives/input.ts";
-import type { Finding, Snapshot } from "../../../domain/model/snapshot.ts";
+import type { Snapshot } from "../../../domain/model/snapshot.ts";
 import type { Change } from "../../../domain/model/diff.ts";
 export interface CliDependencies {
   readFile(path: string, encoding: "utf8"): Promise<string>;
@@ -12,7 +12,7 @@ export interface CliDependencies {
   mkdir(path: string): Promise<unknown>;
   join(...parts: string[]): string;
   collect(home: string, plugins: unknown): Promise<Snapshot>;
-  doctor(snapshot: Snapshot): Finding[];
+  diagnose(directory: string, stateDir: string): Promise<unknown>;
   diff(a: Snapshot, b: Snapshot): Change[];
   emit(snapshot: Snapshot): Map<string, string>;
   ASSEMBLY_LIBRARY: ReadonlyMap<string, string>;
@@ -26,7 +26,7 @@ export function createCli(
     mkdir,
     join,
     collect,
-    doctor,
+    diagnose,
     diff,
     emit,
     ASSEMBLY_LIBRARY,
@@ -40,7 +40,7 @@ export function createCli(
       throw new ExportError(
         "CLI_USAGE",
         "Invalid command or arguments",
-        "Use collect --home DIR [--plugins FILE] --out FILE; export --snapshot FILE --out DIR; doctor --snapshot FILE; diff A B.",
+        "Use collect --home DIR [--plugins FILE] --out FILE; export --snapshot FILE --out DIR; diagnose --export DIR --state-dir DIR; diff A B.",
       );
     };
     const flags = (expected: string[], optional: string[] = []) => {
@@ -90,9 +90,9 @@ export function createCli(
       }
       return { files: [...files.keys()] };
     }
-    if (command === "doctor") {
-      const f = flags(["--snapshot"]);
-      return doctor(await snapshot(f["--snapshot"]));
+    if (command === "diagnose") {
+      const f = flags(["--export", "--state-dir"]);
+      return await diagnose(f["--export"], f["--state-dir"]);
     }
     if (command === "diff") {
       if (rest.length !== 2 || rest.some((x) => x.startsWith("--"))) {
