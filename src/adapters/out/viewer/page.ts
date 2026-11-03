@@ -22,7 +22,7 @@ export const PAGE = String.raw`<!doctype html>
   --diagram: Helvetica, Arial, "Liberation Sans", sans-serif;
   --md-node: #fff; --md-node-def: #f3f2ef; --md-frame: #fdfcfa; --md-group: rgb(0 0 0 / 1.6%);
   --md-stroke: #2b2b2d; --md-soft: #8e8b85; --md-rule: #e1ded8; --md-edge: #4b4b4f;
-  --md-halo: var(--paper); --md-dot: #e3e0da; --md-ring: rgb(29 29 31 / 10%);
+  --md-halo: var(--paper); --md-dot: #e3e0da; --md-ring: rgb(29 29 31 / 28%); --md-ring-hover: rgb(29 29 31 / 11%);
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; }
@@ -116,7 +116,10 @@ main > section[hidden] { display: none; }
 .md-group-label { font-size: 10px; font-style: italic; fill: var(--muted) !important; }
 .md-actor { fill: none; stroke: var(--md-stroke); stroke-width: 1.3; stroke-linecap: round; }
 .md-node.selected > .md-body { stroke: var(--ink); stroke-width: 2.2; }
-.md-ring-select { fill: none; stroke: var(--md-ring); stroke-width: 8; }
+/* The selection's halo, and a fainter one under the pointer, at any zoom. */
+.md-ring-select { display: none; fill: none; stroke: var(--md-ring); stroke-width: 8; vector-effect: non-scaling-stroke; pointer-events: none; }
+.md-node.selected > .md-ring-select { display: inline; }
+.md-node.hot:not(.selected) > .md-ring-select { display: inline; stroke: var(--md-ring-hover); }
 .md-badge circle { stroke: var(--paper); stroke-width: 2; }
 .md-badge text { font-size: 10px; font-weight: 700; fill: #fff !important; text-anchor: middle; }
 .hl .md-node.added > .md-body { stroke: var(--add); stroke-width: 2; }
@@ -125,14 +128,14 @@ main > section[hidden] { display: none; }
 .md-badge { display: none; }
 .hl .md-badge { display: inline; }
 .md-badge.add circle { fill: var(--add); } .md-badge.chg circle { fill: var(--chg); }
-.hl .md-edge.added .md-line { stroke: var(--add); stroke-width: 2; }
-.hl .md-edge.changed .md-line { stroke: var(--chg); stroke-width: 2; }
+.hl .md-edge.added .md-line { stroke: var(--add); --w: 2; }
+.hl .md-edge.changed .md-line { stroke: var(--chg); --w: 2; }
 
 .md-edge { transition: opacity .18s ease; pointer-events: none; }
-.md-line { fill: none; stroke: var(--md-edge); stroke-width: 1.25; }
+.md-line { fill: none; stroke: var(--md-edge); stroke-width: var(--w, 1.25); }
 .md-edge.handoff .md-line, .md-edge.escalation .md-line { stroke-dasharray: 6 4; }
 .md-edge.escalation .md-line { stroke: var(--warn); }
-.md-edge.owner .md-line { stroke-width: 1; }
+.md-edge.owner .md-line { --w: 1; }
 .md-edge.target .md-line { stroke-dasharray: 2 3; stroke: var(--md-soft); }
 .md-edge text, .md-label { font-size: 10.5px; fill: var(--muted); paint-order: stroke; stroke: var(--md-halo); stroke-width: 4px; stroke-linejoin: round; }
 .md-edge.escalation text { fill: var(--warn); }
@@ -140,9 +143,11 @@ main > section[hidden] { display: none; }
 #md-arrow-warn .md-mark-line { stroke: var(--warn); }
 .md-mark-fill { fill: var(--md-edge); }
 
-svg.md-focus .md-edge:not(.lit) { opacity: .12; }
-svg.md-focus .md-node.leaf:not(.lit) { opacity: .28; }
-svg.md-focus .md-edge.lit .md-line { stroke-width: 1.8; }
+/* A selection dims what it does not relate to; the selected or hovered
+   element's own edges stand out, whatever their width. */
+svg.md-focus .md-edge:not(.lit):not(.hot) { opacity: .12; }
+svg.md-focus .md-node.leaf:not(.lit):not(.hot) { opacity: .28; }
+.md-edge.hot .md-line { stroke-width: calc(var(--w, 1.25) + .9); }
 
 /* Inspector */
 /* Sidebar: one panel at a time beside the diagram, picked from the icon rail. */
@@ -201,6 +206,8 @@ svg.md-focus .md-edge.lit .md-line { stroke-width: 1.8; }
 .md-back:hover { color: var(--ink); }
 .md-changes + .md-back { display: block; margin: -4px 0 12px; }
 .md-canvas:focus-visible, button:focus-visible, select:focus-visible, [role="button"]:focus-visible { outline: 2px solid #797369; outline-offset: 2px; }
+/* A clicked element shows its selection, not the browser's focus ring. */
+.md-node:focus:not(:focus-visible) { outline: none; }
 
 /* Tables: a view's elements in rows, under its diagram or alone. */
 .md-sheet { flex: 0 0 auto; max-height: 42%; overflow: auto; isolation: isolate; margin: 0 12px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
@@ -214,9 +221,11 @@ svg.md-focus .md-edge.lit .md-line { stroke-width: 1.8; }
 .tb-note { margin-left: auto; font-style: italic; }
 .hl tr.added > th, .hl tr.added > td { background: color-mix(in srgb, var(--add-bg) 60%, var(--card)); }
 .hl tr.changed > th, .hl tr.changed > td { background: color-mix(in srgb, var(--chg-bg) 60%, var(--card)); }
-.hl tr.added > :first-child { box-shadow: inset 3px 0 var(--add); } .hl tr.changed > :first-child { box-shadow: inset 3px 0 var(--chg); }
-.hl th.added { box-shadow: inset 0 -3px var(--add); } .hl th.changed { box-shadow: inset 0 -3px var(--chg); }
-.hl td.added { box-shadow: inset 0 0 0 2px var(--add); } .hl td.changed { box-shadow: inset 0 0 0 2px var(--chg); }
+/* A cell's marks compose: what changed (--bar) and what is selected (--sel). */
+.md-sheet :is(th, td) { box-shadow: var(--bar, 0 0 #0000), var(--sel, 0 0 #0000); }
+.hl tr.added > :first-child { --bar: inset 3px 0 var(--add); } .hl tr.changed > :first-child { --bar: inset 3px 0 var(--chg); }
+.hl th.added { --bar: inset 0 -3px var(--add); } .hl th.changed { --bar: inset 0 -3px var(--chg); }
+.hl td.added { --bar: inset 0 0 0 2px var(--add); } .hl td.changed { --bar: inset 0 0 0 2px var(--chg); }
 .mx { border-collapse: separate; border-spacing: 0; font-size: 12px; }
 .mx th, .mx td { border-bottom: 1px solid var(--line); background: var(--card); }
 .mx thead th { position: sticky; top: 0; z-index: 2; padding: 6px 4px; vertical-align: bottom; font-weight: 500; border-bottom: 1px solid var(--line-strong); }
@@ -240,8 +249,8 @@ svg.md-focus .md-edge.lit .md-line { stroke-width: 1.8; }
 .mx tr.muted > th { color: var(--muted); }
 .mx tr.dashed .mx-name { color: var(--muted); border-bottom: 1px dashed var(--line-strong); }
 .mx tbody tr:hover > th, .mx tbody tr:hover > td, .mx .hc { background-image: linear-gradient(var(--hover), var(--hover)); }
-.mx .selected, .mx .on { box-shadow: inset 0 0 0 2px var(--ink); }
-.mx thead th.selected { box-shadow: inset 0 -3px var(--ink); }
+.mx .selected, .mx .on { --sel: inset 0 0 0 2px var(--ink); }
+.mx thead th.selected { --sel: inset 0 -3px var(--ink); }
 .tb-title { color: var(--ink); font-weight: 600; }
 .et { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; }
 .et th { position: sticky; top: 0; z-index: 1; padding: 6px 10px; text-align: left; font-weight: 500; color: var(--muted); background: var(--card); border-bottom: 1px solid var(--line-strong); white-space: nowrap; }
@@ -251,7 +260,7 @@ svg.md-focus .md-edge.lit .md-line { stroke-width: 1.8; }
 .et td { padding: 5px 10px; border-bottom: 1px solid var(--line); vertical-align: top; white-space: nowrap; background: var(--card); }
 .et tbody tr { cursor: pointer; }
 .et tbody tr:hover > td { background-image: linear-gradient(var(--hover), var(--hover)); }
-.et tr.selected > td { box-shadow: inset 0 1px var(--ink), inset 0 -1px var(--ink); }
+.et tr.selected > td { --sel: inset 0 1px var(--ink), inset 0 -1px var(--ink); }
 .et tr.muted > td { color: var(--muted); }
 .et-name { font-weight: 600; }
 .et td.et-wrap { white-space: normal; min-width: 160px; }
@@ -274,7 +283,7 @@ svg.md-focus .md-edge.lit .md-line { stroke-width: 1.8; }
 .wk tbody th small { margin-left: 8px; color: var(--muted); }
 .wk-agent th { padding-top: 8px; font: 600 11.5px var(--mono); }
 .wk tr.muted th { color: var(--muted); }
-.wk tr th.selected { box-shadow: inset 3px 0 var(--ink); }
+.wk tr th.selected { --sel: inset 0 1px var(--ink), inset 0 -1px var(--ink); }
 .wk-strip { display: block; overflow: visible; }
 .wk-strip text { font-size: 10px; fill: var(--muted); }
 .wk-strip line { stroke: var(--line-strong); }
@@ -582,6 +591,9 @@ function drawNode(n, delta) {
     "aria-label": (n.kw ? n.kw + " " : "") + (n.name || n.lines && n.lines.join(" ") || n.shape) });
   g.append(sv("title", {}, n.name || (n.lines || []).join(" ") || (n.label ? n.label.lines.join(" ") : n.shape)));
   const { x, y, w, h } = n, cx = x + w / 2, cy = y + h / 2;
+  g.append(n.shape === "initial" || n.shape === "final" ? sv("circle", { class: "md-ring-select", cx, cy, r: w / 2 })
+    : n.shape === "decision" ? sv("path", { class: "md-ring-select", d: "M" + cx + "," + y + " L" + (x + w) + "," + cy + " L" + cx + "," + (y + h) + " L" + x + "," + cy + " Z" })
+    : sv("rect", { class: "md-ring-select", x, y, width: w, height: h, rx: n.shape === "action" ? 14 : 9 }));
   switch (n.shape) {
     case "frame": drawFrame(g, n); break;
     case "group":
@@ -863,6 +875,7 @@ function drawScene(view, delta, keep) {
     if (t.getComputedTextLength() > max) { t.setAttribute("textLength", max); t.setAttribute("lengthAdjust", "spacingAndGlyphs"); }
   }
   state.drawn.svg = svg;
+  state.drawn.nodes = new Map(view.scene.nodes.map((n) => [n.id, n]));
   state.drawn.world = world;
   if (keep && state.viewport) applyViewport(); else fit();
 }
@@ -890,10 +903,10 @@ function zoom(f, cx, cy) {
   applyViewport();
 }
 
-function parents() { return new Map(state.drawn.scene.nodes.map((n) => [n.id, n.parent])); }
+// An element, what it contains, and what their edges reach.
 function related(id) {
-  const scene = state.drawn.scene, up = parents();
-  const within = (x) => { for (let p = x; p; p = up.get(p)) if (p === id) return true; return false; };
+  const scene = state.drawn.scene, up = (x) => state.drawn.nodes.get(x).parent;
+  const within = (x) => { for (let p = x; p; p = up(p)) if (p === id) return true; return false; };
   const nodes = new Set([id]), edges = new Set();
   for (const e of scene.edges) {
     if (within(e.s) || within(e.t)) { edges.add(e.id); nodes.add(e.s); nodes.add(e.t); }
@@ -901,18 +914,30 @@ function related(id) {
   for (const n of scene.nodes) if (within(n.id)) nodes.add(n.id);
   return { nodes, edges };
 }
+// The procedure frame a step sits in, or the element itself.
+function scopeOf(id) {
+  const p = state.drawn.nodes.get(state.drawn.nodes.get(id).parent);
+  return p && p.shape === "frame" ? p.id : id;
+}
+// A selection lights what its scope relates to (a step, its whole procedure)
+// and dims the rest; hovering only marks the element and its own edges.
 function applyFocus() {
   const d = state.drawn;
   if (!d) return;
   if (d.svg) {
-    const focus = state.selected || state.hover;
-    const r = focus && d.scene.nodes.some((n) => n.id === focus) ? related(focus) : null;
+    const sel = d.nodes.has(state.selected) ? state.selected : null;
+    const r = sel ? related(scopeOf(sel)) : null;
+    const hot = new Set(d.scene.edges.filter((e) => [e.s, e.t].some((x) => x && (x === sel || x === state.hover))).map((e) => e.id));
     d.svg.classList.toggle("md-focus", Boolean(r));
     for (const g of d.world.querySelectorAll(".md-node")) {
       g.classList.toggle("lit", Boolean(r && r.nodes.has(g.dataset.id)));
       g.classList.toggle("selected", g.dataset.id === state.selected);
+      g.classList.toggle("hot", g.dataset.id === state.hover);
     }
-    for (const g of d.world.querySelectorAll(".md-edge")) g.classList.toggle("lit", Boolean(r && r.edges.has(g.dataset.id)));
+    for (const g of d.world.querySelectorAll(".md-edge")) {
+      g.classList.toggle("lit", Boolean(r && r.edges.has(g.dataset.id)));
+      g.classList.toggle("hot", hot.has(g.dataset.id));
+    }
   }
   const sheet = document.getElementById("sheet");
   for (const e of sheet.querySelectorAll("[data-id]")) {
@@ -1501,11 +1526,14 @@ canvas.addEventListener("click", (e) => {
   const g = e.target.closest(".md-node");
   if (g) select(g.dataset.id, false);
 });
+function hover(id) {
+  if (id !== state.hover) { state.hover = id; applyFocus(); }
+}
 canvas.addEventListener("pointerover", (e) => {
   const g = e.target.closest(".md-node.leaf");
-  const id = g ? g.dataset.id : null;
-  if (id !== state.hover) { state.hover = id; applyFocus(); }
+  hover(g ? g.dataset.id : null);
 });
+canvas.addEventListener("pointerleave", () => hover(null));
 canvas.addEventListener("keydown", (e) => {
   const g = e.target.closest && e.target.closest(".md-node");
   if (g && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); select(g.dataset.id, false); return; }
