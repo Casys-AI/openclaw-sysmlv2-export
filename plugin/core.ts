@@ -224,10 +224,11 @@ async function versionFiles(dir: string): Promise<Record<string, string>> {
   });
   return Object.fromEntries(
     await Promise.all(
-      names.filter((n) => /\.(sysml|json)$/.test(n)).map(async (n) => [
-        n,
-        await readFile(join(dir, n), "utf8"),
-      ]),
+      names.filter((n) => n === "ape-report.ttl" || /\.(sysml|json)$/.test(n))
+        .map(async (n) => [
+          n,
+          await readFile(join(dir, n), "utf8"),
+        ]),
     ),
   );
 }

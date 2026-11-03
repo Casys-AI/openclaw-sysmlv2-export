@@ -204,6 +204,16 @@ Deno.test({
       );
       assert.equal(Object.hasOwn(published.ape.metrics, "quads"), false);
       assert.equal(Object.hasOwn(published.ape, "validationReport"), false);
+      const page = await readFile(summary.viewer, "utf8");
+      const viewerData = JSON.parse(
+        page.match(
+          /<script id="data" type="application\/json">(.*?)<\/script>/s,
+        )![1],
+      );
+      assert.equal(
+        viewerData.texts[viewerData.versions[0].files["ape-report.ttl"]],
+        await readFile(join(summary.outDir, "ape-report.ttl"), "utf8"),
+      );
       await initOxigraph();
       const reportStore = new Store();
       try {
