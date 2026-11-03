@@ -1,8 +1,8 @@
-import { ExportError } from "./error.ts";
+import { ExportError, isRecord } from "./error.ts";
 
 /** Native catalog completion follows Assembly's prepareToolkitElements in
- * src/adapters/out/sysml-toolkit/compilation/compiler.ts at commit
- * 9493e33db8251d5e0726bd3fd88dda21ea2d161d. Source/flow normalization is
+ * src/adapters/out/sysml-toolkit/compilation/compiler.ts, 3 November 2026.
+ * Source/flow normalization is
  * outside this trial; native IDs and explicit library classification remain.
  */
 export interface ElementSession {
@@ -11,8 +11,41 @@ export interface ElementSession {
 }
 
 export type Element = Record<string, unknown>;
-function object(value: unknown): value is Element {
-  return !!value && typeof value === "object" && !Array.isArray(value);
+
+export class RdfProjectionError extends Error {
+  readonly recovery =
+    "Re-project from the verified canonical artifact bytes; malformed element graphs must be fixed at the compiler/normalizer boundary, not patched here.";
+  constructor(
+    readonly code: "RDF_PROJECTION_INVALID" | "RDF_PROJECTION_UNSUPPORTED",
+    readonly context: Readonly<Record<string, unknown>>,
+    message: string,
+  ) {
+    super(message);
+    this.name = "RdfProjectionError";
+  }
+}
+
+export function invalidProjection(
+  reason: string,
+  extra: Record<string, unknown> = {},
+): never {
+  throw new RdfProjectionError(
+    "RDF_PROJECTION_INVALID",
+    { reason, ...extra },
+    `Invalid element graph for RDF projection: ${reason}`,
+  );
+}
+
+function admitNativeId(value: unknown): string {
+  if (
+    typeof value !== "string" || !value || value.length > 2048 ||
+    value.includes("\0")
+  ) {
+    invalidProjection("nativeId must contain 1–2048 characters without NUL", {
+      nativeId: value,
+    });
+  }
+  return value;
 }
 
 function failed(context: string, cause?: unknown): never {
@@ -102,18 +135,27 @@ export function prepareApeElements(session: ElementSession): {
 } {
   try {
     const raw: unknown = JSON.parse(session.toFullJson(false));
-    if (
-      !Array.isArray(raw) ||
-      raw.some((element) =>
-        !object(element) || typeof element["@id"] !== "string" ||
-        !element["@id"] || typeof element["@type"] !== "string" ||
-        !element["@type"] || typeof element.isLibraryElement !== "boolean"
-      )
-    ) failed("Malformed Toolkit full interchange for the APE graph");
-    const source = raw as Element[];
+    if (!Array.isArray(raw)) invalidProjection("elements is not an array");
+    const known = new Set<string>();
+    const source: Element[] = raw.map((element) => {
+      if (!isRecord(element)) invalidProjection("element is not an object");
+      const nativeId = admitNativeId(element["@id"]);
+      if (typeof element["@type"] !== "string" || !element["@type"]) {
+        invalidProjection("element @type is not a non-empty string", {
+          nativeId,
+        });
+      }
+      if (known.has(nativeId)) {
+        invalidProjection("duplicate element @id", { nativeId });
+      }
+      known.add(nativeId);
+      if (typeof element.isLibraryElement !== "boolean") {
+        failed("Malformed Toolkit full interchange for the APE graph");
+      }
+      return element;
+    });
     const elements = selectApeElements(source);
     // All raw identities remain known even when their nodes are not projected.
-    const known = new Set(source.map((element) => String(element["@id"])));
     const libraryIds = new Set(
       source.filter((element) => element.isLibraryElement === true).map(
         (element) => String(element["@id"]),
@@ -122,14 +164,22 @@ export function prepareApeElements(session: ElementSession): {
     let missing = new Set<string>();
     const visit = (value: unknown): void => {
       if (Array.isArray(value)) value.forEach(visit);
-      else if (object(value)) {
-        if (typeof value["@id"] === "string" && !known.has(value["@id"])) {
-          missing.add(value["@id"]);
+      else if (isRecord(value)) {
+        if ("@id" in value) {
+          const nativeId = admitNativeId(value["@id"]);
+          if (!known.has(nativeId)) missing.add(nativeId);
         }
-        Object.values(value).forEach(visit);
+        for (const [key, child] of Object.entries(value)) {
+          if (key !== "@id") visit(child);
+        }
       }
     };
-    elements.forEach(visit);
+    const visitReferences = (element: Element) => {
+      for (const [key, value] of Object.entries(element)) {
+        if (key !== "@id") visit(value);
+      }
+    };
+    elements.forEach(visitReferences);
     while (missing.size) {
       const ids = [...missing].sort();
       const catalog: unknown = JSON.parse(session.rows(
@@ -145,7 +195,7 @@ export function prepareApeElements(session: ElementSession): {
       if (
         !Array.isArray(catalog) || catalog.length !== ids.length ||
         catalog.some((row) =>
-          !object(row) || row.errors || row.isLibraryElement !== true ||
+          !isRecord(row) || row.errors || row.isLibraryElement !== true ||
           typeof row.metaclass !== "string" || !row.metaclass
         )
       ) {
@@ -171,7 +221,7 @@ export function prepareApeElements(session: ElementSession): {
       }
       elements.push(...stubs);
       missing = new Set();
-      stubs.forEach(visit);
+      stubs.forEach(visitReferences);
     }
     return {
       elements,
@@ -179,7 +229,9 @@ export function prepareApeElements(session: ElementSession): {
       sourceElementCount: source.length,
     };
   } catch (error) {
-    if (error instanceof ExportError) throw error;
+    if (error instanceof ExportError || error instanceof RdfProjectionError) {
+      throw error;
+    }
     const detail = error instanceof Error ? error.message : String(error);
     failed(
       `The Toolkit could not prepare native elements for the APE graph: ${detail}`,

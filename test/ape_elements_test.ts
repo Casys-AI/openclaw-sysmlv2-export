@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   type Element,
   prepareApeElements,
+  RdfProjectionError,
   selectApeElements,
 } from "../src/ape-elements.ts";
 import { ExportError } from "../src/error.ts";
@@ -54,6 +55,43 @@ Deno.test("APE slice preserves whole retained values and occurrence order while 
   assert.equal(selected[0].ownedMember, ordered);
   assert.deepEqual(source[0].relatedFeature, []);
   assert.equal(source[0].qualifiedName, null);
+});
+
+Deno.test("source admission rejects invalid and duplicate native identities before projection", () => {
+  const valid = { "@id": "one", "@type": "PartUsage", isLibraryElement: false };
+  const prepare = (elements: unknown[]) =>
+    prepareApeElements({
+      toFullJson: () => JSON.stringify(elements),
+      rows: () => {
+        throw new Error("unexpected catalog read");
+      },
+    });
+  assert.throws(() => prepare([valid, { ...valid }]), (error: unknown) => {
+    assert.ok(error instanceof RdfProjectionError);
+    assert.equal(error.code, "RDF_PROJECTION_INVALID");
+    assert.deepEqual(error.context, {
+      reason: "duplicate element @id",
+      nativeId: "one",
+    });
+    return true;
+  });
+  for (const nativeId of [null, "", "a".repeat(2049), "bad\0id"]) {
+    assert.throws(() => prepare([{ ...valid, "@id": nativeId }]), {
+      code: "RDF_PROJECTION_INVALID",
+    });
+    assert.throws(() => prepare([{ ...valid, owner: { "@id": nativeId } }]), {
+      code: "RDF_PROJECTION_INVALID",
+    });
+  }
+  assert.throws(() => prepare([{ ...valid, "@type": "" }]), {
+    context: {
+      reason: "element @type is not a non-empty string",
+      nativeId: "one",
+    },
+  });
+  assert.throws(() => prepare([null]), {
+    context: { reason: "element is not an object" },
+  });
 });
 
 Deno.test("catalog completion fetches only absent references retained by the slice and classifies native IDs explicitly", () => {

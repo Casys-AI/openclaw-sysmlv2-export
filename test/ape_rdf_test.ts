@@ -1,10 +1,7 @@
 import assert from "node:assert/strict";
 import {
-  type ElementProjectionMeasurement,
-  measureModelProjection,
   type ModelProjectionInput,
   projectModelToNQuadBatches,
-  projectModelToNQuads,
 } from "../src/ape-rdf.ts";
 import { initOxigraph, Store } from "../src/oxigraph.ts";
 
@@ -35,14 +32,22 @@ Deno.test("RDF projection preserves deterministic native identities, references 
       },
     ],
   };
-  const projected = projectModelToNQuads(input);
+  const projected = [...projectModelToNQuadBatches(input)];
+  const lines = projected.flatMap((batch) => batch.nquads.trimEnd().split("\n"))
+    .sort();
+  const canonical = `${lines.join("\n")}\n`;
   const permuted = {
     ...input,
     elements: [...input.elements].reverse().map((element) =>
       Object.fromEntries(Object.entries(element).reverse())
     ),
   };
-  assert.deepEqual(projectModelToNQuads(permuted), projected);
+  assert.equal(
+    [...projectModelToNQuadBatches(permuted)].flatMap((batch) =>
+      batch.nquads.trimEnd().split("\n")
+    ).sort().join("\n") + "\n",
+    canonical,
+  );
   assert.deepEqual(input.elements[0].ownedMember, [
     { "@id": "lib:Type" },
     { "@id": "user:two" },
@@ -53,8 +58,10 @@ Deno.test("RDF projection preserves deterministic native identities, references 
   const user = "<urn:ase:model:trial%3Arepo:user%3Aone>";
   const second = "<urn:ase:model:trial%3Arepo:user%3Atwo>";
   const library = "<urn:ase:library:lib%3AType>";
-  const lines = projected.nquads.trimEnd().split("\n");
-  assert.equal(projected.quadCount, lines.length);
+  assert.equal(
+    projected.reduce((sum, batch) => sum + batch.quadCount, 0),
+    lines.length,
+  );
   assert(
     lines.includes(`${user} <urn:ase:vocab:prop:type> ${library} ${graph} .`),
   );
@@ -78,11 +85,11 @@ Deno.test("RDF projection preserves deterministic native identities, references 
   }
   assert(lines.some((line) => line.includes(" <urn:ase:vocab:list:empty> ")));
   // Byte reference checked against Assembly's original synchronous projector
-  // at 9493e33d, including escaped literals and blank labels.
+  // in src/adapters/out/oxigraph/rdf.ts, 3 November 2026. Includes escaped literals and blank labels.
   const digest = new Uint8Array(
     await crypto.subtle.digest(
       "SHA-256",
-      new TextEncoder().encode(projected.nquads),
+      new TextEncoder().encode(canonical),
     ),
   );
   assert.equal(
@@ -101,12 +108,25 @@ Deno.test("element batches load the same graph, preserving cross-element referen
         "@type": "PartUsage",
         links: [{ "@id": "two" }, { "@id": "lib" }, { "@id": "two" }],
         details: { label: "nested", values: ["a", "a", "b"] },
+        ref: { "@id": "two", declaredName: "target" },
       },
-      { "@id": "two", "@type": "PartUsage", links: [{ "@id": "one" }] },
-      { "@id": "lib", "@type": "PartDefinition", links: [] },
+      {
+        "@id": "two",
+        "@type": "PartUsage",
+        links: [{ "@id": "one" }],
+        declaredName: "target",
+      },
+      {
+        "@id": "lib",
+        "@type": "PartDefinition",
+        links: [],
+        ref: { "@id": "two", declaredName: "target" },
+      },
     ],
   };
-  const full = projectModelToNQuads(input);
+  const [full] = [
+    ...projectModelToNQuadBatches(input, Number.MAX_SAFE_INTEGER),
+  ];
   // A tiny target exercises the documented oversized-element behavior.
   const batches = [...projectModelToNQuadBatches(input, 1)];
   assert.equal(batches.length, input.elements.length);
@@ -118,36 +138,14 @@ Deno.test("element batches load the same graph, preserving cross-element referen
     batches.flatMap((batch) => batch.nquads.trimEnd().split("\n")).sort().join(
       "\n",
     ) + "\n",
-    full.nquads,
+    full.nquads.trimEnd().split("\n").sort().join("\n") + "\n",
   );
-  const measuredElements: ElementProjectionMeasurement[] = [];
-  const measured = measureModelProjection(
-    input,
-    (element) => measuredElements.push(element),
-  );
-  assert.equal(measured.quadCount, full.quadCount);
-  assert.equal(measured.chars, full.nquads.length);
+  const raw = batches.flatMap((batch) => batch.nquads.trimEnd().split("\n"));
+  assert.equal(new Set(raw).size, raw.length);
   assert.equal(
-    measured.maxElementChars,
-    Math.max(...batches.map((batch) => batch.nquads.length)),
-  );
-  const bounded = [
-    ...projectModelToNQuadBatches(input, measured.maxElementChars),
-  ];
-  assert(
-    bounded.every((batch) => batch.nquads.length <= measured.maxElementChars),
-  );
-  assert.equal(
-    Object.values(measured.byPredicate).reduce((a, b) => a + b),
-    full.quadCount,
-  );
-  assert.equal(
-    Object.values(measured.byProperty).reduce((a, b) => a + b),
-    full.quadCount,
-  );
-  assert.equal(
-    measuredElements.reduce((sum, element) => sum + element.chars, 0),
-    measured.chars,
+    raw.filter((line) => line.includes("<urn:ase:vocab:prop:declaredName>"))
+      .length,
+    1,
   );
 
   await initOxigraph();
@@ -187,66 +185,31 @@ Deno.test("element batches load the same graph, preserving cross-element referen
   assert.deepEqual(nestedRows(batched), [["0", "a"], ["1", "a"], ["2", "b"]]);
 });
 
-Deno.test("measurement exactly deduplicates embedded reference fields across source elements", () => {
-  const input: ModelProjectionInput = {
-    build: { repositoryId: "embedded", artifactDigest: "c".repeat(64) },
-    libraryNativeIds: [],
-    elements: [
-      { "@id": "target", "@type": "PartUsage", declaredName: "target" },
-      {
-        "@id": "one",
-        "@type": "PartUsage",
-        ref: { "@id": "target", declaredName: "target" },
-      },
-      {
-        "@id": "two",
-        "@type": "PartUsage",
-        ref: { "@id": "target", declaredName: "target" },
-      },
-    ],
-  };
-  const full = projectModelToNQuads(input);
-  const batches = [...projectModelToNQuadBatches(input, 1)];
-  const raw = batches.flatMap((batch) => batch.nquads.trimEnd().split("\n"));
-  assert.equal(new Set(raw).size, raw.length);
-  assert.equal(
-    raw.filter((line) => line.includes("<urn:ase:vocab:prop:declaredName>"))
-      .length,
-    1,
-  );
-  const measured = measureModelProjection(input);
-  assert.equal(measured.quadCount, full.quadCount);
-  assert.equal(measured.chars, full.nquads.length);
-  assert.equal(measured.byPredicate["urn:ase:vocab:prop:declaredName"], 1);
-  assert.equal(measured.byProperty.ref, 2);
-  // Canonical bytes remain independent of which source first states a fact.
-  assert.equal(
-    projectModelToNQuads({ ...input, elements: [...input.elements].reverse() })
-      .nquads,
-    full.nquads,
-  );
-});
-
-Deno.test("batch admission rejects duplicate native identities before yielding and handles empty graphs", () => {
+Deno.test("projection validates its build and batch inputs and handles empty graphs", () => {
   const input: ModelProjectionInput = {
     build: { repositoryId: "admission", artifactDigest: "d".repeat(64) },
     libraryNativeIds: [],
-    elements: [{ "@id": "one", "@type": "PartUsage" }, {
-      "@id": "one",
-      "@type": "PartUsage",
-    }],
+    elements: [],
   };
-  assert.throws(
-    () => projectModelToNQuadBatches(input, 1).next(),
-    /duplicate element @id/,
-  );
   assert.throws(
     () => projectModelToNQuadBatches(input, 0).next(),
     /maxBatchChars/,
   );
-  assert.deepEqual(
-    [...projectModelToNQuadBatches({ ...input, elements: [] })],
-    [],
+  assert.throws(
+    () =>
+      projectModelToNQuadBatches({
+        ...input,
+        build: { ...input.build, repositoryId: "" },
+      }).next(),
+    /repositoryId/,
   );
-  assert.equal(measureModelProjection({ ...input, elements: [] }).quadCount, 0);
+  assert.throws(
+    () =>
+      projectModelToNQuadBatches({
+        ...input,
+        build: { ...input.build, artifactDigest: "invalid" },
+      }).next(),
+    /artifactDigest/,
+  );
+  assert.deepEqual([...projectModelToNQuadBatches(input)], []);
 });
