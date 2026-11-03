@@ -2,7 +2,7 @@
   "id": "sysmlv2-export",
   "name": "OpenClaw SysML v2 Export",
   "description": "Export an OpenClaw instance as SysML v2 for Assembly, with optional inferred procedures and a version viewer.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "activation": { "onStartup": true },
   "contracts": { "tools": ["sysmlv2_export"] },
   "toolMetadata": { "sysmlv2_export": { "optional": true } },

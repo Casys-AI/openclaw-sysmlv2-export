@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 — 2026-11-03
 
 The snapshot schema and the inference contract (`openclaw-inference/1`) are
 unchanged: every new field is optional, so older exports, `inference.json` files
