@@ -182,6 +182,48 @@
     "subject": "agent:secretary"
   },
   {
+    "code": "PLAINTEXT_CREDENTIAL",
+    "context": "A plaintext credential is configured at /channels/discord/accounts/default/token.",
+    "recovery": "Replace the value at /channels/discord/accounts/default/token with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
+    "severity": "warning",
+    "subject": "account:discord:default"
+  },
+  {
+    "code": "PLAINTEXT_CREDENTIAL",
+    "context": "A plaintext credential is configured at /channels/discord/accounts/sandbox/token.",
+    "recovery": "Replace the value at /channels/discord/accounts/sandbox/token with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
+    "severity": "warning",
+    "subject": "account:discord:sandbox"
+  },
+  {
+    "code": "PLAINTEXT_CREDENTIAL",
+    "context": "A plaintext credential is configured at /channels/telegram/accounts/field/botToken.",
+    "recovery": "Replace the value at /channels/telegram/accounts/field/botToken with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
+    "severity": "warning",
+    "subject": "account:telegram:field"
+  },
+  {
+    "code": "PLAINTEXT_CREDENTIAL",
+    "context": "A plaintext credential is configured at /channels/telegram/accounts/lead/botToken.",
+    "recovery": "Replace the value at /channels/telegram/accounts/lead/botToken with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
+    "severity": "warning",
+    "subject": "account:telegram:lead"
+  },
+  {
+    "code": "PLAINTEXT_CREDENTIAL",
+    "context": "A plaintext credential is configured at /gateway/auth/token.",
+    "recovery": "Replace the value at /gateway/auth/token with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
+    "severity": "warning",
+    "subject": "instance"
+  },
+  {
+    "code": "PLAINTEXT_CREDENTIAL",
+    "context": "A plaintext credential is configured at /models/providers/google/apiKey.",
+    "recovery": "Replace the value at /models/providers/google/apiKey with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
+    "severity": "warning",
+    "subject": "instance"
+  },
+  {
     "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
     "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
     "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",

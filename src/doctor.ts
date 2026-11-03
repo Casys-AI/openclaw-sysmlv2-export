@@ -1,5 +1,6 @@
 import type { Finding, Snapshot } from "./snapshot.ts";
 import { elementId } from "./element-id.ts";
+import { credentialPathParts } from "./credentials.ts";
 import { is202610 } from "./policy.ts";
 
 // OpenClaw 2026.10.9 dist/exec-safe-bin-runtime-policy-CgvU47MQ.mjs:
@@ -256,9 +257,24 @@ export function doctor(snapshot: Snapshot): Finding[] {
       "List only the intended requester and target agents, or disable agent-to-agent access.",
     );
   }
-  // plaintextSecretCount in /5 includes arbitrary env/header strings, with no
-  // retained paths. It cannot prove a supported credential surface from
-  // docs/reference/secretref-credential-surface.md, so it is not a doctor rule.
+  // docs/reference/secretref-credential-surface.md: these authored credential
+  // paths accept structured SecretRefs. Plaintext is permitted, so SPEC §7
+  // makes this a review warning, not a runtime-failure error.
+  for (const path of [...snapshot.plaintextCredentialPaths ?? []].sort()) {
+    const parts = credentialPathParts(path);
+    const account = parts[0] === "channels"
+      ? snapshot.accounts.find((a) =>
+        a.channel === parts[1] && a.accountId === parts[3]
+      )
+      : undefined;
+    add(
+      "PLAINTEXT_CREDENTIAL",
+      "warning",
+      account ? elementId("account", account.id) : elementId("instance"),
+      `A plaintext credential is configured at ${path}.`,
+      `Replace the value at ${path} with {"source":"env","provider":"default","id":"CREDENTIAL_ENV"} and set CREDENTIAL_ENV in the gateway environment.`,
+    );
+  }
   const agents = new Set(snapshot.agents.map((a) => a.id));
   const cronRuntimeVerified = is202610(snapshot.openclawVersion);
   for (const job of snapshot.cron) {

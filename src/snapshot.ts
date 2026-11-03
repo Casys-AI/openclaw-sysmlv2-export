@@ -1,4 +1,5 @@
 import { invalid } from "./error.ts";
+import { isCredentialPath } from "./credentials.ts";
 import { EMAIL_ADDRESS_PATTERN, JWT_PATTERN } from "@logtape/redaction";
 
 export interface FileRef {
@@ -166,6 +167,8 @@ export interface Snapshot {
   schema: "openclaw-snapshot/5";
   openclawVersion: string;
   plaintextSecretCount: number;
+  /** Authored credential paths only; null means this metadata was not collected. */
+  plaintextCredentialPaths: string[] | null;
   backupCount: number;
   environmentNames: string[];
   agents: Agent[];
@@ -281,6 +284,7 @@ const shape: Shape = {
   schema: { enum: ["openclaw-snapshot/5"] },
   openclawVersion: str,
   plaintextSecretCount: num,
+  plaintextCredentialPaths: nullable(strings),
   backupCount: num,
   environmentNames: strings,
   agents: [{
@@ -488,6 +492,18 @@ function check(value: unknown, schema: Shape): void {
   }
 }
 export function parseSnapshot(value: unknown): Snapshot {
-  check(value, shape);
-  return value as Snapshot;
+  // The optional /5 diagnostic metadata is absent in older exports. Preserve
+  // collector subjects verbatim; this default does not migrate other fields.
+  const withMetadata =
+    value && typeof value === "object" && !Array.isArray(value)
+      ? { plaintextCredentialPaths: null, ...value }
+      : value;
+  check(withMetadata, shape);
+  const snapshot = withMetadata as Snapshot;
+  if (
+    snapshot.plaintextCredentialPaths?.some((path) => !isCredentialPath(path))
+  ) {
+    invalid("Unsupported plaintext credential path");
+  }
+  return snapshot;
 }

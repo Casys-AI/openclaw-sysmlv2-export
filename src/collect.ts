@@ -3,6 +3,7 @@ import { isAbsolute, join, relative, resolve, sep } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { ExportError, invalid, ioError } from "./error.ts";
 import { elementId } from "./element-id.ts";
+import { plaintextCredentialPaths } from "./credentials.ts";
 import {
   type ApprovalPolicy,
   approvalPolicy,
@@ -1029,6 +1030,7 @@ export async function collect(
       schema: "openclaw-snapshot/5",
       openclawVersion: version ?? "unknown",
       plaintextSecretCount: plaintextSecretCount(raw),
+      plaintextCredentialPaths: plaintextCredentialPaths(raw),
       backupCount: (await readdir(home, { withFileTypes: true })).filter((e) =>
         e.isFile() && e.name.startsWith("openclaw.json.")
       ).length,

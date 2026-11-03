@@ -25,7 +25,8 @@ Subjects match the model's stable element IDs: `agent:<id>`, `cron:<id>`,
 `heartbeat:<agentId>`, `account:<id>`, `grant:<agentId>:<tool>` and `instance`.
 A binding finding uses the existing account, otherwise the existing agent,
 otherwise the instance. IDs retain source identifier parts exactly. Findings are
-ordered by code, then subject. Collector infos also remain in the snapshot's
+ordered by code, then subject, with the path breaking ties for
+`PLAINTEXT_CREDENTIAL`. Collector infos also remain in the snapshot's
 `ambiguities`; old collector reference notes are replaced by the doctor's
 current reference checks.
 
@@ -35,6 +36,44 @@ projection choices. The complete contract is in
 [SPEC §7](../SPEC.md#7-findings).
 
 ## Configuration checks
+
+### `PLAINTEXT_CREDENTIAL`
+
+Severity: warning. Subject: account or instance.
+
+One finding is emitted per recorded plaintext credential path. Plaintext is
+allowed on these SecretRef surfaces: the warning calls for review and does not
+establish a runtime failure. The deliberately partial audit covers only:
+
+- `channels.discord.accounts.*.token`
+- `channels.telegram.accounts.*.botToken`
+- `gateway.auth.token`
+- `models.providers.*.apiKey`
+
+Structured SecretRefs, `$NAME` and `${NAME}` environment shorthand,
+whitespace-only values and known OpenClaw model-auth markers are excluded.
+`hooks.token`, `skills.entries.*.env.*`, `agents.defaults.sandbox.docker.env.*`
+and `agents.entries.*.sandbox.docker.env.*` do not produce this finding.
+
+The context names a JSON Pointer, with RFC 6901 escaping (`~0` for `~`, `~1` for
+`/`); no credential value is retained. A `channels.<channel>.accounts.<id>` path
+points to its account when drawn, otherwise to the instance. The four audited
+families contain no agent credentials; agent environment fields are unsupported.
+
+`plaintextCredentialPaths: string[] | null` is optional diagnostic metadata on
+`openclaw-snapshot/5`; collected paths are sorted. An omitted field in an older
+export parses as `null` (not collected); `[]` means collected with no matches. A
+`null` field produces no findings and does not establish that no plaintext
+credentials exist.
+
+Review or recovery: Replace the value at the indicated path with the structured
+env SecretRef `{source: 'env', provider: 'default', id: 'CREDENTIAL_ENV'}` and
+configure `CREDENTIAL_ENV` in the gateway's environment.
+
+Source: `docs/reference/secretref-credential-surface.md`;
+`dist/config-secret-target-DS4jAbAd.mjs, classifyConfigSecretTarget`;
+`dist/types.secrets-DD-Q2SS_.mjs, parseEnvTemplateSecretRef`;
+`dist/model-auth-markers-BKfhEhYJ.mjs, isNonSecretApiKeyMarker`.
 
 ### `EXEC_WITHOUT_APPROVAL`
 
@@ -511,11 +550,11 @@ Source: `docs/automation/cron-jobs/troubleshooting.md`;
 
 ## Legacy secret counter
 
-`plaintextSecretCount` is preserved by the unchanged `openclaw-snapshot/5`
-schema. It counts arbitrary environment and header strings as well as
-credential-like values, with no retained field paths. A positive count cannot
-establish that a credential belongs to a supported SecretRef surface, so
-`PLAINTEXT_SECRET_IN_CONFIG` is not a current diagnostic. Review credentials
-locally using OpenClaw's documented
+`plaintextSecretCount` remains unchanged in `openclaw-snapshot/5`, separately
+from `plaintextCredentialPaths`. It counts arbitrary environment and header
+strings as well as credential-like values, with no retained field paths. A
+positive count cannot establish that a credential belongs to a supported
+SecretRef surface, so `PLAINTEXT_SECRET_IN_CONFIG` is not a current diagnostic.
+Review credentials locally using OpenClaw's documented
 `docs/reference/secretref-credential-surface.md` rather than treating that
 counter as a security error.

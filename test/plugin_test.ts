@@ -52,7 +52,7 @@ Deno.test("plugin runs are kept as versions", async (t) => {
       await readFile(join(first.outDir, "findings.json"), "utf8"),
       canonical(findings),
     );
-    assert.deepEqual(first.findings, { error: 0, warning: 15, info: 34 });
+    assert.deepEqual(first.findings, { error: 0, warning: 21, info: 34 });
     assert.deepEqual(
       JSON.parse(await readFile(join(first.outDir, "validation.json"), "utf8")),
       {

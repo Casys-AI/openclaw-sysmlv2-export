@@ -6,7 +6,7 @@ import {
   configuredExec,
   effectiveExec,
 } from "../src/execution.ts";
-import type { Snapshot } from "../src/snapshot.ts";
+import { parseSnapshot, type Snapshot } from "../src/snapshot.ts";
 import { createFixture } from "./support/fixture.ts";
 
 let cached: Promise<Snapshot> | undefined;
@@ -22,6 +22,9 @@ function baseline(): Promise<Snapshot> {
 }
 
 const rules: [string, (s: Snapshot, positive: boolean) => void][] = [
+  ["PLAINTEXT_CREDENTIAL", (s, yes) => {
+    s.plaintextCredentialPaths = yes ? ["/gateway/auth/token"] : null;
+  }],
   ["MCP_SANDBOX_GATE", (s, yes) => {
     for (const a of s.agents) a.sandbox.mode = "off";
     const server = s.mcpServers[0];
@@ -151,6 +154,53 @@ for (const [code, arrange] of rules) {
     }
   });
 }
+
+Deno.test("credential paths select accounts and old snapshots retain raw subjects", async () => {
+  const snapshot = structuredClone(await baseline());
+  const findings = doctor(snapshot).filter((f) =>
+    f.code === "PLAINTEXT_CREDENTIAL"
+  );
+  assert.equal(findings.length, 6);
+  assert.ok(findings.every((f) => f.severity === "warning"));
+  assert.deepEqual(
+    new Set(findings.map((f) => f.subject)),
+    new Set([
+      "account:discord:default",
+      "account:discord:sandbox",
+      "account:telegram:field",
+      "account:telegram:lead",
+      "instance",
+    ]),
+  );
+  assert.ok(findings.every((f) => f.recovery.includes('"source":"env"')));
+  snapshot.accounts[0] = {
+    ...snapshot.accounts[0],
+    id: "discord:team/~.x",
+    channel: "discord",
+    accountId: "team/~.x",
+  };
+  snapshot.plaintextCredentialPaths = [
+    "/channels/discord/accounts/team~1~0.x/token",
+  ];
+  assert.equal(
+    doctor(snapshot).find((f) => f.code === "PLAINTEXT_CREDENTIAL")?.subject,
+    "account:discord:team/~.x",
+  );
+  const { plaintextCredentialPaths: _paths, ...old } = snapshot;
+  old.ambiguities[0].subject = "raw-legacy-subject";
+  const parsed = parseSnapshot(old);
+  assert.equal(parsed.plaintextCredentialPaths, null);
+  assert.equal(parsed.ambiguities[0].subject, "raw-legacy-subject");
+  assert.ok(!doctor(parsed).some((f) => f.code === "PLAINTEXT_CREDENTIAL"));
+  for (
+    const value of ["bad", ["/hooks/token"], ["/gateway/auth/CANARY-TOKEN"]]
+  ) {
+    assert.throws(
+      () => parseSnapshot({ ...old, plaintextCredentialPaths: value }),
+      { code: "INVALID_INPUT" },
+    );
+  }
+});
 
 Deno.test("doctor MCP gate requires an enabled server and a sandbox context", async () => {
   const snapshot = structuredClone(await baseline());

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { collect } from "../src/collect.ts";
+import { plaintextCredentialPaths } from "../src/credentials.ts";
 import { ExportError } from "../src/error.ts";
 import { plaintextSecretCount } from "../src/redaction.ts";
 import { canonical } from "../src/snapshot.ts";
@@ -104,6 +105,72 @@ Deno.test("unknown fields are excluded and plaintext counting recognizes referen
   } finally {
     await fixture.cleanup();
   }
+});
+
+Deno.test("plaintext credential paths exclude unsupported strings and references", () => {
+  const secret = "CANARY-PLAINTEXT-CREDENTIAL";
+  const raw = {
+    channels: {
+      discord: { accounts: { "team/~.x": { token: secret } } },
+      telegram: { accounts: { bot: { botToken: secret } } },
+    },
+    gateway: { auth: { token: secret } },
+    models: {
+      providers: { example: { apiKey: secret, headers: { Public: secret } } },
+    },
+    hooks: { token: secret },
+    skills: { entries: { example: { env: { KEY: secret } } } },
+    agents: {
+      defaults: { sandbox: { docker: { env: { KEY: secret } } } },
+      entries: { example: { sandbox: { docker: { env: { KEY: secret } } } } },
+    },
+  };
+  assert.deepEqual(plaintextCredentialPaths(raw), [
+    "/channels/discord/accounts/team~1~0.x/token",
+    "/channels/telegram/accounts/bot/botToken",
+    "/gateway/auth/token",
+    "/models/providers/example/apiKey",
+  ]);
+  for (
+    const value of ["", "  ", "$TOKEN", " ${TOKEN} ", {
+      source: "env",
+      provider: "default",
+      id: "TOKEN",
+    }]
+  ) {
+    assert.deepEqual(
+      plaintextCredentialPaths({ gateway: { auth: { token: value } } }),
+      [],
+    );
+  }
+  for (
+    const apiKey of [
+      "ollama-local",
+      "oauth:example",
+      "secretref-env:TOKEN",
+      "secretref-managed",
+      "OPENAI_API_KEY",
+      "ANTHROPIC_ADMIN_KEY",
+      "AWS_PROFILE",
+      "AZURE_SPEECH_REGION",
+      "openclaw:claude-cli-native-auth",
+      "lmstudio-local",
+    ]
+  ) {
+    assert.deepEqual(
+      plaintextCredentialPaths({
+        models: { providers: { example: { apiKey } } },
+      }),
+      [],
+    );
+  }
+  // Marker exclusions are model-only, not guesses about arbitrary token strings.
+  assert.deepEqual(
+    plaintextCredentialPaths({
+      gateway: { auth: { token: "OPENAI_API_KEY" } },
+    }),
+    ["/gateway/auth/token"],
+  );
 });
 
 Deno.test("instruction body edits change only referenced digest and never expose body", async () => {

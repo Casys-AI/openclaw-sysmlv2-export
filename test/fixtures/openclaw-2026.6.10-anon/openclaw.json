@@ -47,7 +47,7 @@
           }
         ],
         "baseUrl": "CANARY-VALUE-1",
-        "apiKey": "CANARY-SECRET-2"
+        "apiKey": "CANARY-PLAINTEXT-MODEL-KEY"
       },
       "ollama": {
         "api": "ollama",
@@ -92,7 +92,7 @@
           }
         ],
         "baseUrl": "CANARY-VALUE-2",
-        "apiKey": "CANARY-SECRET-3"
+        "apiKey": "ollama-local"
       }
     }
   },

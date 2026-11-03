@@ -167,6 +167,7 @@ plugin code.
 | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | `openclawVersion`                     | `meta.lastTouchedVersion`, or `unknown`.                                                                                |
 | `plaintextSecretCount`                | Number of plaintext credential, environment and header values in the configuration (§4.3).                              |
+| `plaintextCredentialPaths`            | Sorted `string[]` of audited plaintext credential JSON Pointers (§4.3), or `null` when not collected.                   |
 | `backupCount`                         | Number of `openclaw.json.*` files.                                                                                      |
 | `environmentNames`                    | Names of configured environment variables.                                                                              |
 | `agents[]`                            | Model, effective `grants`, raw tool `policy`, `sandbox`, `execution`, `workspace`, `memory`, `delegation`, `heartbeat`. |
@@ -195,7 +196,9 @@ reference whose path is a JSON pointer, such as
   array, and no string containing `CANARY-`, an e-mail address or a JWT. Inside
   the pipeline the snapshot is trusted and not revalidated.
 - A released schema version is never extended in place. Older schemas are
-  rejected; collect again.
+  rejected; collect again. The optional `/5` diagnostic metadata field
+  `plaintextCredentialPaths` is an explicit compatibility exception: omission
+  parses as `null` (not collected); `[]` means collected with no matches.
 
 ### 4.3 Privacy
 
@@ -224,6 +227,17 @@ reference whose path is a JSON pointer, such as
   This legacy `/5` counter includes arbitrary environment and header strings and
   retains no field paths. It cannot establish a supported credential surface and
   does not produce a doctor finding (§7.2).
+- **Audited credential paths.** `plaintextCredentialPaths` records only paths,
+  never values, for non-empty plaintext strings on four audited SecretRef
+  families: `channels.discord.accounts.*.token`,
+  `channels.telegram.accounts.*.botToken`, `gateway.auth.token` and
+  `models.providers.*.apiKey`. Paths are JSON Pointers with RFC 6901 escaping
+  (`~` becomes `~0`, `/` becomes `~1`). Structured SecretRefs, `$NAME` and
+  `${NAME}` environment shorthand, whitespace-only values and known OpenClaw
+  model-auth markers are excluded. This is deliberately partial coverage:
+  `hooks.token`, `skills.entries.*.env.*`,
+  `agents.defaults.sandbox.docker.env.*` and
+  `agents.entries.*.sandbox.docker.env.*` do not produce findings.
 - **Coded errors** never echo input values, native messages or absolute paths.
 
 ## 5. SysML mapping by Assembly category
@@ -474,9 +488,10 @@ Collector findings in snapshots taken before these IDs keep raw entity IDs; the
 viewer lists them without selecting an element. A binding finding points to its
 account when present, otherwise its configured agent when present, otherwise
 `instance`: the nearest available drawn element. Findings are sorted by `code`
-then `subject`. `error` identifies a failure or unrestricted approval posture;
-`warning` calls for review; `info` records a limit or context. Severity does not
-affect export completion.
+then `subject`, with the path breaking ties for `PLAINTEXT_CREDENTIAL`. `error`
+identifies a failure or unrestricted approval posture; `warning` calls for
+review; `info` records a limit or context. Severity does not affect export
+completion.
 
 ### 7.1 Collector findings
 
@@ -524,6 +539,7 @@ explains the meaning and recovery of every code.
 | Code                               | Severity                                    | Subject                    | Condition                                                                                                                                                                             | Source                                                                                                   |
 | ---------------------------------- | ------------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `EXEC_WITHOUT_APPROVAL`            | error                                       | agent                      | Exec is policy-reachable on the gateway host with effective security `full` and ask `off`.                                                                                            | `docs/tools/exec-approvals.md`                                                                           |
+| `PLAINTEXT_CREDENTIAL`             | warning                                     | account or instance        | One finding per `plaintextCredentialPaths` entry on an audited SecretRef surface. Allowed plaintext calls for review; it does not prove a runtime failure.                            | `docs/reference/secretref-credential-surface.md`                                                         |
 | `AGENT_WITHOUT_SANDBOX`            | warning; info if security unresolved        | agent                      | Exec can run on the gateway host and effective security is not `deny`. Explicit `host: gateway` reaches the host even with a sandbox-layer grant; `auto` requires a host-layer grant. | `docs/gateway/sandboxing.md`; `docs/tools/exec.md`                                                       |
 | `EXTERNAL_BIND_SOURCES`            | warning                                     | agent                      | An active sandbox permits bind sources outside workspace roots. Other path checks still apply.                                                                                        | `docs/gateway/sandboxing/multiple-folders-for-one-agent.md`                                              |
 | `AGENT_TO_AGENT_WILDCARD`          | warning                                     | instance                   | Agent-to-agent access is enabled and its allowlist contains `*`, allowing every requester and target pair.                                                                            | `dist/session-visibility-c_9BAYYO.mjs, createAgentToAgentPolicy`                                         |
@@ -569,6 +585,18 @@ The `/5` `plaintextSecretCount` remains a legacy count, including arbitrary
 credential covered by OpenClaw's
 `docs/reference/secretref-credential-surface.md`; `PLAINTEXT_SECRET_IN_CONFIG`
 is not a current rule.
+
+`PLAINTEXT_CREDENTIAL` uses the drawn account for a
+`channels.<channel>.accounts.<id>` path, otherwise `instance`. The four audited
+families contain no agent credentials; agent environment fields are unsupported.
+The classifier follows
+`dist/config-secret-target-DS4jAbAd.mjs,
+classifyConfigSecretTarget`. Its
+context names the JSON Pointer, never the credential value. Review or recovery
+is to replace the value at that path with the structured env SecretRef
+`{source: 'env', provider: 'default', id: 'CREDENTIAL_ENV'}` and configure that
+environment variable on the gateway. A `null` path list produces no finding; it
+is not evidence that an older export contains no plaintext credentials.
 
 The plugin writes the canonical sorted array to `findings.json`. Its export
 summary and each new `versions.json` entry have
@@ -913,8 +941,9 @@ Failures are `{ code, context, recovery }` errors, never findings.
     third service, and inferred content must never be mistaken for extracted
     fact.
 12. **Immutable schema versions.** A snapshot schema is never extended in place,
+    apart from the explicit optional `/5` diagnostic metadata exception in §4.2,
     and older ones are rejected. Why: a snapshot's meaning must not depend on
-    the code that reads it.
+    the code that reads it; uncollected credential paths remain unknown.
 13. **Diagnostics from the exported snapshot.** Plugin exports and the Deno CLI
     share the same read-only doctor. Why: findings can name the model's exact
     elements, expose static limits and point to OpenClaw sources without

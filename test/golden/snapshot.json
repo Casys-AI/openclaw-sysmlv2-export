@@ -3113,6 +3113,14 @@
     "enabled": true
   },
   "openclawVersion": "2026.6.10",
+  "plaintextCredentialPaths": [
+    "/channels/discord/accounts/default/token",
+    "/channels/discord/accounts/sandbox/token",
+    "/channels/telegram/accounts/field/botToken",
+    "/channels/telegram/accounts/lead/botToken",
+    "/gateway/auth/token",
+    "/models/providers/google/apiKey"
+  ],
   "plaintextSecretCount": 37,
   "plugins": [
     {
