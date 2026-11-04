@@ -98,12 +98,18 @@ for (
       ) + "\n",
     );
   }
-  const packed = npmPack(directory, artifacts);
+  // npm derives the same filename from the shared package name and version.
+  // Separate temporary destinations keep the lightweight pack from replacing
+  // the complete archive before its final rename.
+  const packDirectory = join(output, `${channel}-pack`);
+  await mkdir(packDirectory);
+  const packed = npmPack(directory, packDirectory);
   assert.deepEqual(packed.files.map((file) => file.path).sort(), selected);
   const name = `casys-openclaw-sysmlv2-export-${version}${
     mode === "external" ? "-clawhub" : ""
   }.tgz`;
-  await rename(join(artifacts, packed.filename), join(artifacts, name));
+  await rename(join(packDirectory, packed.filename), join(artifacts, name));
+  await rm(packDirectory, { recursive: true });
   const sha256 = createHash("sha256").update(
     await readFile(join(artifacts, name)),
   ).digest("hex");
@@ -133,6 +139,11 @@ for (
     await readFile(join(output, "clawhub", name)),
     name,
   );
+}
+for (const result of results) {
+  const bytes = await readFile(join(artifacts, result.name));
+  assert.equal(bytes.length, result.size);
+  assert.equal(createHash("sha256").update(bytes).digest("hex"), result.sha256);
 }
 await writeFile(
   join(artifacts, "packages.json"),
