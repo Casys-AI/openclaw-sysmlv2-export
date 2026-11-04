@@ -18,14 +18,16 @@ Status: preview. Requires OpenClaw 2026.10.9 or later.
 The lightweight **ClawHub** distribution installs the Toolkit separately:
 
 ```sh
-openclaw plugins install clawhub:@casys/openclaw-sysmlv2-export@0.3.1
+openclaw plugins install clawhub:@casys/openclaw-sysmlv2-export@0.3.1 --accept-capabilities
 openclaw sysmlv2-toolkit install
 openclaw sysmlv2-toolkit status
 ```
 
-Run on the Gateway host. `install` explicitly downloads the pinned SysML Toolkit
-0.10.10 archive and verifies its SHA-256 and each extracted file. For an offline
-archive, use `openclaw sysmlv2-toolkit install --from ./sysml-wasm-0.10.10.tgz`.
+Run on the Gateway host. `--accept-capabilities` gives the consent OpenClaw
+requires for the plugin's declared capabilities. Toolkit `install` explicitly
+downloads the pinned SysML Toolkit 0.10.10 archive and verifies its SHA-256 and
+each extracted file. For an offline archive, use
+`openclaw sysmlv2-toolkit install --from ./sysml-wasm-0.10.10.tgz`.
 
 The **complete GitHub distribution** includes all Toolkit files and licenses.
 Download `casys-openclaw-sysmlv2-export-0.3.1.tgz` and verify `SHA256SUMS` from

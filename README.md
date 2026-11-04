@@ -36,16 +36,18 @@ Version **0.3.1** has two distributions of the same plugin:
 Run these on the machine hosting your OpenClaw Gateway:
 
 ```sh
-openclaw plugins install clawhub:@casys/openclaw-sysmlv2-export@0.3.1
+openclaw plugins install clawhub:@casys/openclaw-sysmlv2-export@0.3.1 --accept-capabilities
 openclaw sysmlv2-toolkit install
 openclaw sysmlv2-toolkit status
 ```
 
-The second command downloads the public SysML Toolkit 0.10.10 release, verifies
-its pinned SHA-256 and every extracted file, and installs it under OpenClaw's
-state directory. It is explicit: installing the plugin or running an export
-never downloads the Toolkit. With no Toolkit installed, an export is retained
-with `TOOLKIT_NOT_INSTALLED` and its model checks marked as not run.
+`--accept-capabilities` gives the consent OpenClaw requires for the plugin's
+declared capabilities. The second command downloads the public SysML Toolkit
+0.10.10 release, verifies its pinned SHA-256 and every extracted file, and
+installs it under OpenClaw's state directory. It is explicit: installing the
+plugin or running an export never downloads the Toolkit. With no Toolkit
+installed, an export is retained with `TOOLKIT_NOT_INSTALLED` and its model
+checks marked as not run.
 
 For a machine without internet access, copy the
 [pinned Toolkit archive](https://github.com/Open-MBEE/sysml-toolkit/releases/download/v0.10.10/sysml-wasm-0.10.10.tgz)
