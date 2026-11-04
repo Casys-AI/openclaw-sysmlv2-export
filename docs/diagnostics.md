@@ -1,14 +1,16 @@
 # Diagnostics
 
-Each plugin export compiles its SysML model with the Toolkit bundled in the
-plugin package and runs the OpenClaw and APE SHACL rules; nothing is installed
-or downloaded. The sorted findings and collector notes are written to
+Each plugin export uses the pinned Toolkit to compile its SysML model and run
+the OpenClaw and APE SHACL rules. The complete GitHub package bundles it; the
+lightweight ClawHub package uses the separately installed copy. An export
+downloads nothing. The sorted findings and collector notes are written to
 `findings.json`; export continues even if checks fail. If the bundled Toolkit is
 missing or damaged, validation fails with `TOOLKIT_INTEGRITY`, model checks do
-not run and snapshot `ambiguities` remain as collector notes. No TypeScript
-fallback runs. The standalone command checks an existing export without writing
-files or updating the model, with the Toolkit directory that `plugin:build`
-writes:
+not run and snapshot `ambiguities` remain as collector notes. A missing external
+installation reports `TOOLKIT_NOT_INSTALLED` with recovery
+`openclaw sysmlv2-toolkit install`. No TypeScript fallback runs. The standalone
+command checks an existing export without writing files or updating the model,
+with the Toolkit directory that `plugin:build` writes:
 
 ```sh
 deno task diagnose --export <version-dir> --toolkit plugin/toolkit
@@ -29,12 +31,12 @@ version and says whether the checks ran.
 An empty list of findings is clean only when the checks ran. The viewer reads
 `validation.json` and gives each version one of four states:
 
-| State        | Meaning                                                                                                                                                     |
-| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `verified`   | The APE analysis completed (or, in an archive older than it, the findings were recorded).                                                                   |
-| `not-run`    | It was skipped; `code` says why: `APE_INVALID_MODEL`, `TOOLKIT_INTEGRITY`, or `TOOLKIT_NOT_INSTALLED` in a version exported before the Toolkit was bundled. |
-| `failed`     | It started and failed (`APE_TIMEOUT`, `APE_WORKER_FAILED`…).                                                                                                |
-| `unrecorded` | The archive holds no findings, or a `findings.json` the viewer cannot read.                                                                                 |
+| State        | Meaning                                                                                                                                                  |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `verified`   | The APE analysis completed (or, in an archive older than it, the findings were recorded).                                                                |
+| `not-run`    | It was skipped; `code` says why: `APE_INVALID_MODEL`, `TOOLKIT_INTEGRITY`, or `TOOLKIT_NOT_INSTALLED` for a lightweight package whose Toolkit is absent. |
+| `failed`     | It started and failed (`APE_TIMEOUT`, `APE_WORKER_FAILED`…).                                                                                             |
+| `unrecorded` | The archive holds no findings, or a `findings.json` the viewer cannot read.                                                                              |
 
 A version also gives the number of failed inferences and, when the analysis
 completed, how many rules ran (`ape.metrics.queries`).

@@ -19,20 +19,27 @@ export type {
   ExportSummary,
 } from "../application/export/export-instance.ts";
 import {
-  bundledToolkit,
+  resolveToolkit,
   toolkitStatus as status,
 } from "../adapters/out/sysml-toolkit/bundled.ts";
-export const toolkitStatus = () => status(bundledToolkit);
+import { validationReport as report } from "../application/model/diagnostics/validate-model.ts";
+import {
+  toolkitFailure,
+  validate,
+} from "../adapters/out/sysml-toolkit/worker-client.ts";
+export { installToolkit } from "../adapters/out/sysml-toolkit/install.ts";
+import { installToolkit } from "../adapters/out/sysml-toolkit/install.ts";
+export const toolkitStatus = (stateDir: string) => status(stateDir);
 
-/** `toolkit` is the Toolkit directory: the one bundled with the plugin, unless
- * a test supplies another. */
+/** Resolve this distribution's Toolkit for this state directory at export time.
+ * Tests can still supply an explicit pinned Toolkit directory. */
 export function runExport(
   stateDir: string,
   plugins: unknown,
   outDir: string,
   complete: Complete | null,
   now: Date,
-  toolkit = bundledToolkit,
+  toolkit?: string,
 ) {
   return run(
     {
@@ -44,7 +51,15 @@ export function runExport(
       inference: { parse: parseAgentInference },
       sysml: { emit, library: ASSEMBLY_LIBRARY, emitInferred },
       output: exportFiles,
-      validationReport: (files) => validationReport(files, toolkit),
+      validationReport: (files) =>
+        toolkit !== undefined ? validationReport(files, toolkit) : report(
+          {
+            validate: async (sources) =>
+              validate(sources, (await resolveToolkit(stateDir)).path),
+          },
+          toolkitFailure,
+          files,
+        ),
       viewerPage,
     },
     stateDir,
@@ -65,6 +80,7 @@ export function createPluginEntry(
     pluginList,
     runExport,
     toolkitStatus,
+    installToolkit,
     completeWith,
   });
 }

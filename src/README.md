@@ -22,5 +22,8 @@ The shipped rules are [`rules/ape/ape.ttl`](../rules/ape/ape.ttl) and
 copies both into the plugin. It also writes the pinned Toolkit into
 `plugin/toolkit/` (`adapters/out/sysml-toolkit/`: `extract.ts` at build time,
 `bundled.ts` to read and verify it at run time) from the archive that
-`SYSML_TOOLKIT_WASM_ARCHIVE` names. See
+`SYSML_TOOLKIT_WASM_ARCHIVE` names. `scripts/package-distributions.ts` stages
+the complete GitHub and lightweight ClawHub packages from that same build.
+`distribution.json` selects bundled loading or the versioned state-directory
+copy installed explicitly by `adapters/out/sysml-toolkit/install.ts`. See
 [contribution boundaries](../CONTRIBUTING.md).

@@ -281,6 +281,7 @@ Deno.test("plugin owner tool binds the injected inventory parser", async () => {
   let toolFactory: (context: unknown) => { execute(): Promise<unknown> };
   const entry = createPluginEntry((definition: unknown) => definition, {
     toolkitStatus: unexpected,
+    installToolkit: unexpected,
     completeWith: unexpected,
     pluginList(result: unknown) {
       assert.equal(result, inventory);
@@ -390,32 +391,51 @@ Deno.test("an inference is asked again only for an agent whose sources changed",
   }
 });
 
-Deno.test("the toolkit command only verifies the bundled files", async () => {
-  const commands: string[] = [], actions = new Map<string, () => unknown>();
+Deno.test("the Toolkit commands pass the runtime state directory and explicit archive", async () => {
+  const commands: string[] = [],
+    actions = new Map<string, (options?: unknown) => unknown>();
   const node = (path: string) => {
     commands.push(path);
     const self = {
       command: (name: string) => node(`${path} ${name}`.trim()),
       description: () => self,
       option: () => self,
-      action: (run: () => unknown) => (actions.set(path, run), self),
+      action: (
+        run: (options?: unknown) => unknown,
+      ) => (actions.set(path, run), self),
     };
     return self;
   };
   let setup: (context: { program: ReturnType<typeof node> }) => void;
   let descriptors: { name: string }[] = [];
   const status = {
+    source: "external",
+    installed: false,
     version: "0.10.10",
-    path: "/plugin/toolkit",
-    verified: true,
+    path: "/state/sysmlv2-export-toolkit/0.10.10",
+    verified: false,
   };
+  const calls: unknown[] = [];
   const entry = createPluginEntry((definition: unknown) => definition, {
     pluginList: unexpected,
     runExport: unexpected,
     completeWith: unexpected,
-    toolkitStatus: () => Promise.resolve(status),
+    toolkitStatus: (stateDir: string) => {
+      calls.push(["status", stateDir]);
+      return Promise.resolve(status);
+    },
+    installToolkit: (stateDir: string, options: unknown) => {
+      calls.push(["install", stateDir, options]);
+      return Promise.resolve({
+        ...status,
+        installed: true,
+        verified: true,
+        changed: true,
+      });
+    },
   });
   entry.register({
+    runtime: { state: { resolveStateDir: () => "/state" } },
     registerCommand() {},
     registerTool() {},
     registerCli(
@@ -430,6 +450,7 @@ Deno.test("the toolkit command only verifies the bundled files", async () => {
   assert.deepEqual(commands.slice(1), [
     "sysmlv2-toolkit",
     "sysmlv2-toolkit status",
+    "sysmlv2-toolkit install",
     "sysmlv2-export",
   ]);
   assert.deepEqual(descriptors.map((d) => d.name), [
@@ -446,4 +467,16 @@ Deno.test("the toolkit command only verifies the bundled files", async () => {
     process.stdout.write = write;
   }
   assert.deepEqual(JSON.parse(printed), status);
+  printed = "";
+  process.stdout.write =
+    ((text: string) => (printed += text, true)) as typeof write;
+  try {
+    await actions.get("sysmlv2-toolkit install")!({ from: "/archive.tgz" });
+  } finally {
+    process.stdout.write = write;
+  }
+  assert.equal(JSON.parse(printed).changed, true);
+  assert.deepEqual(calls, [["status", "/state"], ["install", "/state", {
+    from: "/archive.tgz",
+  }]]);
 });

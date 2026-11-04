@@ -27,3 +27,7 @@ for (const directory of directories) {
   count += names.length;
 }
 console.log(`Packaged Oxigraph WASM and ${count} shapes`);
+await Deno.writeTextFile(
+  new URL("distribution.json", plugin),
+  JSON.stringify({ toolkit: "bundled" }, null, 2) + "\n",
+);

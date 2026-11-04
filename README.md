@@ -24,15 +24,71 @@ SysML tool.
 Requires OpenClaw 2026.10.9 or later, on Node 24.22.1 or later (or 26.12.1 or
 later).
 
-From ClawHub:
+Version **0.3.1** has two distributions of the same plugin:
+
+| Channel            | Toolkit                                        | Installation                                                            |
+| ------------------ | ---------------------------------------------- | ----------------------------------------------------------------------- |
+| **ClawHub**        | Downloaded separately, pinned to 0.10.10       | Install the plugin, then run the explicit Toolkit install command once. |
+| **GitHub release** | All pinned Toolkit files and licenses included | Install the complete archive; no Toolkit download is needed.            |
+
+### ClawHub: lightweight plugin
+
+Run these on the machine hosting your OpenClaw Gateway:
 
 ```sh
-openclaw plugins install clawhub:@casys/openclaw-sysmlv2-export
+openclaw plugins install clawhub:@casys/openclaw-sysmlv2-export@0.3.1
+openclaw sysmlv2-toolkit install
+openclaw sysmlv2-toolkit status
 ```
 
-From source, with [Deno](https://deno.com) 2.9.7 or later to build the bundle.
-The build writes the Toolkit into the package from its pinned release archive,
-which you download once and name; it never downloads anything itself:
+The second command downloads the public SysML Toolkit 0.10.10 release, verifies
+its pinned SHA-256 and every extracted file, and installs it under OpenClaw's
+state directory. It is explicit: installing the plugin or running an export
+never downloads the Toolkit. With no Toolkit installed, an export is retained
+with `TOOLKIT_NOT_INSTALLED` and its model checks marked as not run.
+
+For a machine without internet access, copy the
+[pinned Toolkit archive](https://github.com/Open-MBEE/sysml-toolkit/releases/download/v0.10.10/sysml-wasm-0.10.10.tgz)
+and use `openclaw sysmlv2-toolkit install --from ./sysml-wasm-0.10.10.tgz`. The
+same integrity checks apply.
+
+### GitHub: complete package
+
+Use the named `.tgz` asset from the
+[0.3.1 release](https://github.com/Casys-AI/openclaw-sysmlv2-export/releases/tag/v0.3.1).
+GitHub's automatic **Source code** archives do not contain the built plugin and
+Toolkit. The following verifies the checksum before installing:
+
+```sh
+(
+  set -eu
+  mkdir -p openclaw-sysmlv2-export-0.3.1
+  cd openclaw-sysmlv2-export-0.3.1
+  curl --fail --location --output casys-openclaw-sysmlv2-export-0.3.1.tgz \
+    https://github.com/Casys-AI/openclaw-sysmlv2-export/releases/download/v0.3.1/casys-openclaw-sysmlv2-export-0.3.1.tgz
+  curl --fail --location --output SHA256SUMS \
+    https://github.com/Casys-AI/openclaw-sysmlv2-export/releases/download/v0.3.1/SHA256SUMS
+  if command -v sha256sum >/dev/null 2>&1; then
+    sha256sum --check SHA256SUMS
+  else
+    shasum -a 256 --check SHA256SUMS
+  fi
+  openclaw plugins install ./casys-openclaw-sysmlv2-export-0.3.1.tgz \
+    --force --accept-capabilities
+)
+```
+
+`--force` confirms this archive as the source and permits replacing an existing
+`sysmlv2-export` installation. `--accept-capabilities` accepts the plugin's
+declared capabilities. Follow any Gateway restart instruction printed by
+OpenClaw, then run `openclaw sysmlv2-toolkit status` and
+`openclaw sysmlv2-export`. Toolkit status identifies `source: "bundled"` or
+`source: "external"`, version `0.10.10`, and `verified: true`.
+
+### From source
+
+Build with [Deno](https://deno.com) 2.9.7 or later. The build writes the Toolkit
+from the pinned archive you name; it never downloads anything itself:
 
 ```sh
 git clone https://github.com/Casys-AI/openclaw-sysmlv2-export.git
@@ -42,6 +98,12 @@ curl --fail --location --output sysml-wasm-0.10.10.tgz \
 SYSML_TOOLKIT_WASM_ARCHIVE="$(pwd)/sysml-wasm-0.10.10.tgz" deno task plugin:build
 openclaw plugins install --link "$(pwd)/plugin" --force --accept-capabilities
 ```
+
+`deno task plugin:package`, with the same archive variable, builds once and
+stages both distributions under `.release/0.3.1/`. Their runtime bundles,
+viewer, rules and Oxigraph are byte-identical; delivery metadata and the Toolkit
+files are the only differences. It produces both `.tgz` archives and checksums
+without publishing either.
 
 ## Use
 
@@ -78,12 +140,14 @@ Beside the run folders, `versions.json` lists the runs, newest first, and
 
 Each export checks its SysML model with OpenClaw configuration rules and
 portable APE rules using SHACL SPARQL on Oxigraph, with the
-[Toolkit](#validate-the-model) that ships inside the plugin: there is nothing to
-install and nothing is downloaded. It writes findings with codes, affected
-elements and recovery advice; the Doctor panel lists them. Findings do not block
-an export or change the instance. If the bundled Toolkit is missing or damaged,
-validation fails with `TOOLKIT_INTEGRITY`, model checks do not run, and the
-collector notes from the snapshot remain available.
+[Toolkit](#validate-the-model) bundled in the complete package or explicitly
+installed for the lightweight package. An export downloads nothing. It writes
+findings with codes, affected elements and recovery advice; the Doctor panel
+lists them. Findings do not block an export or change the instance. If the
+bundled Toolkit is missing or damaged, validation fails with
+`TOOLKIT_INTEGRITY`, model checks do not run, and the collector notes from the
+snapshot remain available. A lightweight installation without its Toolkit
+reports `TOOLKIT_NOT_INSTALLED` and keeps the export with model checks not run.
 
 ![The Doctor panel: findings grouped by code, each subject a chip, with what to do](docs/screenshots/doctor.png)
 
@@ -98,20 +162,24 @@ its fix. To check an exported model without changing it, run
 
 Each export is compiled with
 [sysml-toolkit](https://github.com/Open-MBEE/sysml-toolkit), an open-source
-SysML v2 compiler, to check that the model is valid SysML v2. The plugin package
-carries the pinned
+SysML v2 compiler, to check that the model is valid SysML v2. The complete
+GitHub package carries the pinned
 [sysml-wasm 0.10.10](https://github.com/Open-MBEE/sysml-toolkit/releases/tag/v0.10.10)
-files in `toolkit/` (about 20 MB), licenses included. Installing the plugin is
-the whole setup; neither the install nor an export downloads anything.
+files in `toolkit/` (about 20 MB), licenses included. The lightweight ClawHub
+package uses the same files from the versioned OpenClaw state directory after
+`openclaw sysmlv2-toolkit install`.
 
 ```sh
 openclaw sysmlv2-toolkit status
 ```
 
-`status` prints JSON: the bundled version, its directory and `verified: true`.
-Each export checks every file against its pinned SHA-256 before using it; a
-missing or modified file is a `TOOLKIT_INTEGRITY` error whose recovery is to
-reinstall the plugin.
+`status` prints the source (`bundled` or `external`), version, directory,
+`installed` and `verified`. Every load checks each file against its pinned
+SHA-256. A damaged or missing bundled file is `TOOLKIT_INTEGRITY`, whose
+recovery is to reinstall the complete plugin; it never silently uses an external
+copy. For the lightweight package, `install` verifies an existing installation
+and returns without downloading again. A damaged external installation is
+reported explicitly and must be repaired following the recovery message.
 
 Every export is compiled, inferred behaviour included, with a 60-second compile
 deadline. APE then has its own default 10-second deadline; an `APE_TIMEOUT`
@@ -253,8 +321,9 @@ of your system, never its secrets or the people it talks to.
   [`@logtape/redaction`](https://jsr.io/@logtape/redaction).
 - **Inference** sends an agent's behaviour files (`AGENTS.md`, `SOUL.md`,
   `TOOLS.md`…) and its cron and heartbeat prompts to the model of one of your
-  agents, never `MEMORY.md`, `USER.md` or other notes. Contact details and
-  token-like strings are masked in the answer.
+  agents. Selection includes top-level Markdown names matching `[A-Z_]+.md`,
+  except `MEMORY.md` and `USER.md`; review other uppercase files before
+  inference. Contact details and token-like strings are masked in the answer.
 - **Chat replies** never show absolute host paths.
 
 ## Develop
@@ -297,7 +366,8 @@ Eclipse Public License 2.0, to lay the diagrams out;
 [plugin/THIRD_PARTY_NOTICES.md](plugin/THIRD_PARTY_NOTICES.md) holds the notices
 of every bundled package.
 
-The Toolkit, bundled in `plugin/toolkit/`, is under the Apache License 2.0 and
-its SysML v2 standard library under the Eclipse Public License 2.0; their
-license files and notices ship with it, and
-[plugin/THIRD_PARTY_NOTICES.md](plugin/THIRD_PARTY_NOTICES.md) names its source.
+The Toolkit, bundled in the complete package or installed separately for the
+lightweight one, is under the Apache License 2.0 and its SysML v2 standard
+library under the Eclipse Public License 2.0; their license files and notices
+ship with it, and [plugin/THIRD_PARTY_NOTICES.md](plugin/THIRD_PARTY_NOTICES.md)
+names its source.

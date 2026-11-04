@@ -4,3 +4,5 @@ plugin/toolkit-worker.mjs
 plugin/oxigraph_bg.wasm
 plugin/rules/
 plugin/toolkit/
+plugin/distribution.json
+.release/

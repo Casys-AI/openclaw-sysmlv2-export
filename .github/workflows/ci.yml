@@ -28,7 +28,7 @@ jobs:
           curl --fail --location --output "$archive" https://github.com/Open-MBEE/sysml-toolkit/releases/download/v0.10.10/sysml-wasm-0.10.10.tgz
           echo "93d6ef0a2140fceabc3115cd95d629146bc004c3959bfa23d715cce8b06cc13c  $archive" | sha256sum -c -
           echo "SYSML_TOOLKIT_WASM_ARCHIVE=$archive" >> "$GITHUB_ENV"
-      - run: deno task plugin:build
+      - run: deno task plugin:package
       - run: deno task test:toolkit
       - name: Download and verify pinned OpenSysML oracle
         shell: bash

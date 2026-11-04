@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.3.1 — 2026-11-04
+
+- **Two distributions, one runtime.** ClawHub provides the lightweight plugin;
+  the GitHub release provides the complete archive with all nine pinned Toolkit
+  files and their licenses. Runtime bundles, viewer, Oxigraph and rules are
+  identical. Both identify as version 0.3.1.
+- **Explicit Toolkit setup for ClawHub.** `openclaw sysmlv2-toolkit install`
+  downloads only the pinned 0.10.10 archive, verifies its SHA-256 and the files,
+  and installs it in the versioned OpenClaw state directory. `--from <archive>`
+  supports offline setup. An existing verified install is reused. Plugin
+  installation and export do not download anything automatically.
+- **Delivery is explicit.** `distribution.json` selects bundled or external
+  Toolkit loading. A damaged complete package never falls back to a cached
+  Toolkit. Status reports the source, version, path, installed and verified
+  state. Without its external Toolkit, the lightweight plugin preserves the
+  export and reports `TOOLKIT_NOT_INSTALLED`, with model checks not run.
+- **Release packaging.** `deno task plugin:package` builds once, stages both
+  distributions, checks their common files match, and produces archives and
+  SHA-256 checksums without publishing.
+- **Documentation.** Install instructions distinguish the ClawHub and GitHub
+  paths. The inference privacy section states the actual uppercase Markdown file
+  selection and its explicit exclusions.
+
 ## 0.3.0 — 2026-11-03
 
 The snapshot schema and the inference contract (`openclaw-inference/1`) are

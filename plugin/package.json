@@ -1,6 +1,6 @@
 {
   "name": "@casys/openclaw-sysmlv2-export",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "description": "Export an OpenClaw instance as SysML v2 for Assembly, with optional inferred procedures and a version viewer.",
   "keywords": [
@@ -26,6 +26,7 @@
     "core.mjs",
     "toolkit-worker.mjs",
     "oxigraph_bg.wasm",
+    "distribution.json",
     "toolkit/",
     "rules/ape/*.ttl",
     "rules/openclaw/*.ttl",

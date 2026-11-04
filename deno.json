@@ -16,8 +16,10 @@
     "test": "deno test --cached-only --allow-read --allow-write --allow-env=SYSML_TOOLKIT_WASM_ARCHIVE,OPENSYSML_ARCHIVE,TMPDIR,TMP,TEMP src/ test/integration/",
     "test:toolkit": "deno test --cached-only --allow-read --allow-write --allow-env=SYSML_TOOLKIT_WASM_ARCHIVE,TMPDIR,TMP,TEMP test/integration/toolkit_test.ts test/integration/toolkit_install_test.ts",
     "plugin:build": "deno run --cached-only --allow-read --allow-write --allow-env=SYSML_TOOLKIT_WASM_ARCHIVE scripts/package-toolkit.ts && deno check --cached-only plugin/core.ts src/adapters/out/sysml-toolkit/worker.ts && deno bundle --deny-import --platform=node -o plugin/core.mjs plugin/core.ts && deno bundle --deny-import --platform=node -o plugin/toolkit-worker.mjs src/adapters/out/sysml-toolkit/worker.ts && deno run --cached-only --allow-read --allow-write scripts/package-ape.ts",
-    "test:opensysml": "deno test --cached-only --allow-read --allow-write --allow-run --allow-env=SYSML_TOOLKIT_WASM_ARCHIVE,OPENSYSML_ARCHIVE,TMPDIR,TMP,TEMP test/integration/opensysml_test.ts test/integration/openclaw_shapes_test.ts"
+    "test:opensysml": "deno test --cached-only --allow-read --allow-write --allow-run --allow-env=SYSML_TOOLKIT_WASM_ARCHIVE,OPENSYSML_ARCHIVE,TMPDIR,TMP,TEMP test/integration/opensysml_test.ts test/integration/openclaw_shapes_test.ts",
+    "plugin:package": "deno task plugin:build && deno run --cached-only --allow-read --allow-write --allow-run=npm scripts/package-distributions.ts"
   },
+  "exclude": [".release/", "plugin/toolkit/"],
   "fmt": {
     "exclude": [
       "test/fixtures",

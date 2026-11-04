@@ -22,10 +22,11 @@ The export reads an OpenClaw instance without changing it and turns it into:
 Each plugin run is kept as a version, browsable and comparable in an offline
 viewer.
 
-With the Toolkit bundled in the plugin package, model checks (§7.2) run OpenClaw
-and APE SHACL rules on the compiled SysML. Exports retain collector notes if the
-Toolkit is damaged and model checks cannot run; findings do not change the
-instance or block export. The Deno CLI can check an existing export.
+With the bundled or separately installed Toolkit, model checks (§7.2) run
+OpenClaw and APE SHACL rules on the compiled SysML. Exports retain collector
+notes if the Toolkit is absent or damaged and model checks cannot run; findings
+do not change the instance or block export. The Deno CLI can check an existing
+export.
 
 **Targets.** OpenClaw 2026.10.x, following the 2026.10.9 documentation. The
 collector also reads 2026.6.10 configurations (`agents.list`, legacy memory
@@ -46,7 +47,7 @@ calls the next.
 | emit     | `emit(snapshot) → Map<path, text>`     | Deterministic SysML text: `OpenClawImport.sysml`, `OpenClawInstance.sysml`.   |
 | diagnose | Model checks and collector notes       | Toolkit validation and SHACL rules (§7.2); plugin and Deno CLI.               |
 | diff     | `diff(a, b) → Change[]`                | Structural changes between two snapshots (§8).                                |
-| validate | `validate(files) → Diagnostics`        | Compiles written files with the pinned WASM Toolkit bundled in the plugin.    |
+| validate | `validate(files) → Diagnostics`        | Compiles written files with the pinned bundled or installed WASM Toolkit.     |
 | views    | `diagramViews(snapshot, inference)`    | The viewer's model: nodes and edges per view, each with its SysML; its table. |
 | layout   | `layoutView(view) → Scene`             | Positions a view's drawn elements with elkjs, at export time. Asynchronous.   |
 | tables   | `drawing(view)`, `tableData(view)`     | Splits a view into what is drawn and its table, shaped for the page (§10.5).  |
@@ -615,7 +616,7 @@ is not evidence that an older export contains no plaintext credentials.
 
 The plugin writes the canonical sorted findings and collector notes to
 `findings.json`; summary and `versions.json` counts include them. Model checks
-do not run when the bundled Toolkit is missing or damaged, with no TypeScript
+do not run when the selected Toolkit is missing or damaged, with no TypeScript
 fallback. The viewer's Doctor panel displays the available findings and their
 status.
 
@@ -897,44 +898,61 @@ version.
 ### 10.6 Toolkit packaging and validation
 
 ```text
+openclaw sysmlv2-toolkit install [--from <archive>]
 openclaw sysmlv2-toolkit status
 ```
 
-The plugin package carries the Toolkit in `toolkit/`, beside `core.mjs`: exactly
-the pinned files of `src/adapters/sysml-toolkit-pin.ts` (`sysmlv2.js`,
-`sysmlv2_bg.wasm`, the three `stdlib/` snapshots and its manifest, `LICENSE`,
-`LICENSE-EPL-2.0`, `THIRD-PARTY-NOTICES.md`), about 20 MB. Installing the plugin
-needs no further step and an export downloads nothing. `status` prints
-`{version, path, verified}`.
+Version 0.3.1 ships one runtime in two distributions. `distribution.json`,
+beside `core.mjs`, selects `{toolkit: "bundled"}` for the complete GitHub
+package or `{toolkit: "external"}` for the lightweight ClawHub package. An
+absent marker defaults to bundled for source and older complete packages; an
+unreadable or invalid marker is an integrity error.
 
-`deno task plugin:build` writes `plugin/toolkit/` from the public archive
-`https://github.com/Open-MBEE/sysml-toolkit/releases/download/v0.10.10/sysml-wasm-0.10.10.tgz`,
-whose SHA-256 is
-`93d6ef0a2140fceabc3115cd95d629146bc004c3959bfa23d715cce8b06cc13c`. The build
-never downloads: `SYSML_TOOLKIT_WASM_ARCHIVE` names the archive, and a missing
-or unreadable one fails with `TOOLKIT_ARCHIVE_MISSING`, a wrong one with
-`TOOLKIT_INTEGRITY`, before anything is bundled. Each written file is checked
-against its own pinned SHA-256, and the directory holds nothing else. It is
-gitignored and listed in the package `files`.
+The complete package carries `toolkit/`: exactly the pinned files of
+`src/adapters/sysml-toolkit-pin.ts` (`sysmlv2.js`, `sysmlv2_bg.wasm`, the three
+`stdlib/` snapshots and its manifest, `LICENSE`, `LICENSE-EPL-2.0`,
+`THIRD-PARTY-NOTICES.md`), about 20 MB. It never falls back to an external cache
+if a bundled file is missing or damaged.
 
-The runtime reads one directory. The plugin resolves `toolkit/` from the
-location of its bundle; a Deno checkout resolves `plugin/toolkit/` from the
-source. Callers can name another directory: `diagnose` takes `--toolkit <dir>`,
-and the tests extract the archive into a temporary directory they pass to
-validation. There is no fallback to an earlier copy, such as the former
-`<state dir>/sysmlv2-export-toolkit/`, which can be deleted.
+The lightweight package selects `<state dir>/sysmlv2-export-toolkit/0.10.10/`.
+Only the explicit `install` command downloads the public archive
+`https://github.com/Open-MBEE/sysml-toolkit/releases/download/v0.10.10/sysml-wasm-0.10.10.tgz`.
+Its pinned SHA-256 is
+`93d6ef0a2140fceabc3115cd95d629146bc004c3959bfa23d715cce8b06cc13c`. `--from`
+reads a local copy instead. The archive and individual files are verified before
+staging, staged files are checked again, and a rename activates the installation
+atomically. A concurrent install is accepted only after verifying its files. An
+existing valid copy is reused without downloading. A damaged copy raises
+`TOOLKIT_INTEGRITY` with explicit recovery instructions. A missing copy gives
+`TOOLKIT_NOT_INSTALLED` on export. Neither plugin installation nor export
+downloads the Toolkit automatically.
 
-The Toolkit's `LICENSE` (Apache-2.0), `LICENSE-EPL-2.0` (its SysML v2 standard
-library) and `THIRD-PARTY-NOTICES.md` ship in `toolkit/`;
-`plugin/THIRD_PARTY_NOTICES.md` names sysml-toolkit 0.10.10, its licenses and
-the upstream release as the source of the EPL-covered library.
+`status` prints `{source, version, path, installed, verified}`. An absent
+external Toolkit gives `installed: false, verified: false`; a bundled Toolkit
+must verify. A Deno checkout resolves `plugin/toolkit/` from the source. Callers
+can name another directory: `diagnose` takes `--toolkit <dir>`, and validation
+tests supply their own extracted directory.
+
+`deno task plugin:build` writes the complete `plugin/` from the pinned archive
+named by `SYSML_TOOLKIT_WASM_ARCHIVE`. The build never downloads: a missing or
+unreadable archive is `TOOLKIT_ARCHIVE_MISSING`, a mismatched one is
+`TOOLKIT_INTEGRITY`. `deno task plugin:package` builds once, stages the GitHub
+and ClawHub distributions under `.release/<version>/`, and runs `npm pack` with
+lifecycle scripts disabled. Shared files are checked byte for byte; only
+`distribution.json`, the package file list and Toolkit inclusion differ. It
+writes the full archive, a `-clawhub.tgz` archive, and their SHA-256 sums. It
+does not publish. Generated files and release staging are gitignored.
+
+The Toolkit's Apache-2.0 and EPL-2.0 licenses and third-party notices accompany
+its files in both the complete package and the external installation.
+`plugin/THIRD_PARTY_NOTICES.md` identifies its upstream source and licenses.
 
 After writing the export, `runExport` validates every written SysML file,
 including inferred SysML and the local `core.sysml`, `cases.sysml` and
 `skills.sysml`, using the Toolkit's standard library. The standalone Deno export
 remains the separate emitter; tests call validation on its exact output files.
-It checks the bundled file hashes on every load and uses `initSync` inside
-`node:worker_threads`, with a 60-second compile timeout.
+It checks the selected Toolkit file hashes on every load and uses `initSync`
+inside `node:worker_threads`, with a 60-second compile timeout.
 
 The validation summary is `{status, errors, code?, recovery?}`, where `status`
 is `passed` or `failed` (`skipped` only in exports made before the Toolkit was
@@ -947,9 +965,10 @@ other non-error findings are kept in `warnings`. Chat and tool output include
 one short validation line.
 
 A missing or modified bundled file is `TOOLKIT_INTEGRITY`, with a recovery that
-says to reinstall the plugin. Compilation errors, that integrity failure and
-timeouts fail validation without discarding the export. These diagnostics are
-informational to the export result.
+says to reinstall the plugin. An absent external Toolkit is
+`TOOLKIT_NOT_INSTALLED`, with recovery to run the explicit install command.
+Compilation errors, that integrity failure and timeouts fail validation without
+discarding the export. These diagnostics are informational to the export result.
 
 **Model rules on the model graph.** After a passing check, the worker projects
 the compiled Toolkit element graph (`toFullJson`) to the `openmbee-v2` RDF
@@ -1015,7 +1034,9 @@ Failures are `{ code, context, recovery }` errors, never findings.
 | `INSTRUCTION_CHANGED`, `INFERENCE_NOT_JSON`       | plugin    | Per agent during inference (§9).                                                        |
 | `EXPORT_VERSION_EXISTS`, `EXPORT_VERSION_MISSING` | plugin    | Two runs in the same second; `versions.json` lists a missing directory.                 |
 | `CLI_USAGE`, `CLI_IO_ERROR`                       | Deno CLI  | Invalid arguments; files cannot be read or created.                                     |
-| `TOOLKIT_INTEGRITY`                               | toolkit   | A bundled file is missing or modified, or the build's archive is not the pinned one.    |
+| `TOOLKIT_INTEGRITY`                               | toolkit   | A selected Toolkit file is missing or modified, or an archive does not match its pin.   |
+| `TOOLKIT_NOT_INSTALLED`                           | toolkit   | The lightweight distribution has no installed Toolkit; export is retained.              |
+| `TOOLKIT_DOWNLOAD_FAILED`                         | toolkit   | The explicit install command could not read or download the archive.                    |
 | `TOOLKIT_ARCHIVE_MISSING`                         | build     | `SYSML_TOOLKIT_WASM_ARCHIVE` is unset or names an unreadable file.                      |
 | `TOOLKIT_TIMEOUT`                                 | validate  | The worker exceeded 60 seconds.                                                         |
 | `TOOLKIT_VALIDATION_FAILED`                       | validate  | The worker or compiler could not complete validation.                                   |

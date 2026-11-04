@@ -20,18 +20,23 @@ License 2.0.
 
 ## sysml-toolkit 0.10.10
 
-The `toolkit/` directory of this package carries, unmodified, the files of the
-public sysml-wasm 0.10.10 release of sysml-toolkit that the plugin loads to
+The complete GitHub package carries, unmodified, the files of the public
+sysml-wasm 0.10.10 release in `toolkit/`. The lightweight ClawHub package
+installs the same files separately through the explicit Toolkit install command.
+The plugin loads these files to
 compile SysML v2: `sysmlv2.js`, `sysmlv2_bg.wasm` and the `stdlib/` files. The
 plugin checks each against a pinned SHA-256 whenever it loads them.
 
-| Component | License | In this package |
+| Component | License | In the Toolkit directory |
 | --- | --- | --- |
 | sysml-toolkit 0.10.10 (npm name `@sysml/wasm`) | Apache-2.0 | `toolkit/LICENSE` |
 | SysML v2 standard library, and the snapshots derived from it | EPL-2.0 | `toolkit/LICENSE-EPL-2.0` |
 
 The Toolkit's own notices, including the upstream licensing notice of the
-standard library, are in `toolkit/THIRD-PARTY-NOTICES.md`.
+standard library, are in `THIRD-PARTY-NOTICES.md` inside that directory. For the
+lightweight distribution, the directory is
+`<OpenClaw state dir>/sysmlv2-export-toolkit/0.10.10/`; it retains the same
+license and notice files as the complete package.
 
 Source of the Toolkit: <https://github.com/Open-MBEE/sysml-toolkit>, release
 `v0.10.10`
