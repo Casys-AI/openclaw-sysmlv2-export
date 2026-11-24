@@ -1524,18 +1524,20 @@ function findingList(findings) {
   const ul = el("ul", "md-findings");
   for (const f of findings) {
     const li = el("li", "doc-" + f.severity), top = el("div");
-    top.append(el("i", "sev"), codeOf(f.code, null));
+    top.append(el("i", "sev"), codeOf(f));
     li.append(top, el("p", "", f.context), el("p", "fix", f.recovery));
     ul.append(li);
   }
   return ul;
 }
 // A finding's code in discreet mono, its label beside it when the code needs
-// one; the APE pattern it checks is its tooltip.
+// one, with its book references in the tooltip.
 const CODE_LABELS = { PROSE_NOT_ENFORCED: "not enforced by config" };
-function codeOf(code, pattern) {
+function codeOf({ code, principle, pattern }) {
   const c = el("code", "", code);
-  if (pattern) c.title = "APE pattern " + pattern;
+  if (principle && pattern) c.title = "Principle " + principle + " · Pattern " + pattern;
+  else if (principle) c.title = "Principle " + principle + " (Agentic System Architecture)";
+  else if (pattern) c.title = "Pattern " + pattern + " (Agentic Process Engineering)";
   if (!CODE_LABELS[code]) return c;
   const s = el("span", "doc-code");
   s.append(el("strong", "", CODE_LABELS[code]), c);
@@ -1623,7 +1625,7 @@ function groupList(groups) {
   const ul = el("ul", "md-findings doc-groups");
   for (const g of groups) {
     const li = el("li", "doc-" + g.severity), head = el("div", "doc-head");
-    head.append(el("i", "sev"), codeOf(g.code, g.pattern));
+    head.append(el("i", "sev"), codeOf(g));
     li.append(head, ...subjectRows(g));
     ul.append(li);
   }
@@ -1640,7 +1642,7 @@ function subjectRows(g) {
     const sub = el("div", "doc-nested doc-" + s.widened.severity), chips = el("div", "doc-chips");
     chips.append(...s.widened.subjects.map((w) => subjectChip(s.widened, w, [w.context])));
     sub.title = s.widened.subjects[0].recovery;
-    sub.append(el("i", "sev"), codeOf(s.widened.code, s.widened.pattern), el("span", "", "toward " + s.label), chips);
+    sub.append(el("i", "sev"), codeOf(s.widened), el("span", "", "toward " + s.label), chips);
     rows.push(sub);
   }
   return rows;

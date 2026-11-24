@@ -179,6 +179,11 @@ Deno.test("unreadable findings remain local to their version", async () => {
       "{}",
       '[{"code":"APE_UNREACHABLE_OPERATOR","severity":"high"}]',
       canonical([{ ...ape, related: [""] }]),
+      canonical([{ ...ape, principle: 4 }]),
+      canonical([{ ...ape, principle: " " }]),
+      canonical([{ ...ape, pattern: "" }]),
+      canonical([{ ...ape, finding: ["absent"] }]),
+      canonical([{ ...ape, finding: undefined }]),
     ]
   ) {
     bad.files["findings.json"] = text;
@@ -435,13 +440,95 @@ const ranApe = (...codes: string[]) =>
       queries: codes.map((code) => ({ code, findings: 0 })),
     },
   });
-const row = (code: string, subject: string, extra = {}) => ({
+const row = (
+  code: string,
+  subject: string,
+  extra: Partial<ApeFinding> = {},
+): ApeFinding => ({
   code,
   severity: "warning",
   subject,
   context: `${code} on ${subject}`,
   recovery: `Fix ${code}.`,
   ...extra,
+});
+
+Deno.test("Doctor code tooltips show current and archived book references", async () => {
+  const now = version("2026-11-02T10-25-00Z", snapshot);
+  const before = version("2026-11-02T10-20-00Z", snapshot);
+  const grant = row("APE_GRANT_WIDENS_PARENT", "agent:field", {
+    finding: "present",
+    related: ["agent:lead"],
+  });
+  now.files["findings.json"] = canonical([
+    row("EXEC_WITHOUT_APPROVAL", "agent:lead", {
+      severity: "error",
+      principle: "A3",
+      pattern: "2.1",
+    }),
+    { ...grant, principle: "A4" },
+    row("APE_UNREACHABLE_OPERATOR", "agent:client", { finding: "absent" }),
+  ]);
+  const archived = [
+    row("EXEC_WITHOUT_APPROVAL", "agent:lead", { severity: "error" }),
+    { ...grant, pattern: "S3" },
+    row("APE_LINK_CYCLE", "agent:client", {
+      pattern: "4.2",
+      finding: "indeterminate",
+    }),
+    row("OTHER_CHECK", "agent:coach", { principle: "G9" }),
+  ];
+  const archiveText = canonical(archived);
+  before.files["findings.json"] = archiveText;
+  const page = await viewerPage([now, before]);
+  const [current, legacy] = dataOf(page).versions;
+  assert.equal(before.files["findings.json"], archiveText);
+  assert.deepEqual(legacy.findings, archived.sort(compareFindings));
+
+  // Run the generated Doctor renderer with a minimal stand-in for its DOM.
+  type Element = {
+    tag: string;
+    text?: string;
+    title?: string;
+    children: Element[];
+    append: (...nodes: Element[]) => void;
+  };
+  const el = (tag: string, _className?: string, text?: string): Element => {
+    const children: Element[] = [];
+    return {
+      tag,
+      text,
+      children,
+      append: (...nodes) => children.push(...nodes),
+    };
+  };
+  const codeTooltips = (
+    element: Element,
+  ): [string | undefined, string | undefined][] =>
+    element.tag === "code"
+      ? [[element.text, element.title]]
+      : element.children.flatMap(codeTooltips);
+  const source =
+    page.match(/const CODE_LABELS = .*?(?=\nfunction subjectChip\()/s)![0];
+  const renderDoctor = new Function(
+    "el",
+    "subjectChip",
+    "groups",
+    source + "\nreturn groupList(nested(merged(groups)));",
+  );
+  const tooltips = (groups: unknown) =>
+    codeTooltips(renderDoctor(el, () => el("button"), groups));
+  assert.deepEqual(tooltips(current.doctor.groups), [
+    ["EXEC_WITHOUT_APPROVAL", "Principle A3 · Pattern 2.1"],
+    ["APE_GRANT_WIDENS_PARENT", "Principle A4 (Agentic System Architecture)"],
+    ["APE_UNREACHABLE_OPERATOR", undefined],
+  ]);
+  assert.deepEqual(tooltips(legacy.doctor.groups), [
+    ["EXEC_WITHOUT_APPROVAL", undefined],
+    ["APE_GRANT_WIDENS_PARENT", "Pattern S3 (Agentic Process Engineering)"],
+    ["APE_LINK_CYCLE", "Pattern 4.2 (Agentic Process Engineering)"],
+    ["OTHER_CHECK", "Principle G9 (Agentic System Architecture)"],
+  ]);
 });
 
 Deno.test("a version says whether its checks ran", () => {
@@ -484,7 +571,7 @@ Deno.test("a version says whether its checks ran", () => {
 });
 
 Deno.test("the Doctor groups findings and sets them against the last version whose checks ran", async () => {
-  const ape = { pattern: "4.2", finding: "present" };
+  const ape = { pattern: "4.2", finding: "present" as const };
   const note = snapshot.ambiguities[0];
   const now = version("2026-11-02T10-25-00Z", snapshot);
   now.files["findings.json"] = canonical([

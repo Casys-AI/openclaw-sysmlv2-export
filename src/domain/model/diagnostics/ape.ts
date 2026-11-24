@@ -1,6 +1,7 @@
 import type { Finding } from "../snapshot.ts";
 
 export interface ApeFinding extends Finding {
+  principle?: string;
   pattern?: string;
   finding?: "present" | "absent" | "indeterminate";
   /** The agents the context names (`agent:<id>`, sorted): a cycle's other

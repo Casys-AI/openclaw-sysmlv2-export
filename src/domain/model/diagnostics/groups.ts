@@ -40,7 +40,9 @@ export interface DoctorGroup {
   severity: ApeFinding["severity"];
   code: string;
   source: FindingSource;
-  /** The APE pattern the rule checks, when it checks one. */
+  /** The principle of Agentic System Architecture the rule applies, when it names one. */
+  principle?: string;
+  /** The pattern of Agentic Process Engineering the rule applies, when it names one. */
   pattern?: string;
   recovery: string;
   subjects: DoctorSubject[];
@@ -64,6 +66,7 @@ export function doctorGroups(
         severity: f.severity,
         code: f.code,
         source,
+        ...(f.principle ? { principle: f.principle } : {}),
         ...(f.pattern ? { pattern: f.pattern } : {}),
         recovery: f.recovery,
         subjects: [],

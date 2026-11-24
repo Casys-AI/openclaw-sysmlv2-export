@@ -20,25 +20,12 @@ import { withToolkitModel } from "../support/toolkit-model.ts";
 import { compileOpenSysml } from "../support/opensysml.ts";
 import {
   MIGRATED_CODES,
+  openclawFindingRows,
   openclawShapesCases,
   openclawShapesSources,
 } from "../support/openclaw-shapes-fixture.ts";
 const archive = Deno.env.get("SYSML_TOOLKIT_WASM_ARCHIVE");
 const oracle = Deno.env.get("OPENSYSML_ARCHIVE");
-const rows = (
-  findings: {
-    code: string;
-    subject: string;
-    severity: string;
-    context: string;
-    recovery: string;
-  }[],
-) =>
-  findings.filter((f) => MIGRATED_CODES.has(f.code)).map((
-    { code, subject, severity, context, recovery },
-  ) => ({ code, subject, severity, context, recovery })).sort((a, b) =>
-    JSON.stringify(a).localeCompare(JSON.stringify(b))
-  );
 Deno.test({
   name:
     "compiled OpenClaw shapes match reviewed golden findings for all seventeen check codes",
@@ -63,7 +50,7 @@ Deno.test({
       for (const [name, snapshot, inferred] of openclawShapesCases(baseline)) {
         await t.step(name, async () => {
           const sources = openclawShapesSources(snapshot, inferred);
-          const expected = rows(expectedCases[name]);
+          const expected = openclawFindingRows(expectedCases[name]);
           if (name === "extended") {
             assert.deepEqual(
               new Set(expected.map((f) => f.code)),
@@ -73,7 +60,9 @@ Deno.test({
           const check = async (store: Store) => {
             const program = await readApeProgram(store);
             materializeApeViews(store, program);
-            const actual = rows(evaluateApeRules(store, program).findings);
+            const actual = openclawFindingRows(
+              evaluateApeRules(store, program).findings,
+            );
             assert.deepEqual(actual, expected);
             console.log(
               name,

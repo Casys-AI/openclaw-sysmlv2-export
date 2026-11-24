@@ -23,7 +23,7 @@ const prefixes = `@prefix sh: <http://www.w3.org/ns/shacl#> .
 @prefix ex: <urn:test:> .`;
 const shape = `${prefixes}
 ex:Shape a sh:NodeShape; sh:targetSubjectsOf ape:agentId;
-  ape:code "APE_TEST_RULE"; ape:pattern "4.2"; ape:finding "absent"; ape:recovery "Review the modeled entry.";
+  ape:code "APE_TEST_RULE"; ape:principle "A4"; ape:finding "absent"; ape:recovery "Review the modeled entry.";
   sh:sparql ex:Constraint .
 ex:Constraint sh:severity sh:Warning;
   sh:message "Cycle with {$relatedAgentId}; again {$relatedAgentId}.";
@@ -53,12 +53,13 @@ Deno.test("APE report mapping groups sorted related IDs and preserves replacemen
       { format: "text/turtle" },
     );
     const admitted = admitApeProgram(store, program);
+    assert.equal(admitted.annotations.values().next().value?.principle, "A4");
     const report = evaluateApeRules(store, admitted);
     assert.deepEqual(report.findings, [{
       code: "APE_TEST_RULE",
       subject: "agent:a:1",
       severity: "warning",
-      pattern: "4.2",
+      principle: "A4",
       finding: "absent",
       context: "Cycle with $$, $&, $'; again $$, $&, $'.",
       recovery: "Review the modeled entry.",
@@ -68,10 +69,13 @@ Deno.test("APE report mapping groups sorted related IDs and preserves replacemen
     assert.match(report.validationReport, /ValidationReport/);
     assert.match(report.validationReport, /resultMessage/);
     // Admitted annotations are retained; evaluation does not read/admit them again.
-    store.load(`${prefixes} ex:Shape ape:pattern "changed after admission" .`, {
-      format: "text/turtle",
-      to_graph_name: namedNode(SHAPES_GRAPH),
-    });
+    store.load(
+      `${prefixes} ex:Shape ape:principle "changed after admission" .`,
+      {
+        format: "text/turtle",
+        to_graph_name: namedNode(SHAPES_GRAPH),
+      },
+    );
     assert.equal(
       evaluateApeRules(store, admitted).validationReport,
       report.validationReport,
@@ -81,12 +85,27 @@ Deno.test("APE report mapping groups sorted related IDs and preserves replacemen
   }
 });
 
-Deno.test("APE annotations and agent IDs are required at the adapter boundary", async () => {
+Deno.test("APE rule admission validates book references and finding values", async () => {
   await initOxigraph();
   for (
-    const broken of [
-      shape.replace('ape:pattern "4.2";', ""),
-      shape.replace('ape:finding "absent"', 'ape:finding "indeterminate"'),
+    const [broken, field] of [
+      [shape.replace('ape:principle "A4"', 'ape:principle "A8"'), "principle"],
+      [
+        shape.replace('ape:principle "A4"', 'ape:principle "A4", "B3"'),
+        "principle",
+      ],
+      [shape.replace('ape:principle "A4"', "ape:principle ex:A4"), "principle"],
+      [shape.replace('ape:principle "A4"', 'ape:pattern "S3"'), "pattern"],
+      [shape.replace('ape:principle "A4"', 'ape:pattern "3.7"'), "pattern"],
+      [
+        shape.replace('ape:finding "absent"', 'ape:finding "unknown"'),
+        "finding",
+      ],
+      [
+        shape.replace('ape:finding "absent"', 'ape:finding "indeterminate"'),
+        "finding",
+      ],
+      [shape.replace('ape:finding "absent";', ""), "finding"],
     ]
   ) {
     const store = new Store();
@@ -95,12 +114,31 @@ Deno.test("APE annotations and agent IDs are required at the adapter boundary", 
       assert.throws(
         () => admitApeProgram(store, program),
         (e) =>
-          e instanceof ApeStageError && /annotation/.test(e.toJSON().cause),
+          e instanceof ApeStageError && e.stage === "loading" &&
+          e.toJSON().cause === `Invalid APE shape annotation ${field}`,
       );
     } finally {
       dispose(store);
     }
   }
+  const store = new Store();
+  try {
+    const program = load(store, shape.replace('ape:principle "A4";', ""));
+    const annotation = admitApeProgram(store, program).annotations.values()
+      .next().value;
+    assert.deepEqual(annotation, {
+      code: "APE_TEST_RULE",
+      finding: "absent",
+      recovery: "Review the modeled entry.",
+      message: "Cycle with {$relatedAgentId}; again {$relatedAgentId}.",
+    });
+  } finally {
+    dispose(store);
+  }
+});
+
+Deno.test("APE agent IDs are required at the adapter boundary", async () => {
+  await initOxigraph();
   const store = new Store();
   try {
     const program = load(store, shape);
@@ -404,7 +442,7 @@ Deno.test("OpenClaw report mapping preserves distinct focuses and actual message
       store,
       `${prefixes}
       ex:Shape a sh:NodeShape; sh:targetSubjectsOf ex:path;
-        ape:code "PLAINTEXT_CREDENTIAL"; ape:recovery "Replace {?value}.";
+        ape:code "PLAINTEXT_CREDENTIAL"; ape:principle "C1"; ape:recovery "Replace {?value}.";
         sh:sparql ex:Constraint .
       ex:Constraint sh:severity sh:Warning; sh:message "Configured at {?value}.";
         sh:select """SELECT DISTINCT $this ?value WHERE { $this <urn:test:path> ?value }""" .`,
@@ -421,6 +459,7 @@ Deno.test("OpenClaw report mapping preserves distinct focuses and actual message
         code: "PLAINTEXT_CREDENTIAL",
         subject: "instance",
         severity: "warning",
+        principle: "C1",
         context: "Configured at a$$.",
         recovery: "Replace a$$.",
       },
@@ -428,6 +467,7 @@ Deno.test("OpenClaw report mapping preserves distinct focuses and actual message
         code: "PLAINTEXT_CREDENTIAL",
         subject: "instance",
         severity: "warning",
+        principle: "C1",
         context: "Configured at z$&.",
         recovery: "Replace z$&.",
       },

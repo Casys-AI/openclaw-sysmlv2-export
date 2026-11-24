@@ -124,6 +124,8 @@ CONSTRUCT {
 oc:EXEC_WITHOUT_APPROVAL0 a sh:NodeShape;
    sh:targetSubjectsOf ape:agentId;
    ape:code "EXEC_WITHOUT_APPROVAL";
+   ape:principle "A3";
+   ape:pattern "2.1";
    ape:recovery "Set tools.exec.mode to ask or auto, or tighten the execution host's approvals policy.";
    dct:source "OpenClaw 2026.10.9 docs/tools/exec-approvals.md";
    sh:sparql oc:EXEC_WITHOUT_APPROVAL0-constraint.
@@ -150,6 +152,7 @@ SELECT DISTINCT $this WHERE {
 oc:PROSE_NOT_ENFORCED0 a sh:NodeShape;
    sh:targetSubjectsOf ape:agentId;
    ape:code "PROSE_NOT_ENFORCED";
+   ape:principle "G5";
    ape:recovery "Set tools.exec.mode to ask or auto, or tighten the execution host's approvals policy, so the configuration holds what the instructions say; or reword the rule.";
    dct:source "OpenClaw 2026.10.9 docs/tools/exec-approvals.md; rules inferred into OpenClawInferred";
    sh:sparql oc:PROSE_NOT_ENFORCED0-constraint.
@@ -182,6 +185,7 @@ SELECT DISTINCT $this ?value WHERE {
 oc:AGENT_WITHOUT_SANDBOX0 a sh:NodeShape;
    sh:targetSubjectsOf ape:agentId;
    ape:code "AGENT_WITHOUT_SANDBOX";
+   ape:principle "A3";
    ape:recovery "Use sandbox mode all with exec host auto or sandbox, or remove the exec grant.";
    dct:source "OpenClaw 2026.10.9 docs/gateway/sandboxing.md; docs/tools/exec.md";
    sh:sparql oc:AGENT_WITHOUT_SANDBOX0-constraint.
@@ -207,6 +211,7 @@ FILTER(?security != "deny" && ?security != "unknown")
 oc:AGENT_WITHOUT_SANDBOX1 a sh:NodeShape;
    sh:targetSubjectsOf ape:agentId;
    ape:code "AGENT_WITHOUT_SANDBOX";
+   ape:principle "A3";
    ape:recovery "Use sandbox mode all with exec host auto or sandbox, or remove the exec grant.";
    dct:source "OpenClaw 2026.10.9 docs/gateway/sandboxing.md; docs/tools/exec.md";
    sh:sparql oc:AGENT_WITHOUT_SANDBOX1-constraint.
@@ -232,6 +237,7 @@ FILTER(?security="unknown")
 oc:EXEC_ALLOWLIST_WILDCARD0 a sh:NodeShape;
    sh:targetSubjectsOf oc:subject;
    ape:code "EXEC_ALLOWLIST_WILDCARD";
+   ape:principle "A3";
    ape:recovery "Replace the wildcard with the intended command names or binary paths.";
    dct:source "OpenClaw 2026.10.9 docs/tools/exec-approvals.md";
    sh:sparql oc:EXEC_ALLOWLIST_WILDCARD0-constraint.
@@ -261,6 +267,7 @@ SELECT DISTINCT $this WHERE {
 oc:MCP_SANDBOX_GATE0 a sh:NodeShape;
    sh:targetSubjectsOf ape:agentId;
    ape:code "MCP_SANDBOX_GATE";
+   ape:principle "A7";
    ape:recovery "Allow the intended server globs or bundle-mcp in the sandbox tool policy.";
    dct:source "OpenClaw 2026.10.9 docs/gateway/config-tools/tool-policy.md";
    sh:sparql oc:MCP_SANDBOX_GATE0-constraint.
@@ -347,6 +354,7 @@ SELECT DISTINCT $this ?count WHERE {
 oc:MEMORY_SESSIONS_INDEXED0 a sh:NodeShape;
    sh:targetSubjectsOf ape:agentId;
    ape:code "MEMORY_SESSIONS_INDEXED";
+   ape:principle "C1";
    ape:recovery "Review session indexing and cross-conversation recall; docs/reference/memory-config.md.";
    dct:source "OpenClaw 2026.10.9 docs/reference/memory-config.md";
    sh:sparql oc:MEMORY_SESSIONS_INDEXED0-constraint.
@@ -368,6 +376,7 @@ SELECT DISTINCT $this WHERE {
 oc:MEMORY_REMOTE_EMBEDDINGS0 a sh:NodeShape;
    sh:targetSubjectsOf ape:agentId;
    ape:code "MEMORY_REMOTE_EMBEDDINGS";
+   ape:principle "C1";
    ape:recovery "Review the embedding provider and its data handling; docs/reference/memory-config.md.";
    dct:source "OpenClaw 2026.10.9 docs/reference/memory-config.md";
    sh:sparql oc:MEMORY_REMOTE_EMBEDDINGS0-constraint.
@@ -386,6 +395,7 @@ SELECT DISTINCT $this WHERE {
 oc:AGENT_TO_AGENT_WILDCARD0 a sh:NodeShape;
    sh:targetSubjectsOf f:InstanceInventory::openclawVersion;
    ape:code "AGENT_TO_AGENT_WILDCARD";
+   ape:principle "A3";
    ape:recovery "List only the intended requester and target agents, or disable agent-to-agent access.";
    dct:source "OpenClaw 2026.10.9 dist/session-visibility-c_9BAYYO.mjs createAgentToAgentPolicy";
    sh:sparql oc:AGENT_TO_AGENT_WILDCARD0-constraint.
@@ -405,6 +415,7 @@ SELECT DISTINCT $this WHERE {
 oc:PLAINTEXT_CREDENTIAL0 a sh:NodeShape;
    sh:targetSubjectsOf f:CredentialPath::path;
    ape:code "PLAINTEXT_CREDENTIAL";
+   ape:principle "C1";
    ape:recovery "Replace the value at {?value} with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.";
    dct:source "OpenClaw 2026.10.9 docs/reference/secretref-credential-surface.md";
    sh:sparql oc:PLAINTEXT_CREDENTIAL0-constraint.
@@ -420,6 +431,7 @@ SELECT DISTINCT $this ?value WHERE {
 oc:UNRESOLVED_AGENT_REFERENCE0 a sh:NodeShape;
    sh:targetSubjectsOf f:ScheduledCase::unresolvedTarget;
    ape:code "UNRESOLVED_AGENT_REFERENCE";
+   ape:principle "G1";
    ape:recovery "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.";
    dct:source "OpenClaw 2026.10.9 dist/server-cron-DmxBCDVE.mjs resolveCronAgent; dist/zod-schema-2kniG8D0.mjs explicitTargets";
    sh:sparql oc:UNRESOLVED_AGENT_REFERENCE0-constraint.
@@ -443,6 +455,7 @@ FILTER(?verified && ?enabled)
 oc:UNRESOLVED_AGENT_REFERENCE1 a sh:NodeShape;
    sh:targetSubjectsOf f:ScheduledCase::unresolvedTarget;
    ape:code "UNRESOLVED_AGENT_REFERENCE";
+   ape:principle "G1";
    ape:recovery "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.";
    dct:source "OpenClaw 2026.10.9 dist/server-cron-DmxBCDVE.mjs resolveCronAgent; dist/zod-schema-2kniG8D0.mjs explicitTargets";
    sh:sparql oc:UNRESOLVED_AGENT_REFERENCE1-constraint.
@@ -466,6 +479,7 @@ FILTER(?verified && !?enabled)
 oc:UNRESOLVED_AGENT_REFERENCE2 a sh:NodeShape;
    sh:targetSubjectsOf f:ScheduledCase::unresolvedTarget;
    ape:code "UNRESOLVED_AGENT_REFERENCE";
+   ape:principle "G1";
    ape:recovery "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.";
    dct:source "OpenClaw 2026.10.9 dist/server-cron-DmxBCDVE.mjs resolveCronAgent; dist/zod-schema-2kniG8D0.mjs explicitTargets";
    sh:sparql oc:UNRESOLVED_AGENT_REFERENCE2-constraint.
@@ -514,6 +528,7 @@ SELECT DISTINCT $this WHERE {
 oc:UNRESOLVED_BINDING_REFERENCE0 a sh:NodeShape;
    sh:targetSubjectsOf f:BindingConfiguration::agentId;
    ape:code "UNRESOLVED_BINDING_REFERENCE";
+   ape:principle "G1";
    ape:recovery "Set the binding's agentId to an existing agent or remove the obsolete binding.";
    dct:source "OpenClaw 2026.10.9 docs/concepts/multi-agent.md";
    sh:sparql oc:UNRESOLVED_BINDING_REFERENCE0-constraint.
@@ -551,6 +566,7 @@ SELECT DISTINCT $this ?count WHERE {
 oc:SAFE_BIN_INTERPRETER_UNPROFILED0 a sh:NodeShape;
    sh:targetSubjectsOf ape:agentId;
    ape:code "SAFE_BIN_INTERPRETER_UNPROFILED";
+   ape:principle "A3";
    ape:recovery "Remove interpreter safe bins or define hardened safeBinProfiles entries.";
    dct:source "OpenClaw 2026.10.9 dist/exec-safe-bin-runtime-policy-CgvU47MQ.mjs; dist/exec-safe-bin-trust-tdUplWO7.mjs";
    sh:sparql oc:SAFE_BIN_INTERPRETER_UNPROFILED0-constraint.

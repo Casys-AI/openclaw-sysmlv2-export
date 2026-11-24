@@ -94,17 +94,21 @@ and
 not a complete SHACL Core or SHACL 1.2 implementation. It supports global
 run-once SPARQL rules and SELECT node constraints with `sh:targetNode`,
 `sh:targetClass` (including subclass traversal), or `sh:targetSubjectsOf`. APE
-shapes use the last target and annotate code, pattern, finding and recovery;
-constraints carry severity and message. The runner uses SPARQL 1.1 syntax for
-its supported subset of draft forms. Unsupported or non-partitionable features
-are rejected explicitly. Active focus nodes must be IRIs. Property shapes,
-custom constraint components, ASK constraints, PATH substitution, and general
-fixpoint inference are outside this profile. To keep results deterministic,
-CONSTRUCT templates that create blank nodes are rejected. Shape, constraint, and
-rule identifiers must be IRIs. Global CONSTRUCT views can use aggregates such as
-COUNT; batched SELECT constraints reject aggregates. A global rule’s `sh:order`
-must be a valid `xsd:integer`. Report values must be IRIs or literals; blank
-nodes are unsupported because parsing the report would change their identity.
+shapes use the last target and annotate `ape:code`, `ape:finding` and
+`ape:recovery`. They may also annotate `ape:principle` and `ape:pattern` with
+codes from the current book catalogues. Rules write `ape:finding` as `present`
+or `absent`, independently of those references. The viewer accepts
+`indeterminate` from older archives. Constraints carry severity and message. The
+runner uses SPARQL 1.1 syntax for its supported subset of draft forms.
+Unsupported or non-partitionable features are rejected explicitly. Active focus
+nodes must be IRIs. Property shapes, custom constraint components, ASK
+constraints, PATH substitution, and general fixpoint inference are outside this
+profile. To keep results deterministic, CONSTRUCT templates that create blank
+nodes are rejected. Shape, constraint, and rule identifiers must be IRIs. Global
+CONSTRUCT views can use aggregates such as COUNT; batched SELECT constraints
+reject aggregates. A global rule’s `sh:order` must be a valid `xsd:integer`.
+Report values must be IRIs or literals; blank nodes are unsupported because
+parsing the report would change their identity.
 
 The APE shapes occupy `urn:ase:ape:v1:shapes`; views use the named graphs above;
 results use `urn:ase:ape:v1:report`, with report node

@@ -78,10 +78,64 @@ export class ApeStageError extends Error {
 }
 
 const APE = "urn:ase:ape:v1:";
-export interface ApeAnnotation {
+// The current Casys book catalogues, used only for admitting rules.
+const PRINCIPLES = new Set([
+  "O1",
+  "O2",
+  "O3",
+  "A1",
+  "A2",
+  "A3",
+  "A4",
+  "A5",
+  "A6",
+  "A7",
+  "I1",
+  "I2",
+  "I3",
+  "I4",
+  "C1",
+  "C2",
+  "B1",
+  "B2",
+  "B3",
+  "B4",
+  "G1",
+  "G2",
+  "G3",
+  "G4",
+  "G5",
+]);
+const PATTERNS = new Set([
+  "1.1",
+  "1.2",
+  "1.3",
+  "2.1",
+  "2.2",
+  "2.3",
+  "2.4",
+  "2.5",
+  "2.6",
+  "3.1",
+  "3.2",
+  "3.3",
+  "3.4",
+  "3.5",
+  "3.6",
+  "4.1",
+  "4.2",
+  "4.3",
+  "4.4",
+  "5.1",
+  "5.2",
+  "6.1",
+  "6.2",
+  "6.3",
+]);
+export interface ApeAnnotation
+  extends Pick<ApeFinding, "principle" | "pattern"> {
   code: string;
-  pattern?: string;
-  finding: ApeFinding["finding"];
+  finding?: "present" | "absent";
   recovery: string;
   message: string;
 }
@@ -111,10 +165,10 @@ function annotations(
   program: ShaclProgram,
 ): Map<string, ApeAnnotation> {
   const result = new Map<string, ApeAnnotation>();
-  const fields = ["code", "pattern", "finding", "recovery"];
+  const fields = ["code", "principle", "pattern", "finding", "recovery"];
   for (const shape of program.shapes) {
     try {
-      const values: Record<string, string> = {};
+      const values: Partial<Record<string, string>> = {};
       for (
         const row of selected(
           store,
@@ -131,19 +185,25 @@ function annotations(
         ) throw new Error(`Invalid APE shape annotation ${name}`);
         values[name] = value.value;
       }
-      for (const name of ["code", "recovery"]) {
-        if (!(name in values)) {
-          throw new Error(`Missing APE shape annotation ${name}`);
-        }
+      const { code, principle, pattern, finding, recovery } = values;
+      if (code === undefined) {
+        throw new Error("Missing APE shape annotation code");
       }
-      if (!/^[A-Z][A-Z_]+$/.test(values.code)) {
+      if (recovery === undefined) {
+        throw new Error("Missing APE shape annotation recovery");
+      }
+      if (!/^[A-Z][A-Z_]+$/.test(code)) {
         throw new Error("Invalid APE shape annotation code");
       }
+      if (principle !== undefined && !PRINCIPLES.has(principle)) {
+        throw new Error("Invalid APE shape annotation principle");
+      }
+      if (pattern !== undefined && !PATTERNS.has(pattern)) {
+        throw new Error("Invalid APE shape annotation pattern");
+      }
       if (
-        (values.pattern === undefined) !== (values.finding === undefined) ||
-        values.code.startsWith("APE_") && !values.pattern ||
-        values.finding !== undefined &&
-          !["present", "absent"].includes(values.finding)
+        (finding === undefined && code.startsWith("APE_")) ||
+        (finding !== undefined && finding !== "present" && finding !== "absent")
       ) {
         throw new Error("Invalid APE shape annotation finding");
       }
@@ -154,9 +214,13 @@ function annotations(
         result.set(
           JSON.stringify([shape.node.value, constraint.sourceConstraint.value]),
           {
-            ...values,
+            code,
+            recovery,
             message: constraint.messages[0].value,
-          } as unknown as ApeAnnotation,
+            ...(principle !== undefined ? { principle } : {}),
+            ...(pattern !== undefined ? { pattern } : {}),
+            ...(finding !== undefined ? { finding } : {}),
+          },
         );
       }
     } catch (error) {
@@ -290,22 +354,21 @@ export function evaluateApeRules(store: Store, program: ApeProgram) {
       } as const)[result.severity];
       if (!severity) throw new Error("Unsupported result severity");
       if (!annotation.code.startsWith("APE_")) {
+        const { code, recovery, message: _message, ...metadata } = annotation;
         const subject = subjects.get(result.focusNode.value);
         if (subject === undefined) {
           throw new Error("OpenClaw report focus has no subject");
         }
         findings.push({
-          code: annotation.code,
+          code,
           severity,
           subject,
           context: result.messages.map((message) => message.value).join("\n"),
-          recovery: annotation.recovery.replace(
+          recovery: recovery.replace(
             /\{[?$]value\}/g,
             () => result.value.value,
           ),
-          ...(annotation.pattern
-            ? { pattern: annotation.pattern, finding: annotation.finding }
-            : {}),
+          ...metadata,
         });
         continue;
       }
@@ -328,17 +391,17 @@ export function evaluateApeRules(store: Store, program: ApeProgram) {
       }
     }
     for (const { annotation, focus, severity, related } of groups.values()) {
+      const { code, recovery, message, ...metadata } = annotation;
       findings.push({
-        code: annotation.code,
+        code,
         severity,
         subject: elementId("agent", focus),
-        context: annotation.message.replace(
+        context: message.replace(
           /\{[?$]relatedAgentId\}/g,
           () => [...related].sort().join(", "),
         ),
-        recovery: annotation.recovery,
-        pattern: annotation.pattern,
-        finding: annotation.finding,
+        recovery,
+        ...metadata,
         ...(related.size
           ? { related: [...related].sort().map((id) => elementId("agent", id)) }
           : {}),

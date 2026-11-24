@@ -1,6 +1,7 @@
 import { emit } from "../../src/adapters/out/sysml/emitter.ts";
 import { emitInferred } from "../../src/adapters/out/sysml/inferred.ts";
 import { ASSEMBLY_LIBRARY } from "../../src/adapters/out/sysml/library.ts";
+import type { ApeFinding } from "../../src/domain/model/diagnostics/ape.ts";
 import type { Inference } from "../../src/domain/model/inference.ts";
 import type { Snapshot } from "../../src/domain/model/snapshot.ts";
 
@@ -156,6 +157,21 @@ export const MIGRATED_CODES = new Set([
   "UNRESOLVED_BINDING_REFERENCE",
   "MANUAL_CONFIG_BACKUPS",
 ]);
+
+export const openclawFindingRows = (findings: ApeFinding[]) =>
+  findings.filter((f) => MIGRATED_CODES.has(f.code)).map((
+    { code, subject, severity, context, recovery, principle, pattern, finding },
+  ) => ({
+    code,
+    subject,
+    severity,
+    context,
+    recovery,
+    principle,
+    pattern,
+    finding,
+  }))
+    .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
 
 export function openclawShapesCases(baseline: Snapshot) {
   const extended = openclawShapesFixture(baseline);

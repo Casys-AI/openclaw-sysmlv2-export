@@ -83,14 +83,18 @@ Deno.test("the Doctor groups findings by severity, code and recovery, each subje
   const note = finding("SAFE_BINS_DEFAULT_UNRESOLVED", "agent:a", {
     severity: "info",
   });
-  const cycle = { pattern: "4.2", finding: "present" as const };
+  const cycle = { principle: "B3", finding: "present" as const };
   const groups = doctorGroups(
     [
       finding("APE_LINK_CYCLE", "agent:a", { ...cycle, related: ["agent:b"] }),
       finding("APE_LINK_CYCLE", "agent:b", { ...cycle, related: ["agent:a"] }),
       finding("NOTE_RULE", "agent:b", { severity: "info" }),
       note,
-      finding("EXEC", "agent:a", { severity: "error" }),
+      finding("EXEC", "agent:a", {
+        severity: "error",
+        principle: "A3",
+        pattern: "2.1",
+      }),
       finding("EXEC", "agent:b", { severity: "error", recovery: "Other." }),
     ],
     { "agent:a": "Alpha" },
@@ -106,7 +110,12 @@ Deno.test("the Doctor groups findings by severity, code and recovery, each subje
       ["info", "SAFE_BINS_DEFAULT_UNRESOLVED", "collector", 1],
     ],
   );
-  assert.equal(groups[2].pattern, "4.2");
+  assert.equal(groups[0].principle, "A3");
+  assert.equal(groups[0].pattern, "2.1");
+  assert.equal(groups[2].principle, "B3");
+  assert.equal(groups[2].pattern, undefined);
+  assert.equal(groups[4].principle, undefined);
+  assert.equal(groups[4].pattern, undefined);
   assert.deepEqual(groups[2].subjects, [
     {
       id: "agent:a",
@@ -168,4 +177,23 @@ Deno.test("a finding whose text alone changed is neither new nor resolved", () =
   assert.deepEqual([delta.new, delta.resolved.map((f) => f.subject)], [[], [
     "agent:b",
   ]]);
+});
+
+Deno.test("a finding whose book references changed is neither new nor resolved", () => {
+  const code = "APE_GRANT_WIDENS_PARENT";
+  const side = (references: Partial<ApeFinding>) => ({
+    findings: [finding(code, "agent:a", { ...references, finding: "present" })],
+    ran: new Set([code]),
+    collector: new Set<string>(),
+  });
+  const delta = findingsDelta(
+    side({ principle: "A4" }),
+    side({ pattern: "S3" }),
+    {
+      against: "v0",
+      inputs: "same",
+      labels: {},
+    },
+  );
+  assert.deepEqual([delta.new, delta.resolved], [[], []]);
 });

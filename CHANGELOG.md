@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- **Doctor book references.** `APE_GRANT_WIDENS_PARENT` replaces the pre-book
+  code `S3` with principle `A4`. `APE_LINK_CYCLE` replaces pattern `4.2` with
+  principle `B3`. `APE_UNREACHABLE_OPERATOR` drops its pattern reference. Twelve
+  OpenClaw checks cite the principle they apply. `EXEC_WITHOUT_APPROVAL` also
+  cites pattern `2.1`. The optional `ape:principle` annotation supplies the
+  finding's `principle` field. The loader checks reference codes against the
+  current catalogues when rules load. The viewer names the references in
+  tooltips and displays older archives as recorded.
+
 ## 0.3.1 — 2026-11-04
 
 - **Two distributions, one runtime.** ClawHub provides the lightweight plugin;

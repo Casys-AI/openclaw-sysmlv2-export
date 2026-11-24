@@ -8,7 +8,7 @@ import { compareFindings } from "../src/domain/model/diagnostics/findings.ts";
 import { canonical } from "../src/infrastructure/canonical-json.ts";
 import { createFixture } from "./support/fixture.ts";
 import {
-  MIGRATED_CODES,
+  openclawFindingRows,
   openclawShapesCases,
   openclawShapesSources,
 } from "./support/openclaw-shapes-fixture.ts";
@@ -33,15 +33,7 @@ try {
       );
     }
     const findings = result.ape.findings;
-    cases[name] = findings.filter((f) => MIGRATED_CODES.has(f.code)).map(
-      ({ code, subject, severity, context, recovery }) => ({
-        code,
-        subject,
-        severity,
-        context,
-        recovery,
-      }),
-    ).sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b)));
+    cases[name] = openclawFindingRows(findings);
     if (name === "baseline") {
       baseFindings = [...input.ambiguities, ...findings].sort(compareFindings);
     }

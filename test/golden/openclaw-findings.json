@@ -3,6 +3,7 @@
     {
       "code": "AGENT_TO_AGENT_WILDCARD",
       "context": "Enabled agent-to-agent policy allows every requester and target pair.",
+      "principle": "A3",
       "recovery": "List only the intended requester and target agents, or disable agent-to-agent access.",
       "severity": "warning",
       "subject": "instance"
@@ -10,6 +11,7 @@
     {
       "code": "AGENT_WITHOUT_SANDBOX",
       "context": "Exec can run on the gateway host outside the sandbox.",
+      "principle": "A3",
       "recovery": "Use sandbox mode all with exec host auto or sandbox, or remove the exec grant.",
       "severity": "warning",
       "subject": "agent:lead"
@@ -31,6 +33,7 @@
     {
       "code": "EXEC_ALLOWLIST_WILDCARD",
       "context": "An exec allowlist has a wildcard executable basename; any directory restriction is omitted from the snapshot.",
+      "principle": "A3",
       "recovery": "Replace the wildcard with the intended command names or binary paths.",
       "severity": "warning",
       "subject": "instance"
@@ -73,6 +76,7 @@
     {
       "code": "MCP_SANDBOX_GATE",
       "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
+      "principle": "A7",
       "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
       "severity": "info",
       "subject": "agent:client"
@@ -80,6 +84,7 @@
     {
       "code": "MCP_SANDBOX_GATE",
       "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
+      "principle": "A7",
       "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
       "severity": "info",
       "subject": "agent:coach"
@@ -87,6 +92,7 @@
     {
       "code": "MCP_SANDBOX_GATE",
       "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
+      "principle": "A7",
       "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
       "severity": "info",
       "subject": "agent:devbox"
@@ -94,6 +100,7 @@
     {
       "code": "MCP_SANDBOX_GATE",
       "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
+      "principle": "A7",
       "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
       "severity": "info",
       "subject": "agent:secretary"
@@ -101,6 +108,7 @@
     {
       "code": "PLAINTEXT_CREDENTIAL",
       "context": "A plaintext credential is configured at /channels/discord/accounts/default/token.",
+      "principle": "C1",
       "recovery": "Replace the value at /channels/discord/accounts/default/token with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
       "severity": "warning",
       "subject": "account:discord:default"
@@ -108,6 +116,7 @@
     {
       "code": "PLAINTEXT_CREDENTIAL",
       "context": "A plaintext credential is configured at /channels/discord/accounts/sandbox/token.",
+      "principle": "C1",
       "recovery": "Replace the value at /channels/discord/accounts/sandbox/token with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
       "severity": "warning",
       "subject": "account:discord:sandbox"
@@ -115,6 +124,7 @@
     {
       "code": "PLAINTEXT_CREDENTIAL",
       "context": "A plaintext credential is configured at /channels/telegram/accounts/field/botToken.",
+      "principle": "C1",
       "recovery": "Replace the value at /channels/telegram/accounts/field/botToken with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
       "severity": "warning",
       "subject": "account:telegram:field"
@@ -122,6 +132,7 @@
     {
       "code": "PLAINTEXT_CREDENTIAL",
       "context": "A plaintext credential is configured at /channels/telegram/accounts/lead/botToken.",
+      "principle": "C1",
       "recovery": "Replace the value at /channels/telegram/accounts/lead/botToken with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
       "severity": "warning",
       "subject": "account:telegram:lead"
@@ -129,6 +140,7 @@
     {
       "code": "PLAINTEXT_CREDENTIAL",
       "context": "A plaintext credential is configured at /gateway/auth/token.",
+      "principle": "C1",
       "recovery": "Replace the value at /gateway/auth/token with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
       "severity": "warning",
       "subject": "instance"
@@ -136,6 +148,7 @@
     {
       "code": "PLAINTEXT_CREDENTIAL",
       "context": "A plaintext credential is configured at /models/providers/google/apiKey.",
+      "principle": "C1",
       "recovery": "Replace the value at /models/providers/google/apiKey with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
       "severity": "warning",
       "subject": "instance"
@@ -143,6 +156,7 @@
     {
       "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
       "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "principle": "A3",
       "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
       "severity": "warning",
       "subject": "agent:client"
@@ -150,6 +164,7 @@
     {
       "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
       "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "principle": "A3",
       "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
       "severity": "warning",
       "subject": "agent:coach"
@@ -157,6 +172,7 @@
     {
       "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
       "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "principle": "A3",
       "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
       "severity": "warning",
       "subject": "agent:devbox"
@@ -164,6 +180,7 @@
     {
       "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
       "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "principle": "A3",
       "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
       "severity": "warning",
       "subject": "agent:field"
@@ -171,6 +188,7 @@
     {
       "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
       "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "principle": "A3",
       "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
       "severity": "warning",
       "subject": "agent:lead"
@@ -178,6 +196,7 @@
     {
       "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
       "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "principle": "A3",
       "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
       "severity": "warning",
       "subject": "agent:secretary"
@@ -185,6 +204,7 @@
     {
       "code": "UNRESOLVED_AGENT_REFERENCE",
       "context": "The task targets the absent agent main; runtime behavior is unverified for the recorded OpenClaw version.",
+      "principle": "G1",
       "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
       "severity": "info",
       "subject": "cron:job-1"
@@ -192,6 +212,7 @@
     {
       "code": "UNRESOLVED_AGENT_REFERENCE",
       "context": "The task targets the absent agent main; runtime behavior is unverified for the recorded OpenClaw version.",
+      "principle": "G1",
       "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
       "severity": "info",
       "subject": "cron:job-2"
@@ -199,6 +220,7 @@
     {
       "code": "UNRESOLVED_AGENT_REFERENCE",
       "context": "The task targets the absent agent main; runtime behavior is unverified for the recorded OpenClaw version.",
+      "principle": "G1",
       "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
       "severity": "info",
       "subject": "cron:job-3"
@@ -206,6 +228,7 @@
     {
       "code": "UNRESOLVED_AGENT_REFERENCE",
       "context": "The task targets the absent agent main; runtime behavior is unverified for the recorded OpenClaw version.",
+      "principle": "G1",
       "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
       "severity": "info",
       "subject": "cron:job-4"
@@ -213,6 +236,7 @@
     {
       "code": "UNRESOLVED_AGENT_REFERENCE",
       "context": "The task targets the absent agent main; runtime behavior is unverified for the recorded OpenClaw version.",
+      "principle": "G1",
       "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
       "severity": "info",
       "subject": "cron:job-5"
@@ -220,6 +244,7 @@
     {
       "code": "UNRESOLVED_AGENT_REFERENCE",
       "context": "The task targets the absent agent main; runtime behavior is unverified for the recorded OpenClaw version.",
+      "principle": "G1",
       "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
       "severity": "info",
       "subject": "cron:job-6"
@@ -264,6 +289,7 @@
     {
       "code": "AGENT_TO_AGENT_WILDCARD",
       "context": "Enabled agent-to-agent policy allows every requester and target pair.",
+      "principle": "A3",
       "recovery": "List only the intended requester and target agents, or disable agent-to-agent access.",
       "severity": "warning",
       "subject": "instance"
@@ -271,6 +297,7 @@
     {
       "code": "AGENT_WITHOUT_SANDBOX",
       "context": "Exec can run on the gateway host outside the sandbox.",
+      "principle": "A3",
       "recovery": "Use sandbox mode all with exec host auto or sandbox, or remove the exec grant.",
       "severity": "warning",
       "subject": "agent:client"
@@ -278,6 +305,7 @@
     {
       "code": "AGENT_WITHOUT_SANDBOX",
       "context": "Exec can run on the gateway host outside the sandbox.",
+      "principle": "A3",
       "recovery": "Use sandbox mode all with exec host auto or sandbox, or remove the exec grant.",
       "severity": "warning",
       "subject": "agent:lead"
@@ -327,6 +355,7 @@
     {
       "code": "EXEC_ALLOWLIST_WILDCARD",
       "context": "An exec allowlist has a wildcard executable basename; any directory restriction is omitted from the snapshot.",
+      "principle": "A3",
       "recovery": "Replace the wildcard with the intended command names or binary paths.",
       "severity": "warning",
       "subject": "agent:client"
@@ -334,6 +363,7 @@
     {
       "code": "EXEC_ALLOWLIST_WILDCARD",
       "context": "An exec allowlist has a wildcard executable basename; any directory restriction is omitted from the snapshot.",
+      "principle": "A3",
       "recovery": "Replace the wildcard with the intended command names or binary paths.",
       "severity": "warning",
       "subject": "instance"
@@ -341,6 +371,8 @@
     {
       "code": "EXEC_WITHOUT_APPROVAL",
       "context": "Host exec is policy-reachable with security full and ask off; ordinary approval prompts are disabled.",
+      "pattern": "2.1",
+      "principle": "A3",
       "recovery": "Set tools.exec.mode to ask or auto, or tighten the execution host's approvals policy.",
       "severity": "error",
       "subject": "agent:client"
@@ -390,6 +422,7 @@
     {
       "code": "MCP_SANDBOX_GATE",
       "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
+      "principle": "A7",
       "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
       "severity": "info",
       "subject": "agent:client"
@@ -397,6 +430,7 @@
     {
       "code": "MCP_SANDBOX_GATE",
       "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
+      "principle": "A7",
       "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
       "severity": "info",
       "subject": "agent:coach"
@@ -404,6 +438,7 @@
     {
       "code": "MCP_SANDBOX_GATE",
       "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
+      "principle": "A7",
       "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
       "severity": "info",
       "subject": "agent:devbox"
@@ -411,6 +446,7 @@
     {
       "code": "MCP_SANDBOX_GATE",
       "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
+      "principle": "A7",
       "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
       "severity": "info",
       "subject": "agent:secretary"
@@ -418,6 +454,7 @@
     {
       "code": "MEMORY_REMOTE_EMBEDDINGS",
       "context": "Memory search selects an embedding adapter other than local or none; endpoint location and transmission are not verified.",
+      "principle": "C1",
       "recovery": "Review the embedding provider and its data handling; docs/reference/memory-config.md.",
       "severity": "info",
       "subject": "agent:client"
@@ -425,6 +462,7 @@
     {
       "code": "MEMORY_SESSIONS_INDEXED",
       "context": "Memory search includes conversation transcripts.",
+      "principle": "C1",
       "recovery": "Review session indexing and cross-conversation recall; docs/reference/memory-config.md.",
       "severity": "warning",
       "subject": "agent:client"
@@ -432,6 +470,7 @@
     {
       "code": "PLAINTEXT_CREDENTIAL",
       "context": "A plaintext credential is configured at /channels/discord/accounts/default/token.",
+      "principle": "C1",
       "recovery": "Replace the value at /channels/discord/accounts/default/token with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
       "severity": "warning",
       "subject": "account:discord:default"
@@ -439,6 +478,7 @@
     {
       "code": "PLAINTEXT_CREDENTIAL",
       "context": "A plaintext credential is configured at /gateway/auth/token.",
+      "principle": "C1",
       "recovery": "Replace the value at /gateway/auth/token with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
       "severity": "warning",
       "subject": "instance"
@@ -446,6 +486,7 @@
     {
       "code": "PLAINTEXT_CREDENTIAL",
       "context": "A plaintext credential is configured at /models/providers/synthetic/apiKey.",
+      "principle": "C1",
       "recovery": "Replace the value at /models/providers/synthetic/apiKey with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
       "severity": "warning",
       "subject": "instance"
@@ -453,6 +494,7 @@
     {
       "code": "PROSE_NOT_ENFORCED",
       "context": "The inferred rule ask-before-commands limits exec, but the configuration does not enforce it: exec can run on the host with security full and ask off.",
+      "principle": "G5",
       "recovery": "Set tools.exec.mode to ask or auto, or tighten the execution host's approvals policy, so the configuration holds what the instructions say; or reword the rule.",
       "severity": "warning",
       "subject": "agent:client"
@@ -460,6 +502,7 @@
     {
       "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
       "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "principle": "A3",
       "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
       "severity": "warning",
       "subject": "agent:client"
@@ -467,6 +510,7 @@
     {
       "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
       "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "principle": "A3",
       "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
       "severity": "warning",
       "subject": "agent:coach"
@@ -474,6 +518,7 @@
     {
       "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
       "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "principle": "A3",
       "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
       "severity": "warning",
       "subject": "agent:devbox"
@@ -481,6 +526,7 @@
     {
       "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
       "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "principle": "A3",
       "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
       "severity": "warning",
       "subject": "agent:field"
@@ -488,6 +534,7 @@
     {
       "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
       "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "principle": "A3",
       "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
       "severity": "warning",
       "subject": "agent:lead"
@@ -495,6 +542,7 @@
     {
       "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
       "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "principle": "A3",
       "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
       "severity": "warning",
       "subject": "agent:secretary"
@@ -502,6 +550,7 @@
     {
       "code": "UNRESOLVED_AGENT_REFERENCE",
       "context": "The disabled task targets the absent agent absent-agent and will fail if run.",
+      "principle": "G1",
       "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
       "severity": "info",
       "subject": "cron:absent-false"
@@ -509,6 +558,7 @@
     {
       "code": "UNRESOLVED_AGENT_REFERENCE",
       "context": "The scheduled task targets the absent agent absent-agent and fails when run.",
+      "principle": "G1",
       "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
       "severity": "error",
       "subject": "cron:absent-true"
@@ -516,6 +566,7 @@
     {
       "code": "UNRESOLVED_AGENT_REFERENCE",
       "context": "The disabled task targets the absent agent main and will fail if run.",
+      "principle": "G1",
       "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
       "severity": "info",
       "subject": "cron:job-1"
@@ -523,6 +574,7 @@
     {
       "code": "UNRESOLVED_AGENT_REFERENCE",
       "context": "The disabled task targets the absent agent main and will fail if run.",
+      "principle": "G1",
       "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
       "severity": "info",
       "subject": "cron:job-2"
@@ -530,6 +582,7 @@
     {
       "code": "UNRESOLVED_AGENT_REFERENCE",
       "context": "The disabled task targets the absent agent main and will fail if run.",
+      "principle": "G1",
       "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
       "severity": "info",
       "subject": "cron:job-3"
@@ -537,6 +590,7 @@
     {
       "code": "UNRESOLVED_AGENT_REFERENCE",
       "context": "The disabled task targets the absent agent main and will fail if run.",
+      "principle": "G1",
       "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
       "severity": "info",
       "subject": "cron:job-4"
@@ -544,6 +598,7 @@
     {
       "code": "UNRESOLVED_AGENT_REFERENCE",
       "context": "The disabled task targets the absent agent main and will fail if run.",
+      "principle": "G1",
       "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
       "severity": "info",
       "subject": "cron:job-5"
@@ -551,6 +606,7 @@
     {
       "code": "UNRESOLVED_AGENT_REFERENCE",
       "context": "The disabled task targets the absent agent main and will fail if run.",
+      "principle": "G1",
       "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
       "severity": "info",
       "subject": "cron:job-6"
@@ -558,6 +614,7 @@
     {
       "code": "UNRESOLVED_BINDING_REFERENCE",
       "context": "The binding names an absent agent; no connection is drawn.",
+      "principle": "G1",
       "recovery": "Set the binding's agentId to an existing agent or remove the obsolete binding.",
       "severity": "info",
       "subject": "instance"
@@ -602,6 +659,7 @@
     {
       "code": "AGENT_TO_AGENT_WILDCARD",
       "context": "Enabled agent-to-agent policy allows every requester and target pair.",
+      "principle": "A3",
       "recovery": "List only the intended requester and target agents, or disable agent-to-agent access.",
       "severity": "warning",
       "subject": "instance"
@@ -609,6 +667,7 @@
     {
       "code": "AGENT_WITHOUT_SANDBOX",
       "context": "Exec routes to the gateway outside the sandbox; its effective security is unresolved.",
+      "principle": "A3",
       "recovery": "Use sandbox mode all with exec host auto or sandbox, or remove the exec grant.",
       "severity": "info",
       "subject": "agent:client"
@@ -616,6 +675,7 @@
     {
       "code": "AGENT_WITHOUT_SANDBOX",
       "context": "Exec can run on the gateway host outside the sandbox.",
+      "principle": "A3",
       "recovery": "Use sandbox mode all with exec host auto or sandbox, or remove the exec grant.",
       "severity": "warning",
       "subject": "agent:lead"
@@ -665,6 +725,7 @@
     {
       "code": "EXEC_ALLOWLIST_WILDCARD",
       "context": "An exec allowlist has a wildcard executable basename; any directory restriction is omitted from the snapshot.",
+      "principle": "A3",
       "recovery": "Replace the wildcard with the intended command names or binary paths.",
       "severity": "warning",
       "subject": "agent:client"
@@ -672,6 +733,7 @@
     {
       "code": "EXEC_ALLOWLIST_WILDCARD",
       "context": "An exec allowlist has a wildcard executable basename; any directory restriction is omitted from the snapshot.",
+      "principle": "A3",
       "recovery": "Replace the wildcard with the intended command names or binary paths.",
       "severity": "warning",
       "subject": "instance"
@@ -714,6 +776,7 @@
     {
       "code": "MCP_SANDBOX_GATE",
       "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
+      "principle": "A7",
       "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
       "severity": "info",
       "subject": "agent:client"
@@ -721,6 +784,7 @@
     {
       "code": "MCP_SANDBOX_GATE",
       "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
+      "principle": "A7",
       "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
       "severity": "info",
       "subject": "agent:coach"
@@ -728,6 +792,7 @@
     {
       "code": "MCP_SANDBOX_GATE",
       "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
+      "principle": "A7",
       "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
       "severity": "info",
       "subject": "agent:devbox"
@@ -735,6 +800,7 @@
     {
       "code": "MCP_SANDBOX_GATE",
       "context": "Enabled MCP servers have no tool grant in the sandbox layer.",
+      "principle": "A7",
       "recovery": "Allow the intended server globs or bundle-mcp in the sandbox tool policy.",
       "severity": "info",
       "subject": "agent:secretary"
@@ -742,6 +808,7 @@
     {
       "code": "PLAINTEXT_CREDENTIAL",
       "context": "A plaintext credential is configured at /channels/discord/accounts/default/token.",
+      "principle": "C1",
       "recovery": "Replace the value at /channels/discord/accounts/default/token with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
       "severity": "warning",
       "subject": "account:discord:default"
@@ -749,6 +816,7 @@
     {
       "code": "PLAINTEXT_CREDENTIAL",
       "context": "A plaintext credential is configured at /gateway/auth/token.",
+      "principle": "C1",
       "recovery": "Replace the value at /gateway/auth/token with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
       "severity": "warning",
       "subject": "instance"
@@ -756,6 +824,7 @@
     {
       "code": "PLAINTEXT_CREDENTIAL",
       "context": "A plaintext credential is configured at /models/providers/synthetic/apiKey.",
+      "principle": "C1",
       "recovery": "Replace the value at /models/providers/synthetic/apiKey with {\"source\":\"env\",\"provider\":\"default\",\"id\":\"CREDENTIAL_ENV\"} and set CREDENTIAL_ENV in the gateway environment.",
       "severity": "warning",
       "subject": "instance"
@@ -763,6 +832,7 @@
     {
       "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
       "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "principle": "A3",
       "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
       "severity": "warning",
       "subject": "agent:coach"
@@ -770,6 +840,7 @@
     {
       "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
       "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "principle": "A3",
       "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
       "severity": "warning",
       "subject": "agent:devbox"
@@ -777,6 +848,7 @@
     {
       "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
       "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "principle": "A3",
       "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
       "severity": "warning",
       "subject": "agent:field"
@@ -784,6 +856,7 @@
     {
       "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
       "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "principle": "A3",
       "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
       "severity": "warning",
       "subject": "agent:lead"
@@ -791,6 +864,7 @@
     {
       "code": "SAFE_BIN_INTERPRETER_UNPROFILED",
       "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
+      "principle": "A3",
       "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
       "severity": "warning",
       "subject": "agent:secretary"
@@ -798,6 +872,7 @@
     {
       "code": "UNRESOLVED_AGENT_REFERENCE",
       "context": "The task targets the absent agent absent-agent; runtime behavior is unverified for the recorded OpenClaw version.",
+      "principle": "G1",
       "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
       "severity": "info",
       "subject": "cron:absent-false"
@@ -805,6 +880,7 @@
     {
       "code": "UNRESOLVED_AGENT_REFERENCE",
       "context": "The task targets the absent agent absent-agent; runtime behavior is unverified for the recorded OpenClaw version.",
+      "principle": "G1",
       "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
       "severity": "info",
       "subject": "cron:absent-true"
@@ -812,6 +888,7 @@
     {
       "code": "UNRESOLVED_AGENT_REFERENCE",
       "context": "The task targets the absent agent main; runtime behavior is unverified for the recorded OpenClaw version.",
+      "principle": "G1",
       "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
       "severity": "info",
       "subject": "cron:job-1"
@@ -819,6 +896,7 @@
     {
       "code": "UNRESOLVED_AGENT_REFERENCE",
       "context": "The task targets the absent agent main; runtime behavior is unverified for the recorded OpenClaw version.",
+      "principle": "G1",
       "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
       "severity": "info",
       "subject": "cron:job-2"
@@ -826,6 +904,7 @@
     {
       "code": "UNRESOLVED_AGENT_REFERENCE",
       "context": "The task targets the absent agent main; runtime behavior is unverified for the recorded OpenClaw version.",
+      "principle": "G1",
       "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
       "severity": "info",
       "subject": "cron:job-3"
@@ -833,6 +912,7 @@
     {
       "code": "UNRESOLVED_AGENT_REFERENCE",
       "context": "The task targets the absent agent main; runtime behavior is unverified for the recorded OpenClaw version.",
+      "principle": "G1",
       "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
       "severity": "info",
       "subject": "cron:job-4"
@@ -840,6 +920,7 @@
     {
       "code": "UNRESOLVED_AGENT_REFERENCE",
       "context": "The task targets the absent agent main; runtime behavior is unverified for the recorded OpenClaw version.",
+      "principle": "G1",
       "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
       "severity": "info",
       "subject": "cron:job-5"
@@ -847,6 +928,7 @@
     {
       "code": "UNRESOLVED_AGENT_REFERENCE",
       "context": "The task targets the absent agent main; runtime behavior is unverified for the recorded OpenClaw version.",
+      "principle": "G1",
       "recovery": "Set the task's agentId to an existing agent, restore that agent, or delete the obsolete task.",
       "severity": "info",
       "subject": "cron:job-6"
@@ -854,6 +936,7 @@
     {
       "code": "UNRESOLVED_BINDING_REFERENCE",
       "context": "The binding names an absent agent; no connection is drawn.",
+      "principle": "G1",
       "recovery": "Set the binding's agentId to an existing agent or remove the obsolete binding.",
       "severity": "info",
       "subject": "instance"

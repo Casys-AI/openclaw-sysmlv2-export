@@ -509,6 +509,14 @@ identifies a failure or unrestricted approval posture; `warning` calls for
 review; `info` records a limit or context. Severity does not affect export
 completion.
 
+Model findings may carry a `principle` code from _Agentic System Architecture_
+and a `pattern` code from _Agentic Process Engineering_. Both fields are
+optional. The viewer shows the recorded references on the finding code and
+accepts reference codes from older archives. The `finding` field is independent
+of the references. It is required for `APE_` codes and optional for other codes.
+Rules write `present` or `absent`. The viewer also accepts `indeterminate` from
+older archives.
+
 ### 7.1 Collector findings
 
 Raised while collecting and resolving grants and kept in the snapshot as
@@ -991,7 +999,9 @@ with `deno task test:opensysml`; CI verifies the pinned Linux archive, and the
 helper verifies supported archive hashes before use.
 
 This is not a full SHACL implementation. Portable APE findings retain their
-`APE_` codes, `pattern` and `finding`; OpenClaw codes remain unprefixed.
+`APE_` codes and `finding` values. OpenClaw codes remain unprefixed. Both rule
+sets can annotate `principle` and `pattern`. The loader checks both annotations
+against the current book catalogues.
 
 A completed analysis writes `ape-report.ttl` once as a SHACL validation report
 for both rule sets. The report name and `ape` result field remain for

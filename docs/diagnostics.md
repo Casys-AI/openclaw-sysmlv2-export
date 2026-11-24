@@ -86,9 +86,14 @@ Every export checks APE good practices on the graph of the exported SysML model,
 with SPARQL on Oxigraph. These rules follow links between agents. Their codes
 start with `APE_`. Rules and views are in [`rules/ape/`](../rules/ape/).
 
+A model finding may name the principle (_Agentic System Architecture_) or the
+pattern (_Agentic Process Engineering_) whose violation it reports in the
+recorded configuration. The references are recorded as `principle` and `pattern`
+and shown in the viewer's tooltip on the finding code.
+
 ### `APE_GRANT_WIDENS_PARENT`
 
-Severity: warning. Subject: agent. Pattern: S3, attenuated redelegation.
+Severity: warning. Subject: agent. Principle: A4, permission delegation.
 
 The agent has no unapproved host exec itself, but can delegate, directly or
 through other agents, to an agent whose built-in exec runs on the host with
@@ -100,7 +105,7 @@ host, or remove the delegation.
 
 ### `APE_LINK_CYCLE`
 
-Severity: warning. Subject: agent. Pattern: 4.2, centralized supervision.
+Severity: warning. Subject: agent. Principle: B3, termination.
 
 The agent is in a directed delegation cycle with at least one other agent; the
 finding names them. Delegating to oneself alone is not a cycle.
@@ -110,7 +115,7 @@ keep delegation flowing one way.
 
 ### `APE_UNREACHABLE_OPERATOR`
 
-Severity: warning. Subject: agent. Pattern: 4.2, centralized supervision.
+Severity: warning. Subject: agent.
 
 Nothing in the model reaches the agent: no channel binding, no scheduled task or
 heartbeat it owns or targets, no hook, no delegation from another agent and no
@@ -130,7 +135,7 @@ into the model.
 
 ### `PLAINTEXT_CREDENTIAL`
 
-Severity: warning. Subject: account or instance.
+Severity: warning. Subject: account or instance. Principle: C1, confidentiality.
 
 One finding is emitted per recorded plaintext credential path. Plaintext is
 allowed on these SecretRef surfaces: the warning calls for review and does not
@@ -168,7 +173,8 @@ Source: `docs/reference/secretref-credential-surface.md`;
 
 ### `EXEC_WITHOUT_APPROVAL`
 
-Severity: error. Subject: agent.
+Severity: error. Subject: agent. Principle: A3, least privilege. Pattern: 2.1,
+proposal–admission–execution separation.
 
 Exec is policy-reachable on the gateway host with effective security `full` and
 ask `off`.
@@ -180,7 +186,8 @@ Source: `docs/tools/exec-approvals.md`.
 
 ### `PROSE_NOT_ENFORCED`
 
-Severity: warning. Subject: agent. Only in an export with inference.
+Severity: warning. Subject: agent. Only in an export with inference. Principle:
+G5, configuration audit.
 
 The model inferred a prohibition or constraint about running commands (a rule
 with concern `exec`) from the agent's instructions, but exec can run on the host
@@ -200,7 +207,7 @@ Source: `docs/tools/exec-approvals.md`; rules inferred into `OpenClawInferred`.
 ### `AGENT_WITHOUT_SANDBOX`
 
 Severity: warning, or info when effective security is unresolved. Subject:
-agent.
+agent. Principle: A3, least privilege.
 
 Exec can run on the gateway host and effective security is not `deny`. Explicit
 `host: gateway` reaches the host even with a sandbox-layer grant; `auto`
@@ -225,7 +232,7 @@ Source: `docs/gateway/sandboxing/multiple-folders-for-one-agent.md`.
 
 ### `AGENT_TO_AGENT_WILDCARD`
 
-Severity: warning. Subject: instance.
+Severity: warning. Subject: instance. Principle: A3, least privilege.
 
 Agent-to-agent access is enabled and its allowlist contains `*`, allowing every
 requester and target pair. For 2026.10 the setting is enabled unless explicitly
@@ -238,7 +245,7 @@ Source: `dist/session-visibility-c_9BAYYO.mjs, createAgentToAgentPolicy`.
 
 ### `SAFE_BIN_INTERPRETER_UNPROFILED`
 
-Severity: warning. Subject: agent.
+Severity: warning. Subject: agent. Principle: A3, least privilege.
 
 An interpreter or runtime in `safeBins` has no explicit argv profile. Paths,
 executable suffixes and versioned interpreter names are normalized.
@@ -251,7 +258,7 @@ Source: `dist/exec-safe-bin-runtime-policy-CgvU47MQ.mjs`;
 
 ### `EXEC_ALLOWLIST_WILDCARD`
 
-Severity: warning. Subject: agent or instance.
+Severity: warning. Subject: agent or instance. Principle: A3, least privilege.
 
 An agent command or instance wildcard-approval command has basename `*`. The
 snapshot omits any directory restriction on that pattern.
@@ -262,7 +269,7 @@ Source: `docs/tools/exec-approvals.md`.
 
 ### `MEMORY_SESSIONS_INDEXED`
 
-Severity: warning. Subject: agent.
+Severity: warning. Subject: agent. Principle: C1, confidentiality.
 
 Memory search is enabled and either `sources` includes `sessions` or
 `rememberAcrossConversations` is true.
@@ -288,6 +295,7 @@ Source: `docs/channels/channel-routing.md`;
 ### `UNRESOLVED_AGENT_REFERENCE`
 
 Severity: error if enabled on OpenClaw 2026.10; info otherwise. Subject: cron.
+Principle: G1, configuration identification.
 
 A job explicitly targets an absent agent, which the context names. OpenClaw
 2026.10 fails the run. Older runtime behavior is unverified. A missing agentId
@@ -300,7 +308,8 @@ Source: `dist/server-cron-DmxBCDVE.mjs, resolveCronAgent`.
 
 ### `UNRESOLVED_BINDING_REFERENCE`
 
-Severity: info. Subject: account, agent or instance.
+Severity: info. Subject: account, agent or instance. Principle: G1,
+configuration identification.
 
 A binding names an absent agent, so no exported connection is drawn. Account
 availability is checked separately.
@@ -338,7 +347,7 @@ Source: `dist/skill-root-discovery-B5Jg-4aX.mjs, discoverSkillCandidates`;
 
 ### `MCP_SANDBOX_GATE`
 
-Severity: info. Subject: agent.
+Severity: info. Subject: agent. Principle: A7, prerequisite constraint.
 
 A sandbox is active and MCP servers are enabled, but no enabled-server MCP tool
 has a sandbox-layer grant.
@@ -350,7 +359,7 @@ Source: `docs/gateway/config-tools/tool-policy.md`.
 
 ### `MEMORY_REMOTE_EMBEDDINGS`
 
-Severity: info. Subject: agent.
+Severity: info. Subject: agent. Principle: C1, confidentiality.
 
 Memory search is enabled with a provider other than `local` or `none`. Actual
 endpoint location and transmission are not verified.

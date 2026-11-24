@@ -111,14 +111,16 @@ export function createViewer(
             row.related !== undefined && (!Array.isArray(row.related) ||
                 row.related.some((id) => typeof id !== "string" || !id))
           ) return true;
-          const metadata = row.pattern !== undefined ||
-            row.finding !== undefined;
-          return ((row.code as string).startsWith("APE_") || metadata) && (
-            typeof row.pattern !== "string" || !row.pattern ||
-            !["present", "absent", "indeterminate"].includes(
-              String(row.finding),
-            )
-          );
+          // Archives keep the reference codes recorded by their exporter.
+          const { principle, pattern, finding } = row;
+          return principle !== undefined &&
+              (typeof principle !== "string" || !principle.trim()) ||
+            pattern !== undefined &&
+              (typeof pattern !== "string" || !pattern) ||
+            (finding === undefined
+              ? (row.code as string).startsWith("APE_")
+              : finding !== "present" && finding !== "absent" &&
+                finding !== "indeterminate");
         })
       ) throw new Error("Expected an array of valid findings");
       return {

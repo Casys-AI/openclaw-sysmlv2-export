@@ -53,6 +53,12 @@ Deno.test("collector is deterministic, read-only and projects six explicit agent
     assert.ok(first.agents.every((agent) => !agent.implicit));
     assert.ok(first.cron.some((job) => job.agentId === "main"));
     assert.ok(first.plaintextSecretCount > 0);
+    assert.ok(first.ambiguities.length > 0);
+    assert.ok(
+      first.ambiguities.every((note) =>
+        !("principle" in note) && !("pattern" in note)
+      ),
+    );
     assert.ok(
       first.agents.some((agent) => agent.workspace.instructions.length > 0),
     );
