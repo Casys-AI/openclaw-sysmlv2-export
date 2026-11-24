@@ -202,6 +202,61 @@
       "subject": "agent:secretary"
     },
     {
+      "code": "SELF_SCHEDULING",
+      "context": "The agent holds a scheduling tool that can request future agent turns when the session permits creation.",
+      "recovery": "Review who should schedule follow-up work and remove the scheduling tool grant if the agent does not need it.",
+      "severity": "info",
+      "subject": "agent:lead"
+    },
+    {
+      "code": "SELF_WRITABLE_CONTEXT",
+      "context": "The agent has a tool grant that can write its workspace context or learned skills.",
+      "principle": "C2",
+      "recovery": "Keep the agent workspace read-only where practical, restrict file-writing grants, and reserve Skill Workshop edits for a reviewed workflow.",
+      "severity": "warning",
+      "subject": "agent:client"
+    },
+    {
+      "code": "SELF_WRITABLE_CONTEXT",
+      "context": "The agent has a tool grant that can write its workspace context or learned skills.",
+      "principle": "C2",
+      "recovery": "Keep the agent workspace read-only where practical, restrict file-writing grants, and reserve Skill Workshop edits for a reviewed workflow.",
+      "severity": "warning",
+      "subject": "agent:coach"
+    },
+    {
+      "code": "SELF_WRITABLE_CONTEXT",
+      "context": "The agent has a tool grant that can write its workspace context or learned skills.",
+      "principle": "C2",
+      "recovery": "Keep the agent workspace read-only where practical, restrict file-writing grants, and reserve Skill Workshop edits for a reviewed workflow.",
+      "severity": "warning",
+      "subject": "agent:devbox"
+    },
+    {
+      "code": "SELF_WRITABLE_CONTEXT",
+      "context": "The agent has a tool grant that can write its workspace context or learned skills.",
+      "principle": "C2",
+      "recovery": "Keep the agent workspace read-only where practical, restrict file-writing grants, and reserve Skill Workshop edits for a reviewed workflow.",
+      "severity": "warning",
+      "subject": "agent:field"
+    },
+    {
+      "code": "SELF_WRITABLE_CONTEXT",
+      "context": "The agent has a tool grant that can write its workspace context or learned skills.",
+      "principle": "C2",
+      "recovery": "Keep the agent workspace read-only where practical, restrict file-writing grants, and reserve Skill Workshop edits for a reviewed workflow.",
+      "severity": "warning",
+      "subject": "agent:lead"
+    },
+    {
+      "code": "SELF_WRITABLE_CONTEXT",
+      "context": "The agent has a tool grant that can write its workspace context or learned skills.",
+      "principle": "C2",
+      "recovery": "Keep the agent workspace read-only where practical, restrict file-writing grants, and reserve Skill Workshop edits for a reviewed workflow.",
+      "severity": "warning",
+      "subject": "agent:secretary"
+    },
+    {
       "code": "UNRESOLVED_AGENT_REFERENCE",
       "context": "The task targets the absent agent main; runtime behavior is unverified for the recorded OpenClaw version.",
       "principle": "G1",
@@ -353,6 +408,14 @@
       "subject": "instance"
     },
     {
+      "code": "DELEGATION_WILDCARD",
+      "context": "The agent holds sessions_spawn and its allowAgents wildcard allows any configured agent as a target.",
+      "principle": "A3",
+      "recovery": "List the intended target agent IDs in subagents.allowAgents, or remove the sessions_spawn grant.",
+      "severity": "warning",
+      "subject": "agent:client"
+    },
+    {
       "code": "EXEC_ALLOWLIST_WILDCARD",
       "context": "An exec allowlist has a wildcard executable basename; any directory restriction is omitted from the snapshot.",
       "principle": "A3",
@@ -468,6 +531,27 @@
       "subject": "agent:client"
     },
     {
+      "code": "OPEN_SENDER_POLICY",
+      "context": "An open sender policy matches a binding to client, which holds unapproved gateway exec or the message tool.",
+      "recovery": "Review effective sender and group allowlists and restrict the bound agent's effectful tools if the route is public.",
+      "severity": "warning",
+      "subject": "account:telegram:public-dm"
+    },
+    {
+      "code": "OPEN_SENDER_POLICY",
+      "context": "An open sender policy matches a binding to field.",
+      "recovery": "Review effective sender and group allowlists and restrict the bound agent's effectful tools if the route is public.",
+      "severity": "info",
+      "subject": "account:telegram:public-group"
+    },
+    {
+      "code": "OPEN_SENDER_POLICY",
+      "context": "An open sender policy matches a binding to coach, which holds unapproved gateway exec or the message tool.",
+      "recovery": "Review effective sender and group allowlists and restrict the bound agent's effectful tools if the route is public.",
+      "severity": "warning",
+      "subject": "account:telegram:public-group"
+    },
+    {
       "code": "PLAINTEXT_CREDENTIAL",
       "context": "A plaintext credential is configured at /channels/discord/accounts/default/token.",
       "principle": "C1",
@@ -544,6 +628,45 @@
       "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
       "principle": "A3",
       "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
+      "severity": "warning",
+      "subject": "agent:secretary"
+    },
+    {
+      "code": "SELF_SCHEDULING",
+      "context": "The agent holds a scheduling tool that can request future agent turns when the session permits creation.",
+      "recovery": "Review who should schedule follow-up work and remove the scheduling tool grant if the agent does not need it.",
+      "severity": "info",
+      "subject": "agent:lead"
+    },
+    {
+      "code": "SELF_WRITABLE_CONTEXT",
+      "context": "The agent has a tool grant that can write its workspace context or learned skills.",
+      "principle": "C2",
+      "recovery": "Keep the agent workspace read-only where practical, restrict file-writing grants, and reserve Skill Workshop edits for a reviewed workflow.",
+      "severity": "warning",
+      "subject": "agent:client"
+    },
+    {
+      "code": "SELF_WRITABLE_CONTEXT",
+      "context": "The agent has a tool grant that can write its workspace context or learned skills.",
+      "principle": "C2",
+      "recovery": "Keep the agent workspace read-only where practical, restrict file-writing grants, and reserve Skill Workshop edits for a reviewed workflow.",
+      "severity": "warning",
+      "subject": "agent:field"
+    },
+    {
+      "code": "SELF_WRITABLE_CONTEXT",
+      "context": "The agent has a tool grant that can write its workspace context or learned skills.",
+      "principle": "C2",
+      "recovery": "Keep the agent workspace read-only where practical, restrict file-writing grants, and reserve Skill Workshop edits for a reviewed workflow.",
+      "severity": "warning",
+      "subject": "agent:lead"
+    },
+    {
+      "code": "SELF_WRITABLE_CONTEXT",
+      "context": "The agent has a tool grant that can write its workspace context or learned skills.",
+      "principle": "C2",
+      "recovery": "Keep the agent workspace read-only where practical, restrict file-writing grants, and reserve Skill Workshop edits for a reviewed workflow.",
       "severity": "warning",
       "subject": "agent:secretary"
     },
@@ -806,6 +929,27 @@
       "subject": "agent:secretary"
     },
     {
+      "code": "OPEN_SENDER_POLICY",
+      "context": "An open sender policy matches a binding to client.",
+      "recovery": "Review effective sender and group allowlists and restrict the bound agent's effectful tools if the route is public.",
+      "severity": "info",
+      "subject": "account:telegram:public-dm"
+    },
+    {
+      "code": "OPEN_SENDER_POLICY",
+      "context": "An open sender policy matches a binding to field.",
+      "recovery": "Review effective sender and group allowlists and restrict the bound agent's effectful tools if the route is public.",
+      "severity": "info",
+      "subject": "account:telegram:public-group"
+    },
+    {
+      "code": "OPEN_SENDER_POLICY",
+      "context": "An open sender policy matches a binding to coach, which holds unapproved gateway exec or the message tool.",
+      "recovery": "Review effective sender and group allowlists and restrict the bound agent's effectful tools if the route is public.",
+      "severity": "warning",
+      "subject": "account:telegram:public-group"
+    },
+    {
       "code": "PLAINTEXT_CREDENTIAL",
       "context": "A plaintext credential is configured at /channels/discord/accounts/default/token.",
       "principle": "C1",
@@ -866,6 +1010,37 @@
       "context": "An interpreter or runtime in safeBins has no explicit argv profile.",
       "principle": "A3",
       "recovery": "Remove interpreter safe bins or define hardened safeBinProfiles entries.",
+      "severity": "warning",
+      "subject": "agent:secretary"
+    },
+    {
+      "code": "SELF_SCHEDULING",
+      "context": "The agent holds a scheduling tool that can request future agent turns when the session permits creation.",
+      "recovery": "Review who should schedule follow-up work and remove the scheduling tool grant if the agent does not need it.",
+      "severity": "info",
+      "subject": "agent:lead"
+    },
+    {
+      "code": "SELF_WRITABLE_CONTEXT",
+      "context": "The agent has a tool grant that can write its workspace context or learned skills.",
+      "principle": "C2",
+      "recovery": "Keep the agent workspace read-only where practical, restrict file-writing grants, and reserve Skill Workshop edits for a reviewed workflow.",
+      "severity": "warning",
+      "subject": "agent:field"
+    },
+    {
+      "code": "SELF_WRITABLE_CONTEXT",
+      "context": "The agent has a tool grant that can write its workspace context or learned skills.",
+      "principle": "C2",
+      "recovery": "Keep the agent workspace read-only where practical, restrict file-writing grants, and reserve Skill Workshop edits for a reviewed workflow.",
+      "severity": "warning",
+      "subject": "agent:lead"
+    },
+    {
+      "code": "SELF_WRITABLE_CONTEXT",
+      "context": "The agent has a tool grant that can write its workspace context or learned skills.",
+      "principle": "C2",
+      "recovery": "Keep the agent workspace read-only where practical, restrict file-writing grants, and reserve Skill Workshop edits for a reviewed workflow.",
       "severity": "warning",
       "subject": "agent:secretary"
     },

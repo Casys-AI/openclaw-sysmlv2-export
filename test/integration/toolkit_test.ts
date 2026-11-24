@@ -63,7 +63,7 @@ Deno.test({
           base.ape.metrics!.queries.map((q) => q.code)
             .filter((code) => !code.startsWith("APE_")),
         ).size,
-        17,
+        21,
       );
       assert.deepEqual(
         base.ape.findings.filter((f) => f.code === "APE_LINK_CYCLE").map((f) =>

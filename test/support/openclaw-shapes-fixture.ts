@@ -5,14 +5,19 @@ import type { ApeFinding } from "../../src/domain/model/diagnostics/ape.ts";
 import type { Inference } from "../../src/domain/model/inference.ts";
 import type { Snapshot } from "../../src/domain/model/snapshot.ts";
 
-/** Public synthetic mutations covering the migrated configuration diagnostics. */
+/** Public synthetic mutations covering the configuration diagnostics. */
 export function openclawShapesFixture(base: Snapshot): Snapshot {
   const snapshot = structuredClone(base);
   snapshot.openclawVersion = "2026.10.9";
   snapshot.backupCount = 2;
   snapshot.messaging = { enabled: true, allowedTargets: ["*"] };
   const agent = snapshot.agents[0];
-  agent.grants = [{ id: "host:exec", tool: "exec", layer: "host" }];
+  agent.grants = ["exec", "sessions_spawn", "apply_patch"].map((tool) => ({
+    id: `host:${tool}`,
+    tool,
+    layer: "host",
+  }));
+  agent.delegation = ["*"];
   agent.execution.host = "gateway";
   agent.execution.effective = { security: "full", ask: "off" };
   agent.execution.safeBins = ["\u00a0/bin/PYTHON3.12.exe\ufeff", "node"];
@@ -91,7 +96,56 @@ export function openclawShapesFixture(base: Snapshot): Snapshot {
       enabled,
     });
   }
+  addAuthorityCases(snapshot);
   return snapshot;
+}
+
+function addAuthorityCases(snapshot: Snapshot) {
+  const agent = (id: string) => snapshot.agents.find((a) => a.id === id)!;
+  agent("coach").sandbox.workspaceAccess = "ro";
+  agent("devbox").sandbox.workspaceAccess = "none";
+  const lead = agent("lead");
+  // Leave only Skill Workshop able to change context for this agent.
+  lead.grants = lead.grants.filter(({ tool }) =>
+    !["write", "edit", "cron"].includes(tool)
+  );
+  lead.grants.push({
+    id: "host:automations",
+    tool: "automations",
+    layer: "host",
+  });
+  const field = agent("field");
+  field.grants = field.grants.filter(({ tool }) => tool !== "message");
+
+  for (
+    const [id, dmPolicy, groupPolicy] of [
+      ["public-dm", "open", "allowlist"],
+      ["public-group", "pairing", "open"],
+      ["unbound-open", "open", "allowlist"],
+    ]
+  ) {
+    snapshot.accounts.push({
+      id: `telegram:${id}`,
+      channel: "telegram",
+      accountId: id,
+      enabled: true,
+      dmPolicy,
+      groupPolicy,
+    });
+  }
+  snapshot.accounts.find((account) => account.id === "whatsapp:devbox")!
+    .dmPolicy = "open";
+  for (
+    const [id, agentId, account, peerKind] of [
+      ["public-dm", "client", "telegram:public-dm", "direct"],
+      ["public-group", "coach", "telegram:*", "group"],
+      ["public-channel", "field", "telegram:public-group", "channel"],
+      ["group-policy-on-direct", "lead", "telegram:public-group", "direct"],
+      ["dm-policy-on-group", "lead", "telegram:public-dm", "group"],
+    ]
+  ) {
+    snapshot.bindings.push({ id, agentId, account, peerKind });
+  }
 }
 
 /** Instructions that limit exec: one prohibition and one permission, so only
@@ -138,7 +192,7 @@ export function openclawShapesSources(
   ]);
 }
 
-export const MIGRATED_CODES = new Set([
+export const OPENCLAW_CODES = new Set([
   "PROSE_NOT_ENFORCED",
   "EXEC_ALLOWLIST_WILDCARD",
   "MCP_SANDBOX_GATE",
@@ -156,10 +210,14 @@ export const MIGRATED_CODES = new Set([
   "BINDING_ACCOUNT_UNAVAILABLE",
   "UNRESOLVED_BINDING_REFERENCE",
   "MANUAL_CONFIG_BACKUPS",
+  "DELEGATION_WILDCARD",
+  "SELF_WRITABLE_CONTEXT",
+  "SELF_SCHEDULING",
+  "OPEN_SENDER_POLICY",
 ]);
 
 export const openclawFindingRows = (findings: ApeFinding[]) =>
-  findings.filter((f) => MIGRATED_CODES.has(f.code)).map((
+  findings.filter((f) => OPENCLAW_CODES.has(f.code)).map((
     { code, subject, severity, context, recovery, principle, pattern, finding },
   ) => ({
     code,
@@ -182,6 +240,9 @@ export function openclawShapesCases(baseline: Snapshot) {
   unverified.agents[0].workspace.malformedSkills = ["skills/SKILL.md"];
   unverified.agents[0].memory.search.enabled = false;
   unverified.agents[0].memory.search.rememberAcrossConversations = true;
+  unverified.agents[0].grants = unverified.agents[0].grants.filter(({ tool }) =>
+    tool !== "sessions_spawn" && tool !== "apply_patch"
+  );
   return [["baseline", baseline, false], ["extended", extended, true], [
     "unverified-and-negative",
     unverified,

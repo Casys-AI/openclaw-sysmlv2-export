@@ -31,6 +31,43 @@ CONSTRUCT {
 }
 """ .
 
+ape:ToolGrantsView a sh:SPARQLRule ;
+  sh:runOnce true ; sh:order 15 ;
+  ape:name "tool-grants" ; ape:graph <urn:ase:ape:v1:view:tool-grants> ;
+  sh:prefixes ape:Prefixes ;
+  sh:construct """
+CONSTRUCT {
+  ?agent ape:toolGrant ?grant .
+  ?grant ape:builtinTool ?toolId ; ape:layer ?layer .
+} WHERE {
+  GRAPH <urn:ase:ape:v1:view:agents> { ?agent ape:definition ?definition . }
+  GRAPH ?build {
+    ?agent sysml:type ?definition .
+    ?definition sysml:ownedMember ?reference .
+    ?reference sysml:type/sysml:qualifiedName "OpenClawImport::ToolGrant" ;
+      sysml:value/(sysml:referent|sysml:targetFeature) ?grant .
+    ?grant sysml:ownedMember ?toolFeature .
+    ?toolFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
+      "OpenClawImport::ToolGrant::tool" ;
+      sysml:value/(sysml:referent|sysml:targetFeature) ?tool .
+    ?tool sysml:ownedMember ?toolIdFeature, ?originFeature .
+    ?toolIdFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
+      "OpenClawImport::OpenClawTool::toolId" ;
+      sysml:value/sysml:value ?toolId .
+    ?originFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
+      "OpenClawImport::OpenClawTool::origin" ;
+      sysml:value/sysml:referent/sysml:qualifiedName "OpenClawImport::ToolOrigin::builtin" .
+    OPTIONAL {
+      ?grant sysml:ownedMember ?layerFeature .
+      ?layerFeature sysml:ownedRedefinition/sysml:redefinedFeature/sysml:qualifiedName
+        "OpenClawImport::ToolGrant::layer" ;
+        sysml:value/sysml:value ?layer .
+    }
+  }
+  FILTER(STRSTARTS(STR(?build), "urn:ase:ape:openmbee:v2:build:"))
+}
+""" .
+
 ape:DelegationView a sh:SPARQLRule ;
   sh:runOnce true ; sh:order 20 ;
   ape:name "delegation" ; ape:graph <urn:ase:ape:v1:view:delegation> ;
@@ -44,6 +81,9 @@ CONSTRUCT {
   GRAPH <urn:ase:ape:v1:view:agents> {
     ?from ape:agentId ?fromId .
     ?to ape:agentId ?toId .
+  }
+  GRAPH <urn:ase:ape:v1:view:tool-grants> {
+    ?from ape:toolGrant/ape:builtinTool "sessions_spawn" .
   }
   {
     GRAPH ?build {

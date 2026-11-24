@@ -19,16 +19,48 @@ import {
 import { withToolkitModel } from "../support/toolkit-model.ts";
 import { compileOpenSysml } from "../support/opensysml.ts";
 import {
-  MIGRATED_CODES,
+  OPENCLAW_CODES,
   openclawFindingRows,
   openclawShapesCases,
   openclawShapesSources,
 } from "../support/openclaw-shapes-fixture.ts";
 const archive = Deno.env.get("SYSML_TOOLKIT_WASM_ARCHIVE");
 const oracle = Deno.env.get("OPENSYSML_ARCHIVE");
+
+const newFindings = {
+  baseline: [
+    "SELF_SCHEDULING agent:lead info",
+    ...["client", "coach", "devbox", "field", "lead", "secretary"].map(
+      (id) => `SELF_WRITABLE_CONTEXT agent:${id} warning C2`,
+    ),
+  ],
+  extended: [
+    "DELEGATION_WILDCARD agent:client warning A3",
+    "OPEN_SENDER_POLICY account:telegram:public-dm warning",
+    "OPEN_SENDER_POLICY account:telegram:public-group info",
+    "OPEN_SENDER_POLICY account:telegram:public-group warning",
+    "SELF_SCHEDULING agent:lead info",
+    ...["client", "field", "lead", "secretary"].map(
+      (id) => `SELF_WRITABLE_CONTEXT agent:${id} warning C2`,
+    ),
+  ],
+  "unverified-and-negative": [
+    "OPEN_SENDER_POLICY account:telegram:public-dm info",
+    "OPEN_SENDER_POLICY account:telegram:public-group info",
+    "OPEN_SENDER_POLICY account:telegram:public-group warning",
+    "SELF_SCHEDULING agent:lead info",
+    ...["field", "lead", "secretary"].map(
+      (id) => `SELF_WRITABLE_CONTEXT agent:${id} warning C2`,
+    ),
+  ],
+};
+const newCodes = new Set(
+  newFindings.extended.map((row) => row.split(" ")[0]),
+);
+
 Deno.test({
   name:
-    "compiled OpenClaw shapes match reviewed golden findings for all seventeen check codes",
+    "compiled OpenClaw shapes match reviewed golden findings for all 21 check codes",
   ignore: !archive,
   async fn(t) {
     const dir = await Deno.makeTempDir({ prefix: "openclaw-shapes-" });
@@ -54,7 +86,7 @@ Deno.test({
           if (name === "extended") {
             assert.deepEqual(
               new Set(expected.map((f) => f.code)),
-              MIGRATED_CODES,
+              OPENCLAW_CODES,
             );
           }
           const check = async (store: Store) => {
@@ -64,11 +96,19 @@ Deno.test({
               evaluateApeRules(store, program).findings,
             );
             assert.deepEqual(actual, expected);
+            assert.deepEqual(
+              actual.filter((row) => newCodes.has(row.code)).map(
+                ({ code, subject, severity, principle, pattern }) =>
+                  [code, subject, severity, principle, pattern].filter(Boolean)
+                    .join(" "),
+              ).sort(),
+              [...newFindings[name]].sort(),
+            );
             console.log(
               name,
               JSON.stringify(
                 Object.fromEntries(
-                  [...MIGRATED_CODES].map((code) => [
+                  [...OPENCLAW_CODES].map((code) => [
                     code,
                     actual.filter((f) => f.code === code).length,
                   ]),

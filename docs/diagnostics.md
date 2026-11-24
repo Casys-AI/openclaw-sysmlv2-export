@@ -97,18 +97,25 @@ Severity: warning. Subject: agent. Principle: A4, permission delegation.
 
 The agent has no unapproved host exec itself, but can delegate, directly or
 through other agents, to an agent whose built-in exec runs on the host with
-effective security `full` and ask `off`. A sandboxed agent can then reach the
-host through delegation. The finding names the agents it reaches.
+effective security `full` and ask `off`. Each outgoing delegation requires a
+built-in `sessions_spawn` grant on the source agent. The finding names the
+agents it reaches in the model. Spawn depth, sender policy, and sandbox
+compatibility can further limit runtime calls.
 
 Review or recovery: Attenuate the delegate's grants, require approval on the
 host, or remove the delegation.
+
+Sources: `docs/tools/subagents/tool-reference.md`;
+`docs/gateway/config-tools/sessions-and-subagents.md`;
+`dist/spawn-thread-binding-CxKbcyi_.mjs`.
 
 ### `APE_LINK_CYCLE`
 
 Severity: warning. Subject: agent. Principle: B3, termination.
 
 The agent is in a directed delegation cycle with at least one other agent; the
-finding names them. Delegating to oneself alone is not a cycle.
+finding names them. A cycle can use an outgoing edge only when its source holds
+`sessions_spawn`. Self-delegation alone is excluded.
 
 Review or recovery: Make the cycle's termination and supervision explicit, or
 keep delegation flowing one way.
@@ -119,16 +126,15 @@ Severity: warning. Subject: agent.
 
 Nothing in the model reaches the agent: no channel binding, no scheduled task or
 heartbeat it owns or targets, no hook, no delegation from another agent and no
-enabled messaging from another agent. A policy targeting only the agent itself
-does not reach it. This is a structural check, not proof that the agent never
-runs.
+enabled messaging from another agent. For the delegation path, the other agent
+must hold `sessions_spawn`. This check reports structural reachability.
 
 Review or recovery: Model the agent's intended entry or supervision path, or
 remove the agent.
 
 ## Configuration checks
 
-These 17 checks are defined in
+These 21 checks are defined in
 [`rules/openclaw/openclaw.ttl`](../rules/openclaw/openclaw.ttl). The former
 `CRON_FAILING` check is deliberately dropped: runtime job health is not emitted
 into the model.
@@ -242,6 +248,80 @@ Review or recovery: List the intended requester and target agents, or disable
 agent-to-agent access.
 
 Source: `dist/session-visibility-c_9BAYYO.mjs, createAgentToAgentPolicy`.
+
+### `DELEGATION_WILDCARD`
+
+Severity: warning. Subject: agent. Principle: A3, least privilege.
+
+An agent with a built-in `sessions_spawn` grant has `*` in its effective
+`subagents.allowAgents`. The target policy accepts every configured agent ID,
+while A3 requires a closed list that names the permitted objects exactly.
+Session-specific spawn limits still apply.
+
+Review or recovery: List the intended target agent IDs or remove the spawn
+grant.
+
+Sources: `docs/gateway/config-tools/sessions-and-subagents.md`;
+`dist/spawn-thread-binding-CxKbcyi_.mjs, resolveSubagentAllowedTargetIds`.
+
+### `SELF_WRITABLE_CONTEXT`
+
+Severity: warning. Subject: agent. Principle: C2, Biba integrity.
+
+Built-in `write`, `edit`, or `apply_patch` on the host layer or a sandbox layer
+with `workspaceAccess: "rw"` can change the agent workspace, including
+instructions, `MEMORY.md`, and workspace skills. A host `skill_workshop` grant
+can save learned skills that load in future sessions. These are routes into
+memory or skills without C2's required admission by note provenance, result and
+validity period, or expected skill fingerprint. Workshop validates content and
+saves versions. The finding describes configured write access, subject to
+runtime filesystem restrictions and sandbox caps.
+
+Review or recovery: Restrict file-writing grants, use a read-only workspace
+where practical, and reserve Skill Workshop edits for a reviewed workflow.
+
+Sources: `docs/concepts/agent-workspace.md`;
+`docs/gateway/sandboxing/workspace-access.md`; `docs/tools/skill-workshop.md`;
+`dist/workspace-mounts-pLi-RJAq.mjs`;
+`dist/openclaw-tools-CSSYZDKR.mjs, createSkillWorkshopTool`.
+
+### `SELF_SCHEDULING`
+
+Severity: info. Subject: agent.
+
+The agent holds the built-in `cron` (2026.6) or `automations` (2026.10) tool.
+When the run permits creation, the tool can schedule a future turn for the
+agent. OpenClaw applies creator authority and scheduler rules. The grant alone
+leaves open whether a particular process lets the agent reopen a settled
+decision under pattern 1.2.
+
+Review or recovery: Review who should schedule follow-up work and remove the
+grant if the agent does not need it.
+
+Sources: `docs/automation/cron-jobs/how-it-works.md`;
+`dist/cron-tool-D1QAKUFW.mjs, createCronTool`; OpenClaw 2026.6.10
+`docs/automation/cron-jobs.md`.
+
+### `OPEN_SENDER_POLICY`
+
+Severity: warning with unapproved gateway exec or a built-in `message` grant;
+info otherwise. Subject: account.
+
+An enabled account with a recorded `dmPolicy` or `groupPolicy` of `open` has a
+matching binding to an existing agent. The check matches the modeled account
+selector and uses the binding's peer kind when present. It emits one finding per
+matching account and agent. Unapproved gateway exec uses the same built-in exec
+posture as the APE rules, with effective security `full` and ask `off`.
+Effective DM allowlists, group or mention checks, more specific routing, and
+per-session tool policies can still limit which messages and actions are
+admitted.
+
+Review or recovery: Review effective sender and group allowlists and restrict
+the agent's effectful tools if the route is public.
+
+Sources: `docs/channels/pairing.md`; `docs/channels/channel-routing.md`;
+`docs/channels/whatsapp.md`; `dist/dm-policy-shared-BAoCKf0l.mjs`;
+`dist/channel-policy-CEeqWrGV.mjs`.
 
 ### `SAFE_BIN_INTERPRETER_UNPROFILED`
 

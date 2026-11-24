@@ -1,11 +1,17 @@
 # OpenClaw model checks
 
-[`openclaw.ttl`](openclaw.ttl) defines 17 OpenClaw configuration checks, with
+[`openclaw.ttl`](openclaw.ttl) defines 21 OpenClaw configuration checks, with
 OpenClaw 2026.10.9 source citations. The shared SHACL engine executes their
-views after the five APE views and evaluates both sets of constraints over the
+views after the six APE views and evaluates both sets of constraints over the
 compiled SysML graph. See the [APE execution profile](../ape/README.md) and
 [diagnostics guide](../../docs/diagnostics.md) for the supported forms and
 finding descriptions.
+
+The delegation wildcard check uses the shared delegation view, which requires a
+built-in `sessions_spawn` grant on each source. The workspace and scheduling
+checks read built-in tool grants. The sender-policy view matches enabled
+accounts to binding declarations and uses the shared exec posture and the
+`message` grant to set severity.
 
 OpenClaw finding codes remain unprefixed. The three portable APE codes retain
 `APE_` and their `finding` values. Both rule sets can add `ape:principle` and

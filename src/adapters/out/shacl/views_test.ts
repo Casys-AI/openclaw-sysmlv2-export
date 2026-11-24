@@ -95,6 +95,22 @@ Deno.test("actual views preserve unknown exec posture, scope wildcards and resol
   add("tool", "PartUsage");
   field("tool", "OpenClawTool::toolId", "exec");
   field("tool", "OpenClawTool::origin", "builtin", true);
+  add("spawn-tool", "PartUsage");
+  field("spawn-tool", "OpenClawTool::toolId", "sessions_spawn");
+  field("spawn-tool", "OpenClawTool::origin", "builtin", true);
+  add("spawn-grant", "ItemUsage");
+  field("spawn-grant", "ToolGrant::tool", "spawn-tool", true);
+  field("spawn-grant", "ToolGrant::layer", "sandbox");
+  add("spawn-grant-ref", "ReferenceUsage", {
+    type: [ref("grant-type")],
+    value: ref("spawn-grant-expression"),
+  });
+  add("spawn-grant-expression", "FeatureReferenceExpression", {
+    referent: ref("spawn-grant"),
+  });
+  (elements.get("known-type")!.ownedMember as unknown[]).push(
+    ref("spawn-grant-ref"),
+  );
   let unknownAsk = "";
   for (const id of ["known", "unknown"]) {
     add(`${id}-grant`, "ItemUsage");
@@ -124,12 +140,19 @@ Deno.test("actual views preserve unknown exec posture, scope wildcards and resol
   add("delegation-type", "PartDefinition", {
     qualifiedName: "OpenClawImport::DelegationPolicy",
   });
-  add("delegation", "PartUsage", {
-    type: [ref("delegation-type")],
-    owner: ref("scope"),
-  });
-  field("delegation", "DelegationPolicy::fromAgent", "known", true);
-  field("delegation", "DelegationPolicy::wildcardTargets", true);
+  for (
+    const [policy, from] of [
+      ["delegation", "known"],
+      ["inactive-delegation", "local"],
+    ]
+  ) {
+    add(policy, "PartUsage", {
+      type: [ref("delegation-type")],
+      owner: ref("scope"),
+    });
+    field(policy, "DelegationPolicy::fromAgent", from, true);
+    field(policy, "DelegationPolicy::wildcardTargets", true);
+  }
   add("messaging-type", "PartDefinition", {
     qualifiedName: "OpenClawImport::MessagingPolicy",
   });
@@ -174,6 +197,7 @@ Deno.test("actual views preserve unknown exec posture, scope wildcards and resol
     assert.deepEqual(values("exec", "unknown", "unapprovedHostExec"), []);
     assert.deepEqual(values("exec", "local", "unapprovedHostExec"), ["false"]);
     assert.deepEqual(values("delegation", "known", "delegatesTo"), localAgents);
+    assert.deepEqual(values("delegation", "local", "delegatesTo"), []);
     assert.deepEqual(values("delegation", "delegation", "wildcardTargets"), [
       "true",
     ]);

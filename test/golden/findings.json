@@ -365,6 +365,61 @@
     "subject": "agent:secretary"
   },
   {
+    "code": "SELF_SCHEDULING",
+    "context": "The agent holds a scheduling tool that can request future agent turns when the session permits creation.",
+    "recovery": "Review who should schedule follow-up work and remove the scheduling tool grant if the agent does not need it.",
+    "severity": "info",
+    "subject": "agent:lead"
+  },
+  {
+    "code": "SELF_WRITABLE_CONTEXT",
+    "context": "The agent has a tool grant that can write its workspace context or learned skills.",
+    "principle": "C2",
+    "recovery": "Keep the agent workspace read-only where practical, restrict file-writing grants, and reserve Skill Workshop edits for a reviewed workflow.",
+    "severity": "warning",
+    "subject": "agent:client"
+  },
+  {
+    "code": "SELF_WRITABLE_CONTEXT",
+    "context": "The agent has a tool grant that can write its workspace context or learned skills.",
+    "principle": "C2",
+    "recovery": "Keep the agent workspace read-only where practical, restrict file-writing grants, and reserve Skill Workshop edits for a reviewed workflow.",
+    "severity": "warning",
+    "subject": "agent:coach"
+  },
+  {
+    "code": "SELF_WRITABLE_CONTEXT",
+    "context": "The agent has a tool grant that can write its workspace context or learned skills.",
+    "principle": "C2",
+    "recovery": "Keep the agent workspace read-only where practical, restrict file-writing grants, and reserve Skill Workshop edits for a reviewed workflow.",
+    "severity": "warning",
+    "subject": "agent:devbox"
+  },
+  {
+    "code": "SELF_WRITABLE_CONTEXT",
+    "context": "The agent has a tool grant that can write its workspace context or learned skills.",
+    "principle": "C2",
+    "recovery": "Keep the agent workspace read-only where practical, restrict file-writing grants, and reserve Skill Workshop edits for a reviewed workflow.",
+    "severity": "warning",
+    "subject": "agent:field"
+  },
+  {
+    "code": "SELF_WRITABLE_CONTEXT",
+    "context": "The agent has a tool grant that can write its workspace context or learned skills.",
+    "principle": "C2",
+    "recovery": "Keep the agent workspace read-only where practical, restrict file-writing grants, and reserve Skill Workshop edits for a reviewed workflow.",
+    "severity": "warning",
+    "subject": "agent:lead"
+  },
+  {
+    "code": "SELF_WRITABLE_CONTEXT",
+    "context": "The agent has a tool grant that can write its workspace context or learned skills.",
+    "principle": "C2",
+    "recovery": "Keep the agent workspace read-only where practical, restrict file-writing grants, and reserve Skill Workshop edits for a reviewed workflow.",
+    "severity": "warning",
+    "subject": "agent:secretary"
+  },
+  {
     "code": "STATIC_TOOL_AVAILABILITY",
     "context": "Grants resolve documented built-in policy and declared plugin tools. Credentials, plugin loading, model-native tools and session approvals are not runtime-verified.",
     "recovery": "Check runtime tool registration and host approvals before treating policy reachability as execution evidence; docs/gateway/config-tools.md and docs/tools/exec.md.",

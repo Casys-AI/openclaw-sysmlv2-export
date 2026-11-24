@@ -121,6 +121,42 @@ CONSTRUCT {
   }
 } """ .
 
+oc:OpenSenderRoutes a sh:SPARQLRule;
+   sh:runOnce true;
+   sh:order 90;
+   ape:name "openclaw-OpenSenderRoutes";
+   ape:graph <urn:openclaw:diagnostics:v1:view:OpenSenderRoutes>;
+   sh:prefixes oc:Prefixes;
+   sh:construct """
+CONSTRUCT {
+  ?account ?risk ?agent.
+} WHERE {
+  ?account oc:kind "OpenClawImport::ChannelAccount";
+    oc:scope ?scope;
+    f:ChannelAccount::id ?accountId;
+    f:ChannelAccount::channel ?channel;
+    f:ChannelAccount::enabled true.
+  ?binding oc:kind "OpenClawImport::BindingConfiguration";
+    oc:scope ?scope;
+    f:BindingConfiguration::account ?selector;
+    f:BindingConfiguration::agentId ?agentId.
+  ?agent ape:scope ?scope;
+    ape:agentId ?agentId.
+  FILTER(?selector = ?accountId || ?selector = CONCAT(?channel, ":*"))
+  OPTIONAL { ?binding f:BindingConfiguration::peerKind ?peerKind. }
+  FILTER(
+    ((COALESCE(?peerKind, "direct") = "direct") &&
+      EXISTS { ?account f:ChannelAccount::dmPolicy "open". }) ||
+    ((COALESCE(?peerKind, "group") IN ("group", "channel")) &&
+      EXISTS { ?account f:ChannelAccount::groupPolicy "open". })
+  )
+  BIND(IF(
+    EXISTS { ?agent ape:unapprovedHostExec true. } ||
+    EXISTS { ?agent ape:toolGrant/ape:builtinTool "message". },
+    oc:openSenderWarning, oc:openSenderInfo
+  ) AS ?risk)
+} """ .
+
 oc:EXEC_WITHOUT_APPROVAL0 a sh:NodeShape;
    sh:targetSubjectsOf ape:agentId;
    ape:code "EXEC_WITHOUT_APPROVAL";
@@ -587,4 +623,85 @@ FILTER NOT EXISTS {
     ?posture f:ExecutionPosture::safeBinProfiles ?profile.
     FILTER(LCASE(REPLACE(STR(?profile),"^[\\u0009-\\u000d\\u0020\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]+|[\\u0009-\\u000d\\u0020\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]+$",""))=?normalized)
   }
+} """ .
+
+oc:DELEGATION_WILDCARD a sh:NodeShape;
+   sh:targetSubjectsOf ape:agentId;
+   ape:code "DELEGATION_WILDCARD";
+   ape:principle "A3";
+   ape:recovery "List the intended target agent IDs in subagents.allowAgents, or remove the sessions_spawn grant.";
+   dct:source "OpenClaw 2026.10.9 docs/gateway/config-tools/sessions-and-subagents.md; dist/spawn-thread-binding-CxKbcyi_.mjs resolveSubagentAllowedTargetIds";
+   sh:sparql oc:DELEGATION_WILDCARD-constraint.
+oc:DELEGATION_WILDCARD-constraint sh:severity sh:Warning;
+   sh:message "The agent holds sessions_spawn and its allowAgents wildcard allows any configured agent as a target.";
+   sh:prefixes oc:Prefixes;
+   sh:select """
+SELECT DISTINCT $this WHERE {
+  GRAPH <urn:ase:ape:v1:view:delegation> {
+    ?policy ape:from $this;
+      ape:wildcardTargets true.
+  }
+} """ .
+
+oc:SELF_WRITABLE_CONTEXT a sh:NodeShape;
+   sh:targetSubjectsOf ape:agentId;
+   ape:code "SELF_WRITABLE_CONTEXT";
+   ape:principle "C2";
+   ape:recovery "Keep the agent workspace read-only where practical, restrict file-writing grants, and reserve Skill Workshop edits for a reviewed workflow.";
+   dct:source "OpenClaw 2026.10.9 docs/concepts/agent-workspace.md; docs/gateway/sandboxing/workspace-access.md; docs/tools/skill-workshop.md; dist/workspace-mounts-pLi-RJAq.mjs; dist/openclaw-tools-CSSYZDKR.mjs createSkillWorkshopTool";
+   sh:sparql oc:SELF_WRITABLE_CONTEXT-constraint.
+oc:SELF_WRITABLE_CONTEXT-constraint sh:severity sh:Warning;
+   sh:message "The agent has a tool grant that can write its workspace context or learned skills.";
+   sh:prefixes oc:Prefixes;
+   sh:select """
+SELECT DISTINCT $this WHERE {
+  $this ape:toolGrant ?grant.
+  {
+    ?grant ape:builtinTool ?tool;
+      ape:layer ?layer.
+    VALUES ?tool { "write" "edit" "apply_patch" }
+    FILTER(?layer = "host" || (?layer = "sandbox" && EXISTS {
+      $this oc:owns ?sandbox.
+      ?sandbox f:Sandbox::workspaceAccess "rw".
+    }))
+  } UNION {
+    ?grant ape:builtinTool "skill_workshop";
+      ape:layer "host".
+  }
+} """ .
+
+oc:SELF_SCHEDULING a sh:NodeShape;
+   sh:targetSubjectsOf ape:agentId;
+   ape:code "SELF_SCHEDULING";
+   ape:recovery "Review who should schedule follow-up work and remove the scheduling tool grant if the agent does not need it.";
+   dct:source "OpenClaw 2026.10.9 docs/automation/cron-jobs/how-it-works.md; dist/cron-tool-D1QAKUFW.mjs createCronTool; OpenClaw 2026.6.10 docs/automation/cron-jobs.md";
+   sh:sparql oc:SELF_SCHEDULING-constraint.
+oc:SELF_SCHEDULING-constraint sh:severity sh:Info;
+   sh:message "The agent holds a scheduling tool that can request future agent turns when the session permits creation.";
+   sh:prefixes oc:Prefixes;
+   sh:select """
+SELECT DISTINCT $this WHERE {
+  $this ape:toolGrant/ape:builtinTool ?tool.
+  VALUES ?tool { "cron" "automations" }
+} """ .
+
+oc:OPEN_SENDER_POLICY a sh:NodeShape;
+   sh:targetSubjectsOf f:ChannelAccount::id;
+   ape:code "OPEN_SENDER_POLICY";
+   ape:recovery "Review effective sender and group allowlists and restrict the bound agent's effectful tools if the route is public.";
+   dct:source "OpenClaw 2026.10.9 docs/channels/pairing.md; docs/channels/channel-routing.md; docs/channels/whatsapp.md; dist/dm-policy-shared-BAoCKf0l.mjs; dist/channel-policy-CEeqWrGV.mjs";
+   sh:sparql oc:OPEN_SENDER_POLICY-warning, oc:OPEN_SENDER_POLICY-info.
+oc:OPEN_SENDER_POLICY-warning sh:severity sh:Warning;
+   sh:message "An open sender policy matches a binding to {$agentId}, which holds unapproved gateway exec or the message tool.";
+   sh:prefixes oc:Prefixes;
+   sh:select """
+SELECT DISTINCT $this ?agentId WHERE {
+  $this oc:openSenderWarning/ape:agentId ?agentId.
+} """ .
+oc:OPEN_SENDER_POLICY-info sh:severity sh:Info;
+   sh:message "An open sender policy matches a binding to {$agentId}.";
+   sh:prefixes oc:Prefixes;
+   sh:select """
+SELECT DISTINCT $this ?agentId WHERE {
+  $this oc:openSenderInfo/ape:agentId ?agentId.
 } """ .

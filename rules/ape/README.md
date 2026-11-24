@@ -1,6 +1,6 @@
 # APE RDF views and rules
 
-[`ape.ttl`](ape.ttl) defines five global SHACL SPARQL rules and three SPARQL
+[`ape.ttl`](ape.ttl) defines six global SHACL SPARQL rules and three SPARQL
 constraints. The companion [OpenClaw rules](../openclaw/README.md) run in the
 same engine after these views. The Toolkit supplies the compiled element graph;
 the rules materialize the derived views below. The APE adapter maps standard
@@ -52,7 +52,7 @@ They follow specialization transitively and recognize a root package by the
 absence of a Package parent, covering Toolkit Namespace ownership and OpenSysML
 rootless packages. They do not rely on ordered JSON mirrors.
 
-All predicates in this section use `ape: <urn:ase:ape:v1:>`. The five global
+All predicates in this section use `ape: <urn:ase:ape:v1:>`. The six global
 rules have unique ascending `sh:order` values and `sh:runOnce true`; they
 materialize views in their own named graphs. Their `ape:source` objects and
 other source properties are native element IRIs, not copied identifiers.
@@ -60,17 +60,18 @@ other source properties are native element IRIs, not copied identifiers.
 | Graph `urn:ase:ape:v1:view:` | Facts and provenance                                                                                                                                 |
 | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `agents`                     | `agentId`, `definition`, `scope`, and `source` (the ID feature).                                                                                     |
+| `tool-grants`                | `toolGrant` associates an agent with a built-in tool grant, which has `builtinTool` (the tool ID) and `layer` when available.                        |
 | `delegation`                 | `delegatesTo` between agents; the source connection or policy has `from`, `to`, `source`, and, for a wildcard, `wildcardTargets true`.               |
 | `messaging`                  | `canMessage` and `messagePolicy` on the sender; the policy has `messageTarget`, `from`, `to`, `source`, and, for a wildcard, `wildcardTargets true`. |
 | `entries`                    | `reachedBy` associates an agent with a binding, scheduled case, or external trigger; an entry has `source` and a hook also has `hookTargets`.        |
 | `exec`                       | `unapprovedHostExec` is a known boolean; `execGrant`, `execPosture`, and `source` identify supporting elements when bound.                           |
 
-Wildcard expansion is confined to known agents in the same top-level package;
-the literal wildcard flag remains explicit. An unresolved target remains
-representable in SysML but does not create an imaginary agent edge. Messaging
-requires an enabled policy. Structural entries include modeled bindings and
-scheduled cases even when disabled; these facts do not establish runtime
-liveness.
+Delegation edges require a built-in `sessions_spawn` grant on the source agent.
+Wildcard expansion is confined to known agents in the same top-level package and
+preserves the literal wildcard flag. An unresolved target remains representable
+in SysML but does not create an imaginary agent edge. Messaging requires an
+enabled policy. Structural entries include modeled bindings and scheduled cases
+even when disabled; these facts do not establish runtime liveness.
 
 Exec recognition requires the builtin tool with ID `exec`. Host execution means
 `gateway`, or `auto` with the grant on the `host` layer. It is unapproved when

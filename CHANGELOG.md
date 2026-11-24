@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- **Doctor configuration checks.** Added `DELEGATION_WILDCARD` (A3),
+  `SELF_WRITABLE_CONTEXT` (C2), `SELF_SCHEDULING`, and `OPEN_SENDER_POLICY`. The
+  delegation view now requires a built-in `sessions_spawn` grant on each source,
+  so widening, cycle and reachability findings use only grant-backed delegation
+  edges.
 - **Doctor book references.** `APE_GRANT_WIDENS_PARENT` replaces the pre-book
   code `S3` with principle `A4`. `APE_LINK_CYCLE` replaces pattern `4.2` with
   principle `B3`. `APE_UNREACHABLE_OPERATOR` drops its pattern reference. Twelve
