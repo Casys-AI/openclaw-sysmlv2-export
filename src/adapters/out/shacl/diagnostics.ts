@@ -1,4 +1,8 @@
 import { readFile } from "node:fs/promises";
+import {
+  PATTERN_SLUGS,
+  PRINCIPLE_SLUGS,
+} from "../../../domain/model/diagnostics/book-references.ts";
 import { compareFindings } from "../../../domain/model/diagnostics/findings.ts";
 import { elementId } from "../../../domain/model/element-id.ts";
 import {
@@ -78,60 +82,6 @@ export class ApeStageError extends Error {
 }
 
 const APE = "urn:ase:ape:v1:";
-// The current Casys book catalogues, used only for admitting rules.
-const PRINCIPLES = new Set([
-  "O1",
-  "O2",
-  "O3",
-  "A1",
-  "A2",
-  "A3",
-  "A4",
-  "A5",
-  "A6",
-  "A7",
-  "I1",
-  "I2",
-  "I3",
-  "I4",
-  "C1",
-  "C2",
-  "B1",
-  "B2",
-  "B3",
-  "B4",
-  "G1",
-  "G2",
-  "G3",
-  "G4",
-  "G5",
-]);
-const PATTERNS = new Set([
-  "1.1",
-  "1.2",
-  "1.3",
-  "2.1",
-  "2.2",
-  "2.3",
-  "2.4",
-  "2.5",
-  "2.6",
-  "3.1",
-  "3.2",
-  "3.3",
-  "3.4",
-  "3.5",
-  "3.6",
-  "4.1",
-  "4.2",
-  "4.3",
-  "4.4",
-  "5.1",
-  "5.2",
-  "6.1",
-  "6.2",
-  "6.3",
-]);
 export interface ApeAnnotation
   extends Pick<ApeFinding, "principle" | "pattern"> {
   code: string;
@@ -195,10 +145,12 @@ function annotations(
       if (!/^[A-Z][A-Z_]+$/.test(code)) {
         throw new Error("Invalid APE shape annotation code");
       }
-      if (principle !== undefined && !PRINCIPLES.has(principle)) {
+      if (
+        principle !== undefined && !Object.hasOwn(PRINCIPLE_SLUGS, principle)
+      ) {
         throw new Error("Invalid APE shape annotation principle");
       }
-      if (pattern !== undefined && !PATTERNS.has(pattern)) {
+      if (pattern !== undefined && !Object.hasOwn(PATTERN_SLUGS, pattern)) {
         throw new Error("Invalid APE shape annotation pattern");
       }
       if (

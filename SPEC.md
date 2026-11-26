@@ -511,11 +511,11 @@ completion.
 
 Model findings may carry a `principle` code from _Agentic System Architecture_
 and a `pattern` code from _Agentic Process Engineering_. Both fields are
-optional. The viewer shows the recorded references on the finding code and
-accepts reference codes from older archives. The `finding` field is independent
-of the references. It is required for `APE_` codes and optional for other codes.
-Rules write `present` or `absent`. The viewer also accepts `indeterminate` from
-older archives.
+optional. The viewer shows each recorded reference beside the finding code and
+links it to its published Casys sheet. Unknown codes appear as plain text. The
+`finding` field is independent of the references. It is required for `APE_`
+codes and optional for other codes. Rules write `present` or `absent`. The
+viewer also accepts `indeterminate` from older archives.
 
 ### 7.1 Collector findings
 

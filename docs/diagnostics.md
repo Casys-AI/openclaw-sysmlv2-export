@@ -88,8 +88,10 @@ start with `APE_`. Rules and views are in [`rules/ape/`](../rules/ape/).
 
 A model finding may name the principle (_Agentic System Architecture_) or the
 pattern (_Agentic Process Engineering_) whose violation it reports in the
-recorded configuration. The references are recorded as `principle` and `pattern`
-and shown in the viewer's tooltip on the finding code.
+recorded configuration. The references are recorded as `principle` and
+`pattern`. In the Doctor and the element inspector, each reference beside a
+finding code opens its Casys sheet in a new tab. Codes without a published sheet
+appear as plain text.
 
 ### `APE_GRANT_WIDENS_PARENT`
 

@@ -1,3 +1,8 @@
+import {
+  PATTERN_SLUGS,
+  PRINCIPLE_SLUGS,
+} from "../../../domain/model/diagnostics/book-references.ts";
+
 /** The viewer page. `__DATA__` is replaced by the versions' data and
  * `__METRICS__` by layout.ts's drawing metrics. It draws the precomputed
  * scenes as SVG in SysML v2 notation and renders the tables shaped by
@@ -403,8 +408,10 @@ button.et-tile:hover { border-color: var(--line-strong); background: var(--card)
 .doc-checks code { font: 10.5px var(--mono); color: var(--muted); }
 .doc-checks p { margin: 4px 0 0; }
 .doc-head { display: flex; align-items: center; gap: 0; }
-.doc-code { display: inline-flex; gap: 8px; align-items: baseline; }
+.doc-code { display: inline-flex; flex-wrap: wrap; gap: 2px 8px; align-items: baseline; }
 .doc-code strong { font-weight: 600; color: var(--doc); }
+.doc-reference { font-size: 11.5px; color: var(--muted); }
+a.doc-reference { color: var(--chg); text-underline-offset: 2px; }
 .doc-groups code { color: var(--muted); }
 .doc-chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 2px; }
 .doc-chip { display: inline-flex; align-items: center; gap: 2px; padding: 1px 3px 1px 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--card); }
@@ -1530,17 +1537,31 @@ function findingList(findings) {
   }
   return ul;
 }
-// A finding's code in discreet mono, its label beside it when the code needs
-// one, with its book references in the tooltip.
+// The export contains its book catalogue so viewing a finding works offline.
+const principleSlugs = ${JSON.stringify(PRINCIPLE_SLUGS)};
+const patternSlugs = ${JSON.stringify(PATTERN_SLUGS)};
+function bookReference(label, id, slugs, path) {
+  const text = label + " " + id;
+  if (!Object.hasOwn(slugs, id)) return el("span", "doc-reference", text);
+  const link = el("a", "doc-reference", text);
+  link.href = "https://casys.ai/" + path + "/" + slugs[id];
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  return link;
+}
 const CODE_LABELS = { PROSE_NOT_ENFORCED: "not enforced by config" };
 function codeOf({ code, principle, pattern }) {
   const c = el("code", "", code);
   if (principle && pattern) c.title = "Principle " + principle + " · Pattern " + pattern;
   else if (principle) c.title = "Principle " + principle + " (Agentic System Architecture)";
   else if (pattern) c.title = "Pattern " + pattern + " (Agentic Process Engineering)";
-  if (!CODE_LABELS[code]) return c;
+  const labelled = Object.hasOwn(CODE_LABELS, code);
+  if (!labelled && !principle && !pattern) return c;
   const s = el("span", "doc-code");
-  s.append(el("strong", "", CODE_LABELS[code]), c);
+  if (labelled) s.append(el("strong", "", CODE_LABELS[code]));
+  s.append(c);
+  if (principle) s.append(bookReference("Principle", principle, principleSlugs, "agentic-system-architecture/principles"));
+  if (pattern) s.append(bookReference("Pattern", pattern, patternSlugs, "agentic-process-engineering/patterns"));
   return s;
 }
 // Shows a panel entry's element without leaving the panel, with the agents a

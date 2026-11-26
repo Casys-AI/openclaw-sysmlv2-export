@@ -453,7 +453,7 @@ const row = (
   ...extra,
 });
 
-Deno.test("Doctor code tooltips show current and archived book references", async () => {
+Deno.test("Doctor links recorded references to published sheets and shows unknown codes as text", async () => {
   const now = version("2026-11-02T10-25-00Z", snapshot);
   const before = version("2026-11-02T10-20-00Z", snapshot);
   const grant = row("APE_GRANT_WIDENS_PARENT", "agent:field", {
@@ -488,46 +488,69 @@ Deno.test("Doctor code tooltips show current and archived book references", asyn
   // Run the generated Doctor renderer with a minimal stand-in for its DOM.
   type Element = {
     tag: string;
+    className?: string;
     text?: string;
     title?: string;
+    href?: string;
+    target?: string;
+    rel?: string;
     children: Element[];
     append: (...nodes: Element[]) => void;
   };
-  const el = (tag: string, _className?: string, text?: string): Element => {
+  const el = (tag: string, className?: string, text?: string): Element => {
     const children: Element[] = [];
     return {
       tag,
+      className,
       text,
       children,
       append: (...nodes) => children.push(...nodes),
     };
   };
-  const codeTooltips = (
-    element: Element,
-  ): [string | undefined, string | undefined][] =>
-    element.tag === "code"
-      ? [[element.text, element.title]]
-      : element.children.flatMap(codeTooltips);
+  function renderedReferences(element: Element): (string | string[])[] {
+    if (element.tag === "code") {
+      return [element.title ? [element.text!, element.title] : element.text!];
+    }
+    if (element.className === "doc-reference") {
+      if (element.tag === "a") {
+        assert.equal(element.target, "_blank");
+        assert.equal(element.rel, "noopener noreferrer");
+        return [[element.text!, element.href!]];
+      }
+      assert.equal(element.tag, "span");
+      assert.equal(element.href, undefined);
+      return [element.text!];
+    }
+    return element.children.flatMap(renderedReferences);
+  }
   const source =
-    page.match(/const CODE_LABELS = .*?(?=\nfunction subjectChip\()/s)![0];
+    page.match(/const principleSlugs = .*?(?=\nfunction subjectChip\()/s)![0];
   const renderDoctor = new Function(
     "el",
     "subjectChip",
     "groups",
     source + "\nreturn groupList(nested(merged(groups)));",
   );
-  const tooltips = (groups: unknown) =>
-    codeTooltips(renderDoctor(el, () => el("button"), groups));
-  assert.deepEqual(tooltips(current.doctor.groups), [
+  const references = (groups: unknown) =>
+    renderedReferences(renderDoctor(el, () => el("button"), groups));
+  const principles = "https://casys.ai/agentic-system-architecture/principles/";
+  const patterns = "https://casys.ai/agentic-process-engineering/patterns/";
+  assert.deepEqual(references(current.doctor.groups), [
     ["EXEC_WITHOUT_APPROVAL", "Principle A3 · Pattern 2.1"],
+    ["Principle A3", principles + "least-privilege"],
+    ["Pattern 2.1", patterns + "proposal-admission-execution-separation"],
     ["APE_GRANT_WIDENS_PARENT", "Principle A4 (Agentic System Architecture)"],
-    ["APE_UNREACHABLE_OPERATOR", undefined],
+    ["Principle A4", principles + "permission-delegation"],
+    "APE_UNREACHABLE_OPERATOR",
   ]);
-  assert.deepEqual(tooltips(legacy.doctor.groups), [
-    ["EXEC_WITHOUT_APPROVAL", undefined],
+  assert.deepEqual(references(legacy.doctor.groups), [
+    "EXEC_WITHOUT_APPROVAL",
     ["APE_GRANT_WIDENS_PARENT", "Pattern S3 (Agentic Process Engineering)"],
+    "Pattern S3",
     ["APE_LINK_CYCLE", "Pattern 4.2 (Agentic Process Engineering)"],
+    ["Pattern 4.2", patterns + "centralized-supervision"],
     ["OTHER_CHECK", "Principle G9 (Agentic System Architecture)"],
+    "Principle G9",
   ]);
 });
 

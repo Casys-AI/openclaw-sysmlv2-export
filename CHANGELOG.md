@@ -13,8 +13,9 @@
   OpenClaw checks cite the principle they apply. `EXEC_WITHOUT_APPROVAL` also
   cites pattern `2.1`. The optional `ape:principle` annotation supplies the
   finding's `principle` field. The loader checks reference codes against the
-  current catalogues when rules load. The viewer names the references in
-  tooltips and displays older archives as recorded.
+  current catalogues when rules load. The Doctor and the element inspector link
+  each recorded reference to its Casys sheet. Codes without a published sheet
+  appear as plain text.
 
 ## 0.3.1 — 2026-11-04
 
