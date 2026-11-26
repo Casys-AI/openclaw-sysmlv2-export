@@ -24,7 +24,7 @@ SysML tool.
 Requires OpenClaw 2026.10.9 or later, on Node 24.22.1 or later (or 26.12.1 or
 later).
 
-Version **0.3.1** has two distributions of the same plugin:
+Version **0.4.0** has two distributions of the same plugin:
 
 | Channel            | Toolkit                                        | Installation                                                            |
 | ------------------ | ---------------------------------------------- | ----------------------------------------------------------------------- |
@@ -36,7 +36,7 @@ Version **0.3.1** has two distributions of the same plugin:
 Run these on the machine hosting your OpenClaw Gateway:
 
 ```sh
-openclaw plugins install clawhub:@casys/openclaw-sysmlv2-export@0.3.1 --accept-capabilities
+openclaw plugins install clawhub:@casys/openclaw-sysmlv2-export@0.4.0 --accept-capabilities
 openclaw sysmlv2-toolkit install
 openclaw sysmlv2-toolkit status
 ```
@@ -57,25 +57,25 @@ same integrity checks apply.
 ### GitHub: complete package
 
 Use the named `.tgz` asset from the
-[0.3.1 release](https://github.com/Casys-AI/openclaw-sysmlv2-export/releases/tag/v0.3.1).
+[0.4.0 release](https://github.com/Casys-AI/openclaw-sysmlv2-export/releases/tag/v0.4.0).
 GitHub's automatic **Source code** archives do not contain the built plugin and
 Toolkit. The following verifies the checksum before installing:
 
 ```sh
 (
   set -eu
-  mkdir -p openclaw-sysmlv2-export-0.3.1
-  cd openclaw-sysmlv2-export-0.3.1
-  curl --fail --location --output casys-openclaw-sysmlv2-export-0.3.1.tgz \
-    https://github.com/Casys-AI/openclaw-sysmlv2-export/releases/download/v0.3.1/casys-openclaw-sysmlv2-export-0.3.1.tgz
+  mkdir -p openclaw-sysmlv2-export-0.4.0
+  cd openclaw-sysmlv2-export-0.4.0
+  curl --fail --location --output casys-openclaw-sysmlv2-export-0.4.0.tgz \
+    https://github.com/Casys-AI/openclaw-sysmlv2-export/releases/download/v0.4.0/casys-openclaw-sysmlv2-export-0.4.0.tgz
   curl --fail --location --output SHA256SUMS \
-    https://github.com/Casys-AI/openclaw-sysmlv2-export/releases/download/v0.3.1/SHA256SUMS
+    https://github.com/Casys-AI/openclaw-sysmlv2-export/releases/download/v0.4.0/SHA256SUMS
   if command -v sha256sum >/dev/null 2>&1; then
     sha256sum --check SHA256SUMS
   else
     shasum -a 256 --check SHA256SUMS
   fi
-  openclaw plugins install ./casys-openclaw-sysmlv2-export-0.3.1.tgz \
+  openclaw plugins install ./casys-openclaw-sysmlv2-export-0.4.0.tgz \
     --force --accept-capabilities
 )
 ```
@@ -102,7 +102,7 @@ openclaw plugins install --link "$(pwd)/plugin" --force --accept-capabilities
 ```
 
 `deno task plugin:package`, with the same archive variable, builds once and
-stages both distributions under `.release/0.3.1/`. Their runtime bundles,
+stages both distributions under `.release/0.4.0/`. Their runtime bundles,
 viewer, rules and Oxigraph are byte-identical; delivery metadata and the Toolkit
 files are the only differences. It produces both `.tgz` archives and checksums
 without publishing either.
@@ -145,8 +145,9 @@ portable APE rules using SHACL SPARQL on Oxigraph, with the
 [Toolkit](#validate-the-model) bundled in the complete package or explicitly
 installed for the lightweight package. An export downloads nothing. It writes
 findings with codes, affected elements and recovery advice; the Doctor panel
-lists them. Findings do not block an export or change the instance. If the
-bundled Toolkit is missing or damaged, validation fails with
+lists them. Select a principle or pattern beside a finding to open its Casys
+sheet in a new tab. Findings do not block an export or change the instance. If
+the bundled Toolkit is missing or damaged, validation fails with
 `TOOLKIT_INTEGRITY`, model checks do not run, and the collector notes from the
 snapshot remain available. A lightweight installation without its Toolkit
 reports `TOOLKIT_NOT_INSTALLED` and keeps the export with model checks not run.

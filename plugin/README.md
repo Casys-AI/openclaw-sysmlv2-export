@@ -13,12 +13,12 @@ since the previous run is highlighted and listed, value by value.
 
 Status: preview. Requires OpenClaw 2026.10.9 or later.
 
-## Install 0.3.1
+## Install 0.4.0
 
 The lightweight **ClawHub** distribution installs the Toolkit separately:
 
 ```sh
-openclaw plugins install clawhub:@casys/openclaw-sysmlv2-export@0.3.1 --accept-capabilities
+openclaw plugins install clawhub:@casys/openclaw-sysmlv2-export@0.4.0 --accept-capabilities
 openclaw sysmlv2-toolkit install
 openclaw sysmlv2-toolkit status
 ```
@@ -30,10 +30,10 @@ each extracted file. For an offline archive, use
 `openclaw sysmlv2-toolkit install --from ./sysml-wasm-0.10.10.tgz`.
 
 The **complete GitHub distribution** includes all Toolkit files and licenses.
-Download `casys-openclaw-sysmlv2-export-0.3.1.tgz` and verify `SHA256SUMS` from
-[release v0.3.1](https://github.com/Casys-AI/openclaw-sysmlv2-export/releases/tag/v0.3.1),
+Download `casys-openclaw-sysmlv2-export-0.4.0.tgz` and verify `SHA256SUMS` from
+[release v0.4.0](https://github.com/Casys-AI/openclaw-sysmlv2-export/releases/tag/v0.4.0),
 then install the local archive with
-`openclaw plugins install ./casys-openclaw-sysmlv2-export-0.3.1.tgz --force --accept-capabilities`.
+`openclaw plugins install ./casys-openclaw-sysmlv2-export-0.4.0.tgz --force --accept-capabilities`.
 No separate Toolkit download is needed. The release includes full download and
 checksum commands. Follow any Gateway restart instruction printed by OpenClaw.
 
@@ -64,13 +64,14 @@ Each run writes `<state dir>/sysmlv2-export/<UTC time>/` with `snapshot.json`,
 
 With the Toolkit available, every export checks the SysML model with OpenClaw
 and APE SHACL rules. The summary counts findings and the viewer's Doctor panel
-lists them. Findings do not block an export or change the instance. A missing
-external Toolkit is `TOOLKIT_NOT_INSTALLED`; a damaged or missing bundled one is
-`TOOLKIT_INTEGRITY`. Model checks do not run in either case, and collector notes
-remain available.
+lists them. Select a principle or pattern beside a finding to open its Casys
+sheet in a new tab. Findings do not block an export or change the instance. A
+missing external Toolkit is `TOOLKIT_NOT_INSTALLED`; a damaged or missing
+bundled one is `TOOLKIT_INTEGRITY`. Model checks do not run in either case, and
+collector notes remain available.
 
 See the
-[diagnostics guide](https://github.com/Casys-AI/openclaw-sysmlv2-export/blob/v0.3.1/docs/diagnostics.md)
+[diagnostics guide](https://github.com/Casys-AI/openclaw-sysmlv2-export/blob/v0.4.0/docs/diagnostics.md)
 for all codes and their sources.
 
 ## Validate the model

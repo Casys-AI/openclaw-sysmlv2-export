@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 — 2026-11-26
 
 - **Doctor configuration checks.** Added `DELEGATION_WILDCARD` (A3),
   `SELF_WRITABLE_CONTEXT` (C2), `SELF_SCHEDULING`, and `OPEN_SENDER_POLICY`. The
@@ -9,13 +9,13 @@
   edges.
 - **Doctor book references.** `APE_GRANT_WIDENS_PARENT` replaces the pre-book
   code `S3` with principle `A4`. `APE_LINK_CYCLE` replaces pattern `4.2` with
-  principle `B3`. `APE_UNREACHABLE_OPERATOR` drops its pattern reference. Twelve
-  OpenClaw checks cite the principle they apply. `EXEC_WITHOUT_APPROVAL` also
-  cites pattern `2.1`. The optional `ape:principle` annotation supplies the
-  finding's `principle` field. The loader checks reference codes against the
-  current catalogues when rules load. The Doctor and the element inspector link
-  each recorded reference to its Casys sheet. Codes without a published sheet
-  appear as plain text.
+  principle `B3`. `APE_UNREACHABLE_OPERATOR` drops its pattern reference.
+  Sixteen of the 24 checks cite a principle. `EXEC_WITHOUT_APPROVAL` also cites
+  pattern `2.1`. The optional `ape:principle` annotation supplies the finding's
+  `principle` field. The loader checks reference codes against the current
+  catalogues when rules load. The Doctor and the element inspector link each
+  recorded reference to its Casys sheet. Codes without a published sheet appear
+  as plain text.
 
 ## 0.3.1 — 2026-11-04
 

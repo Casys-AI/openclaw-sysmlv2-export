@@ -914,11 +914,11 @@ openclaw sysmlv2-toolkit install [--from <archive>]
 openclaw sysmlv2-toolkit status
 ```
 
-Version 0.3.1 ships one runtime in two distributions. `distribution.json`,
-beside `core.mjs`, selects `{toolkit: "bundled"}` for the complete GitHub
-package or `{toolkit: "external"}` for the lightweight ClawHub package. An
-absent marker defaults to bundled for source and older complete packages; an
-unreadable or invalid marker is an integrity error.
+The plugin ships one runtime in two distributions. `distribution.json`, beside
+`core.mjs`, selects `{toolkit: "bundled"}` for the complete GitHub package or
+`{toolkit: "external"}` for the lightweight ClawHub package. An absent marker
+defaults to bundled for source and older complete packages; an unreadable or
+invalid marker is an integrity error.
 
 The complete package carries `toolkit/`: exactly the pinned files of
 `src/adapters/sysml-toolkit-pin.ts` (`sysmlv2.js`, `sysmlv2_bg.wasm`, the three
